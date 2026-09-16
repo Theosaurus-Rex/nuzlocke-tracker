@@ -83,12 +83,19 @@ const catchDetails: CatchDetails = {
   moves: ["tackle"],
 };
 
+/** Builds a party of mons occupying exactly the given slots (in `'party'` status). */
+function partyInSlots(slots: number[]): Mon[] {
+  return slots.map((slot) =>
+    makeMon({ id: `party-mon-${String(slot)}`, status: "party", partySlot: slot }),
+  );
+}
+
 describe("catchEncounter", () => {
   test("moves the encounter to caught and links the new mon", () => {
     const encounter = makeEncounter();
     const { encounter: result, mon } = catchEncounter({
       encounter,
-      partyCount: 0,
+      party: [],
       monId: "mon-1",
       details: catchDetails,
     });
@@ -103,7 +110,7 @@ describe("catchEncounter", () => {
   test("sends the mon to the party with the next free slot when party has room", () => {
     const { mon } = catchEncounter({
       encounter: makeEncounter(),
-      partyCount: 3,
+      party: partyInSlots([0, 1, 2]),
       monId: "mon-4",
       details: catchDetails,
     });
@@ -112,10 +119,36 @@ describe("catchEncounter", () => {
     expect(mon.partySlot).toBe(3);
   });
 
-  test("the seventh catch (party already at 6) goes to the box with a null slot", () => {
+  test("a gap in the party is reused before any higher slot: slots 0, 2, 3 occupied gets slot 1", () => {
     const { mon } = catchEncounter({
       encounter: makeEncounter(),
-      partyCount: 6,
+      party: partyInSlots([0, 2, 3]),
+      monId: "mon-new",
+      details: catchDetails,
+    });
+
+    expect(mon.status).toBe("party");
+    expect(mon.partySlot).toBe(1);
+  });
+
+  test("no two party mons share a partySlot after a gap is filled", () => {
+    const party = partyInSlots([0, 2, 3]);
+    const { mon } = catchEncounter({
+      encounter: makeEncounter(),
+      party,
+      monId: "mon-new",
+      details: catchDetails,
+    });
+
+    const resultingParty = [...party, mon];
+    const usedSlots = resultingParty.map((m) => m.partySlot);
+    expect(new Set(usedSlots).size).toBe(usedSlots.length);
+  });
+
+  test("a full party (slots 0-5 occupied) boxes the catch with a null slot", () => {
+    const { mon } = catchEncounter({
+      encounter: makeEncounter(),
+      party: partyInSlots([0, 1, 2, 3, 4, 5]),
       monId: "mon-7",
       details: catchDetails,
     });
@@ -124,10 +157,28 @@ describe("catchEncounter", () => {
     expect(mon.partySlot).toBeNull();
   });
 
+  test("boxed and dead mons in the party array do not reserve their stale slots", () => {
+    const staleBoxedMon = makeMon({ id: "boxed", status: "box", partySlot: 1 });
+    const staleDeadMon = makeMon({ id: "dead", status: "dead", partySlot: 2 });
+    const party = [staleBoxedMon, staleDeadMon, ...partyInSlots([0])];
+
+    const { mon } = catchEncounter({
+      encounter: makeEncounter(),
+      party,
+      monId: "mon-new",
+      details: catchDetails,
+    });
+
+    // Slot 0 is genuinely occupied; slots 1 and 2 look occupied only via stale non-party rows,
+    // so the lowest real free slot is 1, not 3.
+    expect(mon.status).toBe("party");
+    expect(mon.partySlot).toBe(1);
+  });
+
   test("sets speciesIdCaught and levelCaught to match the catch-time values", () => {
     const { mon } = catchEncounter({
       encounter: makeEncounter(),
-      partyCount: 0,
+      party: [],
       monId: "mon-1",
       details: catchDetails,
     });
@@ -139,7 +190,7 @@ describe("catchEncounter", () => {
   test("stamps caughtRouteId from the encounter's routeId", () => {
     const { mon } = catchEncounter({
       encounter: makeEncounter({ routeId: "route-42" }),
-      partyCount: 0,
+      party: [],
       monId: "mon-1",
       details: catchDetails,
     });
@@ -150,14 +201,14 @@ describe("catchEncounter", () => {
   test("does not mutate the input encounter", () => {
     const encounter = makeEncounter();
     const snapshot = { ...encounter };
-    catchEncounter({ encounter, partyCount: 0, monId: "mon-1", details: catchDetails });
+    catchEncounter({ encounter, party: [], monId: "mon-1", details: catchDetails });
     expect(encounter).toEqual(snapshot);
   });
 
   test("throws when the encounter is not open", () => {
     const encounter = makeEncounter({ status: "missed" });
     expect(() =>
-      catchEncounter({ encounter, partyCount: 0, monId: "mon-1", details: catchDetails }),
+      catchEncounter({ encounter, party: [], monId: "mon-1", details: catchDetails }),
     ).toThrow(/not 'open'/);
   });
 
@@ -168,7 +219,7 @@ describe("catchEncounter", () => {
       moves: ["tackle", "growl", "vine-whip", "razor-leaf", "synthesis"],
     };
     expect(() =>
-      catchEncounter({ encounter, partyCount: 0, monId: "mon-1", details: tooManyMoves }),
+      catchEncounter({ encounter, party: [], monId: "mon-1", details: tooManyMoves }),
     ).toThrow(/4 moves/);
   });
 });
@@ -225,20 +276,42 @@ describe("moveMonToBox", () => {
 
 describe("moveMonToParty", () => {
   test("assigns the next free slot when the party has room", () => {
-    const mon = makeMon({ status: "box", partySlot: null });
-    const result = moveMonToParty({ mon, partyCount: 4 });
+    const mon = makeMon({ id: "boxed-mon", status: "box", partySlot: null });
+    const party = partyInSlots([0, 1, 2, 3]);
+    const result = moveMonToParty({ mon, party });
     expect(result.status).toBe("party");
     expect(result.partySlot).toBe(4);
   });
 
+  test("a gap in the party is reused: slots 0, 2, 3 occupied gets slot 1", () => {
+    const mon = makeMon({ id: "boxed-mon", status: "box", partySlot: null });
+    const party = partyInSlots([0, 2, 3]);
+    const result = moveMonToParty({ mon, party });
+    expect(result.status).toBe("party");
+    expect(result.partySlot).toBe(1);
+  });
+
   test("throws when the party is already full", () => {
-    const mon = makeMon({ status: "box", partySlot: null });
-    expect(() => moveMonToParty({ mon, partyCount: 6 })).toThrow(/cannot exceed 6/);
+    const mon = makeMon({ id: "boxed-mon", status: "box", partySlot: null });
+    const party = partyInSlots([0, 1, 2, 3, 4, 5]);
+    expect(() => moveMonToParty({ mon, party })).toThrow(/cannot exceed 6/);
+  });
+
+  test("re-slotting a mon already in the party does not have it block itself", () => {
+    // The party is "full" at 6, but one of those 6 is the mon being moved: excluding it should
+    // free exactly its own current slot rather than throwing.
+    const mon = makeMon({ id: "already-in-party", status: "party", partySlot: 2 });
+    const party = [...partyInSlots([0, 1, 3, 4, 5]), mon];
+
+    const result = moveMonToParty({ mon, party });
+
+    expect(result.status).toBe("party");
+    expect(result.partySlot).toBe(2);
   });
 
   test("throws on a dead mon", () => {
     const mon = makeMon({ status: "dead", partySlot: null });
-    expect(() => moveMonToParty({ mon, partyCount: 0 })).toThrow(/already dead/);
+    expect(() => moveMonToParty({ mon, party: [] })).toThrow(/already dead/);
   });
 });
 

@@ -29,6 +29,31 @@ function assertMonAlive(mon: Mon): void {
   }
 }
 
+/**
+ * Lowest unoccupied party slot, or null when all six are taken.
+ *
+ * A slot only counts as occupied when its mon is `status === 'party'` and holds a non-null
+ * `partySlot` — a boxed or dead mon that happens to carry a stale `partySlot` value must not
+ * reserve that index. Gaps are legitimate and persistent (PER-17 draws them as a fillable
+ * "empty · add from box" affordance): `killMon` frees a slot without compacting the survivors, so
+ * slot assignment must scan for the lowest free index rather than deriving it from a count.
+ */
+function nextFreeSlot(party: readonly Mon[], excludeMonId?: string): number | null {
+  const occupied = new Set(
+    party
+      .filter((mon) => mon.id !== excludeMonId && mon.status === "party" && mon.partySlot !== null)
+      .map((mon) => mon.partySlot),
+  );
+
+  for (let slot = 0; slot < MAX_PARTY_SIZE; slot++) {
+    if (!occupied.has(slot)) {
+      return slot;
+    }
+  }
+
+  return null;
+}
+
 // ---------------------------------------------------------------------------
 // catchEncounter
 // ---------------------------------------------------------------------------
@@ -47,12 +72,12 @@ export interface CatchDetails {
 
 export function catchEncounter({
   encounter,
-  partyCount,
+  party,
   monId,
   details,
 }: {
   encounter: Encounter;
-  partyCount: number;
+  party: readonly Mon[];
   monId: string;
   details: CatchDetails;
 }): { encounter: Encounter; mon: Draft<Mon> } {
@@ -72,7 +97,7 @@ export function catchEncounter({
     monId,
   };
 
-  const goesToParty = partyCount < MAX_PARTY_SIZE;
+  const slot = nextFreeSlot(party);
 
   const mon: Draft<Mon> = {
     id: monId,
@@ -88,8 +113,8 @@ export function catchEncounter({
     ability: details.ability,
     heldItem: details.heldItem,
     moves: details.moves,
-    status: goesToParty ? "party" : "box",
-    partySlot: goesToParty ? partyCount : null,
+    status: slot === null ? "box" : "party",
+    partySlot: slot,
     boxOrder: null,
     caughtRouteId: encounter.routeId,
   };
@@ -120,14 +145,16 @@ export function moveMonToBox(mon: Mon): Mon {
   return { ...mon, status: "box", partySlot: null };
 }
 
-export function moveMonToParty({ mon, partyCount }: { mon: Mon; partyCount: number }): Mon {
+export function moveMonToParty({ mon, party }: { mon: Mon; party: readonly Mon[] }): Mon {
   assertMonAlive(mon);
 
-  if (partyCount >= MAX_PARTY_SIZE) {
-    throw new Error(`Party cannot exceed ${MAX_PARTY_SIZE} mons (currently at ${partyCount}).`);
+  const slot = nextFreeSlot(party, mon.id);
+
+  if (slot === null) {
+    throw new Error(`Party cannot exceed ${MAX_PARTY_SIZE} mons (currently at ${MAX_PARTY_SIZE}).`);
   }
 
-  return { ...mon, status: "party", partySlot: partyCount };
+  return { ...mon, status: "party", partySlot: slot };
 }
 
 // ---------------------------------------------------------------------------
