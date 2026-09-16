@@ -83,6 +83,14 @@ const catchDetails: CatchDetails = {
   moves: ["tackle"],
 };
 
+const killDetails: KillDetails = {
+  level: 12,
+  routeId: "route-3",
+  cause: { type: "wild", species: "geodude", level: 11, move: "rock-throw" },
+  diedAt: "2026-09-17T01:00:00.000Z",
+  notes: null,
+};
+
 /** Builds a party of mons occupying exactly the given slots (in `'party'` status). */
 function partyInSlots(slots: number[]): Mon[] {
   return slots.map((slot) =>
@@ -92,7 +100,11 @@ function partyInSlots(slots: number[]): Mon[] {
 
 describe("catchEncounter", () => {
   test("moves the encounter to caught and links the new mon", () => {
-    const encounter = makeEncounter();
+    // speciesIdCaught/levelCaught/caughtRouteId are stamped at catch time and never recomputed —
+    // that's what lets a mon's current species/level diverge later (evolution, level-up) while
+    // still remembering what was actually caught. routeId is deliberately non-default here to
+    // prove caughtRouteId is read from the encounter, not hardcoded.
+    const encounter = makeEncounter({ routeId: "route-42" });
     const { encounter: result, mon } = catchEncounter({
       encounter,
       party: [],
@@ -104,7 +116,17 @@ describe("catchEncounter", () => {
     expect(result.speciesId).toBe("chikorita");
     expect(result.level).toBe(5);
     expect(result.monId).toBe("mon-1");
-    expect(mon.id).toBe("mon-1");
+
+    expect(mon).toMatchObject({
+      id: "mon-1",
+      speciesId: "chikorita",
+      speciesIdCaught: "chikorita",
+      level: 5,
+      levelCaught: 5,
+      status: "party",
+      partySlot: 0,
+      caughtRouteId: "route-42",
+    });
   });
 
   test("sends the mon to the party with the next free slot when party has room", () => {
@@ -175,43 +197,6 @@ describe("catchEncounter", () => {
     expect(mon.partySlot).toBe(1);
   });
 
-  test("sets speciesIdCaught and levelCaught to match the catch-time values", () => {
-    const { mon } = catchEncounter({
-      encounter: makeEncounter(),
-      party: [],
-      monId: "mon-1",
-      details: catchDetails,
-    });
-
-    expect(mon.speciesIdCaught).toBe(mon.speciesId);
-    expect(mon.levelCaught).toBe(mon.level);
-  });
-
-  test("stamps caughtRouteId from the encounter's routeId", () => {
-    const { mon } = catchEncounter({
-      encounter: makeEncounter({ routeId: "route-42" }),
-      party: [],
-      monId: "mon-1",
-      details: catchDetails,
-    });
-
-    expect(mon.caughtRouteId).toBe("route-42");
-  });
-
-  test("does not mutate the input encounter", () => {
-    const encounter = makeEncounter();
-    const snapshot = { ...encounter };
-    catchEncounter({ encounter, party: [], monId: "mon-1", details: catchDetails });
-    expect(encounter).toEqual(snapshot);
-  });
-
-  test("throws when the encounter is not open", () => {
-    const encounter = makeEncounter({ status: "missed" });
-    expect(() =>
-      catchEncounter({ encounter, party: [], monId: "mon-1", details: catchDetails }),
-    ).toThrow(/not 'open'/);
-  });
-
   test("throws when the catch details carry more than 4 moves", () => {
     const encounter = makeEncounter();
     const tooManyMoves: CatchDetails = {
@@ -224,32 +209,19 @@ describe("catchEncounter", () => {
   });
 });
 
-describe("missEncounter", () => {
-  test("marks an open encounter as missed", () => {
-    const result = missEncounter(makeEncounter());
-    expect(result.status).toBe("missed");
-  });
+describe("missEncounter / skipEncounter", () => {
+  const cases: {
+    label: string;
+    transition: (encounter: Encounter) => Encounter;
+    expected: Encounter["status"];
+  }[] = [
+    { label: "missEncounter", transition: missEncounter, expected: "missed" },
+    { label: "skipEncounter", transition: skipEncounter, expected: "skipped" },
+  ];
 
-  test("does not mutate the input", () => {
-    const encounter = makeEncounter();
-    const snapshot = { ...encounter };
-    missEncounter(encounter);
-    expect(encounter).toEqual(snapshot);
-  });
-
-  test("throws when the encounter is not open", () => {
-    expect(() => missEncounter(makeEncounter({ status: "caught" }))).toThrow(/not 'open'/);
-  });
-});
-
-describe("skipEncounter", () => {
-  test("marks an open encounter as skipped", () => {
-    const result = skipEncounter(makeEncounter());
-    expect(result.status).toBe("skipped");
-  });
-
-  test("throws when the encounter is not open", () => {
-    expect(() => skipEncounter(makeEncounter({ status: "skipped" }))).toThrow(/not 'open'/);
+  test.each(cases)("$label marks an open encounter as $expected", ({ transition, expected }) => {
+    const result = transition(makeEncounter());
+    expect(result.status).toBe(expected);
   });
 });
 
@@ -259,18 +231,6 @@ describe("moveMonToBox", () => {
     const result = moveMonToBox(mon);
     expect(result.status).toBe("box");
     expect(result.partySlot).toBeNull();
-  });
-
-  test("does not mutate the input", () => {
-    const mon = makeMon({ status: "party", partySlot: 2 });
-    const snapshot = { ...mon };
-    moveMonToBox(mon);
-    expect(mon).toEqual(snapshot);
-  });
-
-  test("throws on a dead mon", () => {
-    const mon = makeMon({ status: "dead", partySlot: null });
-    expect(() => moveMonToBox(mon)).toThrow(/already dead/);
   });
 });
 
@@ -308,22 +268,9 @@ describe("moveMonToParty", () => {
     expect(result.status).toBe("party");
     expect(result.partySlot).toBe(2);
   });
-
-  test("throws on a dead mon", () => {
-    const mon = makeMon({ status: "dead", partySlot: null });
-    expect(() => moveMonToParty({ mon, party: [] })).toThrow(/already dead/);
-  });
 });
 
 describe("killMon", () => {
-  const killDetails: KillDetails = {
-    level: 12,
-    routeId: "route-3",
-    cause: { type: "wild", species: "geodude", level: 11, move: "rock-throw" },
-    diedAt: "2026-09-17T01:00:00.000Z",
-    notes: null,
-  };
-
   test("marks a party mon dead and frees its slot", () => {
     const mon = makeMon({ status: "party", partySlot: 1 });
     const { mon: result, death } = killMon({ mon, deathId: "death-1", details: killDetails });
@@ -342,13 +289,6 @@ describe("killMon", () => {
     expect(result.partySlot).toBeNull();
   });
 
-  test("does not mutate the input mon", () => {
-    const mon = makeMon({ status: "party", partySlot: 1 });
-    const snapshot = { ...mon };
-    killMon({ mon, deathId: "death-1", details: killDetails });
-    expect(mon).toEqual(snapshot);
-  });
-
   test("throws on a mon that is already dead — there is no revive", () => {
     const mon = makeMon({ status: "dead", partySlot: null });
     expect(() => killMon({ mon, deathId: "death-3", details: killDetails })).toThrow(
@@ -365,17 +305,116 @@ describe("clearFight", () => {
     expect(result.clearedAt).toBe("2026-09-17T02:00:00.000Z");
   });
 
-  test("does not mutate the input", () => {
-    const fight = makeFight();
-    const snapshot = { ...fight };
-    clearFight({ fight, clearedAt: "2026-09-17T02:00:00.000Z" });
-    expect(fight).toEqual(snapshot);
-  });
-
   test("throws when the fight is already cleared", () => {
     const fight = makeFight({ status: "cleared", clearedAt: "2026-09-16T00:00:00.000Z" });
     expect(() => clearFight({ fight, clearedAt: "2026-09-17T02:00:00.000Z" })).toThrow(
       /not 'pending'/,
     );
+  });
+});
+
+describe("guard: encounter must be open", () => {
+  const cases: [string, (encounter: Encounter) => unknown][] = [
+    [
+      "catchEncounter",
+      (encounter) =>
+        catchEncounter({ encounter, party: [], monId: "mon-1", details: catchDetails }),
+    ],
+    ["missEncounter", (encounter) => missEncounter(encounter)],
+    ["skipEncounter", (encounter) => skipEncounter(encounter)],
+  ];
+
+  test.each(cases)("%s throws when the encounter is not open", (_label, run) => {
+    const encounter = makeEncounter({ status: "caught" });
+    expect(() => run(encounter)).toThrow(/not 'open'/);
+  });
+});
+
+describe("guard: mon must be alive", () => {
+  const cases: [string, (mon: Mon) => unknown][] = [
+    ["moveMonToBox", (mon) => moveMonToBox(mon)],
+    ["moveMonToParty", (mon) => moveMonToParty({ mon, party: [] })],
+  ];
+
+  test.each(cases)("%s throws on a dead mon", (_label, run) => {
+    const mon = makeMon({ status: "dead", partySlot: null });
+    expect(() => run(mon)).toThrow(/already dead/);
+  });
+});
+
+describe("input immutability", () => {
+  // Every transition returns a new object rather than mutating its input — this matters because a
+  // mutating transition would let the caller's existing reference change in place, which makes
+  // React state updates silently fail to re-render (the old and "new" object are the same
+  // reference, so a shallow equality check never sees a change).
+  const catchEncounterInput = makeEncounter();
+  const missEncounterInput = makeEncounter();
+  const skipEncounterInput = makeEncounter();
+  const moveMonToBoxInput = makeMon({ status: "party", partySlot: 2 });
+  const moveMonToPartyInput = makeMon({ id: "boxed-mon", status: "box", partySlot: null });
+  const killMonInput = makeMon({ status: "party", partySlot: 1 });
+  const clearFightInput = makeFight();
+
+  const cases: { label: string; input: object; run: () => void }[] = [
+    {
+      label: "catchEncounter",
+      input: catchEncounterInput,
+      run: () => {
+        catchEncounter({
+          encounter: catchEncounterInput,
+          party: [],
+          monId: "mon-1",
+          details: catchDetails,
+        });
+      },
+    },
+    {
+      label: "missEncounter",
+      input: missEncounterInput,
+      run: () => {
+        missEncounter(missEncounterInput);
+      },
+    },
+    {
+      label: "skipEncounter",
+      input: skipEncounterInput,
+      run: () => {
+        skipEncounter(skipEncounterInput);
+      },
+    },
+    {
+      label: "moveMonToBox",
+      input: moveMonToBoxInput,
+      run: () => {
+        moveMonToBox(moveMonToBoxInput);
+      },
+    },
+    {
+      label: "moveMonToParty",
+      input: moveMonToPartyInput,
+      run: () => {
+        moveMonToParty({ mon: moveMonToPartyInput, party: partyInSlots([0, 1, 2, 3]) });
+      },
+    },
+    {
+      label: "killMon",
+      input: killMonInput,
+      run: () => {
+        killMon({ mon: killMonInput, deathId: "death-1", details: killDetails });
+      },
+    },
+    {
+      label: "clearFight",
+      input: clearFightInput,
+      run: () => {
+        clearFight({ fight: clearFightInput, clearedAt: "2026-09-17T02:00:00.000Z" });
+      },
+    },
+  ];
+
+  test.each(cases)("$label does not mutate its input", ({ input, run }) => {
+    const snapshot = { ...input };
+    run();
+    expect(input).toEqual(snapshot);
   });
 });
