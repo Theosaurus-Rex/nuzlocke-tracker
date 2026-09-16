@@ -219,6 +219,35 @@ export function runAdapterContractTests(
         expect(second.createdAt).not.toBe("1999-01-01T00:00:00.000Z");
       });
 
+      it("ignores a supplied updatedAt on update, always stamping the current time", async () => {
+        // Mirrors the createdAt round-trip test above, for the other timestamp: import (PER-10)
+        // and the M6 migration both replay whole rows carrying their own old `updatedAt`, and
+        // every downstream merge/sync heuristic reads it. `adapter.ts` promises it is stamped on
+        // EVERY write "regardless of any `updatedAt` present on the draft" — prove the stale
+        // supplied value is discarded, not accepted because it happened to be unset.
+        const first = await adapter.runs.put(makeRunDraft({ id: "run-1" }));
+        await tick();
+        const second = await adapter.runs.put({
+          ...first,
+          updatedAt: "1999-01-01T00:00:00.000Z",
+          name: "Renamed Again",
+        });
+
+        expect(second.updatedAt).not.toBe("1999-01-01T00:00:00.000Z");
+        expect(second.updatedAt > first.updatedAt).toBe(true);
+      });
+
+      it("ignores a supplied updatedAt on insert, always stamping the current time", async () => {
+        // The insert half of the same promise: a brand-new id whose draft already carries a
+        // stale `updatedAt` (an imported row that has never touched this store before) must
+        // still be stamped fresh, not have the supplied value honoured.
+        const run = await adapter.runs.put(
+          makeRunDraft({ id: "run-imported", updatedAt: "1999-01-01T00:00:00.000Z" }),
+        );
+
+        expect(run.updatedAt).not.toBe("1999-01-01T00:00:00.000Z");
+      });
+
       it("is an upsert: putting the same id twice yields one row with the later values", async () => {
         await adapter.runs.put(makeRunDraft({ id: "run-1", name: "First Name" }));
         await adapter.runs.put(makeRunDraft({ id: "run-1", name: "Second Name" }));
