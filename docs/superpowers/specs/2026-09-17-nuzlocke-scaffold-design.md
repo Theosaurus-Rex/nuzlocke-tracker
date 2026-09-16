@@ -36,7 +36,7 @@ since moved on.
 |---|---|---|
 | Build | Vite 8 | |
 | UI | React 19 | |
-| Language | TypeScript 5, `strict` | |
+| Language | TypeScript 6, `strict` | Not 7 — see below |
 | Routing | React Router 8, declarative mode | Not framework mode. No loaders, no `route.ts` |
 | Styling | Tailwind 4 | CSS-first `@theme`, no `tailwind.config.js` |
 | Components | shadcn/ui (CLI 4) | |
@@ -46,6 +46,13 @@ since moved on.
 | Package manager | pnpm 9 | |
 | Lint / format | ESLint flat config + Prettier | |
 | Test | Vitest 5 + React Testing Library | `fake-indexeddb` for adapter tests |
+
+**TypeScript is pinned to 6.0.x, deliberately below `latest`.** TypeScript 7 (7.0.2) is the
+current release, but `typescript-eslint` 8.70 declares `typescript: ">=4.8.4 <6.1.0"`, so
+adopting 7 would leave the project with no type-aware linting — and the storage-boundary rule in
+§3 is the thing that enforces hard rule 1. 6.0.x is the newest version inside that range and is
+what `create-vite` itself pins. Revisit when `typescript-eslint` widens its peer range; the
+upgrade should be a version bump and nothing else.
 
 React Router is at v8; v7 is a year old. v8's declarative mode is the same API surface that was
 approved — `createBrowserRouter` with plain route objects — so this is a version bump, not a
