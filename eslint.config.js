@@ -59,6 +59,15 @@ export default tseslint.config(
     },
   },
   {
+    // storage-context.tsx co-locates `StorageProvider` with the `useStorage` hook that reads it
+    // by design (spec section 3): the pairing is the point, not something to split into two
+    // files just to satisfy fast-refresh's one-component-per-file heuristic.
+    files: ["src/storage/storage-context.tsx"],
+    rules: {
+      "react-refresh/only-export-components": ["error", { allowExportNames: ["useStorage"] }],
+    },
+  },
+  {
     // shadcn/ui generates components that co-locate a cva() variants helper next
     // to the component export (e.g. `export { Button, buttonVariants }`). That is
     // upstream, regenerated-by-CLI code, not an app fast-refresh boundary.
