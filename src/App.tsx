@@ -1,4 +1,4 @@
-import { Button } from '@/components/ui/button'
+import { Button } from "@/components/ui/button";
 
 function App() {
   return (
@@ -6,7 +6,7 @@ function App() {
       <span>Nuzlocke Tracker</span>
       <Button>Hello</Button>
     </div>
-  )
+  );
 }
 
-export default App
+export default App;

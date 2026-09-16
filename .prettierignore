@@ -1,0 +1,7 @@
+dist
+coverage
+pnpm-lock.yaml
+
+# Prose is hand-authored. Prettier realigns tables and rewrites
+# emphasis markers, producing large diffs for no content change.
+*.md
