@@ -170,13 +170,53 @@ export function runAdapterContractTests(
         expect(run.id).toBe("run-fixed-id");
       });
 
-      it("stamps updatedAt on write, changes it on a later write, and preserves createdAt", async () => {
+      it("stamps updatedAt on write and recovers createdAt from the stored row when the update draft carries no timestamps", async () => {
+        // `src/domain/transitions.ts` returns `Draft<T>` with an `id` and NO timestamps — this
+        // is the path the app actually takes on every write after the first. Spreading a full
+        // returned row here (`{ ...first }`) would let the draft carry `createdAt` itself and
+        // pass even if the adapter never consulted the stored row, so this deliberately does not.
         const first = await adapter.runs.put(makeRunDraft({ id: "run-1" }));
         await tick();
-        const second = await adapter.runs.put({ ...first, name: "Renamed Run" });
+        const second = await adapter.runs.put({
+          id: "run-1",
+          ...makeRunDraft({ name: "Renamed Run" }),
+        });
 
         expect(second.createdAt).toBe(first.createdAt);
         expect(second.updatedAt > first.updatedAt).toBe(true);
+        expect(second.name).toBe("Renamed Run");
+      });
+
+      it("recovers createdAt from the stored row for mons, matching what catchEncounter actually returns", async () => {
+        // Same shape of regression, exercised on the other table where a `Draft<Mon>` with no
+        // timestamps is the real production path (`catchEncounter` in transitions.ts).
+        const run = await adapter.runs.put(makeRunDraft());
+        const first = await adapter.mons.put(makeMonDraft(run.id, { id: "mon-1" }));
+        await tick();
+        const second = await adapter.mons.put({
+          id: "mon-1",
+          ...makeMonDraft(run.id, { level: 6 }),
+        });
+
+        expect(second.createdAt).toBe(first.createdAt);
+        expect(second.updatedAt > first.updatedAt).toBe(true);
+        expect(second.level).toBe(6);
+      });
+
+      it("ignores a supplied createdAt on update, preserving the stored row's original", async () => {
+        // The round-trip path: a caller supplies a full row, including `createdAt`, on an
+        // update. `adapter.ts` promises the stored row's original always wins; use a
+        // deliberately wrong value to prove it is discarded rather than accepted by coincidence.
+        const first = await adapter.runs.put(makeRunDraft({ id: "run-1" }));
+        await tick();
+        const second = await adapter.runs.put({
+          ...first,
+          createdAt: "1999-01-01T00:00:00.000Z",
+          name: "Renamed Again",
+        });
+
+        expect(second.createdAt).toBe(first.createdAt);
+        expect(second.createdAt).not.toBe("1999-01-01T00:00:00.000Z");
       });
 
       it("is an upsert: putting the same id twice yields one row with the later values", async () => {
