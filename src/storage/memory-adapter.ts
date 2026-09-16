@@ -87,6 +87,15 @@ function createRepository<T extends Timestamped, TIndexed extends keyof T>(
       return Promise.resolve(Array.from(table.values()));
     },
     where(field, value) {
+      if (value === null || value === undefined) {
+        return Promise.reject(
+          new Error(
+            `where("${String(field)}", ${String(value)}) is not supported: IndexedDB cannot ` +
+              "index null values, so a nullable field can't be queried through where(). Use a " +
+              "named adapter method instead (see deathsByFight).",
+          ),
+        );
+      }
       return Promise.resolve(Array.from(table.values()).filter((row) => row[field] === value));
     },
     put,

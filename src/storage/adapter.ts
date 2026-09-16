@@ -53,6 +53,13 @@ export type FightIndexedKey = "id" | "runId" | "status";
 export interface Repository<T extends Timestamped, TIndexed extends keyof T> {
   get(id: string): Promise<T | undefined>;
   getAll(): Promise<T[]>;
+  /**
+   * Equality match on an indexed field. Rejects with an Error when `value` is `null` or
+   * `undefined`, rather than matching rows whose field holds that value: IndexedDB cannot index
+   * `null`, so a Dexie-backed adapter and an in-memory one would otherwise silently disagree
+   * about what `where(field, null)` returns. Query a nullable field through a named adapter
+   * method instead (see `deathsByFight`).
+   */
   where<K extends TIndexed>(field: K, value: T[K]): Promise<T[]>;
   put(record: Draft<T>): Promise<T>;
   putMany(records: Draft<T>[]): Promise<T[]>;

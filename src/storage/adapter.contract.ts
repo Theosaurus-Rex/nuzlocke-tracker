@@ -326,6 +326,17 @@ export function runAdapterContractTests(
 
         expect(await adapter.mons.where("runId", "no-such-run")).toEqual([]);
       });
+
+      it("rejects null on an indexed nullable field: IndexedDB cannot index null", async () => {
+        // Both implementations must agree here. The in-memory adapter could otherwise happily
+        // match rows whose field is null, while IndexedDB simply never indexes them — two
+        // "implementations of one interface" quietly disagreeing is exactly what this suite
+        // exists to catch.
+        const run = await adapter.runs.put(makeRunDraft());
+        await adapter.mons.put(makeMonDraft(run.id, { encounterId: null }));
+
+        await expect(adapter.mons.where("encounterId", null)).rejects.toThrow(/null/i);
+      });
     });
 
     describe("transaction", () => {
