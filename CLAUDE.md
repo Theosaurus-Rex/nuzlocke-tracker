@@ -3,8 +3,10 @@
 A personal Pokémon Nuzlocke run tracker. Web app first, installable mobile app later.
 Single user — there is no multi-user story and no plan for one.
 
-**Status: pre-implementation.** No code yet. Once the app is scaffolded, add build/test/lint
-commands to a "Commands" section here.
+**Status: M0 in progress.** Scaffolded and building — Vite/React/TS, Tailwind, shadcn/ui, and
+the lint/test harness are in. The data model, storage adapter and app shell are next. See
+`docs/superpowers/specs/2026-09-17-nuzlocke-scaffold-design.md` for the design this is built to;
+it is the source of truth for table shapes and the adapter interface.
 
 Source design: Claude Design project `52583f86-cc91-43e2-b2f3-b592e7fcec36`
 ("Nuzlocke Tracker Wireframes") — 10 screens, each drawn for desktop sidebar and mobile
@@ -13,6 +15,31 @@ Patrick Hand / sketch-border styling as the intended visual direction.
 
 Backlog, milestones and dependency order:
 https://claude.ai/code/artifact/18a760bb-38e5-4834-98f6-348d08002270
+
+---
+
+## Commands
+
+pnpm only. `packageManager` is pinned, so use corepack rather than a global pnpm if they differ.
+
+| Command | Does |
+|---|---|
+| `pnpm dev` | Vite dev server |
+| `pnpm build` | `tsc -b` then `vite build` — typecheck is part of the build |
+| `pnpm preview` | Serve the production build |
+| `pnpm typecheck` | Types only, no emit |
+| `pnpm lint` | ESLint, including the storage-boundary rule |
+| `pnpm lint:fix` | ESLint with `--fix` |
+| `pnpm format` / `pnpm format:check` | Prettier write / verify |
+| `pnpm test` | Vitest once |
+| `pnpm test:watch` | Vitest in watch mode |
+| `pnpm test:coverage` | Vitest with v8 coverage |
+
+**The gate before any commit is `pnpm lint && pnpm typecheck && pnpm test && pnpm build`.**
+Every commit in the history so far passes all four.
+
+Prettier does not touch Markdown — `*.md` is in `.prettierignore`. Prose here is hand-authored,
+and Prettier realigns tables and rewrites emphasis markers for no content change.
 
 ---
 
@@ -30,6 +57,27 @@ https://claude.ai/code/artifact/18a760bb-38e5-4834-98f6-348d08002270
 
 If you think one of these needs revisiting, say so once with your reasoning and move on.
 Do not quietly introduce an alternative.
+
+### Versions as built
+
+The table above records the decisions; these are the facts as installed. None of them reopen a
+decision — check `package.json` before quoting a version from memory, as several of these moved
+between the table being written and the code being built.
+
+| Thing | Installed | Note |
+|---|---|---|
+| Vite / React | 8 · 19 | |
+| TypeScript | **6.0.x, pinned below latest** | 7 is current, but `typescript-eslint` peers `<6.1.0`. Adopting 7 would lose type-aware linting, which is what enforces hard rule 1. Revisit when that peer range widens. |
+| React Router | 8, declarative mode | *not* framework mode — no loaders, no `route.ts` |
+| Tailwind | 4, via `@tailwindcss/vite` | CSS-first. There is no `tailwind.config.js` and should not be |
+| shadcn/ui | CLI 4, `base-nova`, neutral | Now ships **Base UI** (`@base-ui/react`), *not* Radix |
+| `cn()` | the `cn` package | Replaces hand-rolled `clsx` + `tailwind-merge`; `src/lib/utils.ts` just re-exports it |
+| dnd-kit | not installed | Arrives at M3. Check `@dnd-kit/sortable` 10.x peers `core` 6.x before pinning — the two version independently, and the "v6 line" rule means `core` |
+
+The shadcn CLI reads path aliases from `tsconfig.json` only, but the Vite template splits
+tsconfigs. `@/` is therefore declared in **both** `tsconfig.json` and `tsconfig.app.json`. Keep
+them in sync. Do not add `baseUrl` to either — it is deprecated in TS 6 and removed in TS 7;
+`paths` resolves relative to the tsconfig's own directory.
 
 ### Why no backend
 
@@ -51,11 +99,26 @@ sync is wanted in V2, evaluate InstantDB or Dexie Cloud, not a Postgres backend.
 **1. Storage goes behind an adapter interface.** Nothing outside the storage layer touches
 Dexie directly. M6 swaps in native SQLite by implementing the same interface.
 
+> Enforced, not merely agreed: `no-restricted-imports` in `eslint.config.js` bans `dexie` and
+> `dexie-react-hooks` everywhere except `src/storage/**`, so a breach fails `pnpm lint`. The
+> adapter interface also exposes no Dexie-only capability — no `liveQuery`, no observables —
+> because native SQLite has no equivalent. Reactivity is TanStack Query's job, over the adapter.
+> Components import hooks from `@/storage/queries` and never see the adapter itself.
+
 **2. UUID-keyed flat tables per aggregate** — `runs`, `encounters`, `mons`, `deaths`,
 `fights`. Never autoincrement keys. Every record carries its own `updatedAt`.
 
+> As built this is six tables: the five above plus `routes`, which is per-run rather than global
+> so that custom routes and reordering have somewhere to live and a run stays self-contained for
+> export. There is deliberately no `fightAttempts` table — a fight is pending or cleared, and its
+> casualties are `deaths` whose `cause.fightId` points at it.
+
 **3. Never model a run as one nested JSON blob.** This is the obvious V1 shortcut and it
 forces a full re-model before any sync tool can be adopted. Row-shaped data or nothing.
+
+> A value object on an already-keyed row is not this. `runs.rules` and `deaths.cause` are both
+> embedded objects: fixed-shape, no identity of their own, never queried independently. What the
+> rule protects against is a run's *encounters, mons and deaths* living inside one document.
 
 **4. The export format carries `schemaVersion`** from the first commit.
 

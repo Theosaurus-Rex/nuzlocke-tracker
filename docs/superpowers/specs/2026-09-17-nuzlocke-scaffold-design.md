@@ -455,14 +455,14 @@ Each commit leaves the repo green — `pnpm lint && pnpm test && pnpm build` pas
 | 2 | `chore: scaffold vite, react and typescript` | — |
 | 3 | `chore: add tailwind and shadcn/ui` | PER-12 |
 | 4 | `chore: add eslint, prettier and vitest` | — |
-| 5 | `feat: define the data model and export schema` | PER-5 |
-| 6 | `feat: add storage adapter interface and contract tests` | PER-9 |
-| 7 | `feat: implement the dexie storage adapter` | PER-9 |
-| 8 | `feat: add tanstack query layer over the adapter` | PER-9 |
-| 9 | `feat: add app shell with sidebar and tab bar` | PER-11 |
-| 10 | `docs: record build commands in CLAUDE.md` | — |
+| 5 | `docs: update CLAUDE.md for the scaffolded state` | — |
+| 6 | `feat: define the data model and export schema` | PER-5 |
+| 7 | `feat: add storage adapter interface and contract tests` | PER-9 |
+| 8 | `feat: implement the dexie storage adapter` | PER-9 |
+| 9 | `feat: add tanstack query layer over the adapter` | PER-9 |
+| 10 | `feat: add app shell with sidebar and tab bar` | PER-11 |
 
-Commit 6 lands the contract suite before any implementation exists, so the tests fail first and
+Commit 7 lands the contract suite before any implementation exists, so the tests fail first and
 the Dexie implementation in commit 7 is what makes them pass.
 
 ## 12. Open questions carried forward
