@@ -12,7 +12,7 @@
 
 import { describe, it, expect, beforeEach } from "vitest";
 
-import type { Draft, Run, Route, Encounter, Mon, Death, Fight } from "@/domain/types";
+import type { Draft, Run, Route, Encounter, Mon, Death, Fight, Cause } from "@/domain/types";
 import { SCHEMA_VERSION, isExportBundle } from "@/domain/schema";
 
 import type { StorageAdapter } from "./adapter";
@@ -480,6 +480,38 @@ export function runAdapterContractTests(
         );
 
         expect(await adapter.deathsByFight("fight-404")).toEqual([]);
+      });
+
+      it("excludes a non-trainer cause carrying a stray fightId, as a malformed JSON import could produce", async () => {
+        // `Cause`'s type system forbids `fightId` outside the `trainer` variant, so this row
+        // cannot arise from any write path this app makes today. But `isExportBundle` (see
+        // domain/schema.ts) validates only the export envelope, not individual rows, and PER-10
+        // (JSON import) hands the adapter whatever a user's file contains — hand-edited, or
+        // written by an older schema. The cast below deliberately reproduces exactly that: data
+        // the type system says cannot exist, but that a real import can still put in front of
+        // this method. Without the `cause.type === 'trainer'` filter, the sparse `cause.fightId`
+        // index would match this row and report a poison death as a casualty of the named fight.
+        const run = await adapter.runs.put(makeRunDraft());
+
+        const matching = await adapter.deaths.put(
+          makeDeathDraft(run.id, "mon-1", {
+            cause: {
+              type: "trainer",
+              fightId: "fight-1",
+              trainerName: null,
+              species: "spearow",
+              level: 12,
+              move: "Peck",
+            },
+          }),
+        );
+        await adapter.deaths.put(
+          makeDeathDraft(run.id, "mon-2", {
+            cause: { type: "status", status: "poison", fightId: "fight-1" } as unknown as Cause,
+          }),
+        );
+
+        expect(await adapter.deathsByFight("fight-1")).toEqual([matching]);
       });
     });
   });
