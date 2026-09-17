@@ -1,103 +1,135 @@
 import { describe, expect, test } from "vitest";
 
 import { abilities } from "@/game/data/pokedex/abilities";
-import { learnsets } from "@/game/data/pokedex/learnsets";
 import { moves } from "@/game/data/pokedex/moves";
 import { natures } from "@/game/data/pokedex/natures";
 import { species } from "@/game/data/pokedex/species";
-import { getEvolutions, getLearnset, getSpecies, searchSpecies } from "@/game/pokedex";
+import { getEvolutions, getSpecies, pokedexFor, searchSpecies } from "@/game/pokedex";
 
-describe("Gen 4 guarantee: no Fairy type anywhere", () => {
-  test("no species has a Fairy type", () => {
-    const fairyMons = species.filter((s) => s.types.some((t) => (t as string) === "fairy"));
-    expect(fairyMons).toEqual([]);
-  });
+describe("per-generation type resolution: the Gen 6 Fairy retcons", () => {
+  // Fairy was added in Gen 6; PokeAPI's past_types confirms each of these was some other type
+  // through Gen 5. Sources: Bulbapedia's per-species type history, cross-checked against the
+  // cached PokeAPI pokemon/{id}.past_types response used to generate species.ts.
+  const retcons: { name: string; before: string[]; after: string[] }[] = [
+    { name: "clefairy", before: ["normal"], after: ["fairy"] },
+    { name: "togepi", before: ["normal"], after: ["fairy"] },
+    { name: "marill", before: ["water"], after: ["water", "fairy"] },
+    { name: "jigglypuff", before: ["normal"], after: ["normal", "fairy"] },
+  ];
 
-  test("no move is Fairy type", () => {
-    const fairyMoves = moves.filter((m) => (m.type as string) === "fairy");
-    expect(fairyMoves).toEqual([]);
-  });
-});
+  for (const { name, before, after } of retcons) {
+    test(`${name} resolves to ${before.join("/")} at generation 4`, () => {
+      const s = species.find((sp) => sp.name === name);
+      expect(s).toBeDefined();
+      expect(pokedexFor(4).typesOf(s?.id ?? -1)).toEqual(before);
+    });
 
-describe("Gen 4 typing spot-checks: species that changed type in later generations", () => {
-  function typesOf(name: string): string[] | undefined {
-    return species.find((s) => s.name === name)?.types;
+    test(`${name} resolves to ${after.join("/")} at generation 6 and generation 9`, () => {
+      const s = species.find((sp) => sp.name === name);
+      expect(s).toBeDefined();
+      expect(pokedexFor(6).typesOf(s?.id ?? -1)).toEqual(after);
+      expect(pokedexFor(9).typesOf(s?.id ?? -1)).toEqual(after);
+    });
   }
-
-  test("Clefairy is Normal, not Fairy", () => {
-    expect(typesOf("clefairy")).toEqual(["normal"]);
-  });
-
-  test("Togepi is Normal, not Fairy", () => {
-    expect(typesOf("togepi")).toEqual(["normal"]);
-  });
-
-  test("Marill is Water, not Water/Fairy", () => {
-    expect(typesOf("marill")).toEqual(["water"]);
-  });
 });
 
-describe("Gen 4 typing spot-checks: species whose type never changed (control)", () => {
-  function typesOf(name: string): string[] | undefined {
-    return species.find((s) => s.name === name)?.types;
+describe("per-generation type resolution: species whose type never changed (control)", () => {
+  const stable: { name: string; types: string[] }[] = [
+    { name: "pikachu", types: ["electric"] },
+    { name: "gyarados", types: ["water", "flying"] },
+  ];
+
+  for (const { name, types } of stable) {
+    test(`${name} resolves to ${types.join("/")} at every generation 1-9`, () => {
+      const s = species.find((sp) => sp.name === name);
+      expect(s).toBeDefined();
+      for (let gen = 1; gen <= 9; gen++) {
+        expect(pokedexFor(gen).typesOf(s?.id ?? -1)).toEqual(types);
+      }
+    });
   }
+});
 
-  test("Pikachu is Electric", () => {
-    expect(typesOf("pikachu")).toEqual(["electric"]);
-  });
+describe("Gen 4 guarantee, expressed as a property of resolution: no species that EXISTED at generation 4 or earlier resolves to Fairy", () => {
+  // Scoped to species introduced at or before the target generation: a species introduced in
+  // Gen 6+ that has been Fairy since its debut (Sylveon, Flabebe, ...) legitimately has no
+  // earlier typing to fall back to and correctly resolves to Fairy at any generation — that is
+  // the "introduced after the target generation" fallback, not a bug. What must never happen is
+  // a species that DID exist at the target generation resolving to Fairy, which is exactly what
+  // would happen if a retcon's pastTypes entry were ever dropped (e.g. Clefairy losing its
+  // { throughGeneration: 5, types: ["normal"] } entry) — this is what this test actually catches.
+  for (const gen of [1, 2, 3, 4]) {
+    test(`generation ${String(gen)}`, () => {
+      const fairyMons = species
+        .filter((s) => s.introducedInGeneration <= gen)
+        .filter((s) => pokedexFor(gen).typesOf(s.id)?.includes("fairy"));
+      expect(fairyMons.map((s) => s.name)).toEqual([]);
+    });
+  }
+});
 
-  test("Gyarados is Water/Flying", () => {
-    expect(typesOf("gyarados")).toEqual(["water", "flying"]);
-  });
-
-  test("Steelix is Steel/Ground", () => {
-    expect(typesOf("steelix")).toEqual(["steel", "ground"]);
+describe("a species introduced after the target generation resolves without throwing", () => {
+  test("a Gen 9 species resolves fine when targeting Gen 4 (normal for a randomiser/romhack)", () => {
+    const gen9Species = species.filter((s) => s.introducedInGeneration === 9);
+    expect(gen9Species.length).toBeGreaterThan(0);
+    for (const s of gen9Species) {
+      expect(() => pokedexFor(4).typesOf(s.id)).not.toThrow();
+      expect(pokedexFor(4).typesOf(s.id)).toEqual(s.types);
+    }
   });
 });
 
-describe("species table shape", () => {
-  test("has exactly 493 species", () => {
-    expect(species.length).toBe(493);
-  });
-
-  test("ids are contiguous from 1 to 493", () => {
-    const ids = species.map((s) => s.id).toSorted((a, b) => a - b);
-    expect(ids).toEqual(Array.from({ length: 493 }, (_, i) => i + 1));
+describe("searchSpecies is unfiltered by generation", () => {
+  test("a Gen 9 species is findable even though the run is Gen 4", () => {
+    // sprigatito: introduced Gen 9, a starter with a stable, well-known name.
+    const results = searchSpecies("sprigatito");
+    expect(results.map((s) => s.name)).toContain("sprigatito");
+    expect(results.find((s) => s.name === "sprigatito")?.introducedInGeneration).toBe(9);
   });
 });
 
-describe("past_values resolution: move stats are Gen 4 (HeartGold/SoulSilver), not present-day", () => {
+describe("per-generation move stat resolution: power/accuracy/pp/type are not present-day", () => {
   // Sources (Bulbapedia, checked against the cached PokeAPI move/{id} response used to generate
   // moves.ts):
   //   https://bulbapedia.bulbagarden.net/wiki/Vine_Whip_(move)
   //   https://bulbapedia.bulbagarden.net/wiki/Tackle_(move)
   //   https://bulbapedia.bulbagarden.net/wiki/Bite_(move)
 
-  test("Vine Whip is power 35 / pp 15 in Gen 4 — a mid-generation change, not just a generation boundary", () => {
-    // PokeAPI's move/22.past_values has two entries: one tagged diamond-pearl (pp: 10, the
-    // Gen 1-3 value — diamond-pearl is Gen 4's own first version group, so this does NOT cover
-    // our target) and one tagged x-y (power: 35, pp: 15 — this DOES cover heartgold-soulsilver,
-    // since x-y is chronologically after it). The current top-level value (power 45 / pp 25) is
-    // the Gen 6+ value and must NOT leak into Gen 4.
+  test("Vine Whip is power 35 / pp 15 at generation 4 — a mid-generation change, not just a generation boundary", () => {
     const vineWhip = moves.find((m) => m.name === "vine-whip");
-    expect(vineWhip?.power).toBe(35);
-    expect(vineWhip?.accuracy).toBe(100);
-    expect(vineWhip?.pp).toBe(15);
+    expect(vineWhip).toBeDefined();
+    const resolved = pokedexFor(4).statsOf(vineWhip?.id ?? -1);
+    expect(resolved?.power).toBe(35);
+    expect(resolved?.accuracy).toBe(100);
+    expect(resolved?.pp).toBe(15);
   });
 
-  test("Tackle is power 35 / accuracy 95 in Gen 4, not the modern power 40 / accuracy 100", () => {
+  test("Vine Whip is power 45 / pp 25 at generation 9 (the present-day value, not Gen 4's)", () => {
+    const vineWhip = moves.find((m) => m.name === "vine-whip");
+    expect(vineWhip).toBeDefined();
+    const resolved = pokedexFor(9).statsOf(vineWhip?.id ?? -1);
+    expect(resolved?.power).toBe(45);
+    expect(resolved?.accuracy).toBe(100);
+    expect(resolved?.pp).toBe(25);
+  });
+
+  test("Tackle is power 35 / accuracy 95 at generation 4, not the modern power 40 / accuracy 100", () => {
     const tackle = moves.find((m) => m.name === "tackle");
-    expect(tackle?.power).toBe(35);
-    expect(tackle?.accuracy).toBe(95);
-    expect(tackle?.pp).toBe(35);
+    expect(tackle).toBeDefined();
+    const resolved = pokedexFor(4).statsOf(tackle?.id ?? -1);
+    expect(resolved?.power).toBe(35);
+    expect(resolved?.accuracy).toBe(95);
+    expect(resolved?.pp).toBe(35);
   });
 
-  test("Bite is Dark-type (not its Gen 1 Normal type) with unchanged power/accuracy/pp", () => {
+  test("Bite is Dark-type (not its Gen 1 Normal type) at generation 4, with unchanged power/accuracy/pp", () => {
     const bite = moves.find((m) => m.name === "bite");
-    expect(bite?.type).toBe("dark");
-    expect(bite?.power).toBe(60);
-    expect(bite?.accuracy).toBe(100);
-    expect(bite?.pp).toBe(25);
+    expect(bite).toBeDefined();
+    const resolved = pokedexFor(4).statsOf(bite?.id ?? -1);
+    expect(resolved?.type).toBe("dark");
+    expect(resolved?.power).toBe(60);
+    expect(resolved?.accuracy).toBe(100);
+    expect(resolved?.pp).toBe(25);
   });
 });
 
@@ -112,6 +144,28 @@ describe("damage class is per-move, not per-type (the Gen 4 physical/special spl
     const hyperBeam = moves.find((m) => m.name === "hyper-beam");
     expect(hyperBeam?.type).toBe("normal");
     expect(hyperBeam?.damageClass).toBe("special");
+  });
+});
+
+describe("species table shape", () => {
+  test("has every national dex species (1025 as of this generator run)", () => {
+    expect(species.length).toBe(1025);
+  });
+
+  test("ids are contiguous from 1 to the species count", () => {
+    const ids = species.map((s) => s.id).toSorted((a, b) => a - b);
+    expect(ids).toEqual(Array.from({ length: species.length }, (_, i) => i + 1));
+  });
+});
+
+describe("move table shape", () => {
+  test("ids are contiguous from 1 to the move count (the National Move Dex, Shadow moves excluded)", () => {
+    const ids = moves.map((m) => m.id).toSorted((a, b) => a - b);
+    expect(ids).toEqual(Array.from({ length: moves.length }, (_, i) => i + 1));
+  });
+
+  test("every move id is unique", () => {
+    expect(new Set(moves.map((m) => m.id)).size).toBe(moves.length);
   });
 });
 
@@ -156,23 +210,10 @@ describe("evolution links resolve", () => {
 describe("cross-references", () => {
   test("every ability referenced by a species exists in abilities.ts", () => {
     const abilityNames = new Set(abilities.map((a) => a.name));
-    const missing = species.flatMap((s) => s.abilities.filter((a) => !abilityNames.has(a)));
-    expect(missing).toEqual([]);
-  });
-
-  test("every move in a learnset exists in moves.ts", () => {
-    const moveIds = new Set(moves.map((m) => m.id));
-    const missing = Object.values(learnsets).flatMap((rows) =>
-      rows.filter((r) => !moveIds.has(r.moveId)).map((r) => r.moveId),
+    const missing = species.flatMap((s) =>
+      s.abilities.filter((a) => !abilityNames.has(a.name)).map((a) => a.name),
     );
     expect(missing).toEqual([]);
-  });
-
-  test("getLearnset resolves for a real species and is empty for an unknown id", () => {
-    const chikorita = species.find((s) => s.name === "chikorita");
-    expect(chikorita).toBeDefined();
-    expect(getLearnset(chikorita?.id ?? -1).length).toBeGreaterThan(0);
-    expect(getLearnset(999_999)).toEqual([]);
   });
 });
 

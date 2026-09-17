@@ -1,11 +1,11 @@
 /**
- * Generator for the Gen 4 (National Dex 1-493) pokedex data: species, moves, abilities and
- * evolution links, for HeartGold/SoulSilver specifically.
+ * Generator for the pokedex data: species, moves, abilities, items and evolution links across
+ * every Pokemon generation (National Dex, currently 1-1025) plus hidden abilities (Gen 5+).
  *
- * Source: PokeAPI (https://pokeapi.co/), free and unauthenticated. This script fetches ~2000
- * resources across species/moves/abilities/evolution-chains/items, so it is polite about it:
- * every response is cached to disk (see CACHE_DIR below) and re-read on rerun, and requests are
- * throttled to a modest concurrency rather than fired all at once.
+ * Source: PokeAPI (https://pokeapi.co/), free and unauthenticated. This script fetches several
+ * thousand resources across species/moves/abilities/evolution-chains/items/version-groups, so
+ * it is polite about it: every response is cached to disk (see CACHE_DIR below) and re-read on
+ * rerun, and requests are throttled to a modest concurrency rather than fired all at once.
  *
  * This script does NOT run at build or test time — the emitted modules under
  * src/game/data/pokedex/ are what ships (see CLAUDE.md "Why no backend" and the architectural
@@ -18,51 +18,53 @@
  * is never committed (see .gitignore) — only the generated src/game/data/pokedex/*.ts files are.
  *
  * ---------------------------------------------------------------------------------------------
- * THE TRAP: PokeAPI serves PRESENT-DAY values by default, not Gen 4 values.
+ * THE TRAP: PokeAPI serves PRESENT-DAY values by default, not the value for any particular gen.
  * ---------------------------------------------------------------------------------------------
- * This app is Gen 4 only (HeartGold/SoulSilver). Two fields need historical resolution:
+ * Pickers are free-text across all generations (a randomiser or romhack can put anything
+ * anywhere — see CLAUDE.md "Game data"), so this dataset does not collapse to one target
+ * generation the way the original Gen 4-only extraction did. Instead, the FULL history is kept
+ * in the emitted data and resolved at read time by src/game/pokedex.ts `pokedexFor(generation)`.
+ * This file's job is just to get that history out of PokeAPI's two different tagging schemes and
+ * into one consistent "valid through generation N" shape:
  *
  * - Pokemon `types` / `past_types`: a `past_types` entry is tagged with a `generation` and
  *   means "the type was THIS, for this generation and every earlier one; it changes starting
  *   the next recorded generation (or the top-level current value, if this is the last entry)".
  *   Confirmed against Clefairy: past_types has one entry tagged generation-v (Normal), and
  *   Clefairy is genuinely Normal through Gen 5, Fairy from Gen 6 (Fairy didn't exist before
- *   then) — so "generation tag N, value V" = "V applies for generation <= N".
- *   To resolve Gen 4: take the earliest past_types entry with generation >= 4; if none, use
- *   the current top-level types.
+ *   then) — so "generation tag N, value V" = "V applies for generation <= N". This is already
+ *   the exact shape we want to emit (see PastTypes in ./types.ts): copy straight across as
+ *   `{ throughGeneration: N, types: V }`, sorted ascending.
  *
  * - Move `power`/`accuracy`/`pp`/`type` / `past_values`: a `past_values` entry is tagged with a
  *   `version_group` and means the OPPOSITE direction: "value V applied for every version group
  *   strictly BEFORE this tag; starting at this tag, the value has already changed to whatever
- *   the next entry (or the current top-level value) says." Confirmed against two known-history
- *   moves (see scratch notes / PR description): Bite (Normal pre-Gen 2, Dark from Gold/Silver
- *   itself onward — the tag's own version group already carries the new value) and Tackle
- *   (power 35/accuracy 95 through Gen 4, tagged at Black/White; power 40/accuracy 100 from
- *   Generation VII onward, tagged at Sun/Moon — both match Bulbapedia's documented history
- *   exactly under this rule).
- *   To resolve our target (HeartGold/SoulSilver, generation 4, version_group id looked up by
- *   name below): among past_values entries whose (generation, version_group id) is strictly
- *   AFTER heartgold-soulsilver, take the earliest one; for each field, if it's null there, keep
- *   walking later qualifying entries; if none ever specify it, use the current top-level value.
+ *   the next entry (or the current top-level value) says." To get this into the same
+ *   "throughGeneration" shape as past_types, each entry is converted to
+ *   `throughGeneration = generationOf(taggedVersionGroup) - 1` — i.e. "the old value is only
+ *   GUARANTEED to hold through the generation before the tag's own". This deliberately collapses
+ *   to whole-generation granularity: a change that happens strictly WITHIN a generation (at a
+ *   version group that isn't that generation's first) gets rounded down to the previous
+ *   generation's boundary. This is a known, accepted limitation — it does not affect any
+ *   generation this dataset is tested against (see src/game/pokedex.test.ts), because the one
+ *   move where PokeAPI records an intra-Gen4 tag (Vine Whip, tagged diamond-pearl — Gen 4's OWN
+ *   first version group) never actually produces a different answer within Gen 4: the following
+ *   x-y-tagged entry (throughGeneration 5) is what every Gen 4 target resolves through, exactly
+ *   as the diamond-pearl tag (throughGeneration 3) predicts by falling one generation short of
+ *   it. Resolution itself (src/game/pokedex.ts `pokedexFor`) mirrors past_types: per field, walk
+ *   the sorted-ascending qualifying entries (`throughGeneration >= target`) and take the first
+ *   non-null value, else fall back to the move's current top-level value.
  *
  * NOTE: this direction genuinely differs between the two endpoints (generation-tagged
- * "up to and including" for past_types/past_abilities vs version-group-tagged "strictly
- * before" for moves' past_values) — do not assume they are the same rule.
+ * "up to and including" for past_types vs version-group-tagged "strictly before" for moves'
+ * past_values) — do not assume they are the same rule.
  *
- * This also correctly recovers a stat that changed WITHIN Gen 4 itself (between paired
- * releases), not just at generation boundaries. Vine Whip (move/22) is the case that proves
- * it: PokeAPI records past_values entries tagged diamond-pearl (pp: 10, i.e. "before
- * diamond-pearl the pp was 10" — the Gen 1-3 value) and x-y (power: 35, pp: 15, i.e. "before
- * x-y the power was 35 and the pp was 15"). Our target (heartgold-soulsilver) is chronologically
- * after diamond-pearl but before x-y, so the diamond-pearl entry doesn't qualify (it only
- * covers strictly-before-it) and the x-y entry does, giving power 35 / pp 15 — exactly what
- * Bulbapedia documents for Generation IV-V, distinct from both the Gen 1-3 value (pp 10) and
- * the Gen 6+ value (power 45 / pp 25, the current top-level value neither past_values entry
- * needed to restate). See src/game/pokedex.test.ts for this and two more spot-checks (Bite,
- * Tackle) against Bulbapedia's documented history.
+ * Spot-checked against Bulbapedia (see src/game/pokedex.test.ts): Vine Whip (35 power / 15 pp
+ * Gen 4-5, 45/25 Gen 6+), Tackle (35 power / 95 accuracy through Gen 4, 40/100 from Gen VII),
+ * Bite (Normal pre-Gen 2, Dark from Gold/Silver on, power/accuracy/pp unchanged).
  */
 
-import { mkdirSync, readFileSync, writeFileSync, existsSync } from "node:fs";
+import { mkdirSync, readFileSync, rmSync, writeFileSync, existsSync } from "node:fs";
 import os from "node:os";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
@@ -73,17 +75,21 @@ const CACHE_DIR = process.env.POKEDEX_CACHE_DIR ?? path.join(os.tmpdir(), "nuzlo
 
 const API_BASE = "https://pokeapi.co/api/v2";
 const CONCURRENCY = 8;
-const TARGET_GENERATION = 4;
-const TARGET_VERSION_GROUP_NAME = "heartgold-soulsilver";
 
-const SPECIES_COUNT = 493;
-const MOVE_ID_MAX = 467; // National move dex 1-467 = every standard move that exists by Gen 4.
+/**
+ * Shadow moves (Pokemon Colosseum/XD) are assigned ids >= 10000 by PokeAPI and are not part of
+ * the National Move Dex numbering (which runs contiguously from 1). They are a console-spinoff
+ * mechanic, out of scope for a mainline-game Nuzlocke tracker, and are excluded outright.
+ */
+const SHADOW_MOVE_ID_FLOOR = 10000;
 
 // ---------------------------------------------------------------------------
-// Curated item list: held items, evolution items/stones, and a representative set of
-// berries that matter for a Nuzlocke tracker in HGSS. Not exhaustive — PokeAPI has ~2000
-// items and most (TMs, key items, mail, etc.) are out of scope. See CLAUDE.md: "Use
-// judgement; completeness matters less than correctness."
+// Curated item list: held items, evolution items/stones, and a representative set of berries
+// across every generation that matter for a Nuzlocke tracker. Not exhaustive — PokeAPI has
+// ~2000 items and most (TMs, key items, mail, etc.) are out of scope. Mega stones, Z-crystals
+// and Dynamax-related items are deliberately excluded: those mechanics don't exist outside the
+// generations that introduced them, unlike a held item or evolution stone a randomiser can hand
+// out anywhere. See CLAUDE.md: "Use judgement; completeness matters less than correctness."
 // ---------------------------------------------------------------------------
 const CURATED_ITEM_SLUGS: readonly string[] = [
   // Evolution items and stones
@@ -96,6 +102,7 @@ const CURATED_ITEM_SLUGS: readonly string[] = [
   "shiny-stone",
   "dusk-stone",
   "dawn-stone",
+  "ice-stone",
   "oval-stone",
   "everstone",
   "up-grade",
@@ -138,6 +145,17 @@ const CURATED_ITEM_SLUGS: readonly string[] = [
   "flame-orb",
   "iron-ball",
   "sticky-barb",
+  "eviolite",
+  "rocky-helmet",
+  "assault-vest",
+  "weakness-policy",
+  "air-balloon",
+  "safety-goggles",
+  "mental-herb",
+  "white-herb",
+  "big-root",
+  "float-stone",
+  "red-card",
   // Berries
   "oran-berry",
   "sitrus-berry",
@@ -154,11 +172,8 @@ const CURATED_ITEM_SLUGS: readonly string[] = [
   "figy-berry",
 ];
 
-/** Gen 4 introduced this per-move split; every move must resolve to exactly one of these. */
-const DAMAGE_CLASSES = new Set(["physical", "special", "status"]);
-
-/** The 17 types that exist in Gen 4. If anything outside this set is ever resolved, we abort. */
-const GEN4_TYPES = new Set([
+/** The 18 real elemental types (excludes "unknown", which is move-only — see ./types.ts). */
+const ALL_TYPES = new Set([
   "normal",
   "fire",
   "water",
@@ -176,15 +191,14 @@ const GEN4_TYPES = new Set([
   "dragon",
   "dark",
   "steel",
+  "fairy",
 ]);
 
-/**
- * Move types only: the 17 real types plus PokeAPI's "unknown" ("???") placeholder, which is
- * genuinely correct for exactly one Gen 4 move — Curse (id 174) was typeless in Gen 2-4 and
- * only became Ghost-type in Gen 5 (confirmed against Bulbapedia). No species ever legitimately
- * has this type, so it is intentionally NOT in GEN4_TYPES above.
- */
-const GEN4_MOVE_TYPES = new Set([...GEN4_TYPES, "unknown"]);
+/** Move types only: the 18 real types plus PokeAPI's "unknown" ("???") placeholder (Curse). */
+const MOVE_TYPES = new Set([...ALL_TYPES, "unknown"]);
+
+/** Every move must resolve to exactly one of these. */
+const DAMAGE_CLASSES = new Set(["physical", "special", "status"]);
 
 // ---------------------------------------------------------------------------
 // Cached, throttled fetch
@@ -254,13 +268,10 @@ interface NamedRef {
   url: string;
 }
 
-interface PokemonMoveEntry {
-  move: NamedRef;
-  version_group_details: {
-    level_learned_at: number;
-    version_group: NamedRef;
-    move_learn_method: NamedRef;
-  }[];
+interface PokemonAbilityEntry {
+  is_hidden: boolean;
+  slot: number;
+  ability: NamedRef | null;
 }
 
 interface PokemonJson {
@@ -268,18 +279,14 @@ interface PokemonJson {
   name: string;
   types: { slot: number; type: NamedRef }[];
   past_types: { generation: NamedRef; types: { slot: number; type: NamedRef }[] }[];
-  abilities: { is_hidden: boolean; slot: number; ability: NamedRef | null }[];
-  past_abilities: {
-    generation: NamedRef;
-    abilities: { is_hidden: boolean; slot: number; ability: NamedRef | null }[];
-  }[];
+  abilities: PokemonAbilityEntry[];
   stats: { base_stat: number; stat: NamedRef }[];
-  moves: PokemonMoveEntry[];
 }
 
 interface SpeciesJson {
   id: number;
   name: string;
+  generation: NamedRef;
   evolution_chain: NamedRef;
 }
 
@@ -315,6 +322,7 @@ interface MoveJson {
 interface AbilityJson {
   id: number;
   name: string;
+  generation: NamedRef;
   effect_entries: { effect: string; short_effect: string; language: NamedRef }[];
 }
 
@@ -331,8 +339,13 @@ interface VersionGroupJson {
   generation: NamedRef;
 }
 
+interface NamedApiResourceList {
+  count: number;
+  results: NamedRef[];
+}
+
 // ---------------------------------------------------------------------------
-// Generation/version-group resolution helpers
+// Generation resolution helpers
 // ---------------------------------------------------------------------------
 
 /** generation.url looks like ".../generation/4/" — the resource id IS the generation number. */
@@ -340,90 +353,60 @@ function generationNumber(ref: NamedRef): number {
   return idFromUrl(ref.url);
 }
 
-function resolveGen4Types(pokemon: PokemonJson): string[] {
-  const candidates = pokemon.past_types
-    .map((entry) => ({ gen: generationNumber(entry.generation), types: entry.types }))
-    .filter((entry) => entry.gen >= TARGET_GENERATION)
-    .sort((a, b) => a.gen - b.gen);
-  const chosen = candidates[0]?.types ?? pokemon.types;
-  const names = [...chosen].sort((a, b) => a.slot - b.slot).map((t) => t.type.name);
-  for (const name of names) {
-    if (!GEN4_TYPES.has(name)) {
-      throw new Error(
-        `resolved a non-Gen4 type "${name}" for ${pokemon.name} (id ${String(pokemon.id)})`,
-      );
-    }
-  }
-  return names;
+/** Sorted ascending by throughGeneration, one entry per past_types tag — see header comment. */
+function pastTypesOf(pokemon: PokemonJson): { throughGeneration: number; types: string[] }[] {
+  return pokemon.past_types
+    .map((entry) => ({
+      throughGeneration: generationNumber(entry.generation),
+      types: entry.types.toSorted((a, b) => a.slot - b.slot).map((t) => t.type.name),
+    }))
+    .toSorted((a, b) => a.throughGeneration - b.throughGeneration);
+}
+
+function currentTypesOf(pokemon: PokemonJson): string[] {
+  return pokemon.types.toSorted((a, b) => a.slot - b.slot).map((t) => t.type.name);
+}
+
+/** All non-null ability slots, hidden included (marked, not dropped) — see header comment. */
+function abilitiesOf(pokemon: PokemonJson): { name: string; isHidden: boolean }[] {
+  const withAbility = pokemon.abilities.filter(
+    (a): a is PokemonAbilityEntry & { ability: NamedRef } => a.ability !== null,
+  );
+  return withAbility
+    .toSorted((a, b) => a.slot - b.slot)
+    .map((a) => ({ name: a.ability.name, isHidden: a.is_hidden }));
 }
 
 /**
- * Resolves the Gen 4 (HeartGold/SoulSilver) non-hidden abilities for a species.
- *
- * Hidden abilities do not exist in Gen 4 (introduced Gen 5) so they are excluded outright.
- * For the remaining (current) non-hidden slots, past_abilities can override per-slot: an
- * entry tagged generation >= 4 with a null ability means that slot did not exist yet at Gen 4
- * (excluded); a non-null ability there overrides the current one for that slot.
+ * Converts one move's past_values (version-group-tagged, "applies strictly before this tag")
+ * into the "throughGeneration" shape (generation-tagged, "applies through this generation
+ * inclusive") that past_types already uses natively. See the header comment for the direction
+ * flip and the accepted whole-generation-granularity limitation.
  */
-function resolveGen4Abilities(pokemon: PokemonJson): string[] {
-  const bySlot = new Map<number, string | null>();
-  for (const a of pokemon.abilities) {
-    if (a.is_hidden) continue;
-    bySlot.set(a.slot, a.ability?.name ?? null);
-  }
-
-  // Earliest past_abilities entry with generation >= 4, if any, wins per-slot.
-  const futureEntries = pokemon.past_abilities
-    .map((entry) => ({ gen: generationNumber(entry.generation), abilities: entry.abilities }))
-    .filter((entry) => entry.gen >= TARGET_GENERATION)
-    .sort((a, b) => a.gen - b.gen);
-  const override = futureEntries[0];
-  if (override !== undefined) {
-    for (const a of override.abilities) {
-      if (a.is_hidden) continue;
-      bySlot.set(a.slot, a.ability?.name ?? null);
-    }
-  }
-
-  return [...bySlot.entries()]
-    .sort((a, b) => a[0] - b[0])
-    .map(([, name]) => name)
-    .filter((name): name is string => name !== null);
-}
-
-/**
- * Core resolver: among `pastValues` entries chronologically after our target (Gen 4,
- * heartgold-soulsilver), returns the earliest one's value for `field` if non-null, else
- * `undefined` (meaning: nothing overrides the current top-level value).
- *
- * Kept scoped to MovePastValueEntry's own field shape (never MoveJson's) so the two "power"/
- * "type" etc. keys never have to reconcile two different declared types for the same key —
- * that mismatch (current `type` is never null; a past `type` entry can be) is what makes a
- * single MoveJson-typed generic fall over. Callers combine the result with `?? current`.
- */
-function resolveMovePastField<K extends keyof MovePastValueEntry>(
-  field: K,
-  pastValues: MovePastValueEntry[],
+function pastValuesOf(
+  move: MoveJson,
   vgIdToGen: Map<number, number>,
-  targetGen: number,
-  targetVgId: number,
-): MovePastValueEntry[K] | undefined {
-  const qualifying = pastValues
+): {
+  throughGeneration: number;
+  power: number | null;
+  accuracy: number | null;
+  pp: number | null;
+  type: string | null;
+}[] {
+  return move.past_values
     .map((entry) => {
       const vgId = idFromUrl(entry.version_group.url);
       const gen = vgIdToGen.get(vgId);
       if (gen === undefined) throw new Error(`unknown version group id ${String(vgId)}`);
-      return { gen, vgId, value: entry[field] };
+      return {
+        throughGeneration: gen - 1,
+        power: entry.power,
+        accuracy: entry.accuracy,
+        pp: entry.pp,
+        type: entry.type === null ? null : entry.type.name,
+      };
     })
-    .filter(
-      (entry) => entry.gen > targetGen || (entry.gen === targetGen && entry.vgId > targetVgId),
-    )
-    .sort((a, b) => a.gen - b.gen || a.vgId - b.vgId);
-
-  for (const entry of qualifying) {
-    if (entry.value !== null) return entry.value;
-  }
-  return undefined;
+    .toSorted((a, b) => a.throughGeneration - b.throughGeneration);
 }
 
 // ---------------------------------------------------------------------------
@@ -434,16 +417,25 @@ function quote(value: string): string {
   return JSON.stringify(value);
 }
 
+function quoteOrNull(value: string | null): string {
+  return value === null ? "null" : quote(value);
+}
+
+function numberOrNull(value: number | null): string {
+  return value === null ? "null" : String(value);
+}
+
 const GENERATED_HEADER = (subject: string) => `/**
  * ${subject}
  *
  * Generated by scripts/extract-pokedex.ts from PokeAPI (https://pokeapi.co/). Do not
  * hand-edit — re-run the generator instead.
  *
- * Values are Gen 4 (HeartGold/SoulSilver) specific: PokeAPI serves present-day values by
- * default, so types/abilities/move stats are resolved from \`past_types\`/\`past_abilities\`/
- * \`past_values\` where Gen 4 differs from today. See the header comment in
- * scripts/extract-pokedex.ts for exactly how.
+ * Spans every generation. Types and move stats are stored as present-day (current) values plus
+ * a history (\`pastTypes\` / \`pastValues\`); resolve against a specific generation with
+ * \`pokedexFor(generation)\` in src/game/pokedex.ts, never by reading these fields directly. See
+ * ./types.ts for the resolution rule and scripts/extract-pokedex.ts for how the history is
+ * derived.
  */
 `;
 
@@ -456,26 +448,29 @@ async function main() {
   mkdirSync(OUT_DIR, { recursive: true });
 
   // --- version groups: build version-group id -> generation number map ---
-  const vgList = (await fetchJson(`${API_BASE}/version-group/?limit=100`)) as {
-    results: NamedRef[];
-  };
+  const vgList = (await fetchJson(`${API_BASE}/version-group/?limit=100`)) as NamedApiResourceList;
   const versionGroups = await mapPool(vgList.results, CONCURRENCY, async (ref) => {
     return (await fetchJson(ref.url)) as VersionGroupJson;
   });
   const vgIdToGen = new Map<number, number>(
     versionGroups.map((vg) => [vg.id, generationNumber(vg.generation)]),
   );
-  const targetVg = versionGroups.find((vg) => vg.name === TARGET_VERSION_GROUP_NAME);
-  if (targetVg === undefined) {
-    throw new Error(`could not find version group "${TARGET_VERSION_GROUP_NAME}"`);
-  }
-  const targetVgId = targetVg.id;
-  console.log(
-    `Target version group: ${targetVg.name} (id ${String(targetVgId)}, gen ${String(TARGET_GENERATION)})`,
-  );
 
-  // --- species: fetch /pokemon/{id} and /pokemon-species/{id} for 1..493 ---
-  const speciesIds = Array.from({ length: SPECIES_COUNT }, (_, i) => i + 1);
+  // --- species: discover the authoritative id range, then fetch /pokemon/{id} and
+  // /pokemon-species/{id} for every one of them ---
+  const speciesList = (await fetchJson(
+    `${API_BASE}/pokemon-species/?limit=2000`,
+  )) as NamedApiResourceList;
+  const speciesIds = speciesList.results.map((r) => idFromUrl(r.url)).toSorted((a, b) => a - b);
+  const maxSpeciesId = speciesIds[speciesIds.length - 1];
+  if (maxSpeciesId === undefined) throw new Error("pokemon-species list was empty");
+  if (speciesIds.length !== maxSpeciesId) {
+    throw new Error(
+      `expected species ids 1..${String(maxSpeciesId)} contiguous, got ${String(speciesIds.length)} ids`,
+    );
+  }
+  console.log(`Species: ${String(speciesIds.length)} (national dex 1-${String(maxSpeciesId)})`);
+
   const pokemonJsons = await mapPool(speciesIds, CONCURRENCY, async (id) => {
     return (await fetchJson(`${API_BASE}/pokemon/${String(id)}`)) as PokemonJson;
   });
@@ -502,14 +497,14 @@ async function main() {
 
   function walkChain(node: EvolutionChainNode, parentId: number | null) {
     const id = idFromUrl(node.species.url);
-    if (id <= SPECIES_COUNT) {
+    if (id <= maxSpeciesId) {
       evolvesFrom.set(id, parentId);
-      if (parentId !== null && parentId <= SPECIES_COUNT) {
+      if (parentId !== null && parentId <= maxSpeciesId) {
         evolvesTo.set(parentId, [...(evolvesTo.get(parentId) ?? []), id]);
       }
     }
     for (const child of node.evolves_to) {
-      walkChain(child, id <= SPECIES_COUNT ? id : parentId);
+      walkChain(child, id <= maxSpeciesId ? id : parentId);
     }
   }
   for (const chain of chainJsons) {
@@ -520,20 +515,33 @@ async function main() {
   const referencedAbilityNames = new Set<string>();
   const speciesEntries = speciesIds.map((id, i) => {
     const p = pokemonJsons[i];
-    if (p === undefined) throw new Error(`missing pokemon json for id ${String(id)}`);
-    const types = resolveGen4Types(p);
-    const abilities = resolveGen4Abilities(p);
-    for (const a of abilities) referencedAbilityNames.add(a);
-    const statByName = new Map(p.stats.map((s) => [s.stat.name, s.base_stat]));
+    const s = speciesJsons[i];
+    if (p === undefined || s === undefined) throw new Error(`missing json for id ${String(id)}`);
+
+    const types = currentTypesOf(p);
+    const pastTypes = pastTypesOf(p);
+    for (const name of [...types, ...pastTypes.flatMap((t) => t.types)]) {
+      if (!ALL_TYPES.has(name)) {
+        throw new Error(`unexpected type "${name}" for ${p.name} (id ${String(p.id)})`);
+      }
+    }
+
+    const abilities = abilitiesOf(p);
+    for (const a of abilities) referencedAbilityNames.add(a.name);
+
+    const statByName = new Map(p.stats.map((st) => [st.stat.name, st.base_stat]));
     const stat = (name: string): number => {
       const value = statByName.get(name);
       if (value === undefined) throw new Error(`missing stat "${name}" for ${p.name}`);
       return value;
     };
+
     return {
       id,
       name: p.name,
+      introducedInGeneration: generationNumber(s.generation),
       types,
+      pastTypes,
       abilities,
       baseStats: {
         hp: stat("hp"),
@@ -548,8 +556,23 @@ async function main() {
     };
   });
 
-  // --- moves: fetch 1..467 ---
-  const moveIds = Array.from({ length: MOVE_ID_MAX }, (_, i) => i + 1);
+  // --- moves: discover the authoritative id range (excluding the Shadow-move block), then
+  // fetch /move/{id} for every one of them ---
+  const moveList = (await fetchJson(`${API_BASE}/move/?limit=1000`)) as NamedApiResourceList;
+  const allMoveIds = moveList.results.map((r) => idFromUrl(r.url));
+  const moveIds = allMoveIds.filter((id) => id < SHADOW_MOVE_ID_FLOOR).toSorted((a, b) => a - b);
+  const shadowMoveCount = allMoveIds.length - moveIds.length;
+  const maxMoveId = moveIds[moveIds.length - 1];
+  if (maxMoveId === undefined) throw new Error("move list was empty");
+  if (moveIds.length !== maxMoveId) {
+    throw new Error(
+      `expected move ids 1..${String(maxMoveId)} contiguous, got ${String(moveIds.length)} ids`,
+    );
+  }
+  console.log(
+    `Moves: ${String(moveIds.length)} (national move dex 1-${String(maxMoveId)}), excluded ${String(shadowMoveCount)} Shadow moves`,
+  );
+
   const moveJsons = await mapPool(moveIds, CONCURRENCY, async (id) => {
     return (await fetchJson(`${API_BASE}/move/${String(id)}`)) as MoveJson;
   });
@@ -557,42 +580,39 @@ async function main() {
   const moveEntries = moveJsons.map((m, i) => {
     const id = moveIds[i];
     if (m?.id !== id) throw new Error(`move id mismatch at index ${String(i)}`);
-    if (generationNumber(m.generation) > TARGET_GENERATION) {
-      throw new Error(`move "${m.name}" (id ${String(m.id)}) was introduced after Gen 4`);
+    if (!MOVE_TYPES.has(m.type.name)) {
+      throw new Error(`unexpected type "${m.type.name}" for move ${m.name} (id ${String(m.id)})`);
     }
-    const type =
-      resolveMovePastField("type", m.past_values, vgIdToGen, TARGET_GENERATION, targetVgId) ??
-      m.type;
-    if (!GEN4_MOVE_TYPES.has(type.name)) {
-      throw new Error(
-        `resolved a non-Gen4 type "${type.name}" for move ${m.name} (id ${String(m.id)})`,
-      );
-    }
-    const pp =
-      resolveMovePastField("pp", m.past_values, vgIdToGen, TARGET_GENERATION, targetVgId) ?? m.pp;
-    if (pp === null) throw new Error(`move ${m.name} (id ${String(m.id)}) resolved to a null pp`);
     if (!DAMAGE_CLASSES.has(m.damage_class.name)) {
       throw new Error(
         `unexpected damage class "${m.damage_class.name}" for move ${m.name} (id ${String(m.id)})`,
       );
     }
+    if (m.pp === null) throw new Error(`move ${m.name} (id ${String(m.id)}) has a null pp`);
+
+    const pastValues = pastValuesOf(m, vgIdToGen);
+    for (const pv of pastValues) {
+      if (pv.type !== null && !MOVE_TYPES.has(pv.type)) {
+        throw new Error(
+          `unexpected past type "${pv.type}" for move ${m.name} (id ${String(m.id)})`,
+        );
+      }
+    }
+
     return {
       id: m.id,
       name: m.name,
-      type: type.name,
+      introducedInGeneration: generationNumber(m.generation),
+      type: m.type.name,
       damageClass: m.damage_class.name,
-      power:
-        resolveMovePastField("power", m.past_values, vgIdToGen, TARGET_GENERATION, targetVgId) ??
-        m.power,
-      accuracy:
-        resolveMovePastField("accuracy", m.past_values, vgIdToGen, TARGET_GENERATION, targetVgId) ??
-        m.accuracy,
-      pp,
+      power: m.power,
+      accuracy: m.accuracy,
+      pp: m.pp,
+      pastValues,
     };
   });
-  const moveNameToId = new Map(moveEntries.map((m) => [m.name, m.id]));
 
-  // --- abilities: fetch every ability referenced by a species ---
+  // --- abilities: fetch every ability referenced by at least one species (hidden included) ---
   const abilityJsons = await mapPool([...referencedAbilityNames], CONCURRENCY, async (name) => {
     return (await fetchJson(`${API_BASE}/ability/${name}`)) as AbilityJson;
   });
@@ -602,6 +622,7 @@ async function main() {
       return {
         id: a.id,
         name: a.name,
+        introducedInGeneration: generationNumber(a.generation),
         shortEffect: en?.short_effect.replace(/\s+/g, " ").trim() ?? "",
       };
     })
@@ -623,53 +644,33 @@ async function main() {
     })
     .toSorted((a, b) => a.id - b.id);
 
-  // --- learnsets: HGSS-only version_group_details from each species' moves list ---
-  const learnsetEntries = speciesIds.map((id, i) => {
-    const p = pokemonJsons[i];
-    if (p === undefined) throw new Error(`missing pokemon json for id ${String(id)}`);
-    const rows: { moveId: number; method: string; level: number | null }[] = [];
-    for (const entry of p.moves) {
-      const moveId = moveNameToId.get(entry.move.name);
-      if (moveId === undefined) continue; // move introduced after Gen 4 — not in our move table
-      for (const vgd of entry.version_group_details) {
-        if (vgd.version_group.name !== TARGET_VERSION_GROUP_NAME) continue;
-        rows.push({
-          moveId,
-          method: vgd.move_learn_method.name,
-          level: vgd.move_learn_method.name === "level-up" ? vgd.level_learned_at : null,
-        });
-      }
-    }
-    // De-dupe identical (move, method, level) triples — HGSS sometimes lists a method twice
-    // across egg-move chains.
-    const seen = new Set<string>();
-    const deduped = rows.filter((r) => {
-      const key = `${String(r.moveId)}:${r.method}:${String(r.level)}`;
-      if (seen.has(key)) return false;
-      seen.add(key);
-      return true;
-    });
-    return { id, moves: deduped.toSorted((a, b) => a.moveId - b.moveId) };
-  });
-
   // ---------------------------------------------------------------------------
   // Write files
   // ---------------------------------------------------------------------------
 
   writeFileSync(
     path.join(OUT_DIR, "species.ts"),
-    GENERATED_HEADER(
-      "Gen 4 species: national dex 1-493, types/abilities as of HeartGold/SoulSilver.",
-    ) +
+    GENERATED_HEADER(`Species: national dex 1-${String(maxSpeciesId)}.`) +
       `
-import type { BaseStats, Gen4Type } from "./types";
+import type { BaseStats, PastTypes, Type } from "./types";
+
+export interface AbilitySlot {
+  name: string;
+  isHidden: boolean;
+}
 
 export interface SpeciesDef {
   id: number;
   name: string;
-  types: Gen4Type[];
-  /** Non-hidden abilities legal in Gen 4 (hidden abilities do not exist until Gen 5). */
-  abilities: string[];
+  /** The generation this species was first introduced in (national dex debut). */
+  introducedInGeneration: number;
+  /** Present-day (current) types. Resolve via pokedexFor(generation).typesOf(id) instead of
+   * reading this directly unless you specifically want the current value. */
+  types: Type[];
+  /** Historical typings, ascending by throughGeneration. Empty if it never changed. */
+  pastTypes: PastTypes[];
+  /** Every non-past ability slot, hidden included (hidden abilities exist from Gen 5 on). */
+  abilities: AbilitySlot[];
   baseStats: BaseStats;
   evolvesFrom: number | null;
   evolvesTo: number[];
@@ -681,8 +682,10 @@ ${speciesEntries
     (s) => `  {
     id: ${String(s.id)},
     name: ${quote(s.name)},
+    introducedInGeneration: ${String(s.introducedInGeneration)},
     types: [${s.types.map(quote).join(", ")}],
-    abilities: [${s.abilities.map(quote).join(", ")}],
+    pastTypes: [${s.pastTypes.length === 0 ? "" : `\n${s.pastTypes.map((pt) => `      { throughGeneration: ${String(pt.throughGeneration)}, types: [${pt.types.map(quote).join(", ")}] },`).join("\n")}\n    `}],
+    abilities: [${s.abilities.length === 0 ? "" : `\n${s.abilities.map((a) => `      { name: ${quote(a.name)}, isHidden: ${String(a.isHidden)} },`).join("\n")}\n    `}],
     baseStats: {
       hp: ${String(s.baseStats.hp)},
       attack: ${String(s.baseStats.attack)},
@@ -702,18 +705,24 @@ ${speciesEntries
 
   writeFileSync(
     path.join(OUT_DIR, "moves.ts"),
-    GENERATED_HEADER("Gen 4 moves: national move dex 1-467, stats as of HeartGold/SoulSilver.") +
+    GENERATED_HEADER(`Moves: national move dex 1-${String(maxMoveId)}.`) +
       `
-import type { DamageClass, Gen4Type } from "./types";
+import type { DamageClass, PastMoveValue, Type } from "./types";
 
 export interface MoveDef {
   id: number;
   name: string;
-  type: Gen4Type;
+  /** The generation this move was first introduced in. */
+  introducedInGeneration: number;
+  /** Present-day (current) values. Resolve via pokedexFor(generation).statsOf(id) instead of
+   * reading these directly unless you specifically want the current value. */
+  type: Type;
   damageClass: DamageClass;
   power: number | null;
   accuracy: number | null;
   pp: number;
+  /** Historical stat snapshots, ascending by throughGeneration. Empty if never changed. */
+  pastValues: PastMoveValue[];
 }
 
 export const moves: MoveDef[] = [
@@ -722,11 +731,13 @@ ${moveEntries
     (m) => `  {
     id: ${String(m.id)},
     name: ${quote(m.name)},
+    introducedInGeneration: ${String(m.introducedInGeneration)},
     type: ${quote(m.type)},
     damageClass: ${quote(m.damageClass)},
-    power: ${m.power === null ? "null" : String(m.power)},
-    accuracy: ${m.accuracy === null ? "null" : String(m.accuracy)},
+    power: ${numberOrNull(m.power)},
+    accuracy: ${numberOrNull(m.accuracy)},
     pp: ${String(m.pp)},
+    pastValues: [${m.pastValues.length === 0 ? "" : `\n${m.pastValues.map((pv) => `      { throughGeneration: ${String(pv.throughGeneration)}, power: ${numberOrNull(pv.power)}, accuracy: ${numberOrNull(pv.accuracy)}, pp: ${numberOrNull(pv.pp)}, type: ${quoteOrNull(pv.type)} },`).join("\n")}\n    `}],
   },`,
   )
   .join("\n")}
@@ -736,11 +747,13 @@ ${moveEntries
 
   writeFileSync(
     path.join(OUT_DIR, "abilities.ts"),
-    GENERATED_HEADER("Abilities referenced by at least one Gen 4 species (non-hidden only).") +
+    GENERATED_HEADER("Abilities referenced by at least one species (hidden abilities included).") +
       `
 export interface AbilityDef {
   id: number;
   name: string;
+  /** The generation this ability was first introduced in. */
+  introducedInGeneration: number;
   shortEffect: string;
 }
 
@@ -748,7 +761,7 @@ export const abilities: AbilityDef[] = [
 ${abilityEntries
   .map(
     (a) =>
-      `  { id: ${String(a.id)}, name: ${quote(a.name)}, shortEffect: ${quote(a.shortEffect)} },`,
+      `  { id: ${String(a.id)}, name: ${quote(a.name)}, introducedInGeneration: ${String(a.introducedInGeneration)}, shortEffect: ${quote(a.shortEffect)} },`,
   )
   .join("\n")}
 ];
@@ -758,7 +771,7 @@ ${abilityEntries
   writeFileSync(
     path.join(OUT_DIR, "items.ts"),
     GENERATED_HEADER(
-      "Curated held items, evolution items/stones and berries relevant to an HGSS Nuzlocke tracker.\n * See scripts/extract-pokedex.ts CURATED_ITEM_SLUGS for the list and why each is included.",
+      "Curated held items, evolution items/stones and berries across every generation, relevant to a Nuzlocke tracker.\n * See scripts/extract-pokedex.ts CURATED_ITEM_SLUGS for the list and why each is included.",
     ) +
       `
 export interface ItemDef {
@@ -779,54 +792,16 @@ ${itemEntries
 `,
   );
 
-  writeFileSync(
-    path.join(OUT_DIR, "learnsets.ts"),
-    `/**
- * Gen 4 (HeartGold/SoulSilver) learnsets: which moves each species can learn, by which method.
- *
- * Generated by scripts/extract-pokedex.ts from PokeAPI (https://pokeapi.co/). Do not hand-edit.
- *
- * Deliberately kept free of any import (not even from ./types) so it can be code-split or
- * lazily loaded later without pulling in the rest of the pokedex — see the module-size report
- * in the PR this landed in.
- */
+  // learnsets.ts is no longer generated (see CLAUDE.md "Game data": moveset editing is
+  // free-text over every move, so a species' legal learnset is not stored). Remove a stale
+  // copy if one is left over from before this generator stopped writing it.
+  const staleLearnsets = path.join(OUT_DIR, "learnsets.ts");
+  if (existsSync(staleLearnsets)) rmSync(staleLearnsets);
 
-export type LearnMethod =
-  | "level-up"
-  | "machine"
-  | "egg"
-  | "tutor"
-  /** HGSS-specific: a Pichu hatched from a Volt-Tackle-eligible parent holding a Light Ball. */
-  | "light-ball-egg"
-  /** Rotom's appliance forms (introduced Platinum) each grant a signature move on form change. */
-  | "form-change";
-
-export interface LearnsetEntry {
-  moveId: number;
-  method: LearnMethod;
-  /** Only set for method "level-up"; 0 means "known from the start / on evolution". */
-  level: number | null;
-}
-
-export const learnsets: Record<number, LearnsetEntry[]> = {
-${learnsetEntries
-  .map(
-    (e) =>
-      `  ${String(e.id)}: [${e.moves.length === 0 ? "" : `\n${e.moves.map((m) => `    { moveId: ${String(m.moveId)}, method: ${quote(m.method)}, level: ${m.level === null ? "null" : String(m.level)} },`).join("\n")}\n  `}],`,
-  )
-  .join("\n")}
-};
-`,
-  );
-
-  const totalLearnsetMoves = learnsetEntries.reduce((sum, e) => sum + e.moves.length, 0);
   console.log(`Wrote ${String(speciesEntries.length)} species to ${OUT_DIR}/species.ts`);
   console.log(`Wrote ${String(moveEntries.length)} moves to ${OUT_DIR}/moves.ts`);
   console.log(`Wrote ${String(abilityEntries.length)} abilities to ${OUT_DIR}/abilities.ts`);
   console.log(`Wrote ${String(itemEntries.length)} items to ${OUT_DIR}/items.ts`);
-  console.log(
-    `Wrote learnsets for ${String(learnsetEntries.length)} species (${String(totalLearnsetMoves)} total move rows) to ${OUT_DIR}/learnsets.ts`,
-  );
 }
 
 main().catch((err: unknown) => {

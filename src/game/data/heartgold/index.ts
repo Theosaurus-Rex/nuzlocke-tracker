@@ -11,6 +11,7 @@ import { routes } from "./routes";
 export const heartgold: GameData = {
   id: "heartgold",
   name: "HeartGold",
+  generation: 4,
   routes,
   fights,
 };
