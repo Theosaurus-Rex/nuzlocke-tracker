@@ -49,16 +49,17 @@
  * "up to and including" for past_types/past_abilities vs version-group-tagged "strictly
  * before" for moves' past_values) — do not assume they are the same rule.
  *
- * A known limitation this produces: a move whose stat changed at a version group that never
- * got its own past_values entry (i.e. PokeAPI recorded the boundary before and after but not
- * the specific mid-generation bump) will resolve to whichever recorded value brackets our
- * target. Vine Whip's PP is a case: Bulbapedia documents 10 (Gen 1-3) -> 15 (Gen 4-5) -> 25
- * (Gen 6+), but PokeAPI's move/22 only records a past_values boundary at diamond-pearl (pp: 10)
- * and at x-y (pp: null, i.e. "unchanged", falling through to the current top-level 25) — there
- * is no boundary entry for the Gen 4-specific bump to 15. Applying the rule above therefore
- * resolves our Gen 4 pp to 25, not the 15 Bulbapedia documents. Flagged in the PR report as a
- * PokeAPI data-granularity gap worth a spot-check/upstream note, not a bug in this script's
- * resolution logic (which is verified correct against Bite and Tackle above).
+ * This also correctly recovers a stat that changed WITHIN Gen 4 itself (between paired
+ * releases), not just at generation boundaries. Vine Whip (move/22) is the case that proves
+ * it: PokeAPI records past_values entries tagged diamond-pearl (pp: 10, i.e. "before
+ * diamond-pearl the pp was 10" — the Gen 1-3 value) and x-y (power: 35, pp: 15, i.e. "before
+ * x-y the power was 35 and the pp was 15"). Our target (heartgold-soulsilver) is chronologically
+ * after diamond-pearl but before x-y, so the diamond-pearl entry doesn't qualify (it only
+ * covers strictly-before-it) and the x-y entry does, giving power 35 / pp 15 — exactly what
+ * Bulbapedia documents for Generation IV-V, distinct from both the Gen 1-3 value (pp 10) and
+ * the Gen 6+ value (power 45 / pp 25, the current top-level value neither past_values entry
+ * needed to restate). See src/game/pokedex.test.ts for this and two more spot-checks (Bite,
+ * Tackle) against Bulbapedia's documented history.
  */
 
 import { mkdirSync, readFileSync, writeFileSync, existsSync } from "node:fs";

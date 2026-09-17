@@ -66,6 +66,41 @@ describe("species table shape", () => {
   });
 });
 
+describe("past_values resolution: move stats are Gen 4 (HeartGold/SoulSilver), not present-day", () => {
+  // Sources (Bulbapedia, checked against the cached PokeAPI move/{id} response used to generate
+  // moves.ts):
+  //   https://bulbapedia.bulbagarden.net/wiki/Vine_Whip_(move)
+  //   https://bulbapedia.bulbagarden.net/wiki/Tackle_(move)
+  //   https://bulbapedia.bulbagarden.net/wiki/Bite_(move)
+
+  test("Vine Whip is power 35 / pp 15 in Gen 4 — a mid-generation change, not just a generation boundary", () => {
+    // PokeAPI's move/22.past_values has two entries: one tagged diamond-pearl (pp: 10, the
+    // Gen 1-3 value — diamond-pearl is Gen 4's own first version group, so this does NOT cover
+    // our target) and one tagged x-y (power: 35, pp: 15 — this DOES cover heartgold-soulsilver,
+    // since x-y is chronologically after it). The current top-level value (power 45 / pp 25) is
+    // the Gen 6+ value and must NOT leak into Gen 4.
+    const vineWhip = moves.find((m) => m.name === "vine-whip");
+    expect(vineWhip?.power).toBe(35);
+    expect(vineWhip?.accuracy).toBe(100);
+    expect(vineWhip?.pp).toBe(15);
+  });
+
+  test("Tackle is power 35 / accuracy 95 in Gen 4, not the modern power 40 / accuracy 100", () => {
+    const tackle = moves.find((m) => m.name === "tackle");
+    expect(tackle?.power).toBe(35);
+    expect(tackle?.accuracy).toBe(95);
+    expect(tackle?.pp).toBe(35);
+  });
+
+  test("Bite is Dark-type (not its Gen 1 Normal type) with unchanged power/accuracy/pp", () => {
+    const bite = moves.find((m) => m.name === "bite");
+    expect(bite?.type).toBe("dark");
+    expect(bite?.power).toBe(60);
+    expect(bite?.accuracy).toBe(100);
+    expect(bite?.pp).toBe(25);
+  });
+});
+
 describe("damage class is per-move, not per-type (the Gen 4 physical/special split)", () => {
   test("a physical Normal-type move exists", () => {
     const tackle = moves.find((m) => m.name === "tackle");
