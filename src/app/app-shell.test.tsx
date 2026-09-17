@@ -9,15 +9,34 @@
  */
 
 import { createMemoryRouter, RouterProvider } from "react-router";
+import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { render, screen, waitFor, within } from "@testing-library/react";
 import { describe, expect, it } from "vitest";
+
+import { createMemoryAdapter } from "@/storage/memory-adapter";
+import { StorageProvider } from "@/storage/storage-context";
 
 import { navItemsFor } from "./nav-items";
 import { appRoutes } from "./router";
 
+/**
+ * Real composition is `QueryClientProvider` -> `StorageProvider` -> `RouterProvider` (see
+ * `app/root.tsx`). This suite only exercises routing/nav, but the settings screen (mounted at
+ * `/settings`, exercised below) reads the storage adapter through TanStack Query, so both
+ * providers need to be present for that route to render without throwing — a fresh instance of
+ * each per call, so no state leaks between tests.
+ */
 function renderAt(initialPath: string) {
   const router = createMemoryRouter(appRoutes, { initialEntries: [initialPath] });
-  const rendered = render(<RouterProvider router={router} />);
+  const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+  const adapter = createMemoryAdapter();
+  const rendered = render(
+    <QueryClientProvider client={queryClient}>
+      <StorageProvider adapter={adapter}>
+        <RouterProvider router={router} />
+      </StorageProvider>
+    </QueryClientProvider>,
+  );
   return { router, unmount: rendered.unmount };
 }
 
