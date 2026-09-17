@@ -35,6 +35,18 @@ export function getSpecies(id: number): SpeciesDef | undefined {
 
 /** Case-insensitive prefix match on species name, in national dex order. Unfiltered by
  * generation — see the module comment. */
+/**
+ * Prefix search across EVERY generation, deliberately unfiltered by the run's game: a randomiser
+ * or romhack can put anything anywhere, so a picker scoped to the tracked game cannot represent
+ * what the player actually caught. Only resolved values (types, move stats) depend on the
+ * generation — see `pokedexFor`.
+ *
+ * KNOWN QUIRK, matters when building the picker UI: PokéAPI names the canonical entry of some
+ * multi-form species with a form suffix, so id 778 is `"mimikyu-disguised"` and id 386 is
+ * `"deoxys-normal"` — roughly 24 species are affected. Prefix search still matches ("mimikyu"
+ * finds it) and ids are unaffected, but rendering `name` raw will show those suffixes to the
+ * user. A display-name pass is wanted before these reach a dropdown.
+ */
 export function searchSpecies(query: string): SpeciesDef[] {
   const q = query.toLowerCase();
   return species.filter((s) => s.name.toLowerCase().startsWith(q));
