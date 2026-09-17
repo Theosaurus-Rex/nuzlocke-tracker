@@ -147,16 +147,22 @@ No single source covers this. Two are combined:
   Elite Four and rival rosters. Hand-curated; nothing else has trainer rosters at all.
   PokéAPI has never had trainer data (feature requests #432 and #580 are still open).
 
-**Unresolved licence question:** `nuzlocke.data` has no LICENSE file, and the sibling app
-repo's BSD-3-Clause does not automatically extend to it. **Do not vendor it wholesale until
-Theo has confirmed terms with the maintainer.** Using it as a reference to hand-author our
-own dataset is safe regardless, and is the fallback.
+**Licence question — resolved 2026-09-17.** Theo has cleared use of `nuzlocke.data`. The
+approach is **not** to vendor the repo wholesale: extract only the HeartGold subset we actually
+need into our own files, in our own format, committed here. Credit the source in the generated
+files. If a second game is ever wanted from upstream, extract that subset the same way.
 
 **Level caps are derived**, not sourced — take the ace (highest-level) mon per boss. They
 are a community convention, not a game mechanic, so no API will ever return them.
 
 **Scope: HeartGold only for V1.** Every additional game is a whole curated dataset, not a
 config flag. Build the ingest pipeline so a second game is additive.
+
+**Romhacks are a first-class future case, not an afterthought.** Theo intends to hand-author
+datasets for romhacks he wants to support. So the game-data format is something a human writes
+by hand, not just something a script emits: it needs to be readable, typed, and validated at
+build time, and adding a game must mean adding one directory plus one registry entry. Nothing
+in the app may assume a game's data came from `nuzlocke.data`.
 
 ---
 
