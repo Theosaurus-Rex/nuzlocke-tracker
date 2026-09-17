@@ -677,12 +677,12 @@ export async function importBundle(
   return adapter.transaction(async (tx) => {
     if (mode === "replace") {
       await tx.clear();
-      await tx.runs.putMany(bundle.runs);
-      await tx.routes.putMany(bundle.routes);
-      await tx.encounters.putMany(bundle.encounters);
-      await tx.mons.putMany(bundle.mons);
-      await tx.deaths.putMany(bundle.deaths);
-      await tx.fights.putMany(bundle.fights);
+      await tx.runs.restoreMany(bundle.runs);
+      await tx.routes.restoreMany(bundle.routes);
+      await tx.encounters.restoreMany(bundle.encounters);
+      await tx.mons.restoreMany(bundle.mons);
+      await tx.deaths.restoreMany(bundle.deaths);
+      await tx.fights.restoreMany(bundle.fights);
 
       return {
         mode,
@@ -712,12 +712,12 @@ export async function importBundle(
     const deathsToImport = bundle.deaths.filter((row) => importRunIds.has(row.runId));
     const fightsToImport = bundle.fights.filter((row) => importRunIds.has(row.runId));
 
-    await tx.runs.putMany(runsToImport);
-    await tx.routes.putMany(routesToImport);
-    await tx.encounters.putMany(encountersToImport);
-    await tx.mons.putMany(monsToImport);
-    await tx.deaths.putMany(deathsToImport);
-    await tx.fights.putMany(fightsToImport);
+    await tx.runs.restoreMany(runsToImport);
+    await tx.routes.restoreMany(routesToImport);
+    await tx.encounters.restoreMany(encountersToImport);
+    await tx.mons.restoreMany(monsToImport);
+    await tx.deaths.restoreMany(deathsToImport);
+    await tx.fights.restoreMany(fightsToImport);
 
     return {
       mode,

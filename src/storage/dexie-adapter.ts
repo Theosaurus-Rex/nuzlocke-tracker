@@ -104,6 +104,22 @@ function buildTables(source: TableSource): DexieTables {
   };
 }
 
+/** `restoreMany` writes rows that came from outside the type system (a JSON backup file, an
+ * M6 migration source) — validate at runtime even though `T` says these fields are required,
+ * naming both the missing field and the row's id so a bad restore fails loud. */
+function assertRestorable<T extends Timestamped>(row: T): void {
+  const label = typeof row.id === "string" && row.id.length > 0 ? row.id : "(missing id)";
+  if (typeof row.id !== "string" || row.id.length === 0) {
+    throw new Error(`restoreMany: row "${label}" is missing "id".`);
+  }
+  if (typeof row.createdAt !== "string" || row.createdAt.length === 0) {
+    throw new Error(`restoreMany: row "${label}" is missing "createdAt".`);
+  }
+  if (typeof row.updatedAt !== "string" || row.updatedAt.length === 0) {
+    throw new Error(`restoreMany: row "${label}" is missing "updatedAt".`);
+  }
+}
+
 /** One table's worth of CRUD, backed directly by a Dexie `Table` (top-level, or bound to a
  * running transaction — see `DexieStorageAdapter.transaction`). */
 class DexieRepository<T extends Timestamped, TIndexed extends keyof T> implements Repository<
@@ -162,6 +178,18 @@ class DexieRepository<T extends Timestamped, TIndexed extends keyof T> implement
 
   async delete(id: string): Promise<void> {
     await this.table.delete(id);
+  }
+
+  async restoreMany(rows: T[]): Promise<T[]> {
+    // Validate every row before writing any of them: a restore either lands whole or not at all,
+    // matching `importBundle`'s single-transaction guarantee.
+    for (const row of rows) {
+      assertRestorable(row);
+    }
+    for (const row of rows) {
+      await this.table.put(row);
+    }
+    return rows;
   }
 }
 

@@ -272,6 +272,81 @@ export function runAdapterContractTests(
       });
     });
 
+    describe("restoreMany", () => {
+      // `put`'s "ignores a supplied updatedAt" tests above are the other half of this contract —
+      // they stay exactly as they are, unchanged, so a future edit cannot quietly swap the two
+      // methods' semantics: `put` always re-stamps `updatedAt`; `restoreMany` never does.
+
+      it("preserves id, createdAt and updatedAt exactly, including a deliberately old updatedAt", async () => {
+        const run: Run = {
+          id: "run-1",
+          createdAt: "2019-01-01T00:00:00.000Z",
+          updatedAt: "2020-01-01T00:00:00.000Z",
+          ...makeRunDraft(),
+        };
+
+        const [result] = await adapter.runs.restoreMany([run]);
+
+        expect(result).toEqual(run);
+        expect(await adapter.runs.get("run-1")).toEqual(run);
+      });
+
+      it("is an upsert: restoring over an existing id replaces it and keeps the incoming timestamps", async () => {
+        const first = await adapter.runs.put(makeRunDraft({ id: "run-1" }));
+        const replacement: Run = {
+          ...first,
+          name: "Restored Name",
+          createdAt: "2018-01-01T00:00:00.000Z",
+          updatedAt: "2019-06-01T00:00:00.000Z",
+        };
+
+        const [result] = await adapter.runs.restoreMany([replacement]);
+
+        expect(result).toEqual(replacement);
+        const stored = await adapter.runs.get("run-1");
+        expect(stored).toEqual(replacement);
+        expect(stored?.createdAt).toBe("2018-01-01T00:00:00.000Z");
+        expect(stored?.updatedAt).toBe("2019-06-01T00:00:00.000Z");
+
+        const all = await adapter.runs.getAll();
+        expect(all).toHaveLength(1);
+      });
+
+      it("throws naming the field and the row id when id is missing", async () => {
+        const row = {
+          ...makeRunDraft(),
+          createdAt: "2020-01-01T00:00:00.000Z",
+          updatedAt: "2020-01-01T00:00:00.000Z",
+        } as unknown as Run;
+
+        await expect(adapter.runs.restoreMany([row])).rejects.toThrow(/"id"/);
+      });
+
+      it("throws naming the field and the row id when createdAt is missing", async () => {
+        const row = {
+          id: "run-missing-createdAt",
+          ...makeRunDraft(),
+          updatedAt: "2020-01-01T00:00:00.000Z",
+        } as unknown as Run;
+
+        await expect(adapter.runs.restoreMany([row])).rejects.toThrow(
+          /run-missing-createdAt.*"createdAt"/,
+        );
+      });
+
+      it("throws naming the field and the row id when updatedAt is missing", async () => {
+        const row = {
+          id: "run-missing-updatedAt",
+          createdAt: "2020-01-01T00:00:00.000Z",
+          ...makeRunDraft(),
+        } as unknown as Run;
+
+        await expect(adapter.runs.restoreMany([row])).rejects.toThrow(
+          /run-missing-updatedAt.*"updatedAt"/,
+        );
+      });
+    });
+
     describe("getAll / delete", () => {
       it("getAll returns everything; delete removes one and leaves the rest", async () => {
         const run = await adapter.runs.put(makeRunDraft());

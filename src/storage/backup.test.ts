@@ -146,12 +146,6 @@ async function seedFullRun(
   return { run, route, mon, death, fight };
 }
 
-function withoutUpdatedAt<T extends { updatedAt: string }>(row: T): Omit<T, "updatedAt"> {
-  const rest: Partial<T> = { ...row };
-  delete rest.updatedAt;
-  return rest as Omit<T, "updatedAt">;
-}
-
 /** Unwraps a `get(id)` result, failing the test immediately (with a useful message) rather than
  * letting `undefined` flow into an equality assertion untyped. */
 function mustExist<T>(row: T | undefined, what: string): T {
@@ -179,27 +173,51 @@ describe("round trip", () => {
 
     expect(summary.imported).toEqual([{ id: seeded.run.id, name: seeded.run.name }]);
 
-    // `adapter.ts`'s Repository.put contract stamps `updatedAt` to the current time on EVERY
-    // write, insert included, regardless of any value supplied on the draft (see
-    // `adapter.contract.ts`, "ignores a supplied updatedAt on insert"). That is deliberate and
-    // applies to import the same as any other write, so `updatedAt` is compared separately below
-    // rather than folded into the row equality checks — see the "lossy" note in the final report.
+    // `importBundle` writes through `Repository.restoreMany`, not `put`: a restore is not a
+    // modification, so every row — including `updatedAt` — must come back byte-identical to what
+    // was exported. (Ordinary writes still go through `put`, which stamps `updatedAt` on every
+    // write; that behaviour is unchanged and is asserted separately in `adapter.contract.ts`.)
     const importedRun = mustExist(await target.runs.get(seeded.run.id), "imported run");
     const importedRoute = mustExist(await target.routes.get(seeded.route.id), "imported route");
     const importedMon = mustExist(await target.mons.get(seeded.mon.id), "imported mon");
     const importedDeath = mustExist(await target.deaths.get(seeded.death.id), "imported death");
     const importedFight = mustExist(await target.fights.get(seeded.fight.id), "imported fight");
 
-    expect(withoutUpdatedAt(importedRun)).toEqual(withoutUpdatedAt(seeded.run));
-    expect(withoutUpdatedAt(importedRoute)).toEqual(withoutUpdatedAt(seeded.route));
-    expect(withoutUpdatedAt(importedMon)).toEqual(withoutUpdatedAt(seeded.mon));
-    expect(withoutUpdatedAt(importedDeath)).toEqual(withoutUpdatedAt(seeded.death));
-    expect(withoutUpdatedAt(importedFight)).toEqual(withoutUpdatedAt(seeded.fight));
+    expect(importedRun).toEqual(seeded.run);
+    expect(importedRoute).toEqual(seeded.route);
+    expect(importedMon).toEqual(seeded.mon);
+    expect(importedDeath).toEqual(seeded.death);
+    expect(importedFight).toEqual(seeded.fight);
 
-    // createdAt IS preserved: the repository only stamps createdAt on a genuinely new id, and
-    // honours a supplied one otherwise.
+    // createdAt AND updatedAt are both preserved byte-identically — a restore recovers rows, it
+    // does not modify them.
     expect(importedRun.createdAt).toBe(seeded.run.createdAt);
+    expect(importedRun.updatedAt).toBe(seeded.run.updatedAt);
     expect(importedMon.createdAt).toBe(seeded.mon.createdAt);
+    expect(importedMon.updatedAt).toBe(seeded.mon.updatedAt);
+  });
+
+  it("preserves a deliberately old updatedAt through an export/import cycle intact", async () => {
+    const source = createMemoryAdapter();
+    await source.init();
+    const oldUpdatedAt = "2020-01-01T00:00:00.000Z";
+    const run = await source.runs.put(makeRunDraft());
+    // `put` always stamps `updatedAt` fresh (see `adapter.contract.ts`), so back-date the row
+    // directly through `restoreMany` — the same path a real backup restore uses — to get a row
+    // whose `updatedAt` genuinely predates "now" without depending on the clock.
+    const backdated = { ...run, updatedAt: oldUpdatedAt };
+    await source.runs.restoreMany([backdated]);
+
+    const bundle = await exportBundle(source);
+    expect(bundle.runs[0]?.updatedAt).toBe(oldUpdatedAt);
+
+    const target = createMemoryAdapter();
+    await target.init();
+    await importBundle(target, bundle, "replace");
+
+    const imported = mustExist(await target.runs.get(run.id), "imported run");
+    expect(imported.updatedAt).toBe(oldUpdatedAt);
+    expect(imported).toEqual(backdated);
   });
 });
 
@@ -500,10 +518,13 @@ describe("importBundle — replace", () => {
 // Atomicity
 // ---------------------------------------------------------------------------
 
-/** Wraps a `StorageAdapter` so `mons.putMany` always rejects, mirroring the failure-injection
+/** Wraps a `StorageAdapter` so `mons.restoreMany` always rejects, mirroring the failure-injection
  * pattern `queries.test.tsx` uses for `useCatchEncounter`. `transaction` re-wraps the scoped
  * adapter it hands to the callback, so the injected failure is visible from inside a transaction
- * too — which is what proves a real rollback rather than just a rejected outer promise. */
+ * too — which is what proves a real rollback rather than just a rejected outer promise.
+ *
+ * Targets `restoreMany` rather than `putMany` because `importBundle` writes through `restoreMany`
+ * (see the "restore is not a modification" fix) — `putMany` is no longer on its write path. */
 function withFailingMonsPutMany(base: StorageAdapter): StorageAdapter {
   return {
     init: () => base.init(),
@@ -512,7 +533,7 @@ function withFailingMonsPutMany(base: StorageAdapter): StorageAdapter {
     encounters: base.encounters,
     mons: {
       ...base.mons,
-      putMany: () => Promise.reject(new Error("simulated write failure")),
+      restoreMany: () => Promise.reject(new Error("simulated write failure")),
     },
     deaths: base.deaths,
     fights: base.fights,

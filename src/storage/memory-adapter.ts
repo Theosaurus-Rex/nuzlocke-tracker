@@ -65,6 +65,25 @@ function restoreTable<T>(live: Map<string, T>, snapshot: Map<string, T>): void {
   }
 }
 
+/** `restoreMany` writes rows that came from outside the type system (a JSON backup file, an
+ * M6 migration source) — validate at runtime even though `T` says these fields are required,
+ * naming both the missing field and the row's id so a bad restore fails loud. Returns an `Error`
+ * rather than throwing, so a caller can turn it into a rejected promise without a synchronous
+ * throw escaping the method call. */
+function restorableRowError<T extends Timestamped>(row: T): Error | undefined {
+  const label = typeof row.id === "string" && row.id.length > 0 ? row.id : "(missing id)";
+  if (typeof row.id !== "string" || row.id.length === 0) {
+    return new Error(`restoreMany: row "${label}" is missing "id".`);
+  }
+  if (typeof row.createdAt !== "string" || row.createdAt.length === 0) {
+    return new Error(`restoreMany: row "${label}" is missing "createdAt".`);
+  }
+  if (typeof row.updatedAt !== "string" || row.updatedAt.length === 0) {
+    return new Error(`restoreMany: row "${label}" is missing "updatedAt".`);
+  }
+  return undefined;
+}
+
 function createRepository<T extends Timestamped, TIndexed extends keyof T>(
   table: Map<string, T>,
 ): Repository<T, TIndexed> {
@@ -109,6 +128,25 @@ function createRepository<T extends Timestamped, TIndexed extends keyof T>(
     delete(id) {
       table.delete(id);
       return Promise.resolve();
+    },
+    restoreMany(rows) {
+      // Validate every row before writing any of them: a restore either lands whole or not at
+      // all, matching `importBundle`'s single-transaction guarantee. Validation failures are
+      // returned as a rejected promise, not a synchronous throw, so a caller can `await` or
+      // `.catch()` this the same way as every other `Repository` method.
+      for (const row of rows) {
+        const error = restorableRowError(row);
+        if (error) {
+          return Promise.reject(error);
+        }
+      }
+      const results: T[] = [];
+      for (const row of rows) {
+        const next = { ...row };
+        table.set(next.id, next);
+        results.push(next);
+      }
+      return Promise.resolve(results);
     },
   };
 }

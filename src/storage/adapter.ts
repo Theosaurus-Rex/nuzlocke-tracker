@@ -64,6 +64,31 @@ export interface Repository<T extends Timestamped, TIndexed extends keyof T> {
   put(record: Draft<T>): Promise<T>;
   putMany(records: Draft<T>[]): Promise<T[]>;
   delete(id: string): Promise<void>;
+  /**
+   * Writes `rows` verbatim: `id`, `createdAt` AND `updatedAt` are all taken from the row exactly
+   * as given, and NEVER regenerated or re-stamped. Like `put`, it is an upsert — restoring the
+   * same `id` twice yields one row holding the later values.
+   *
+   * This exists for exactly two callers: restoring a JSON backup (PER-10, `backup.ts`) and the M6
+   * IndexedDB -> SQLite migration. Both move rows that are already fully timestamped from one
+   * place to another — the write is the data arriving, not a change being made to it. `put`
+   * cannot be used for either, because it stamps `updatedAt` to the current time on EVERY write
+   * (see `put`'s doc comment above); running a restore through `put` rewrites every row's
+   * `updatedAt` to the restore time, flattening exactly the per-record history hard rule 2 keeps
+   * `updatedAt` around for (a run last played in January would report March after a March
+   * restore).
+   *
+   * DO NOT use this for an ordinary application write, even though it looks more direct than
+   * `put`. `put` is what makes it impossible for a caller to forget hard rule 2's per-record
+   * `updatedAt`; `restoreMany` makes the opposite promise, deliberately, for the two callers
+   * above only. Reaching for it because it seems simpler silently defeats that guarantee.
+   *
+   * Takes a fully-formed `T[]`, not `Draft<T>[]`: a restore always has complete rows already,
+   * never a partial one waiting on the adapter to fill in an id or a timestamp. Throws a clear
+   * Error — naming both the missing field and the row's id — when a row lacks `id`, `createdAt`
+   * or `updatedAt`.
+   */
+  restoreMany(rows: T[]): Promise<T[]>;
 }
 
 // ---------------------------------------------------------------------------
