@@ -139,10 +139,10 @@ the interaction genuinely differs.
 
 No single source covers this. Two are combined:
 
-- **PokéAPI** — species, types, abilities, learnsets, evolutions, and wild encounter tables
-  via `/pokemon/{id}/encounters` (the only source with method *and* level). Gen 8 is
-  incomplete and Gen 9 absent; Gen 2–5 is decent but has had real bugs. Spot-check anything
-  level-cap-sensitive against a walkthrough.
+- **PokéAPI** — species, types, abilities and evolutions. Gen 8 is incomplete and Gen 9 absent;
+  Gen 2–5 is decent but has had real bugs. Spot-check anything level-cap-sensitive against a
+  walkthrough. Extracted at build time into typed modules; the app never calls it at runtime,
+  because offline-first is the whole reason there is no backend.
 - **`domtronn/nuzlocke.data`** — `routes/*.txt` for route order, `leagues/*.txt` for gym,
   Elite Four and rival rosters. Hand-curated; nothing else has trainer rosters at all.
   PokéAPI has never had trainer data (feature requests #432 and #580 are still open).
@@ -154,6 +154,25 @@ files. If a second game is ever wanted from upstream, extract that subset the sa
 
 **Level caps are derived**, not sourced — take the ace (highest-level) mon per boss. They
 are a community convention, not a game mechanic, so no API will ever return them.
+
+**Pickers are never constrained to one generation — decided 2026-09-17.** Species, ability, move
+and item pickers are free-text search over **all generations**. A randomiser or a romhack can put
+anything anywhere, so a picker scoped to the tracked game cannot represent what the player
+actually caught, and blocking them from logging it is worse than showing too many options. The
+randomiser sub-toggles already existed to defeat these constraints; a constraint that must be
+defeatable was never a constraint.
+
+Consequences, all deliberate:
+
+- **Learnsets are not stored.** The moveset editor is free-text over every move. Filtering by a
+  species' legal set is exactly the constraint being removed.
+- **Wild encounter tables are not stored.** The app does not show expected encounters per route
+  (PER-8 closed). The randomiser toggle labelled "hides known encounter tables" is therefore
+  misleading and needs rewording when PER-18 builds the rules screen.
+- **Types and move stats are resolved per generation**, not shipped as present-day values. A
+  `GameData` carries its `generation`, and the picker resolves through PokéAPI's `past_types` /
+  `past_values`. Clefairy is Normal in a HeartGold run and Fairy in a Gen 6+ one; Vine Whip is 35
+  power there and 45 now. Present-day values would be visibly wrong for the game being tracked.
 
 **Scope: HeartGold only for V1.** Every additional game is a whole curated dataset, not a
 config flag. Build the ingest pipeline so a second game is additive.
@@ -171,8 +190,9 @@ in the app may assume a game's data came from `nuzlocke.data`.
 - **Visual direction.** shadcn defers this rather than answering it. Do not invest in a
   polish pass until Theo decides whether the hand-drawn look is real.
 - **Desktop/mobile issue split.** Currently one responsive issue per screen.
-- The randomiser toggle ("hides known encounter tables") implies the app normally *shows*
-  expected encounters per route — a feature nothing in the wireframes draws. Unresolved.
+- ~~The randomiser toggle ("hides known encounter tables")~~ **Resolved 2026-09-17:** the app does
+  not show expected encounters per route. PER-8 is closed and no encounter tables are stored.
+  Reword that toggle's label when PER-18 builds the rules screen.
 - Run stats screen and distraction-free logging mode are noted in the design but never
   drawn. They need design before they are buildable.
 
