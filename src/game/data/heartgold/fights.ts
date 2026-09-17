@@ -342,6 +342,11 @@ export const fights: FightDef[] = [
       { species: "starmie", level: 54 },
     ],
   },
+  // Kabutops corrected from upstream (domtronn/nuzlocke.data): it lists this at level 54, but
+  // both Bulbapedia (https://bulbapedia.bulbagarden.net/wiki/Brock, "Pokémon HeartGold and
+  // SoulSilver" gym battle section) and Serebii (https://www.serebii.net/heartgoldsoulsilver/
+  // gym.shtml) independently list it at level 52, which is what's recorded here. Brock's ace
+  // (Onix, level 54) is unaffected either way, so this does not change his level cap.
   {
     id: "gym-brock",
     name: "Brock",

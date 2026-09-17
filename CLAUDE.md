@@ -169,9 +169,23 @@ No single source covers this. Two are combined:
   PokéAPI has never had trainer data (feature requests #432 and #580 are still open).
 
 **Licence question — resolved 2026-09-17.** Theo has cleared use of `nuzlocke.data`. The
-approach is **not** to vendor the repo wholesale: extract only the HeartGold subset we actually
-need into our own files, in our own format, committed here. Credit the source in the generated
-files. If a second game is ever wanted from upstream, extract that subset the same way.
+approach is **not** to vendor the repo wholesale: bootstrap only the HeartGold subset we
+actually need into our own files, in our own format, committed here, crediting the source in a
+header comment. If a second game is ever wanted from upstream, bootstrap that subset the same
+way. That bootstrap is one-shot, not a pipeline kept in sync with upstream — see the ownership
+decision below.
+
+**Game data is ours once seeded — decided 2026-09-18.** A generator (`scripts/extract-*.ts`) is
+a one-shot bootstrapper: run it to seed a new game, or a new kind of data, not something re-run
+to keep output in sync with upstream. After that, the committed files under `src/game/data/`
+are ours — hand-editing them is the normal workflow, not a special case: fix an upstream error,
+trim what we don't need, or tune values to suit the app, and say why in a comment beside the
+change. Hand-authored romhack datasets were always the end state, so this is the same workflow
+applied to data that happened to be seeded from somewhere. Reproducibility protects data you'd
+actually regenerate; nobody re-runs the HeartGold extraction — only a genuinely new game would
+call for that — so requiring it protected nothing and taxed the common case. A stray re-run is
+now destructive rather than idempotent, so both generators refuse to overwrite a populated
+output directory unless passed `--force`. See README.md "Game data" for the how.
 
 **Level caps are derived**, not sourced — take the ace (highest-level) mon per boss. They
 are a community convention, not a game mechanic, so no API will ever return them.

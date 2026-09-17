@@ -105,13 +105,20 @@ Two things worth knowing before you touch the storage layer:
 
 ---
 
-## Regenerating game data
+## Game data
 
-The species, route and roster data in `src/game/data/` is generated at build time and
-**committed**. The generators do not run during `pnpm build` or `pnpm test` — the emitted
-modules are what ships, so the app never needs the network.
+The species, route and roster data in `src/game/data/` is **ours**, committed to the repo.
+A generator (`scripts/extract-*.ts`) is a one-shot bootstrapper: run it once to seed a new
+game, or to pull in a new kind of data as features need it. After that, the files it wrote
+belong to us — hand-editing them is the normal, expected workflow, not a special case. That
+covers fixing an upstream error, trimming what we don't need, or tuning values to suit the
+app. Hand-authored romhack datasets were always the end state here, so this is the same
+workflow applied to data that happened to be seeded from somewhere.
 
-You only need these when the source data changes:
+The generators do not run during `pnpm build` or `pnpm test` — the emitted modules are what
+ships, so the app never needs the network.
+
+Seed a new game or a new kind of data with:
 
 ```bash
 # Routes and boss rosters, from a local clone of domtronn/nuzlocke.data
@@ -121,13 +128,17 @@ node scripts/extract-heartgold.ts /path/to/nuzlocke.data
 POKEDEX_CACHE_DIR=/tmp/pokeapi-cache node scripts/extract-pokedex.ts
 ```
 
-Both cache their responses, so a rerun is cheap. Run `pnpm format` afterwards — the
-generators do not format their own output, and `format:check` is part of the gate.
+Both refuse to run if their output directory already has generated files in it — re-running
+against an already-seeded game would silently overwrite every hand correction with upstream's
+current values. Pass `--force` if you genuinely mean to re-seed from scratch, and diff the
+result before committing.
 
-> **If you edit generated data by hand, put the correction in the generator.** Committed
-> output whose script cannot reproduce it has no provenance. `scripts/extract-heartgold.ts`
-> has a `LEVEL_CORRECTIONS` table for exactly this — upstream had a boss's roster level wrong,
-> and the fix lives in the pipeline rather than in the emitted file.
+Run `pnpm format` afterwards — the generators do not format their own output, and
+`format:check` is part of the gate.
+
+**Correct the data file, not the generator.** If you find an upstream error or want to tune a
+value, edit the committed file directly and say why in a comment beside the change, so the
+next reader knows it was deliberate rather than a transcription slip.
 
 ---
 
