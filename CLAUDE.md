@@ -156,6 +156,52 @@ the interaction genuinely differs.
 
 ---
 
+## Testing — a green suite proves less than it looks
+
+A passing suite shows the code does what the test author expected. When the same person wrote
+both, in the same hour, from the same mental model, the tests agree with the code rather than
+with reality. **Three real defects in this repo survived a fully green suite** — a party-slot
+collision that corrupted data silently, and two tests that asserted nothing at all.
+
+**Verify every new guarantee by watching the suite go red.** Break the thing deliberately, run
+`pnpm test`, confirm it fails *for the right reason*, then restore:
+
+```bash
+# match on the code, never a line number — line numbers drift and the probe
+# then silently applies nothing, which reads exactly like a passing test
+sed -i '' 's/existing ? existing.createdAt/record.createdAt/' src/storage/memory-adapter.ts
+git diff --stat            # confirm it actually applied before trusting the result
+pnpm test                  # expect FAILURE. green here means the test is fake
+git checkout -- src/storage/memory-adapter.ts
+```
+
+About a minute per guarantee, and it is the difference between "the tests pass" and "the tests
+would notice". Every claim this repo makes — transaction rollback, timestamp semantics, the
+indexed-key constraint, the sparse `cause.fightId` index, import atomicity, party-slot
+allocation, Gen 4 type resolution, the shared nav config — has been checked this way.
+
+Failure modes already seen here, each of which passed CI:
+
+- **Tests that only describe the happy shape.** 27 transition tests all used contiguous party
+  slots, so a collision that only occurs when the party has a *gap* — the state every death
+  produces — was invisible.
+- **A test fed the value it asserts on.** `put({ ...returnedRow, name: "x" })` then asserting
+  `createdAt` survived: the draft already carried it, so the adapter's recovery path never ran.
+  Deleting that path entirely left all 60 tests green.
+- **Rewriting a test silently dropped coverage it was incidentally providing.** Fixing the above
+  removed the only case where a draft carried its own `updatedAt`. **When you change a test,
+  re-run the whole mutation battery, not just the mutation you are working on.**
+
+**Never write a test that cannot fail.** jsdom does not evaluate CSS media queries, so a
+breakpoint assertion passes whatever the classes say — there is deliberately none, and the gap
+is listed openly instead. Likewise never assert a constant against its own literal: it can only
+fail when someone deliberately changes it and updates the test in the same breath.
+
+A fuller write-up, with the reasoning behind the architecture as a whole, is in the
+[Building for Permadeath](https://claude.ai/artifact/Rw58g8ixMfXcLD2RB6JwQQ) walkthrough.
+
+---
+
 ## Game data
 
 No single source covers this. Two are combined:
