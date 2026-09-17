@@ -197,9 +197,6 @@ breakpoint assertion passes whatever the classes say — there is deliberately n
 is listed openly instead. Likewise never assert a constant against its own literal: it can only
 fail when someone deliberately changes it and updates the test in the same breath.
 
-A fuller write-up, with the reasoning behind the architecture as a whole, is in the
-[Building for Permadeath](https://claude.ai/artifact/Rw58g8ixMfXcLD2RB6JwQQ) walkthrough.
-
 ---
 
 ## Game data

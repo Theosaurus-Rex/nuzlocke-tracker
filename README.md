@@ -84,15 +84,12 @@ the others, which is what makes the game rules testable without a database.
 
 ## Architecture
 
-Three places, in increasing depth:
+Two places, in increasing depth:
 
-- **`CLAUDE.md`** — the decisions and the six hard rules everything answers to. Read this
-  before changing anything structural.
+- **`CLAUDE.md`** — the decisions and the six hard rules everything answers to, plus the
+  testing conventions. Read this before changing anything structural.
 - **`docs/superpowers/specs/2026-09-17-nuzlocke-scaffold-design.md`** — the M0 design spec:
   table shapes, the adapter interface, the commit plan.
-- **[Building for Permadeath](https://claude.ai/artifact/Rw58g8ixMfXcLD2RB6JwQQ)** — a
-  narrative walkthrough of *why* the architecture is shaped this way, written for someone
-  joining cold. (Hosted on claude.ai, private unless shared.)
 
 Two things worth knowing before you touch the storage layer:
 
