@@ -4,9 +4,11 @@
  * are equals"). A second, hand-maintained copy for the other shell is exactly the drift that rule
  * exists to prevent.
  *
- * These are the destinations that exist outside the context of any one run. Once a run is open,
- * navigating between its routes/party/boxes/graveyard/fights screens is in-page tab navigation
- * owned by that screen (M1-M4), not global app nav.
+ * Navigation is run-scoped: once a run is open, the sidebar and the tab bar navigate between
+ * THAT run's five screens (routes/party/boxes/graveyard/fights), matching the wireframes and
+ * PER-20. Outside of any run, they show the global destinations instead. `navItemsFor` is the
+ * one place that decides which list applies; callers compute it once and pass the same array to
+ * both shells (see `app-shell.tsx`).
  */
 
 export interface NavItem {
@@ -17,7 +19,25 @@ export interface NavItem {
   end?: boolean;
 }
 
-export const NAV_ITEMS: NavItem[] = [
+const GLOBAL_NAV_ITEMS: NavItem[] = [
   { label: "Runs", to: "/", end: true },
   { label: "Settings", to: "/settings" },
 ];
+
+function runNavItems(runId: string): NavItem[] {
+  return [
+    { label: "Routes", to: `/runs/${runId}/routes` },
+    { label: "Party", to: `/runs/${runId}/party` },
+    { label: "Boxes", to: `/runs/${runId}/boxes` },
+    { label: "Graveyard", to: `/runs/${runId}/graveyard` },
+    { label: "Fights", to: `/runs/${runId}/fights` },
+  ];
+}
+
+/**
+ * Returns the nav items for the current context: a run's five screens when `runId` is present,
+ * the global destinations otherwise.
+ */
+export function navItemsFor(runId: string | undefined): NavItem[] {
+  return runId ? runNavItems(runId) : GLOBAL_NAV_ITEMS;
+}

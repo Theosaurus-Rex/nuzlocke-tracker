@@ -12,37 +12,64 @@ import { createMemoryRouter, RouterProvider } from "react-router";
 import { render, screen, waitFor, within } from "@testing-library/react";
 import { describe, expect, it } from "vitest";
 
-import { NAV_ITEMS } from "./nav-items";
+import { navItemsFor } from "./nav-items";
 import { appRoutes } from "./router";
 
 function renderAt(initialPath: string) {
   const router = createMemoryRouter(appRoutes, { initialEntries: [initialPath] });
-  render(<RouterProvider router={router} />);
-  return router;
+  const rendered = render(<RouterProvider router={router} />);
+  return { router, unmount: rendered.unmount };
+}
+
+function linksIn(nav: HTMLElement) {
+  return within(nav)
+    .getAllByRole("link")
+    .map((link) => ({ label: link.textContent, href: link.getAttribute("href") }));
+}
+
+function shells() {
+  return {
+    sidebar: screen.getByRole("navigation", { name: "Sidebar navigation" }),
+    tabBar: screen.getByRole("navigation", { name: "Tab bar navigation" }),
+  };
 }
 
 describe("AppShell navigation", () => {
-  it("renders the sidebar and the tab bar from the same nav item config", () => {
+  it("renders the global nav items in both shells when there is no active run", () => {
     renderAt("/");
 
-    const sidebar = screen.getByRole("navigation", { name: "Sidebar navigation" });
-    const tabBar = screen.getByRole("navigation", { name: "Tab bar navigation" });
-
-    const linksIn = (nav: HTMLElement) =>
-      within(nav)
-        .getAllByRole("link")
-        .map((link) => ({ label: link.textContent, href: link.getAttribute("href") }));
-
-    const expected = NAV_ITEMS.map((item) => ({ label: item.label, href: item.to }));
+    const { sidebar, tabBar } = shells();
+    const expected = navItemsFor(undefined).map((item) => ({
+      label: item.label,
+      href: item.to,
+    }));
 
     expect(linksIn(sidebar)).toEqual(expected);
     expect(linksIn(tabBar)).toEqual(expected);
   });
 
-  it("links each nav item to its configured path", () => {
+  it("renders the run's five screens in both shells when a run is active", () => {
+    renderAt("/runs/run-123/party");
+
+    const { sidebar, tabBar } = shells();
+
+    // Compare the two renderings against each other, not against a duplicated literal.
+    expect(linksIn(sidebar)).toEqual(linksIn(tabBar));
+
+    const hrefs = linksIn(sidebar).map((link) => link.href);
+    expect(hrefs).toEqual([
+      "/runs/run-123/routes",
+      "/runs/run-123/party",
+      "/runs/run-123/boxes",
+      "/runs/run-123/graveyard",
+      "/runs/run-123/fights",
+    ]);
+  });
+
+  it("links each global nav item to its configured path", () => {
     renderAt("/");
 
-    for (const item of NAV_ITEMS) {
+    for (const item of navItemsFor(undefined)) {
       const links = screen.getAllByRole("link", { name: item.label });
       expect(links.length).toBeGreaterThan(0);
       for (const link of links) {
@@ -51,11 +78,10 @@ describe("AppShell navigation", () => {
     }
   });
 
-  it("marks the active route in both the sidebar and the tab bar", () => {
+  it("marks the active route in both the sidebar and the tab bar outside a run", () => {
     renderAt("/settings");
 
-    const sidebar = screen.getByRole("navigation", { name: "Sidebar navigation" });
-    const tabBar = screen.getByRole("navigation", { name: "Tab bar navigation" });
+    const { sidebar, tabBar } = shells();
 
     for (const nav of [sidebar, tabBar]) {
       const settingsLink = within(nav).getByRole("link", { name: "Settings" });
@@ -65,8 +91,42 @@ describe("AppShell navigation", () => {
     }
   });
 
+  it("marks the active screen in both shells within a run", () => {
+    renderAt("/runs/run-123/boxes");
+
+    const { sidebar, tabBar } = shells();
+
+    for (const nav of [sidebar, tabBar]) {
+      const boxesLink = within(nav).getByRole("link", { name: "Boxes" });
+      const partyLink = within(nav).getByRole("link", { name: "Party" });
+      expect(boxesLink).toHaveAttribute("aria-current", "page");
+      expect(partyLink).not.toHaveAttribute("aria-current");
+    }
+  });
+
+  it("updates the nav hrefs when switching runs", () => {
+    const first = renderAt("/runs/run-a/party");
+    expect(linksIn(shells().sidebar).map((link) => link.href)).toEqual([
+      "/runs/run-a/routes",
+      "/runs/run-a/party",
+      "/runs/run-a/boxes",
+      "/runs/run-a/graveyard",
+      "/runs/run-a/fights",
+    ]);
+    first.unmount();
+
+    renderAt("/runs/run-b/party");
+    expect(linksIn(shells().sidebar).map((link) => link.href)).toEqual([
+      "/runs/run-b/routes",
+      "/runs/run-b/party",
+      "/runs/run-b/boxes",
+      "/runs/run-b/graveyard",
+      "/runs/run-b/fights",
+    ]);
+  });
+
   it("redirects /runs/:runId to /runs/:runId/routes", async () => {
-    const router = renderAt("/runs/run-123");
+    const { router } = renderAt("/runs/run-123");
 
     await waitFor(() => {
       expect(router.state.location.pathname).toBe("/runs/run-123/routes");

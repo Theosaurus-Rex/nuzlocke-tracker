@@ -8,25 +8,32 @@
  *
  * Active-route highlighting is `NavLink`'s own `isActive` (and the `aria-current="page"` it sets
  * on the anchor), applied identically to both variants.
+ *
+ * Nav items are run-scoped: the active `runId` (if any) comes from the router, `navItemsFor` is
+ * called once, and the SAME resulting array feeds both renderings below — see `nav-items.ts`.
  */
 
 import type { ReactNode } from "react";
-import { NavLink, Outlet } from "react-router";
+import { NavLink, Outlet, useParams } from "react-router";
 
-import { NAV_ITEMS } from "./nav-items";
+import { navItemsFor } from "./nav-items";
 
 function navLinkClassName({ isActive }: { isActive: boolean }): string {
   return isActive ? "text-foreground font-medium" : "text-muted-foreground hover:text-foreground";
 }
 
 export function AppShell(): ReactNode {
+  const { runId } = useParams<{ runId: string }>();
+  const navItems = navItemsFor(runId);
+
   return (
     <div className="min-h-screen">
       <nav
         aria-label="Sidebar navigation"
         className="fixed inset-y-0 left-0 hidden w-56 flex-col gap-1 border-r border-border bg-sidebar p-4 md:flex"
       >
-        {NAV_ITEMS.map((item) => (
+        {/* Run switcher + live counters (PER-20, M1) will sit here, above the nav items. */}
+        {navItems.map((item) => (
           <NavLink key={item.to} to={item.to} end={item.end} className={navLinkClassName}>
             {item.label}
           </NavLink>
@@ -43,7 +50,7 @@ export function AppShell(): ReactNode {
         aria-label="Tab bar navigation"
         className="fixed inset-x-0 bottom-0 flex border-t border-border bg-background md:hidden"
       >
-        {NAV_ITEMS.map((item) => (
+        {navItems.map((item) => (
           <NavLink
             key={item.to}
             to={item.to}
