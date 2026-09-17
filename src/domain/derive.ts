@@ -7,7 +7,7 @@
  * consume it.
  */
 
-import type { Death, Encounter, Mon } from "./types";
+import type { Encounter, Mon } from "./types";
 
 // ---------------------------------------------------------------------------
 // countByMonStatus
@@ -69,27 +69,34 @@ export interface RunSummary {
 }
 
 /**
- * The numbers a run's summary card needs, in one call. `dead` comes from the `deaths` table
- * (the run's authoritative casualty log) rather than from `countByMonStatus(mons).dead`; the two
- * agree under every transition this app performs (`killMon` writes both a dead mon and its death
- * in the same transaction — see `transitions.ts` and `mutations.ts`), so this is a choice of
- * which source of truth to read, not a different number.
+ * The numbers a run's summary card needs, in one call. `party`, `boxed` and `dead` are a
+ * PARTITION of `mons` — they are three faces of one status field, so they always sum to
+ * `mons.length` — which is why all three come from `countByMonStatus(mons)` rather than `dead`
+ * being read off the `deaths` table instead.
+ *
+ * That's a deliberate choice, not an oversight: `deaths` and "mons whose status is `dead`" agree
+ * under every transition this app performs today (`killMon` writes both in the same
+ * transaction — see `transitions.ts` and `mutations.ts`), but they are not the same guarantee.
+ * `backup.ts` validates that a death's `monId` references a mon present in the bundle, but NOT
+ * that mon's `status` — and hand-editing game/run data is an explicitly supported workflow
+ * (CLAUDE.md, "Game data is ours once seeded"). A bundle with deaths whose mons are still `party`
+ * would make `party + boxed + deaths.length` exceed `mons.length`, silently. Deriving `dead` from
+ * `mons` instead keeps the three numbers a true breakdown of the roster no matter how the data
+ * arrived. Do not "fix" this back toward `deaths.length` — see `derive.test.ts`'s partition test.
  */
 export function summariseRun({
   encounters,
   mons,
-  deaths,
 }: {
   encounters: readonly Encounter[];
   mons: readonly Mon[];
-  deaths: readonly Death[];
 }): RunSummary {
-  const { party, boxed } = countByMonStatus(mons);
+  const { party, boxed, dead } = countByMonStatus(mons);
 
   return {
     routesCovered: countRoutesCovered(encounters),
     party,
     boxed,
-    dead: deaths.length,
+    dead,
   };
 }

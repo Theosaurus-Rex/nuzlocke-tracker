@@ -1,7 +1,7 @@
 import { describe, expect, test } from "vitest";
 
 import { countByMonStatus, countRoutesCovered, summariseRun } from "@/domain/derive";
-import type { Death, Encounter, Mon } from "@/domain/types";
+import type { Encounter, Mon } from "@/domain/types";
 
 const TIMESTAMP = "2026-09-17T00:00:00.000Z";
 
@@ -46,22 +46,6 @@ function makeEncounter(overrides: Partial<Encounter> = {}): Encounter {
   };
 }
 
-function makeDeath(overrides: Partial<Death> = {}): Death {
-  return {
-    id: "death-1",
-    runId: "run-1",
-    monId: "mon-1",
-    level: 10,
-    routeId: "route-1",
-    cause: { type: "wild", species: "geodude", level: 10, move: "Rock Throw" },
-    diedAt: TIMESTAMP,
-    notes: null,
-    createdAt: TIMESTAMP,
-    updatedAt: TIMESTAMP,
-    ...overrides,
-  };
-}
-
 describe("countByMonStatus", () => {
   test("tallies party, box and dead mons separately", () => {
     // Boxed (2) and dead (1) are deliberately unequal so a classification bug that swaps them
@@ -78,6 +62,30 @@ describe("countByMonStatus", () => {
 
   test("returns all zeros for no mons", () => {
     expect(countByMonStatus([])).toEqual({ party: 0, boxed: 0, dead: 0 });
+  });
+
+  test("party + boxed + dead always sum to the number of mons (partition invariant)", () => {
+    // This is the property `summariseRun` relies on to treat party/boxed/dead as a breakdown of
+    // one roster rather than three independently-sourced numbers — see the comment on
+    // `summariseRun`. Checked across several mixes, including the empty and single-mon cases.
+    const fixtures: Mon[][] = [
+      [],
+      [makeMon({ status: "party" })],
+      [makeMon({ status: "box" })],
+      [makeMon({ status: "dead" })],
+      [
+        makeMon({ id: "a", status: "party" }),
+        makeMon({ id: "b", status: "party" }),
+        makeMon({ id: "c", status: "box" }),
+        makeMon({ id: "d", status: "dead" }),
+        makeMon({ id: "e", status: "dead" }),
+      ],
+    ];
+
+    for (const mons of fixtures) {
+      const { party, boxed, dead } = countByMonStatus(mons);
+      expect(party + boxed + dead).toBe(mons.length);
+    }
   });
 });
 
@@ -109,7 +117,7 @@ describe("countRoutesCovered", () => {
 });
 
 describe("summariseRun", () => {
-  test("combines routes covered, mon status counts and the death count", () => {
+  test("combines routes covered with a mons-status breakdown", () => {
     const summary = summariseRun({
       encounters: [
         makeEncounter({ id: "e1", routeId: "route-1", status: "caught" }),
@@ -121,14 +129,30 @@ describe("summariseRun", () => {
         makeMon({ id: "c", status: "box" }),
         makeMon({ id: "d", status: "dead" }),
       ],
-      deaths: [makeDeath({ id: "death-1", monId: "d" })],
     });
 
     expect(summary).toEqual({ routesCovered: 1, party: 1, boxed: 2, dead: 1 });
   });
 
+  test("dead comes from mons whose status is 'dead', not from a deaths table row count", () => {
+    // A death row's mon that is somehow not (or no longer) marked `dead` — possible via a
+    // hand-edited import, since `backup.ts` validates the `monId` reference but not that mon's
+    // status — must NOT inflate the card's dead count. Only three mons here, none `dead`, so the
+    // count must be 0 regardless of how many `deaths` rows might exist elsewhere for this run.
+    const summary = summariseRun({
+      encounters: [],
+      mons: [
+        makeMon({ id: "a", status: "party" }),
+        makeMon({ id: "b", status: "box" }),
+        makeMon({ id: "c", status: "party" }),
+      ],
+    });
+
+    expect(summary.dead).toBe(0);
+  });
+
   test("is all zeros for a freshly created run with no rows yet", () => {
-    const summary = summariseRun({ encounters: [], mons: [], deaths: [] });
+    const summary = summariseRun({ encounters: [], mons: [] });
     expect(summary).toEqual({ routesCovered: 0, party: 0, boxed: 0, dead: 0 });
   });
 });

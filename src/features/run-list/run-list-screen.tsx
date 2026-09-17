@@ -3,11 +3,12 @@
  * party/boxed/dead counts at a glance, with one action per card.
  *
  * Each card fetches its OWN run's rows via the existing per-run hooks (`useEncounters`,
- * `useMons`, `useDeaths`) rather than a new aggregate query. `invalidateRun`
- * (`@/storage/queries`) only invalidates the keys it enumerates, so a new aggregate key such as
- * `['runSummaries']` would silently go stale after a catch or a death, with no error anywhere. N
- * runs x 3 cached per-run queries against IndexedDB is fine at this scale, and invalidation
- * already works correctly for it — see that module's doc comment.
+ * `useMons`) rather than a new aggregate query. `invalidateRun` (`@/storage/queries`) only
+ * invalidates the keys it enumerates, so a new aggregate key such as `['runSummaries']` would
+ * silently go stale after a catch or a death, with no error anywhere. N runs x 2 cached per-run
+ * queries against IndexedDB is fine at this scale, and invalidation already works correctly for
+ * it — see that module's doc comment. (No `useDeaths` here: `summariseRun`'s `dead` count is a
+ * `mons`-status partition, not a `deaths`-table tally — see `derive.ts`.)
  *
  * No visual design work here: CLAUDE.md's "still open" section leaves the hand-drawn look
  * unresolved, so this is existing shadcn primitives (`buttonVariants`) plus plain Tailwind on the
@@ -25,7 +26,7 @@ import { Link } from "react-router";
 import { buttonVariants } from "@/components/ui/button";
 import { summariseRun } from "@/domain/derive";
 import type { Run } from "@/domain/types";
-import { useDeaths, useEncounters, useMons, useRuns } from "@/storage/queries";
+import { useEncounters, useMons, useRuns } from "@/storage/queries";
 
 const STAT_LABELS = [
   { key: "routesCovered", label: "Routes covered" },
@@ -37,16 +38,14 @@ const STAT_LABELS = [
 function RunCard({ run }: { run: Run }): ReactNode {
   const encountersQuery = useEncounters(run.id);
   const monsQuery = useMons(run.id);
-  const deathsQuery = useDeaths(run.id);
 
-  const loading = encountersQuery.isPending || monsQuery.isPending || deathsQuery.isPending;
+  const loading = encountersQuery.isPending || monsQuery.isPending;
 
   const summary = loading
     ? null
     : summariseRun({
         encounters: encountersQuery.data ?? [],
         mons: monsQuery.data ?? [],
-        deaths: deathsQuery.data ?? [],
       });
 
   const actionLabel = run.status === "active" ? "Resume" : "View";
