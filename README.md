@@ -133,8 +133,8 @@ generators do not format their own output, and `format:check` is part of the gat
 
 ## Testing
 
-204 tests. They cover the domain rules, both storage adapters via the shared contract, the
-query layer, the game data's invariants, and the app shell's routing.
+`pnpm test` covers the domain rules, both storage adapters via the shared contract, the query
+layer, the game data's invariants, and the app shell's routing.
 
 Two conventions worth keeping:
 

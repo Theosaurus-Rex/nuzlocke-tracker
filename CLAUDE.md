@@ -41,6 +41,27 @@ Every commit in the history so far passes all four.
 Prettier does not touch Markdown — `*.md` is in `.prettierignore`. Prose here is hand-authored,
 and Prettier realigns tables and rewrites emphasis markers for no content change.
 
+### Keep the README current
+
+`README.md` is the setup and orientation doc. **Update it in the same commit as the change that
+dates it** — a README corrected later is a README that was wrong in between, and nothing fails
+when it rots.
+
+Changes that stale it, none of which the build will catch:
+
+- **Scripts added, renamed or removed** in `package.json` — the command table and the gate
+- **Node or pnpm version moves** — the requirements table and `packageManager`
+- **A new top-level directory under `src/`**, or a layer's responsibility shifting — the
+  structure block and the dependency direction under it
+- **A generator's invocation or env vars changing** — the regeneration commands, which are
+  otherwise undiscoverable since the build never runs them
+- **A known gap being closed**, e.g. the CSS breakpoint getting a real browser test — delete
+  the entry rather than leaving a fixed problem listed as outstanding
+- **A file moving that the README names by path**, including the design spec
+
+Do not put counts of anything in it. A test or commit count is stale on the next commit and
+nobody will notice; point at the command that prints the real number instead.
+
 ---
 
 ## Stack — decided, do not relitigate
