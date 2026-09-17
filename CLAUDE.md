@@ -276,6 +276,30 @@ in the app may assume a game's data came from `nuzlocke.data`.
 
 ---
 
+## Pull requests — one per ticket, Theo merges
+
+From 2026-09-18 onward, work lands through a reviewed PR, not directly on `main`.
+
+- **One branch and one PR per Linear issue.** Use the branch name Linear supplies on the issue
+  (e.g. `theosaurus13/per-16-08-new-run-name-and-game-picker`) so it links automatically.
+- **Never push to `main`, and never merge.** Theo verifies the change by hand and merges when
+  satisfied. Opening the PR is where your work stops.
+- **The gate runs before the PR opens**, not after:
+  `pnpm lint && pnpm typecheck && pnpm test && pnpm build`.
+- **The PR description must say how to verify it by hand.** That is the whole point of the
+  review, so it is the part worth writing properly: the exact steps, what to look for, and what
+  is deliberately not covered by a test (the CSS breakpoint, anything visual). A reviewer should
+  not have to work out how to exercise the change.
+- Link the Linear issue, and state what is out of scope so a missing thing does not read as an
+  oversight.
+- **No tool-attribution lines** in commit messages or PR bodies — no `Co-Authored-By`, no
+  "Generated with Claude Code". This follows Theo's global config and applies here too.
+
+If a ticket turns out to be too large for one reviewable PR, say so and propose the split before
+building, rather than opening one PR that nobody can usefully review.
+
+---
+
 ## Linear
 
 This is a **personal** project. Issues live in the **Personal** workspace
