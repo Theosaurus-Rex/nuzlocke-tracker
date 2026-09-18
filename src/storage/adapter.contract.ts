@@ -1,13 +1,9 @@
 /**
- * Reusable contract test suite for `StorageAdapter`.
+ * Reusable contract test suite for `StorageAdapter`, named `.contract.ts` rather than `.test.ts`
+ * so Vitest does not collect it on its own. Test files invoke it directly.
  *
- * This file is invoked BY test files (`memory-adapter.test.ts` now, the Dexie adapter's test at
- * commit 8, the SQLite adapter's test at M6) — it is deliberately named `.contract.ts`, not
- * `.test.ts`, so Vitest does not try to collect it on its own.
- *
- * Every assertion here is written against the promises the `StorageAdapter` interface makes, in
- * `adapter.ts`'s doc comments, never against one implementation's internals. That is the whole
- * point of the file: the same suite, unchanged, is what proves the SQLite adapter at M6.
+ * Every assertion is written against the promises `StorageAdapter`'s interface makes, never
+ * against one implementation's internals.
  */
 
 import { describe, it, expect, beforeEach } from "vitest";
@@ -19,9 +15,7 @@ import type { StorageAdapter } from "./adapter";
 
 const UUID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
-// ---------------------------------------------------------------------------
-// Honest domain fixtures — real Run/Route/Encounter/Mon/Death/Fight drafts, not `as any` stubs.
-// ---------------------------------------------------------------------------
+// Honest domain fixtures: real Run/Route/Encounter/Mon/Death/Fight drafts, not `as any` stubs.
 
 function makeRunDraft(overrides: Partial<Draft<Run>> = {}): Draft<Run> {
   return {
@@ -135,9 +129,8 @@ function makeFightDraft(runId: string, overrides: Partial<Draft<Fight>> = {}): D
   };
 }
 
-/** A short, real delay — guarantees two `put`s land in different milliseconds without mocking
- * the clock (fake timers would risk interfering with a future IndexedDB-backed implementation).
- */
+/** A short, real delay so two `put`s land in different milliseconds, without mocking the clock
+ * (fake timers risk interfering with the Dexie-backed adapter). */
 function tick(): Promise<void> {
   return new Promise((resolve) => setTimeout(resolve, 5));
 }
@@ -171,10 +164,10 @@ export function runAdapterContractTests(
       });
 
       it("stamps updatedAt on write and recovers createdAt from the stored row when the update draft carries no timestamps", async () => {
-        // `src/domain/transitions.ts` returns `Draft<T>` with an `id` and NO timestamps — this
-        // is the path the app actually takes on every write after the first. Spreading a full
+        // `src/domain/transitions.ts` returns `Draft<T>` with an `id` and no timestamps: this is
+        // the path the app actually takes on every write after the first. Spreading a full
         // returned row here (`{ ...first }`) would let the draft carry `createdAt` itself and
-        // pass even if the adapter never consulted the stored row, so this deliberately does not.
+        // pass even if the adapter never consulted the stored row, so this deliberately doesn't.
         const first = await adapter.runs.put(makeRunDraft({ id: "run-1" }));
         await tick();
         const second = await adapter.runs.put({
@@ -205,8 +198,8 @@ export function runAdapterContractTests(
 
       it("ignores a supplied createdAt on update, preserving the stored row's original", async () => {
         // The round-trip path: a caller supplies a full row, including `createdAt`, on an
-        // update. `adapter.ts` promises the stored row's original always wins; use a
-        // deliberately wrong value to prove it is discarded rather than accepted by coincidence.
+        // update. `adapter.ts` promises the stored row's original always wins. This uses a
+        // deliberately wrong value to prove it's discarded rather than accepted by coincidence.
         const first = await adapter.runs.put(makeRunDraft({ id: "run-1" }));
         await tick();
         const second = await adapter.runs.put({
@@ -220,11 +213,11 @@ export function runAdapterContractTests(
       });
 
       it("ignores a supplied updatedAt on update, always stamping the current time", async () => {
-        // Mirrors the createdAt round-trip test above, for the other timestamp: import (PER-10)
-        // and the M6 migration both replay whole rows carrying their own old `updatedAt`, and
-        // every downstream merge/sync heuristic reads it. `adapter.ts` promises it is stamped on
-        // EVERY write "regardless of any `updatedAt` present on the draft" — prove the stale
-        // supplied value is discarded, not accepted because it happened to be unset.
+        // Mirrors the createdAt round-trip test above, for the other timestamp. Import replays
+        // whole rows carrying their own old `updatedAt`, and every downstream merge/sync
+        // heuristic reads it. `adapter.ts` promises it's stamped on every write regardless of
+        // what the draft carries. This proves the stale supplied value is discarded, not
+        // accepted because it happened to be unset.
         const first = await adapter.runs.put(makeRunDraft({ id: "run-1" }));
         await tick();
         const second = await adapter.runs.put({
@@ -273,9 +266,9 @@ export function runAdapterContractTests(
     });
 
     describe("restoreMany", () => {
-      // `put`'s "ignores a supplied updatedAt" tests above are the other half of this contract —
-      // they stay exactly as they are, unchanged, so a future edit cannot quietly swap the two
-      // methods' semantics: `put` always re-stamps `updatedAt`; `restoreMany` never does.
+      // `put`'s "ignores a supplied updatedAt" tests above are the other half of this contract.
+      // They stay unchanged, so a future edit can't quietly swap the two methods' semantics.
+      // `put` always re-stamps `updatedAt`. `restoreMany` never does.
 
       it("preserves id, createdAt and updatedAt exactly, including a deliberately old updatedAt", async () => {
         const run: Run = {
@@ -310,6 +303,21 @@ export function runAdapterContractTests(
 
         const all = await adapter.runs.getAll();
         expect(all).toHaveLength(1);
+      });
+
+      it("stores a copy: mutating the caller's row after restoreMany does not change what was stored", async () => {
+        const row: Run = {
+          id: "run-1",
+          createdAt: "2019-01-01T00:00:00.000Z",
+          updatedAt: "2020-01-01T00:00:00.000Z",
+          ...makeRunDraft(),
+        };
+
+        await adapter.runs.restoreMany([row]);
+        row.name = "Mutated After Restore";
+
+        const stored = await adapter.runs.get("run-1");
+        expect(stored?.name).toBe("Test Run");
       });
 
       it("throws naming the field and the row id when id is missing", async () => {
@@ -404,9 +412,9 @@ export function runAdapterContractTests(
 
       it("rejects null on an indexed nullable field: IndexedDB cannot index null", async () => {
         // Both implementations must agree here. The in-memory adapter could otherwise happily
-        // match rows whose field is null, while IndexedDB simply never indexes them — two
-        // "implementations of one interface" quietly disagreeing is exactly what this suite
-        // exists to catch.
+        // match rows whose field is null, while IndexedDB simply never indexes them. Two
+        // implementations of one interface quietly disagreeing is exactly what this suite exists
+        // to catch.
         const run = await adapter.runs.put(makeRunDraft());
         await adapter.mons.put(makeMonDraft(run.id, { encounterId: null }));
 
@@ -560,12 +568,12 @@ export function runAdapterContractTests(
       it("excludes a non-trainer cause carrying a stray fightId, as a malformed JSON import could produce", async () => {
         // `Cause`'s type system forbids `fightId` outside the `trainer` variant, so this row
         // cannot arise from any write path this app makes today. But `isExportBundle` (see
-        // domain/schema.ts) validates only the export envelope, not individual rows, and PER-10
-        // (JSON import) hands the adapter whatever a user's file contains — hand-edited, or
-        // written by an older schema. The cast below deliberately reproduces exactly that: data
-        // the type system says cannot exist, but that a real import can still put in front of
-        // this method. Without the `cause.type === 'trainer'` filter, the sparse `cause.fightId`
-        // index would match this row and report a poison death as a casualty of the named fight.
+        // domain/schema.ts) validates only the export envelope, not individual rows, and JSON
+        // import hands the adapter whatever a user's file contains, hand-edited or written by an
+        // older schema. The cast below reproduces exactly that: data the type system says cannot
+        // exist, but that a real import can still put in front of this method. Without the
+        // `cause.type === 'trainer'` filter, the sparse `cause.fightId` index would match this
+        // row and report a poison death as a casualty of the named fight.
         const run = await adapter.runs.put(makeRunDraft());
 
         const matching = await adapter.deaths.put(
