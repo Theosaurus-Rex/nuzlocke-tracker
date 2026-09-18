@@ -1,73 +1,40 @@
 /**
  * Generator for the pokedex data: species, moves, abilities, items and evolution links across
- * every Pokemon generation (National Dex, currently 1-1025) plus hidden abilities (Gen 5+).
+ * every generation (National Dex, currently 1-1025) plus hidden abilities (Gen 5+).
  *
- * Source: PokeAPI (https://pokeapi.co/), free and unauthenticated. This script fetches several
- * thousand resources across species/moves/abilities/evolution-chains/items/version-groups, so
- * it is polite about it: every response is cached to disk (see CACHE_DIR below) and re-read on
- * rerun, and requests are throttled to a modest concurrency rather than fired all at once.
+ * Source: PokeAPI (https://pokeapi.co/), free and unauthenticated. This fetches several
+ * thousand resources, so every response is cached to disk (see CACHE_DIR below) and re-read on
+ * rerun, with requests throttled to a modest concurrency.
  *
- * This script does NOT run at build or test time — the emitted modules under
- * src/game/data/pokedex/ are what ships (see CLAUDE.md "Why no backend" and the architectural
- * constraint this issue was scoped under: the app must never call PokeAPI at runtime). It is a
- * one-shot bootstrapper (see CLAUDE.md "Game data" — decided 2026-09-18): run it once to seed
- * this kind of data, by hand:
+ * This script does not run at build or test time; the emitted modules under
+ * src/game/data/pokedex/ are what ships, because the app must never call PokeAPI at runtime
+ * (see CLAUDE.md "Why no backend"). It is a one-shot bootstrapper: run it once, by hand:
  *
  *   POKEDEX_CACHE_DIR=/path/to/scratch/cache node scripts/extract-pokedex.ts
  *
- * If POKEDEX_CACHE_DIR is not set, it defaults to a directory under the OS temp dir. The cache
- * is never committed (see .gitignore) — only the generated src/game/data/pokedex/*.ts files are.
+ * POKEDEX_CACHE_DIR defaults to a directory under the OS temp dir if unset. The cache is never
+ * committed; only the generated src/game/data/pokedex/*.ts files are.
  *
- * After that first seed, the emitted files are ours — hand-edit them directly for corrections,
- * trims or tuning, and note why in a comment beside the change. This script refuses to
- * overwrite a directory that already has output; see refuseIfAlreadyPopulated below and pass
- * --force only if you mean to re-seed from scratch.
+ * After that first seed, the emitted files are ours. Hand-edit them directly for corrections,
+ * trims or tuning, and note why beside the change. This script refuses to overwrite a
+ * populated output directory; pass --force only if you mean to re-seed from scratch.
  *
- * ---------------------------------------------------------------------------------------------
- * THE TRAP: PokeAPI serves PRESENT-DAY values by default, not the value for any particular gen.
- * ---------------------------------------------------------------------------------------------
- * Pickers are free-text across all generations (a randomiser or romhack can put anything
- * anywhere — see CLAUDE.md "Game data"), so this dataset does not collapse to one target
- * generation the way the original Gen 4-only extraction did. Instead, the FULL history is kept
- * in the emitted data and resolved at read time by src/game/pokedex.ts `pokedexFor(generation)`.
- * This file's job is just to get that history out of PokeAPI's two different tagging schemes and
- * into one consistent "valid through generation N" shape:
+ * PokeAPI serves present-day values by default, not the value for a particular generation.
+ * Pickers are free-text across all generations, so this dataset keeps the full history and
+ * resolves it at read time; see ./types.ts for the resolution rule this script's output feeds.
+ * This file's job is to convert PokeAPI's two tagging schemes into that one shape:
  *
- * - Pokemon `types` / `past_types`: a `past_types` entry is tagged with a `generation` and
- *   means "the type was THIS, for this generation and every earlier one; it changes starting
- *   the next recorded generation (or the top-level current value, if this is the last entry)".
- *   Confirmed against Clefairy: past_types has one entry tagged generation-v (Normal), and
- *   Clefairy is genuinely Normal through Gen 5, Fairy from Gen 6 (Fairy didn't exist before
- *   then) — so "generation tag N, value V" = "V applies for generation <= N". This is already
- *   the exact shape we want to emit (see PastTypes in ./types.ts): copy straight across as
- *   `{ throughGeneration: N, types: V }`, sorted ascending.
+ * - `past_types` is generation-tagged the same way our `pastTypes` is, so it copies straight
+ *   across as `{ throughGeneration: N, types: V }`, sorted ascending.
+ * - `past_values` is version-group-tagged and runs the opposite direction, so each entry is
+ *   converted with `throughGeneration = generationOf(taggedVersionGroup) - 1`. This collapses
+ *   to whole-generation granularity: a change strictly within a generation rounds down to the
+ *   previous boundary. This is accepted and does not affect any generation this dataset is
+ *   tested against (src/game/pokedex.test.ts): the one intra-Gen-4 case PokeAPI records, Vine
+ *   Whip's diamond-pearl tag, still resolves through the following entry for every Gen 4
+ *   target, exactly as the rounded-down value predicts.
  *
- * - Move `power`/`accuracy`/`pp`/`type` / `past_values`: a `past_values` entry is tagged with a
- *   `version_group` and means the OPPOSITE direction: "value V applied for every version group
- *   strictly BEFORE this tag; starting at this tag, the value has already changed to whatever
- *   the next entry (or the current top-level value) says." To get this into the same
- *   "throughGeneration" shape as past_types, each entry is converted to
- *   `throughGeneration = generationOf(taggedVersionGroup) - 1` — i.e. "the old value is only
- *   GUARANTEED to hold through the generation before the tag's own". This deliberately collapses
- *   to whole-generation granularity: a change that happens strictly WITHIN a generation (at a
- *   version group that isn't that generation's first) gets rounded down to the previous
- *   generation's boundary. This is a known, accepted limitation — it does not affect any
- *   generation this dataset is tested against (see src/game/pokedex.test.ts), because the one
- *   move where PokeAPI records an intra-Gen4 tag (Vine Whip, tagged diamond-pearl — Gen 4's OWN
- *   first version group) never actually produces a different answer within Gen 4: the following
- *   x-y-tagged entry (throughGeneration 5) is what every Gen 4 target resolves through, exactly
- *   as the diamond-pearl tag (throughGeneration 3) predicts by falling one generation short of
- *   it. Resolution itself (src/game/pokedex.ts `pokedexFor`) mirrors past_types: per field, walk
- *   the sorted-ascending qualifying entries (`throughGeneration >= target`) and take the first
- *   non-null value, else fall back to the move's current top-level value.
- *
- * NOTE: this direction genuinely differs between the two endpoints (generation-tagged
- * "up to and including" for past_types vs version-group-tagged "strictly before" for moves'
- * past_values) — do not assume they are the same rule.
- *
- * Spot-checked against Bulbapedia (see src/game/pokedex.test.ts): Vine Whip (35 power / 15 pp
- * Gen 4-5, 45/25 Gen 6+), Tackle (35 power / 95 accuracy through Gen 4, 40/100 from Gen VII),
- * Bite (Normal pre-Gen 2, Dark from Gold/Silver on, power/accuracy/pp unchanged).
+ * Spot-checked against Bulbapedia (src/game/pokedex.test.ts): Vine Whip, Tackle, Bite.
  */
 
 import { mkdirSync, readFileSync, rmSync, writeFileSync, existsSync } from "node:fs";
@@ -83,18 +50,11 @@ const GENERATED_FILES = ["species.ts", "moves.ts", "abilities.ts", "items.ts"] a
 const API_BASE = "https://pokeapi.co/api/v2";
 const CONCURRENCY = 8;
 
-// ---------------------------------------------------------------------------
-// Guard against clobbering hand-owned data
-// ---------------------------------------------------------------------------
-
 /**
- * Refuses to write into a directory that already holds generated output.
- *
- * The committed files under src/game/data/ are hand-owned once seeded (CLAUDE.md "Game
- * data" — decided 2026-09-18): a generator is a one-shot bootstrapper, not something re-run
- * for data that already exists. Under the old "output is reproducible" model a stray re-run
- * was harmless; under this one it silently overwrites every hand correction with whatever
- * upstream says today. So refuse outright unless the caller explicitly forces it.
+ * Committed files under src/game/data/ are hand-owned once seeded (CLAUDE.md "Game data"): a
+ * generator is a one-shot bootstrapper, not something re-run for data that already exists. A
+ * stray re-run would silently overwrite every hand correction with today's upstream values, so
+ * this refuses outright unless the caller explicitly forces it.
  */
 function refuseIfAlreadyPopulated(
   outDir: string,
@@ -107,7 +67,7 @@ function refuseIfAlreadyPopulated(
 
   console.error(
     `Refusing to write: ${outDir} already contains generated files.\n\n` +
-      'These files are hand-owned now (see CLAUDE.md "Game data") — corrections belong in the\n' +
+      'These files are hand-owned now (see CLAUDE.md "Game data"). Corrections belong in the\n' +
       "data itself, not in this generator. Re-running it here would silently overwrite every\n" +
       "hand correction with today's upstream values.\n\n" +
       "Pass --force if that is genuinely what you want, then run\n" +
@@ -124,14 +84,11 @@ function refuseIfAlreadyPopulated(
  */
 const SHADOW_MOVE_ID_FLOOR = 10000;
 
-// ---------------------------------------------------------------------------
-// Curated item list: held items, evolution items/stones, and a representative set of berries
-// across every generation that matter for a Nuzlocke tracker. Not exhaustive — PokeAPI has
-// ~2000 items and most (TMs, key items, mail, etc.) are out of scope. Mega stones, Z-crystals
-// and Dynamax-related items are deliberately excluded: those mechanics don't exist outside the
-// generations that introduced them, unlike a held item or evolution stone a randomiser can hand
-// out anywhere. See CLAUDE.md: "Use judgement; completeness matters less than correctness."
-// ---------------------------------------------------------------------------
+// Curated: held items, evolution items and stones, and a representative set of berries. Not
+// exhaustive; PokeAPI has ~2000 items and most (TMs, key items, mail) are out of scope. Mega
+// stones, Z-crystals and Dynamax items are excluded too, since those mechanics don't exist
+// outside the generations that introduced them, unlike a held item a randomiser can hand out
+// anywhere.
 const CURATED_ITEM_SLUGS: readonly string[] = [
   // Evolution items and stones
   "fire-stone",
@@ -213,7 +170,7 @@ const CURATED_ITEM_SLUGS: readonly string[] = [
   "figy-berry",
 ];
 
-/** The 18 real elemental types (excludes "unknown", which is move-only — see ./types.ts). */
+/** The 18 real elemental types. Excludes "unknown", which is move-only. See ./types.ts. */
 const ALL_TYPES = new Set([
   "normal",
   "fire",
@@ -240,10 +197,6 @@ const MOVE_TYPES = new Set([...ALL_TYPES, "unknown"]);
 
 /** Every move must resolve to exactly one of these. */
 const DAMAGE_CLASSES = new Set(["physical", "special", "status"]);
-
-// ---------------------------------------------------------------------------
-// Cached, throttled fetch
-// ---------------------------------------------------------------------------
 
 function cacheKeyFor(url: string): string {
   return url.replace(/^https?:\/\//, "").replace(/[^a-zA-Z0-9]+/g, "_") + ".json";
@@ -300,9 +253,7 @@ function idFromUrl(url: string): number {
   return Number(match[1]);
 }
 
-// ---------------------------------------------------------------------------
-// Minimal shapes of the PokeAPI JSON we read. Only the fields we use.
-// ---------------------------------------------------------------------------
+// Minimal shapes of the PokeAPI JSON we read: only the fields we use.
 
 interface NamedRef {
   name: string;
@@ -385,16 +336,12 @@ interface NamedApiResourceList {
   results: NamedRef[];
 }
 
-// ---------------------------------------------------------------------------
-// Generation resolution helpers
-// ---------------------------------------------------------------------------
-
-/** generation.url looks like ".../generation/4/" — the resource id IS the generation number. */
+/** generation.url looks like ".../generation/4/": the resource id is the generation number. */
 function generationNumber(ref: NamedRef): number {
   return idFromUrl(ref.url);
 }
 
-/** Sorted ascending by throughGeneration, one entry per past_types tag — see header comment. */
+/** Sorted ascending by throughGeneration, one entry per past_types tag. */
 function pastTypesOf(pokemon: PokemonJson): { throughGeneration: number; types: string[] }[] {
   return pokemon.past_types
     .map((entry) => ({
@@ -408,7 +355,7 @@ function currentTypesOf(pokemon: PokemonJson): string[] {
   return pokemon.types.toSorted((a, b) => a.slot - b.slot).map((t) => t.type.name);
 }
 
-/** All non-null ability slots, hidden included (marked, not dropped) — see header comment. */
+/** All non-null ability slots, hidden included and marked as such rather than dropped. */
 function abilitiesOf(pokemon: PokemonJson): { name: string; isHidden: boolean }[] {
   const withAbility = pokemon.abilities.filter(
     (a): a is PokemonAbilityEntry & { ability: NamedRef } => a.ability !== null,
@@ -419,10 +366,8 @@ function abilitiesOf(pokemon: PokemonJson): { name: string; isHidden: boolean }[
 }
 
 /**
- * Converts one move's past_values (version-group-tagged, "applies strictly before this tag")
- * into the "throughGeneration" shape (generation-tagged, "applies through this generation
- * inclusive") that past_types already uses natively. See the header comment for the direction
- * flip and the accepted whole-generation-granularity limitation.
+ * Converts one move's past_values into the "throughGeneration" shape past_types already uses
+ * natively. See the module header for the direction flip this involves.
  */
 function pastValuesOf(
   move: MoveJson,
@@ -450,10 +395,6 @@ function pastValuesOf(
     .toSorted((a, b) => a.throughGeneration - b.throughGeneration);
 }
 
-// ---------------------------------------------------------------------------
-// Emit helpers
-// ---------------------------------------------------------------------------
-
 function quote(value: string): string {
   return JSON.stringify(value);
 }
@@ -466,24 +407,53 @@ function numberOrNull(value: number | null): string {
   return value === null ? "null" : String(value);
 }
 
-const GENERATED_HEADER = (subject: string) => `/**
- * ${subject}
- *
- * Bootstrapped by scripts/extract-pokedex.ts from PokeAPI (https://pokeapi.co/). This file is
- * hand-owned now (CLAUDE.md "Game data") — edit it directly and note why in a comment beside
- * the change.
- *
- * Spans every generation. Types and move stats are stored as present-day (current) values plus
- * a history (\`pastTypes\` / \`pastValues\`); resolve against a specific generation with
- * \`pokedexFor(generation)\` in src/game/pokedex.ts, never by reading these fields directly. See
- * ./types.ts for the resolution rule and scripts/extract-pokedex.ts for how the history is
- * derived.
- */
-`;
+const PROVENANCE =
+  "Bootstrapped by scripts/extract-pokedex.ts from PokeAPI (https://pokeapi.co/). Hand-owned " +
+  'now, per CLAUDE.md "Game data".';
 
-// ---------------------------------------------------------------------------
-// Main
-// ---------------------------------------------------------------------------
+const TYPES_RESOLUTION =
+  "Types are present-day values plus history (`pastTypes`). Resolve through `pokedexFor` in " +
+  "src/game/pokedex.ts rather than reading these fields directly. See ./types.ts for the rule.";
+
+const MOVE_STATS_RESOLUTION =
+  "Stats are present-day values plus history (`pastValues`). Resolve through `pokedexFor` in " +
+  "src/game/pokedex.ts rather than reading these fields directly. See ./types.ts for the rule.";
+
+// Prettier's printWidth minus the " * " each comment line carries.
+const HEADER_WIDTH = 100 - 3;
+
+function wrapParagraph(text: string): string[] {
+  const lines: string[] = [];
+  let line = "";
+  for (const word of text.split(/\s+/)) {
+    if (line.length === 0) {
+      line = word;
+    } else if (line.length + 1 + word.length <= HEADER_WIDTH) {
+      line += ` ${word}`;
+    } else {
+      lines.push(line);
+      line = word;
+    }
+  }
+  if (line.length > 0) lines.push(line);
+  return lines;
+}
+
+// Wraps rather than taking pre-formatted text, so a header stays inside printWidth whatever the
+// subject line is. Only species and moves carry a history field, so the others pass no resolution.
+function generatedHeader(subject: string, resolution?: string): string {
+  const paragraphs = resolution
+    ? [`${subject} ${PROVENANCE}`, resolution]
+    : [`${subject} ${PROVENANCE}`];
+  const body = paragraphs
+    .map((paragraph) =>
+      wrapParagraph(paragraph)
+        .map((line) => ` * ${line}`)
+        .join("\n"),
+    )
+    .join("\n *\n");
+  return `/**\n${body}\n */\n`;
+}
 
 async function main() {
   const force = process.argv.slice(2).includes("--force");
@@ -492,7 +462,6 @@ async function main() {
   console.log(`Cache: ${CACHE_DIR}`);
   mkdirSync(OUT_DIR, { recursive: true });
 
-  // --- version groups: build version-group id -> generation number map ---
   const vgList = (await fetchJson(`${API_BASE}/version-group/?limit=100`)) as NamedApiResourceList;
   const versionGroups = await mapPool(vgList.results, CONCURRENCY, async (ref) => {
     return (await fetchJson(ref.url)) as VersionGroupJson;
@@ -501,8 +470,6 @@ async function main() {
     versionGroups.map((vg) => [vg.id, generationNumber(vg.generation)]),
   );
 
-  // --- species: discover the authoritative id range, then fetch /pokemon/{id} and
-  // /pokemon-species/{id} for every one of them ---
   const speciesList = (await fetchJson(
     `${API_BASE}/pokemon-species/?limit=2000`,
   )) as NamedApiResourceList;
@@ -531,7 +498,6 @@ async function main() {
     }
   }
 
-  // --- evolution chains: dedupe by URL, then walk each chain's tree ---
   const chainUrls = [...new Set(speciesJsons.map((s) => s.evolution_chain.url))];
   const chainJsons = await mapPool(chainUrls, CONCURRENCY, async (url) => {
     return (await fetchJson(url)) as EvolutionChainJson;
@@ -556,7 +522,6 @@ async function main() {
     walkChain(chain.chain, null);
   }
 
-  // --- build species.ts entries ---
   const referencedAbilityNames = new Set<string>();
   const speciesEntries = speciesIds.map((id, i) => {
     const p = pokemonJsons[i];
@@ -601,8 +566,6 @@ async function main() {
     };
   });
 
-  // --- moves: discover the authoritative id range (excluding the Shadow-move block), then
-  // fetch /move/{id} for every one of them ---
   const moveList = (await fetchJson(`${API_BASE}/move/?limit=1000`)) as NamedApiResourceList;
   const allMoveIds = moveList.results.map((r) => idFromUrl(r.url));
   const moveIds = allMoveIds.filter((id) => id < SHADOW_MOVE_ID_FLOOR).toSorted((a, b) => a - b);
@@ -657,7 +620,6 @@ async function main() {
     };
   });
 
-  // --- abilities: fetch every ability referenced by at least one species (hidden included) ---
   const abilityJsons = await mapPool([...referencedAbilityNames], CONCURRENCY, async (name) => {
     return (await fetchJson(`${API_BASE}/ability/${name}`)) as AbilityJson;
   });
@@ -673,7 +635,6 @@ async function main() {
     })
     .toSorted((a, b) => a.id - b.id);
 
-  // --- items: curated list ---
   const itemJsons = await mapPool(CURATED_ITEM_SLUGS, CONCURRENCY, async (slug) => {
     return (await fetchJson(`${API_BASE}/item/${slug}`)) as ItemJson;
   });
@@ -689,13 +650,9 @@ async function main() {
     })
     .toSorted((a, b) => a.id - b.id);
 
-  // ---------------------------------------------------------------------------
-  // Write files
-  // ---------------------------------------------------------------------------
-
   writeFileSync(
     path.join(OUT_DIR, "species.ts"),
-    GENERATED_HEADER(`Species: national dex 1-${String(maxSpeciesId)}.`) +
+    generatedHeader(`Species: national dex 1-${String(maxSpeciesId)}.`, TYPES_RESOLUTION) +
       `
 import type { BaseStats, PastTypes, Type } from "./types";
 
@@ -750,7 +707,7 @@ ${speciesEntries
 
   writeFileSync(
     path.join(OUT_DIR, "moves.ts"),
-    GENERATED_HEADER(`Moves: national move dex 1-${String(maxMoveId)}.`) +
+    generatedHeader(`Moves: national move dex 1-${String(maxMoveId)}.`, MOVE_STATS_RESOLUTION) +
       `
 import type { DamageClass, PastMoveValue, Type } from "./types";
 
@@ -792,7 +749,7 @@ ${moveEntries
 
   writeFileSync(
     path.join(OUT_DIR, "abilities.ts"),
-    GENERATED_HEADER("Abilities referenced by at least one species (hidden abilities included).") +
+    generatedHeader("Abilities referenced by at least one species, hidden abilities included.") +
       `
 export interface AbilityDef {
   id: number;
@@ -815,8 +772,9 @@ ${abilityEntries
 
   writeFileSync(
     path.join(OUT_DIR, "items.ts"),
-    GENERATED_HEADER(
-      "Curated held items, evolution items/stones and berries across every generation, relevant to a Nuzlocke tracker.\n * See scripts/extract-pokedex.ts CURATED_ITEM_SLUGS for the list and why each is included.",
+    generatedHeader(
+      "Curated held items, evolution items and berries relevant to a Nuzlocke tracker. " +
+        "CURATED_ITEM_SLUGS in the generator lists them and says why each is included.",
     ) +
       `
 export interface ItemDef {
@@ -837,9 +795,9 @@ ${itemEntries
 `,
   );
 
-  // learnsets.ts is no longer generated (see CLAUDE.md "Game data": moveset editing is
-  // free-text over every move, so a species' legal learnset is not stored). Remove a stale
-  // copy if one is left over from before this generator stopped writing it.
+  // learnsets.ts is no longer generated: moveset editing is free-text over every move, so a
+  // species' legal learnset is not stored. Remove a stale copy left over from before this
+  // generator stopped writing it.
   const staleLearnsets = path.join(OUT_DIR, "learnsets.ts");
   if (existsSync(staleLearnsets)) rmSync(staleLearnsets);
 

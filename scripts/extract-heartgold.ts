@@ -2,32 +2,30 @@
  * Generator for the HeartGold route order and boss rosters.
  *
  * Source: domtronn/nuzlocke.data (https://github.com/domtronn/nuzlocke.data), specifically
- * `routes/hg.txt` (the Johto-through-Kanto traversal order, with gym/rival/etc. fight anchors
- * interleaved) and `leagues/hgss.txt` (boss rosters, keyed by the same fight keys).
+ * `routes/hg.txt` (traversal order, with gym/rival/etc. fight anchors interleaved) and
+ * `leagues/hgss.txt` (boss rosters, keyed by the same fight keys).
  *
- * Licence position (see CLAUDE.md "Game data"): this is NOT a vendoring of that repo. It is
- * cloned to a scratch location, read once by this script, and only the HeartGold subset is
- * emitted into typed modules of our own under `src/game/data/heartgold/`, each carrying a
- * header comment crediting the source. The upstream repo itself is never copied into this
- * project and is not a dependency.
+ * This does not vendor that repo (see CLAUDE.md "Game data"). It is cloned to a scratch
+ * location, read once by this script, and only the HeartGold subset is emitted into typed
+ * modules of our own under `src/game/data/heartgold/`, each crediting the source in its
+ * header. The upstream repo is never copied into this project and is not a dependency.
  *
- * This script does NOT run at build or test time — the emitted modules are what ships. It is a
- * one-shot bootstrapper (see CLAUDE.md "Game data" — decided 2026-09-18): run it once to seed a
- * new game from the upstream source, pointing at a local clone of that repo:
+ * This script does not run at build or test time; the emitted modules are what ships. It is a
+ * one-shot bootstrapper: run it once to seed a new game, pointing at a local clone of the
+ * upstream repo:
  *
  *   node scripts/extract-heartgold.ts /path/to/local/clone/of/nuzlocke.data
  *
- * After that, the emitted files under src/game/data/heartgold/ are ours — hand-edit them
- * directly for corrections, trims or tuning, and note why in a comment beside the change. This
- * script refuses to overwrite a directory that already has output; see
- * refuseIfAlreadyPopulated below and pass --force only if you mean to re-seed from scratch.
+ * After that, the emitted files are ours. Hand-edit them directly for corrections, trims or
+ * tuning, and note why beside the change. This script refuses to overwrite a populated output
+ * directory; pass --force only if you mean to re-seed from scratch.
  *
  * To extract a second game from the same upstream project, copy this script, point it at a
  * different `routes/<id>.txt` / `leagues/<id>.txt` pair, and re-derive `LEVEL_CORRECTIONS`
- * against an independent source (Bulbapedia/Serebii) — do not assume the upstream levels are
- * bug-free; see CLAUDE.md's note that Gen 2-5 data in the wild has had real bugs.
+ * against an independent source such as Bulbapedia or Serebii. Do not assume the upstream
+ * levels are correct.
  *
- * Level caps are never read from the source data: they are computed here, from `roster`, for
+ * Level caps are never read from the source data. They are computed here, from `roster`, for
  * every fight that grants a badge plus the Elite Four and Champion. Rivals get no cap.
  */
 
@@ -50,18 +48,11 @@ if (!cloneRoot) {
 const ROUTES_SRC = "routes/hg.txt";
 const LEAGUE_SRC = "leagues/hgss.txt";
 
-// ---------------------------------------------------------------------------
-// Guard against clobbering hand-owned data
-// ---------------------------------------------------------------------------
-
 /**
- * Refuses to write into a directory that already holds generated output.
- *
- * The committed files under src/game/data/ are hand-owned once seeded (CLAUDE.md "Game
- * data" — decided 2026-09-18): a generator is a one-shot bootstrapper, not something re-run
- * for a game that already exists. Under the old "output is reproducible" model a stray re-run
- * was harmless; under this one it silently overwrites every hand correction with whatever
- * upstream says today. So refuse outright unless the caller explicitly forces it.
+ * Committed files under src/game/data/ are hand-owned once seeded (CLAUDE.md "Game data"): a
+ * generator is a one-shot bootstrapper, not something re-run for a game that already exists. A
+ * stray re-run would silently overwrite every hand correction with today's upstream values, so
+ * this refuses outright unless the caller explicitly forces it.
  */
 function refuseIfAlreadyPopulated(
   outDir: string,
@@ -74,7 +65,7 @@ function refuseIfAlreadyPopulated(
 
   console.error(
     `Refusing to write: ${outDir} already contains generated files.\n\n` +
-      'These files are hand-owned now (see CLAUDE.md "Game data") — corrections belong in the\n' +
+      'These files are hand-owned now (see CLAUDE.md "Game data"). Corrections belong in the\n' +
       "data itself, not in this generator. Re-running it here would silently overwrite every\n" +
       "hand correction with today's upstream values.\n\n" +
       "Pass --force if that is genuinely what you want, then run\n" +
@@ -84,31 +75,21 @@ function refuseIfAlreadyPopulated(
   process.exit(1);
 }
 
-// ---------------------------------------------------------------------------
-// Known corrections against an independent source
-// ---------------------------------------------------------------------------
-
 /**
  * Overrides applied on top of the upstream roster data, keyed by league fight key then species.
  *
  * Brock's HGSS Kanto team (`k6`): nuzlocke.data lists Kabutops at level 54, but both
  * Bulbapedia (https://bulbapedia.bulbagarden.net/wiki/Brock, "Pokémon HeartGold and
  * SoulSilver" gym battle section) and Serebii (https://www.serebii.net/heartgoldsoulsilver/
- * gym.shtml) independently list it at level 52. Brock's ace (Onix, level 54) is unaffected
- * either way, so this does not change his level cap — but the roster itself was wrong.
+ * gym.shtml) independently list it at level 52. Brock's ace, Onix at level 54, is unaffected,
+ * so this does not change his level cap, but the roster itself was wrong.
  *
- * This table is still what a future bootstrap of this game would apply, but it is no longer
- * the source of truth: src/game/data/heartgold/fights.ts is, per CLAUDE.md "Game data" (decided
- * 2026-09-18). The same correction is recorded there, on Brock's entry, for anyone hand-editing
- * the data to actually see.
+ * fights.ts carries this same correction directly on Brock's entry and is the source of truth
+ * now. This table only matters if the game is ever re-bootstrapped from scratch.
  */
 const LEVEL_CORRECTIONS: Record<string, Record<string, number>> = {
   k6: { kabutops: 52 },
 };
-
-// ---------------------------------------------------------------------------
-// Parsing
-// ---------------------------------------------------------------------------
 
 interface RawRoute {
   name: string;
@@ -125,7 +106,7 @@ interface RawFightAnchor {
   order: number;
 }
 
-/** Fight kinds we keep. Mini-bosses and evil-team executives are out of scope for PER-6. */
+/** Fight kinds we keep. Mini-bosses and evil-team executives are dropped. */
 const KEPT_KINDS: ReadonlySet<RawFightKind> = new Set(["gym-leader", "elite-four", "rival"]);
 
 /** The route name at which the traversal crosses from Johto into Kanto. */
@@ -218,10 +199,6 @@ function parseLeagueFile(text: string): Map<string, RawBossMon[]> {
   return rosters;
 }
 
-// ---------------------------------------------------------------------------
-// Mapping to our domain
-// ---------------------------------------------------------------------------
-
 type OurFightKind = "gym" | "elite_four" | "champion" | "rival";
 
 function mapKind(anchor: RawFightAnchor): OurFightKind {
@@ -254,7 +231,7 @@ function slug(name: string): string {
     .replace(/^-+|-+$/g, "");
 }
 
-/** Upstream reuses the name "Silver" across all six rival fights; disambiguate by key. */
+/** Upstream reuses the name "Silver" across all six rival fights. Disambiguate by key. */
 function fightId(kind: OurFightKind, name: string, key: string): string {
   const base = `${KIND_ID_PREFIX[kind]}-${slug(name)}`;
   const digits = key.replace(/\D/g, "");
@@ -264,10 +241,6 @@ function fightId(kind: OurFightKind, name: string, key: string): string {
 function routeId(name: string): string {
   return slug(name);
 }
-
-// ---------------------------------------------------------------------------
-// Emit
-// ---------------------------------------------------------------------------
 
 function quote(value: string): string {
   return JSON.stringify(value);
@@ -285,8 +258,8 @@ function emitRoutesModule(routes: RawRoute[]): string {
  * HeartGold route order, Johto through Kanto, in traversal order.
  *
  * Bootstrapped by scripts/extract-heartgold.ts from domtronn/nuzlocke.data
- * (https://github.com/domtronn/nuzlocke.data), file \`${ROUTES_SRC}\`. This file is hand-owned
- * now (CLAUDE.md "Game data") — edit it directly and note why in a comment beside the change.
+ * (https://github.com/domtronn/nuzlocke.data), file \`${ROUTES_SRC}\`. Hand-owned now, per
+ * CLAUDE.md "Game data": edit it directly and note why beside the change.
  */
 
 import type { RouteDef } from "@/game/types";
@@ -332,8 +305,8 @@ ${roster}
  *
  * Bootstrapped by scripts/extract-heartgold.ts from domtronn/nuzlocke.data
  * (https://github.com/domtronn/nuzlocke.data), files \`${ROUTES_SRC}\` (fight order and names)
- * and \`${LEAGUE_SRC}\` (rosters). This file is hand-owned now (CLAUDE.md "Game data") — edit it
- * directly and note why in a comment beside the change.
+ * and \`${LEAGUE_SRC}\` (rosters). Hand-owned now, per CLAUDE.md "Game data": edit it
+ * directly and note why beside the change.
  *
  * \`levelCap\` is computed from each fight's own \`roster\` (the ace's level), never
  * hand-entered. Rivals carry no cap.
@@ -349,8 +322,8 @@ ${entries}
 
 function emitIndexModule(): string {
   return `/**
- * Assembles the HeartGold GameData. Bootstrapped alongside routes.ts and fights.ts by
- * scripts/extract-heartgold.ts. This file is hand-owned now (CLAUDE.md "Game data").
+ * Assembles the HeartGold GameData from routes.ts and fights.ts. Bootstrapped by
+ * scripts/extract-heartgold.ts; hand-owned now, same as the two files it assembles.
  */
 
 import type { GameData } from "@/game/types";
@@ -366,10 +339,6 @@ export const heartgold: GameData = {
 };
 `;
 }
-
-// ---------------------------------------------------------------------------
-// Main
-// ---------------------------------------------------------------------------
 
 function main(cloneRootArg: string) {
   refuseIfAlreadyPopulated(OUT_DIR, GENERATED_FILES, force);
