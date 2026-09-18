@@ -122,8 +122,8 @@ export function NewRunScreen(): ReactNode {
         {createRun.isError && (
           <p role="alert" className="text-sm text-destructive">
             Could not create the run:{" "}
-            {createRun.error instanceof Error ? createRun.error.message : "Unknown error"}.
-            Nothing was saved.
+            {createRun.error instanceof Error ? createRun.error.message : "Unknown error"}. Nothing
+            was saved.
           </p>
         )}
 
