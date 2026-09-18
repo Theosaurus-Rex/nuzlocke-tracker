@@ -57,20 +57,30 @@ export function useRoutes(runId: string): UseQueryResult<Route[]> {
   });
 }
 
-export function useEncounters(runId: string): UseQueryResult<Encounter[]> {
+/**
+ * `runId` is optional so a caller that may or may not have an active run (`AppShell`'s run
+ * switcher, PER-20) can call this hook unconditionally, as the rules of hooks require, rather
+ * than skipping it when there's nothing to fetch. `enabled: false` while `runId` is `undefined`
+ * means the query simply never runs — no request against `runId: ""`, and `data` stays
+ * `undefined` rather than resolving to a misleading empty array.
+ */
+export function useEncounters(runId: string | undefined): UseQueryResult<Encounter[]> {
   const adapter = useStorage();
   return useQuery({
-    queryKey: queryKeys.encounters(runId),
-    queryFn: () => adapter.encounters.where("runId", runId),
+    queryKey: queryKeys.encounters(runId ?? ""),
+    queryFn: () => adapter.encounters.where("runId", runId ?? ""),
+    enabled: runId !== undefined,
     staleTime: Infinity,
   });
 }
 
-export function useMons(runId: string): UseQueryResult<Mon[]> {
+/** See `useEncounters` above — same optional-`runId` reasoning. */
+export function useMons(runId: string | undefined): UseQueryResult<Mon[]> {
   const adapter = useStorage();
   return useQuery({
-    queryKey: queryKeys.mons(runId),
-    queryFn: () => adapter.mons.where("runId", runId),
+    queryKey: queryKeys.mons(runId ?? ""),
+    queryFn: () => adapter.mons.where("runId", runId ?? ""),
+    enabled: runId !== undefined,
     staleTime: Infinity,
   });
 }

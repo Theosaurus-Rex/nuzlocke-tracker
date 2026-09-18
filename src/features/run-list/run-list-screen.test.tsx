@@ -20,6 +20,7 @@ import userEvent from "@testing-library/user-event";
 import { describe, expect, it } from "vitest";
 import { MemoryRouter } from "react-router";
 
+import { summariseRun } from "@/domain/derive";
 import type { Death, Encounter, Mon, Route, Run, Rules } from "@/domain/types";
 import { createMemoryAdapter } from "@/storage/memory-adapter";
 import { StorageProvider } from "@/storage/storage-context";
@@ -320,6 +321,36 @@ describe("RunListScreen", () => {
     expect(screen.queryByText(/permanently delete/i)).not.toBeInTheDocument();
     expect(await adapter.runs.get(run.id)).toBeDefined();
     expect(screen.getByRole("heading", { name: "Blaze Nuzlocke" })).toBeInTheDocument();
+  });
+
+  it("shows a death count in the delete confirmation that matches summariseRun for the same fixture", async () => {
+    // Distinct from the test above on purpose: this asserts the death count against a real
+    // `summariseRun` call on the same rows, not a hand-written literal, so a second counting
+    // implementation inside `DeleteConfirm` that drifted from `summariseRun`'s `dead` — exactly
+    // what used to live there (`mons.filter((mon) => mon.status === "dead").length`) — would
+    // fail here even if it still happened to agree with the literal-count test above.
+    const adapter = createMemoryAdapter();
+    const run = await adapter.runs.put(
+      makeRunDraft({ name: "Crystal Nuzlocke", status: "active" }),
+    );
+    const mons = [
+      await adapter.mons.put(makeMonDraft(run.id, { status: "party" })),
+      await adapter.mons.put(makeMonDraft(run.id, { status: "dead", partySlot: null })),
+      await adapter.mons.put(makeMonDraft(run.id, { status: "dead", partySlot: null })),
+    ];
+    const encounters: Encounter[] = [];
+    const expected = summariseRun({ encounters, mons });
+
+    renderScreen(adapter);
+    await screen.findByRole("heading", { name: "Crystal Nuzlocke" });
+
+    await userEvent.click(screen.getByRole("button", { name: "Delete" }));
+
+    expect(
+      screen.getByText(
+        `Permanently delete Crystal Nuzlocke? This removes 0 encounters, 3 Pokémon and ${expected.dead} deaths. This cannot be undone.`,
+      ),
+    ).toBeInTheDocument();
   });
 
   it("deletes a run on confirmation and removes it from the list without a manual refetch, leaving the other run intact", async () => {

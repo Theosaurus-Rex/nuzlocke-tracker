@@ -11,9 +11,14 @@
 import { createMemoryRouter, RouterProvider } from "react-router";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { render, screen, waitFor, within } from "@testing-library/react";
+import userEvent from "@testing-library/user-event";
 import { describe, expect, it } from "vitest";
 
+import { summariseRun } from "@/domain/derive";
+import type { Encounter, Mon, Route, Run, Rules } from "@/domain/types";
 import { createMemoryAdapter } from "@/storage/memory-adapter";
+import { invalidateRun } from "@/storage/queries";
+import type { StorageAdapter } from "@/storage/adapter";
 import { StorageProvider } from "@/storage/storage-context";
 
 import { navItemsFor } from "./nav-items";
@@ -25,11 +30,19 @@ import { appRoutes } from "./router";
  * `/settings`, exercised below) reads the storage adapter through TanStack Query, so both
  * providers need to be present for that route to render without throwing — a fresh instance of
  * each per call, so no state leaks between tests.
+ *
+ * `adapter`/`queryClient` are optional so the PER-20 tests below can seed an adapter with runs
+ * BEFORE rendering, and keep hold of the same `queryClient` afterwards to drive an invalidation
+ * the way a real mutation would (see "counters update after a write" below).
  */
-function renderAt(initialPath: string) {
+function renderAt(
+  initialPath: string,
+  options: { adapter?: StorageAdapter; queryClient?: QueryClient } = {},
+) {
   const router = createMemoryRouter(appRoutes, { initialEntries: [initialPath] });
-  const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } });
-  const adapter = createMemoryAdapter();
+  const queryClient =
+    options.queryClient ?? new QueryClient({ defaultOptions: { queries: { retry: false } } });
+  const adapter = options.adapter ?? createMemoryAdapter();
   const rendered = render(
     <QueryClientProvider client={queryClient}>
       <StorageProvider adapter={adapter}>
@@ -37,7 +50,7 @@ function renderAt(initialPath: string) {
       </StorageProvider>
     </QueryClientProvider>,
   );
-  return { router, unmount: rendered.unmount };
+  return { router, unmount: rendered.unmount, queryClient, adapter };
 }
 
 function linksIn(nav: HTMLElement) {
@@ -51,6 +64,118 @@ function shells() {
     sidebar: screen.getByRole("navigation", { name: "Sidebar navigation" }),
     tabBar: screen.getByRole("navigation", { name: "Tab bar navigation" }),
   };
+}
+
+// ---------------------------------------------------------------------------
+// PER-20 fixtures — same shape/convention as run-list-screen.test.tsx's local drafts.
+// ---------------------------------------------------------------------------
+
+const RULES_FIXTURE: Rules = {
+  dupesClause: false,
+  speciesClause: false,
+  shinyClause: false,
+  nicknamesRequired: false,
+  levelCaps: false,
+  setMode: false,
+  hardcore: false,
+  randomiser: {
+    enabled: false,
+    wildEncounters: false,
+    trainers: false,
+    starters: false,
+    abilities: false,
+    items: false,
+    moves: false,
+    evolutions: false,
+  },
+  customClause: null,
+};
+
+function makeRunDraft(overrides: Partial<Run> = {}): Omit<Run, "id" | "createdAt" | "updatedAt"> {
+  return {
+    name: "Test Run",
+    game: "heartgold",
+    status: "active",
+    rules: RULES_FIXTURE,
+    finishedAt: null,
+    ...overrides,
+  };
+}
+
+function makeRouteDraft(
+  runId: string,
+  overrides: Partial<Route> = {},
+): Omit<Route, "id" | "createdAt" | "updatedAt"> {
+  return {
+    runId,
+    name: "Route 29",
+    order: 1,
+    isCustom: false,
+    gameRouteId: null,
+    ...overrides,
+  };
+}
+
+function makeEncounterDraft(
+  runId: string,
+  routeId: string,
+  overrides: Partial<Encounter> = {},
+): Omit<Encounter, "id" | "createdAt" | "updatedAt"> {
+  return {
+    runId,
+    routeId,
+    status: "open",
+    speciesId: null,
+    level: null,
+    monId: null,
+    notes: null,
+    ...overrides,
+  };
+}
+
+function makeMonDraft(
+  runId: string,
+  overrides: Partial<Mon> = {},
+): Omit<Mon, "id" | "createdAt" | "updatedAt"> {
+  return {
+    runId,
+    encounterId: null,
+    speciesId: "chikorita",
+    speciesIdCaught: "chikorita",
+    nickname: null,
+    gender: null,
+    level: 5,
+    levelCaught: 5,
+    nature: null,
+    ability: null,
+    heldItem: null,
+    moves: [],
+    status: "party",
+    partySlot: 0,
+    boxOrder: null,
+    caughtRouteId: null,
+    ...overrides,
+  };
+}
+
+/** Reads a `RunSwitcher` mount's counters out as a plain label -> value map, the same way
+ * `run-list-screen.test.tsx`'s `statsIn` reads a run card's `<dl>` — scoped to a single
+ * `<dl>` found within `scope` so sidebar/mobile mounts (or a run card sharing the page) can be
+ * asserted on independently. */
+function countersIn(scope: HTMLElement): Record<string, string> {
+  const dl = scope.querySelector("dl");
+  if (!dl) {
+    throw new Error("Expected a <dl> of run counters within scope.");
+  }
+  const counters: Record<string, string> = {};
+  for (const entry of dl.querySelectorAll(":scope > div")) {
+    const label = entry.querySelector("dt")?.textContent;
+    const value = entry.querySelector("dd")?.textContent;
+    if (label && value !== undefined && value !== null) {
+      counters[label] = value;
+    }
+  }
+  return counters;
 }
 
 describe("AppShell navigation", () => {
@@ -157,5 +282,170 @@ describe("AppShell navigation", () => {
     renderAt("/this-path-does-not-exist");
 
     expect(screen.getByRole("heading", { name: "Not Found" })).toBeInTheDocument();
+  });
+});
+
+describe("Run switcher and live counters (PER-20)", () => {
+  it("shows no counters when there is no active run", async () => {
+    const adapter = createMemoryAdapter();
+    await adapter.runs.put(makeRunDraft({ name: "Silver Nuzlocke" }));
+
+    renderAt("/", { adapter });
+
+    // The switcher itself still renders in the sidebar (it's the "jump into a run" case), but
+    // there is no counter <dl> there. Scoped to the sidebar specifically, not `document`, since
+    // the run list screen underneath renders its OWN per-card `<dl>` of stats (run-list-screen.tsx)
+    // which is a separate surface this ticket doesn't touch.
+    const sidebar = screen.getByRole("navigation", { name: "Sidebar navigation" });
+    expect(
+      await within(sidebar).findByRole("option", { name: "Silver Nuzlocke" }),
+    ).toBeInTheDocument();
+    expect(sidebar.querySelector("dl")).not.toBeInTheDocument();
+
+    // No mobile mount at all outside a run — the tab bar's own "Runs" destination covers it.
+    expect(screen.queryAllByRole("combobox", { name: "Switch run" })).toHaveLength(1);
+  });
+
+  it("shows the active run's routes/party/boxed/dead counters, matching summariseRun for the same fixture", async () => {
+    const adapter = createMemoryAdapter();
+    const run = await adapter.runs.put(makeRunDraft({ name: "Silver Nuzlocke" }));
+    const routeA = await adapter.routes.put(makeRouteDraft(run.id, { name: "Route 29" }));
+    const routeB = await adapter.routes.put(makeRouteDraft(run.id, { name: "Route 30", order: 2 }));
+    const encounters = [
+      await adapter.encounters.put(makeEncounterDraft(run.id, routeA.id, { status: "caught" })),
+      await adapter.encounters.put(makeEncounterDraft(run.id, routeB.id, { status: "missed" })),
+    ];
+    const mons = [
+      await adapter.mons.put(makeMonDraft(run.id, { status: "party" })),
+      await adapter.mons.put(makeMonDraft(run.id, { status: "box", partySlot: null })),
+      await adapter.mons.put(makeMonDraft(run.id, { status: "dead", partySlot: null })),
+    ];
+
+    // Asserted against a real `summariseRun` call on the same rows, not hand-written literals —
+    // a second counting implementation that drifts from `summariseRun` would fail this.
+    const expected = summariseRun({ encounters, mons });
+
+    renderAt(`/runs/${run.id}/party`, { adapter });
+
+    const sidebar = await screen.findByRole("navigation", { name: "Sidebar navigation" });
+    await waitFor(() => {
+      expect(countersIn(sidebar)).toEqual({
+        Routes: String(expected.routesCovered),
+        Party: String(expected.party),
+        Boxed: String(expected.boxed),
+        Dead: String(expected.dead),
+      });
+    });
+  });
+
+  it("changes the counters when the active run changes", async () => {
+    const adapter = createMemoryAdapter();
+    const runA = await adapter.runs.put(makeRunDraft({ name: "Silver Nuzlocke" }));
+    const routeA = await adapter.routes.put(makeRouteDraft(runA.id));
+    await adapter.encounters.put(makeEncounterDraft(runA.id, routeA.id, { status: "caught" }));
+    await adapter.mons.put(makeMonDraft(runA.id, { status: "party" }));
+
+    const runB = await adapter.runs.put(makeRunDraft({ name: "Gold Nuzlocke" }));
+    const routeB1 = await adapter.routes.put(makeRouteDraft(runB.id, { name: "Route 1" }));
+    const routeB2 = await adapter.routes.put(
+      makeRouteDraft(runB.id, { name: "Route 2", order: 2 }),
+    );
+    await adapter.encounters.put(makeEncounterDraft(runB.id, routeB1.id, { status: "caught" }));
+    await adapter.encounters.put(makeEncounterDraft(runB.id, routeB2.id, { status: "missed" }));
+    await adapter.mons.put(makeMonDraft(runB.id, { status: "box", partySlot: null }));
+    await adapter.mons.put(makeMonDraft(runB.id, { status: "dead", partySlot: null }));
+
+    const first = renderAt(`/runs/${runA.id}/party`, { adapter });
+    await waitFor(() => {
+      expect(countersIn(screen.getByRole("navigation", { name: "Sidebar navigation" }))).toEqual({
+        Routes: "1",
+        Party: "1",
+        Boxed: "0",
+        Dead: "0",
+      });
+    });
+    first.unmount();
+
+    renderAt(`/runs/${runB.id}/party`, { adapter });
+    await waitFor(() => {
+      expect(countersIn(screen.getByRole("navigation", { name: "Sidebar navigation" }))).toEqual({
+        Routes: "2",
+        Party: "0",
+        Boxed: "1",
+        Dead: "1",
+      });
+    });
+  });
+
+  it("both shells render the same counter values from the one source", async () => {
+    const adapter = createMemoryAdapter();
+    const run = await adapter.runs.put(makeRunDraft({ name: "Silver Nuzlocke" }));
+    const route = await adapter.routes.put(makeRouteDraft(run.id));
+    await adapter.encounters.put(makeEncounterDraft(run.id, route.id, { status: "caught" }));
+    await adapter.mons.put(makeMonDraft(run.id, { status: "party" }));
+    await adapter.mons.put(makeMonDraft(run.id, { status: "box", partySlot: null }));
+
+    renderAt(`/runs/${run.id}/party`, { adapter });
+
+    const { sidebar } = shells();
+    const main = await screen.findByRole("main");
+
+    // Compare the two renderings against each other, not against a duplicated literal — the same
+    // pattern `app-shell.test.tsx` already uses for nav items above.
+    await waitFor(() => {
+      expect(countersIn(main)).toEqual(countersIn(sidebar));
+    });
+    expect(countersIn(sidebar)).toEqual({ Routes: "1", Party: "1", Boxed: "1", Dead: "0" });
+
+    // And both switchers show the same run selected.
+    const selects = screen.getAllByRole("combobox", { name: "Switch run" });
+    expect(selects).toHaveLength(2);
+    for (const select of selects) {
+      expect(select).toHaveValue(run.id);
+    }
+  });
+
+  it("preserves the sub-screen when switching runs: /runs/A/party -> /runs/B/party, not B's routes", async () => {
+    const adapter = createMemoryAdapter();
+    const runA = await adapter.runs.put(makeRunDraft({ name: "Silver Nuzlocke" }));
+    const runB = await adapter.runs.put(makeRunDraft({ name: "Gold Nuzlocke" }));
+
+    const { router } = renderAt(`/runs/${runA.id}/party`, { adapter });
+
+    const selects = await screen.findAllByRole("combobox", { name: "Switch run" });
+    const select = selects[0];
+    if (!select) {
+      throw new Error("Expected at least one 'Switch run' select to render.");
+    }
+    await userEvent.selectOptions(select, runB.id);
+
+    await waitFor(() => {
+      expect(router.state.location.pathname).toBe(`/runs/${runB.id}/party`);
+    });
+    expect(screen.getByRole("heading", { name: "Party" })).toBeInTheDocument();
+  });
+
+  it("updates the counters after a write, without a manual refetch", async () => {
+    const adapter = createMemoryAdapter();
+    const run = await adapter.runs.put(makeRunDraft({ name: "Silver Nuzlocke" }));
+    await adapter.mons.put(makeMonDraft(run.id, { status: "party" }));
+
+    const { queryClient } = renderAt(`/runs/${run.id}/party`, { adapter });
+
+    const sidebar = await screen.findByRole("navigation", { name: "Sidebar navigation" });
+    await waitFor(() => {
+      expect(countersIn(sidebar)).toEqual({ Routes: "0", Party: "1", Boxed: "0", Dead: "0" });
+    });
+
+    // A write through the adapter, then the same invalidation a real mutation performs
+    // (`invalidateRun` — see `mutations.ts`). Nothing here is a manual refetch of the counters
+    // themselves: this is exactly the existing TanStack Query invalidation the ticket says to
+    // rely on rather than adding polling.
+    await adapter.mons.put(makeMonDraft(run.id, { status: "party", partySlot: 1 }));
+    await invalidateRun(queryClient, run.id);
+
+    await waitFor(() => {
+      expect(countersIn(sidebar)).toEqual({ Routes: "0", Party: "2", Boxed: "0", Dead: "0" });
+    });
   });
 });
