@@ -35,8 +35,8 @@ pnpm only. `packageManager` is pinned, so use corepack rather than a global pnpm
 | `pnpm test:watch` | Vitest in watch mode |
 | `pnpm test:coverage` | Vitest with v8 coverage |
 
-**The gate before any commit is `pnpm lint && pnpm typecheck && pnpm test && pnpm build`.**
-Every commit in the history so far passes all four.
+**The gate before any commit is `pnpm lint && pnpm typecheck && pnpm format:check && pnpm test && pnpm build`.**
+Every commit in the history so far passes all five.
 
 Prettier does not touch Markdown — `*.md` is in `.prettierignore`. Prose here is hand-authored,
 and Prettier realigns tables and rewrites emphasis markers for no content change.
@@ -167,13 +167,24 @@ collision that corrupted data silently, and two tests that asserted nothing at a
 `pnpm test`, confirm it fails *for the right reason*, then restore:
 
 ```bash
+F=src/storage/memory-adapter.ts
+cp "$F" /tmp/probe.bak          # NOT `git checkout --` to restore: see below
+
 # match on the code, never a line number — line numbers drift and the probe
 # then silently applies nothing, which reads exactly like a passing test
-sed -i '' 's/existing ? existing.createdAt/record.createdAt/' src/storage/memory-adapter.ts
-git diff --stat            # confirm it actually applied before trusting the result
-pnpm test                  # expect FAILURE. green here means the test is fake
-git checkout -- src/storage/memory-adapter.ts
+sed -i '' 's/existing ? existing.createdAt/record.createdAt/' "$F"
+git diff --stat                 # confirm it actually applied before trusting the result
+pnpm test                       # expect FAILURE. green here means the test is fake
+
+cp /tmp/probe.bak "$F"          # safe whether or not the file was committed
 ```
+
+**Restore from a copy, never with `git checkout -- <file>`.** That reverts the file to `HEAD`, so
+if the code you are probing is not committed yet — which it usually is not, since you are
+probing work in progress — it deletes the feature along with the probe. This has already cost one
+session most of a ticket. The two failure modes are symmetrical and both silent: a probe that
+applies nothing looks like a passing test, and a restore that reverts too much looks like a clean
+tree.
 
 About a minute per guarantee, and it is the difference between "the tests pass" and "the tests
 would notice". Every claim this repo makes — transaction rollback, timestamp semantics, the
@@ -285,7 +296,7 @@ From 2026-09-18 onward, work lands through a reviewed PR, not directly on `main`
 - **Never push to `main`, and never merge.** Theo verifies the change by hand and merges when
   satisfied. Opening the PR is where your work stops.
 - **The gate runs before the PR opens**, not after:
-  `pnpm lint && pnpm typecheck && pnpm test && pnpm build`.
+  `pnpm lint && pnpm typecheck && pnpm format:check && pnpm test && pnpm build`.
 - **The PR description must say how to verify it by hand.** That is the whole point of the
   review, so it is the part worth writing properly: the exact steps, what to look for, and what
   is deliberately not covered by a test (the CSS breakpoint, anything visual). A reviewer should

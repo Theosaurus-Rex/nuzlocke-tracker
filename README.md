@@ -56,10 +56,10 @@ reported on the Settings screen and affects nothing else.
 **The gate before any commit:**
 
 ```bash
-pnpm lint && pnpm typecheck && pnpm test && pnpm build
+pnpm lint && pnpm typecheck && pnpm format:check && pnpm test && pnpm build
 ```
 
-Every commit in the history passes all four.
+Every commit in the history passes all five.
 
 ---
 

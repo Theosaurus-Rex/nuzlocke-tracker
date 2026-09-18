@@ -13,7 +13,7 @@
   # whose tests fail should produce a failed deploy preview rather than a
   # working preview of broken code. `pnpm build` alone still runs `tsc -b`,
   # so dropping back to it keeps typecheck but loses lint and tests.
-  command = "pnpm lint && pnpm typecheck && pnpm test && pnpm build"
+  command = "pnpm lint && pnpm typecheck && pnpm format:check && pnpm test && pnpm build"
   publish = "dist"
 
 [build.environment]
