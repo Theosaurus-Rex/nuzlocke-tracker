@@ -210,6 +210,50 @@ fail when someone deliberately changes it and updates the test in the same breat
 
 ---
 
+## Comments: fewer, and only where the code cannot speak
+
+The default is no comment. Code, types and test names already carry most of the meaning, and a
+comment that restates them is a second thing that has to stay true. PER-42 deleted most of the
+comments written before it, not because they were wrong, but because they were history,
+restatement, or rationale that belonged in a spec.
+
+Write one only when it is one of these:
+
+- **A constraint the code cannot show.** Dexie loses its transaction zone across a non-Dexie
+  `await`. IndexedDB cannot index `null`. iOS evicts storage after 7 days. Nobody infers these
+  from reading the lines around them.
+- **A deliberate choice that looks like a mistake.** `nextFreeSlot` scans for the lowest free
+  index rather than counting the party, because a death leaves a gap. Without the note the next
+  reader "simplifies" it and reintroduces the bug.
+- **A guarantee a caller must not break.** `restoreMany` writes `updatedAt` verbatim, where `put`
+  always re-stamps it.
+
+Never for:
+
+- **Ticket numbers, commit numbers or milestones.** `PER-16`, "commit 9", "M2 fills this in".
+  Linear and `git log` already hold this and stay correct when the code moves. Source does not.
+- **What a ticket used to say, or who decided what.** That is a commit message.
+- **Future work.** A comment describing what PER-41 will do is wrong the day PER-41 lands, and
+  nothing fails when it rots.
+- **Restating the signature.** `/** Throws when used outside a StorageProvider. */` above a
+  function that throws when used outside a `StorageProvider`.
+- **Rationale longer than a few lines.** That is a design decision. It goes in `docs/` or in this
+  file, and the code links to it.
+
+### How the survivors read
+
+Plain, direct English, in short sentences.
+
+- No em dashes. A full stop or a comma does the same work.
+- No semicolons joining clauses. Split the sentence instead.
+- No ALL-CAPS emphasis. A point that needs shouting usually means the code needs changing.
+- No stacked parentheticals, and no sentence carrying three subordinate clauses.
+- A file header is one or two lines on what the file is for, not an essay.
+
+The check before keeping one: read it, then imagine it deleted. If nothing is lost, delete it.
+
+---
+
 ## Game data
 
 No single source covers this. Two are combined:
