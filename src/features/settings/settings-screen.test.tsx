@@ -1,9 +1,9 @@
 /**
- * Covers the settings screen's import flow end to end against the in-memory adapter: a malformed
- * file is refused with legible errors, a valid file previews before anything is written, and
- * replace mode cannot be confirmed until the destructive-action checkbox is ticked. The heavier
- * validation/atomicity/round-trip properties live in `@/storage/backup.test.ts` — this file only
- * covers the screen's own wiring (preview, confirmation gating, cache invalidation).
+ * Covers the settings screen's import flow against the in-memory adapter: a malformed file is
+ * refused with legible errors, a valid file previews before anything is written, and replace
+ * mode can't be confirmed until the destructive checkbox is ticked. Validation, atomicity and
+ * round-trip properties live in `@/storage/backup.test.ts`. This file only covers the screen's
+ * own wiring.
  */
 
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
@@ -73,6 +73,23 @@ async function uploadFile(file: File): Promise<void> {
   }
   await userEvent.upload(fileInput, file);
 }
+
+describe("SettingsScreen — export", () => {
+  it("surfaces the error when exportAll rejects", async () => {
+    const adapter = createMemoryAdapter();
+    await adapter.init();
+    adapter.exportAll = () => Promise.reject(new Error("disk full"));
+    renderScreen(adapter);
+
+    await userEvent.click(screen.getByRole("button", { name: "Export data" }));
+
+    await waitFor(() => {
+      expect(screen.getByRole("alert")).toHaveTextContent(
+        "Export failed: disk full. Nothing was saved.",
+      );
+    });
+  });
+});
 
 describe("SettingsScreen — import", () => {
   it("refuses a malformed file and lists what was wrong", async () => {

@@ -1,14 +1,6 @@
-/**
- * Settings screen (PER-10). Export/import is the backup CLAUDE.md hard rule 5 requires — see
- * `@/storage/backup.ts` for why a bad import must never be able to destroy good data.
- *
- * No visual design work here: CLAUDE.md's "still open" section leaves the hand-drawn look
- * unresolved, so this is existing shadcn primitives (`Button`) plus plain Tailwind, laid out as
- * inline sections rather than a modal dialog component — there is no shadcn Dialog in this repo
- * yet, and one isn't needed to make preview/confirm work.
- */
+/** Export/import UI. See `@/storage/backup.ts` for the validation and atomicity guarantees. */
 
-import { useRef, useState, type ChangeEvent, type ReactNode } from "react";
+import { useState, type ChangeEvent, type ReactNode } from "react";
 
 import { useQueryClient } from "@tanstack/react-query";
 
@@ -37,7 +29,6 @@ export function SettingsScreen(): ReactNode {
   const adapter = useStorage();
   const queryClient = useQueryClient();
   const runsQuery = useRuns();
-  const fileInputRef = useRef<HTMLInputElement | null>(null);
 
   const [pending, setPending] = useState<PendingImport | null>(null);
   const [mode, setMode] = useState<ImportMode>("merge");
@@ -45,14 +36,20 @@ export function SettingsScreen(): ReactNode {
   const [parseErrors, setParseErrors] = useState<string[] | null>(null);
   const [importSummary, setImportSummary] = useState<ImportSummary | null>(null);
   const [importError, setImportError] = useState<string | null>(null);
+  const [exportError, setExportError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
 
   const existingRuns = runsQuery.data ?? [];
   const preview = pending ? previewImport(pending.bundle, mode, existingRuns) : null;
 
   async function handleExport(): Promise<void> {
-    const bundle = await exportBundle(adapter);
-    downloadBundle(bundle);
+    setExportError(null);
+    try {
+      const bundle = await exportBundle(adapter);
+      downloadBundle(bundle);
+    } catch (error) {
+      setExportError(error instanceof Error ? error.message : String(error));
+    }
   }
 
   function resetImportState(): void {
@@ -65,7 +62,7 @@ export function SettingsScreen(): ReactNode {
 
   async function handleFileChange(event: ChangeEvent<HTMLInputElement>): Promise<void> {
     const file = event.target.files?.[0];
-    // Clear the input's value so picking the SAME file again still fires a change event.
+    // Clear the input's value so picking the same file again still fires a change event.
     event.target.value = "";
     if (!file) {
       return;
@@ -103,9 +100,9 @@ export function SettingsScreen(): ReactNode {
       setImportSummary(summary);
       setPending(null);
       setReplaceAcknowledged(false);
-      // Everything may have changed (a merge adds whole runs; a replace erases and rewrites
-      // every table), so invalidate every cached query rather than one run's keys —
-      // `invalidateRun` is per-run and is not sufficient here.
+      // A merge adds whole runs and a replace erases and rewrites every table, so invalidate
+      // every cached query rather than one run's keys. `invalidateRun` is per-run and isn't
+      // sufficient here.
       await queryClient.invalidateQueries();
     } catch (error) {
       setImportError(error instanceof Error ? error.message : String(error));
@@ -130,6 +127,11 @@ export function SettingsScreen(): ReactNode {
           switching devices, and periodically otherwise.
         </p>
         <Button onClick={() => void handleExport()}>Export data</Button>
+        {exportError && (
+          <p role="alert" className="text-sm text-destructive">
+            Export failed: {exportError}. Nothing was saved.
+          </p>
+        )}
       </section>
 
       <section className="space-y-3 border-t border-border pt-4">
@@ -139,7 +141,6 @@ export function SettingsScreen(): ReactNode {
         </p>
 
         <input
-          ref={fileInputRef}
           type="file"
           accept="application/json"
           onChange={(event) => void handleFileChange(event)}
@@ -249,6 +250,11 @@ export function SettingsScreen(): ReactNode {
                 <Button variant="outline" size="sm" onClick={() => void handleExport()}>
                   Export current data first
                 </Button>
+                {exportError && (
+                  <p role="alert" className="text-sm text-destructive">
+                    Export failed: {exportError}. Nothing was saved.
+                  </p>
+                )}
                 <label className="flex items-start gap-2">
                   <input
                     type="checkbox"
