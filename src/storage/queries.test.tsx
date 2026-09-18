@@ -509,6 +509,23 @@ describe("useCreateRun", () => {
     expect(persisted).toEqual(run);
   });
 
+  it("persists the caller's rules instead of DEFAULT_RULES when given one (PER-18)", async () => {
+    const adapter = createMemoryAdapter();
+    await adapter.init();
+
+    const { result } = renderHook(() => useCreateRun(), { wrapper: createWrapper(adapter) });
+
+    const customRules = { ...DEFAULT_RULES, hardcore: true, customClause: "No held items" };
+    const run = await result.current.mutateAsync({
+      name: "Hardcore Run",
+      game: "heartgold",
+      rules: customRules,
+    });
+
+    expect(run.rules).toEqual(customRules);
+    expect(run.rules).not.toEqual(DEFAULT_RULES);
+  });
+
   it("invalidates the plain runs list, so a mounted useRuns reflects the new run without a manual refetch", async () => {
     const adapter = createMemoryAdapter();
     await adapter.init();

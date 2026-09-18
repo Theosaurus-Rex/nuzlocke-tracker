@@ -139,20 +139,27 @@ type Rules = {
 }
 ```
 
-The randomiser sub-toggles are not inert metadata — each one invalidates a picker that would
-otherwise be constrained by seeded game data, so the forms in M2 have to read them:
+**Corrected 2026-09-18 (PER-18):** the table below originally claimed each randomiser sub-toggle
+invalidated a picker that was otherwise constrained by seeded game data. That premise is gone —
+CLAUDE.md's "Pickers are never constrained to one generation" decision (2026-09-17) made every
+species/ability/move/item picker free-text over all generations regardless of these flags, and
+learnsets were never stored. PER-8 (wild encounter tables) was also cancelled, so there is no
+encounter table for `wildEncounters` to hide. None of the sub-toggles change app behaviour today;
+they are read back only as a record of what kind of run this is (PER-18's rules screen, PER-41's
+rules summary). `evolutions` is the one with a plausible future consequence, at PER-37's evolve
+action — nothing has been built against it yet.
 
 | Toggle | Effect on the UI |
 |---|---|
-| `wildEncounters` | Route encounter tables are hidden (the label in PER-18 says so outright) |
-| `abilities` | Ability picker offers every ability, not the species' legal set |
-| `items` | Held-item picker is unconstrained |
-| `moves` | Moveset editor (PER-34) cannot filter by learnset; offers every move |
-| `evolutions` | Evolve action (PER-37) cannot offer the real evolution; free species choice |
-| `trainers`, `starters` | Recorded for the run summary; no picker consequence |
+| `wildEncounters` | None. Recorded for the run summary; the app never showed encounter tables (PER-8 cancelled) |
+| `abilities` | None. The ability picker is already unconstrained for every run — see "Pickers are never constrained to one generation" |
+| `items` | None. The held-item picker is already unconstrained for every run |
+| `moves` | None. Learnsets are not stored; the moveset editor (PER-34) is already free-text over every move |
+| `evolutions` | None yet. Recorded for the run summary; PER-37's evolve action may read it to allow a free species choice, but that is unbuilt |
+| `trainers`, `starters` | None. Always metadata — recorded for the run summary, never a picker consequence |
 
-This matters at M0 only insofar as the flags must exist on the run before M2 builds against
-them. The behaviour is M2's problem, not this work's.
+This matters at M0 only insofar as the flags must exist on the run before M4 (PER-41) reads them
+back. Nothing enforces or displays them before then.
 
 ### `routes`
 

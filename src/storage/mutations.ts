@@ -17,7 +17,9 @@
  * `useCreateRun` (PER-16) is the third. It does not generate `id`/`createdAt`/`updatedAt` itself
  * — `adapter.runs.put` assigns those, same as every other write through the adapter — and it does
  * not seed routes or fights: seeding a run's route list from game data is PER-22 (M2), and the
- * boss list is PER-33 (M4). A run created here legitimately has no routes yet.
+ * boss list is PER-33 (M4). A run created here legitimately has no routes yet. PER-18 extended
+ * `CreateRunInput` with an optional `rules`, so the new-run screen's (possibly edited) form state
+ * can override `DEFAULT_RULES`; enforcing any of those rules is still PER-41.
  *
  * This module depends ONLY on the `StorageAdapter` interface (via `useStorage`) and the pure
  * transition in `src/domain/transitions.ts`. It must never import Dexie.
@@ -27,7 +29,7 @@ import { useMutation, useQueryClient, type UseMutationResult } from "@tanstack/r
 
 import { DEFAULT_RULES } from "@/domain/rules";
 import { catchEncounter, type CatchDetails } from "@/domain/transitions";
-import type { Encounter, GameId, Mon, Run } from "@/domain/types";
+import type { Encounter, GameId, Mon, Rules, Run } from "@/domain/types";
 
 import type { StorageAdapter } from "./adapter";
 import { invalidateRun, queryKeys } from "./queries";
@@ -152,20 +154,29 @@ export function useDeleteRun(): UseMutationResult<void, Error, string> {
 export interface CreateRunInput {
   name: string;
   game: GameId;
+  /**
+   * PER-18: the rules screen on `new-run-screen.tsx` always passes its (possibly edited) form
+   * state here. Optional only so the pre-PER-18 call sites in this module's own test suite keep
+   * compiling without updating every call; omitting it falls back to `DEFAULT_RULES`, same as
+   * before PER-18 existed.
+   */
+  rules?: Rules;
 }
 
 /**
  * Writes the new run's row. `id`, `createdAt` and `updatedAt` are left for `adapter.runs.put` to
- * assign, per hard rule 2 — never generated here. The run starts `active`, with `DEFAULT_RULES`
- * (PER-18 makes them editable) and `finishedAt: null`, and with no routes or fights: seeding those
- * from game data is PER-22 and PER-33.
+ * assign, per hard rule 2 — never generated here. The run starts `active`, with `finishedAt:
+ * null`, and with no routes or fights: seeding those from game data is PER-22 and PER-33.
+ *
+ * `rules` defaults to `DEFAULT_RULES` when the caller doesn't supply one; PER-18's screen always
+ * does, seeded from that same constant so an untouched form round-trips it exactly.
  */
 async function persistCreateRun(adapter: StorageAdapter, input: CreateRunInput): Promise<Run> {
   return adapter.runs.put({
     name: input.name,
     game: input.game,
     status: "active",
-    rules: DEFAULT_RULES,
+    rules: input.rules ?? DEFAULT_RULES,
     finishedAt: null,
   });
 }
