@@ -1,101 +1,46 @@
 /**
- * New run screen (PER-16, M1). The first way to create a run without importing a JSON backup —
- * name it, pick its game, and land on the run's own screen.
- *
- * No visual design work here: CLAUDE.md's "still open" section leaves the hand-drawn look
- * unresolved, so this is plain Tailwind on the existing tokens plus the existing `Button` — see
- * `run-list-screen.tsx` for the same approach on the most recently built real screen.
- *
- * The game picker is populated from `GAMES` (`@/game/registry`), never a hard-coded list, so
- * adding a game means adding a registry entry and nothing else — see that module's doc comment.
- * HeartGold is the only entry today, but the control is still a labelled, pre-selected `<select>`
- * rather than something that looks broken with one option.
- *
- * The name field validates on submit, not before: the message only appears once the user has
- * tried, so an empty form doesn't greet them with an error, and the submit button is never
- * disabled without explanation (CLAUDE.md's testing section calls out exactly this kind of
- * happy-path-only test; this screen's own test exercises the empty-name path deliberately). The
- * message sits next to the field and is wired to it via `aria-describedby`, rather than a
- * standalone alert banner like the mutation-failure messages elsewhere in this app (see
- * `run-list-screen.tsx`'s `DeleteConfirm`) — the two are different kinds of failure.
- *
- * `DEFAULT_RULES` (`@/domain/rules`) seeds the rules section below (PER-18): every clause,
- * randomiser toggle and the custom clause field starts at that constant's value, so an untouched
- * submit persists exactly today's pre-PER-18 behaviour. Seeding the run's route list from game
- * data is PER-22, and the boss list is PER-33 — a run created here legitimately has no routes yet.
- *
- * PER-18 only *configures* rules. Nothing here enforces them — dupes/species-clause detection and
- * nicknames-required validation are PER-41 (M4), which reads `run.rules` back. A hardcore run
- * created today behaves identically to a non-hardcore one; only the stored flag differs.
- *
- * Randomiser sub-toggle labels describe what kind of run this is ("Wild encounters are
- * randomised"), not an app behaviour they switch — see CLAUDE.md's "Pickers are never constrained
- * to one generation" decision. Every picker is already unconstrained regardless of these flags
- * (abilities/items/moves), there is no encounter table to hide (wildEncounters — PER-8 was
- * cancelled), and evolutions/trainers/starters were always metadata. The master `enabled` toggle
- * clears every sub-toggle when turned off, so the stored shape can never claim a sub-randomiser is
- * on while the run overall isn't — that combination would be read back by the PER-41 rules summary
- * as a claim about the run that isn't true.
+ * The game picker is populated from the `GAMES` registry, not a hard-coded list. The name
+ * field validates on submit, so an untouched form doesn't greet the user with an error.
  */
 
 import { useState, type ChangeEvent, type FormEvent, type ReactNode } from "react";
 import { Link, useNavigate } from "react-router";
 
 import { Button, buttonVariants } from "@/components/ui/button";
-import { DEFAULT_RULES } from "@/domain/rules";
-import type { GameId, Rules } from "@/domain/types";
+import {
+  CLAUSE_FIELDS,
+  DEFAULT_RULES,
+  RANDOMISER_OFF,
+  RANDOMISER_SUB_FIELDS,
+} from "@/domain/rules";
+import type { ClauseField, GameId, RandomiserSubField, Rules } from "@/domain/types";
 import { GAMES } from "@/game/registry";
 import { useCreateRun } from "@/storage/mutations";
 
 const GAME_OPTIONS = Object.values(GAMES);
 
-// The registry is guaranteed non-empty (there is always at least one supported game); this
-// fallback exists only to satisfy noUncheckedIndexedAccess and is never the source of truth for
-// what's selectable — GAME_OPTIONS above is.
+// Guards noUncheckedIndexedAccess only. GAME_OPTIONS is never empty and remains the source of
+// truth for what's selectable.
 const FIRST_GAME_ID: GameId = GAME_OPTIONS[0]?.id ?? "heartgold";
 
-type ClauseField =
-  | "dupesClause"
-  | "speciesClause"
-  | "shinyClause"
-  | "nicknamesRequired"
-  | "levelCaps"
-  | "setMode"
-  | "hardcore";
+const CLAUSE_LABELS: Record<ClauseField, string> = {
+  dupesClause: "Dupes clause",
+  speciesClause: "Species clause",
+  shinyClause: "Shiny clause",
+  nicknamesRequired: "Nicknames required",
+  levelCaps: "Level caps by badge",
+  setMode: "Set mode",
+  hardcore: "Hardcore",
+};
 
-const CLAUSE_FIELDS: readonly { key: ClauseField; label: string }[] = [
-  { key: "dupesClause", label: "Dupes clause" },
-  { key: "speciesClause", label: "Species clause" },
-  { key: "shinyClause", label: "Shiny clause" },
-  { key: "nicknamesRequired", label: "Nicknames required" },
-  { key: "levelCaps", label: "Level caps by badge" },
-  { key: "setMode", label: "Set mode" },
-  { key: "hardcore", label: "Hardcore" },
-];
-
-type RandomiserSubField = Exclude<keyof Rules["randomiser"], "enabled">;
-
-// Labels describe what kind of run this is, for the record — not a picker they switch. See the
-// file doc comment above.
-const RANDOMISER_SUB_FIELDS: readonly { key: RandomiserSubField; label: string }[] = [
-  { key: "wildEncounters", label: "Wild encounters are randomised" },
-  { key: "trainers", label: "Trainer parties are randomised" },
-  { key: "starters", label: "Starters are randomised" },
-  { key: "abilities", label: "Abilities are randomised" },
-  { key: "items", label: "Held items are randomised" },
-  { key: "moves", label: "Movesets are randomised" },
-  { key: "evolutions", label: "Evolutions are randomised" },
-];
-
-const CLEARED_RANDOMISER: Rules["randomiser"] = {
-  enabled: false,
-  wildEncounters: false,
-  trainers: false,
-  starters: false,
-  abilities: false,
-  items: false,
-  moves: false,
-  evolutions: false,
+const RANDOMISER_SUB_LABELS: Record<RandomiserSubField, string> = {
+  wildEncounters: "Wild encounters are randomised",
+  trainers: "Trainer parties are randomised",
+  starters: "Starters are randomised",
+  abilities: "Abilities are randomised",
+  items: "Held items are randomised",
+  moves: "Movesets are randomised",
+  evolutions: "Evolutions are randomised",
 };
 
 export function NewRunScreen(): ReactNode {
@@ -126,11 +71,9 @@ export function NewRunScreen(): ReactNode {
   function handleRandomiserMasterToggle(): void {
     setRules((prev) => ({
       ...prev,
-      // Turning the master off also clears every sub-toggle: a disabled sub-toggle that stayed
-      // "on" underneath would be recorded as true while visibly greyed out — see file doc comment.
-      randomiser: prev.randomiser.enabled
-        ? CLEARED_RANDOMISER
-        : { ...prev.randomiser, enabled: true },
+      // Clearing the master toggle also clears every sub-toggle, so the stored shape can never
+      // claim a sub-randomiser is on while the run itself isn't a randomiser run.
+      randomiser: prev.randomiser.enabled ? RANDOMISER_OFF : { ...prev.randomiser, enabled: true },
     }));
   }
 
@@ -214,7 +157,7 @@ export function NewRunScreen(): ReactNode {
 
         <fieldset className="space-y-2 rounded border border-border p-3">
           <legend className="px-1 text-sm font-medium">Clauses</legend>
-          {CLAUSE_FIELDS.map(({ key, label }) => {
+          {CLAUSE_FIELDS.map((key) => {
             const id = `rule-${key}`;
             return (
               <div key={key} className="flex items-center gap-2">
@@ -228,7 +171,7 @@ export function NewRunScreen(): ReactNode {
                   className="h-4 w-4 rounded border-border"
                 />
                 <label htmlFor={id} className="text-sm">
-                  {label}
+                  {CLAUSE_LABELS[key]}
                 </label>
               </div>
             );
@@ -257,7 +200,7 @@ export function NewRunScreen(): ReactNode {
           </p>
 
           <div className="ml-6 space-y-2">
-            {RANDOMISER_SUB_FIELDS.map(({ key, label }) => {
+            {RANDOMISER_SUB_FIELDS.map((key) => {
               const id = `rule-randomiser-${key}`;
               return (
                 <div key={key} className="flex items-center gap-2">
@@ -277,7 +220,7 @@ export function NewRunScreen(): ReactNode {
                       rules.randomiser.enabled ? "text-sm" : "text-sm text-muted-foreground"
                     }
                   >
-                    {label}
+                    {RANDOMISER_SUB_LABELS[key]}
                   </label>
                 </div>
               );
