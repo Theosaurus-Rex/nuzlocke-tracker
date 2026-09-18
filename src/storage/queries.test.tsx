@@ -16,9 +16,11 @@ import { describe, expect, it } from "vitest";
 import type { CatchDetails } from "@/domain/transitions";
 import type { Death, Encounter, Fight, Mon, Route, Run, Rules } from "@/domain/types";
 
+import { DEFAULT_RULES } from "@/domain/rules";
+
 import type { StorageAdapter } from "./adapter";
 import { createMemoryAdapter } from "./memory-adapter";
-import { useCatchEncounter, useDeleteRun } from "./mutations";
+import { useCatchEncounter, useCreateRun, useDeleteRun } from "./mutations";
 import { useEncounters, useMons, useRun, useRuns } from "./queries";
 import { StorageProvider } from "./storage-context";
 
@@ -480,6 +482,55 @@ describe("useDeleteRun", () => {
     });
     await waitFor(() => {
       expect(encounters.result.current.data).toEqual([]);
+    });
+  });
+});
+
+// ---------------------------------------------------------------------------
+// useCreateRun
+// ---------------------------------------------------------------------------
+
+describe("useCreateRun", () => {
+  it("persists a run with the given name and game, active status, and DEFAULT_RULES", async () => {
+    const adapter = createMemoryAdapter();
+    await adapter.init();
+
+    const { result } = renderHook(() => useCreateRun(), { wrapper: createWrapper(adapter) });
+
+    const run = await result.current.mutateAsync({ name: "Soul Silver Solo", game: "heartgold" });
+
+    expect(run.name).toBe("Soul Silver Solo");
+    expect(run.game).toBe("heartgold");
+    expect(run.status).toBe("active");
+    expect(run.rules).toEqual(DEFAULT_RULES);
+    expect(run.finishedAt).toBeNull();
+
+    const persisted = await adapter.runs.get(run.id);
+    expect(persisted).toEqual(run);
+  });
+
+  it("invalidates the plain runs list, so a mounted useRuns reflects the new run without a manual refetch", async () => {
+    const adapter = createMemoryAdapter();
+    await adapter.init();
+
+    const wrapper = createWrapper(adapter);
+    const runsList = renderHook(() => useRuns(), { wrapper });
+    const createRun = renderHook(() => useCreateRun(), { wrapper });
+
+    await waitFor(() => {
+      expect(runsList.result.current.data).toEqual([]);
+    });
+
+    const run = await createRun.result.current.mutateAsync({
+      name: "New Run",
+      game: "heartgold",
+    });
+
+    // Same invalidation trap `invalidateRun` documents: creating a run changes WHICH runs exist,
+    // so `useCreateRun` MUST invalidate the plain `['runs']` list key, or this mounted list would
+    // keep showing zero runs with nothing erroring.
+    await waitFor(() => {
+      expect(runsList.result.current.data).toEqual([run]);
     });
   });
 });

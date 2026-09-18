@@ -14,14 +14,20 @@
  * `"archived"` state with `useArchiveRun`/`useUnarchiveRun`, but Theo rejected the archive concept
  * on review of PER-14: a run is either kept or deleted, no third state. Delete replaces it.
  *
+ * `useCreateRun` (PER-16) is the third. It does not generate `id`/`createdAt`/`updatedAt` itself
+ * — `adapter.runs.put` assigns those, same as every other write through the adapter — and it does
+ * not seed routes or fights: seeding a run's route list from game data is PER-22 (M2), and the
+ * boss list is PER-33 (M4). A run created here legitimately has no routes yet.
+ *
  * This module depends ONLY on the `StorageAdapter` interface (via `useStorage`) and the pure
  * transition in `src/domain/transitions.ts`. It must never import Dexie.
  */
 
 import { useMutation, useQueryClient, type UseMutationResult } from "@tanstack/react-query";
 
+import { DEFAULT_RULES } from "@/domain/rules";
 import { catchEncounter, type CatchDetails } from "@/domain/transitions";
-import type { Encounter, Mon } from "@/domain/types";
+import type { Encounter, GameId, Mon, Run } from "@/domain/types";
 
 import type { StorageAdapter } from "./adapter";
 import { invalidateRun, queryKeys } from "./queries";
@@ -133,6 +139,53 @@ export function useDeleteRun(): UseMutationResult<void, Error, string> {
     onSuccess: async (_result, runId) => {
       await Promise.all([
         invalidateRun(queryClient, runId),
+        queryClient.invalidateQueries({ queryKey: queryKeys.runs() }),
+      ]);
+    },
+  });
+}
+
+// ---------------------------------------------------------------------------
+// Create a run (PER-16)
+// ---------------------------------------------------------------------------
+
+export interface CreateRunInput {
+  name: string;
+  game: GameId;
+}
+
+/**
+ * Writes the new run's row. `id`, `createdAt` and `updatedAt` are left for `adapter.runs.put` to
+ * assign, per hard rule 2 — never generated here. The run starts `active`, with `DEFAULT_RULES`
+ * (PER-18 makes them editable) and `finishedAt: null`, and with no routes or fights: seeding those
+ * from game data is PER-22 and PER-33.
+ */
+async function persistCreateRun(adapter: StorageAdapter, input: CreateRunInput): Promise<Run> {
+  return adapter.runs.put({
+    name: input.name,
+    game: input.game,
+    status: "active",
+    rules: DEFAULT_RULES,
+    finishedAt: null,
+  });
+}
+
+/**
+ * Creates a run and switches which runs exist, exactly like `useDeleteRun` does — so, like that
+ * mutation, this invalidates the plain `queryKeys.runs()` list key in addition to the newly
+ * created run's own per-run keys (via `invalidateRun`). Skipping the list key would leave a
+ * mounted run list not showing the new run until a manual reload, with nothing erroring — see the
+ * "Deliberately does NOT invalidate" note on `invalidateRun` in `queries.ts`.
+ */
+export function useCreateRun(): UseMutationResult<Run, Error, CreateRunInput> {
+  const adapter = useStorage();
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: (input: CreateRunInput) => persistCreateRun(adapter, input),
+    onSuccess: async (run) => {
+      await Promise.all([
+        invalidateRun(queryClient, run.id),
         queryClient.invalidateQueries({ queryKey: queryKeys.runs() }),
       ]);
     },
