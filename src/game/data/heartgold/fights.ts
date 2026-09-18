@@ -3,9 +3,8 @@
  *
  * Bootstrapped by scripts/extract-heartgold.ts from domtronn/nuzlocke.data
  * (https://github.com/domtronn/nuzlocke.data), files `routes/hg.txt` (fight order and names)
- * and `leagues/hgss.txt` (rosters). This file is hand-owned
- * now (CLAUDE.md "Game data") — edit it directly and note why in a comment beside the
- * change.
+ * and `leagues/hgss.txt` (rosters). Hand-owned now, per CLAUDE.md "Game data": edit it
+ * directly and note why beside the change.
  *
  * `levelCap` is computed from each fight's own `roster` (the ace's level), never
  * hand-entered. Rivals carry no cap. See scripts/extract-heartgold.ts for one known

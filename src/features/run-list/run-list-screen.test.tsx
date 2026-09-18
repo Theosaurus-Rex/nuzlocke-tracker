@@ -1,17 +1,10 @@
 /**
- * Covers `run-list-screen.tsx`: the empty state, one card per run with its own derived counts,
- * the per-card action link, and (PER-14) search, the Active/Finished tabs, and delete. Each
- * card's counts come from its own `useEncounters`/`useMons` queries against the in-memory adapter
- * (spec §10) — this is what actually proves no new aggregate query key crept in, since a bug there
- * would show up as every card sharing one run's numbers.
- *
- * Row-level proof that delete removes every table's rows (and leaves another run's rows alone)
- * lives in `src/storage/queries.test.tsx`, against the adapter directly — this file only covers
- * the screen's own wiring: the confirmation gate, the numbers shown in it, and the card
- * disappearing without a manual refetch.
+ * Covers `run-list-screen.tsx`'s own wiring: the empty state, per-card counts, search, tabs, and
+ * the delete confirmation. Row-level proof that delete removes every table's rows lives in
+ * `src/storage/queries.test.tsx`, against the adapter directly.
  *
  * jsdom does not evaluate CSS media queries, so there is no test here asserting how the grid
- * looks at a given viewport width — see CLAUDE.md's Testing section.
+ * looks at a given viewport width.
  */
 
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
@@ -133,8 +126,8 @@ function makeDeathDraft(
   };
 }
 
-/** Maps each stat's label ("Routes covered", "Party", …) to its value, read out of the card's
- * `<dl>` so assertions don't have to guess which `getByText("1")` match is which stat. */
+/** Maps each stat's label to its value, read out of the card's `<dl>` so assertions don't have
+ * to guess which `getByText("1")` match is which stat. */
 function statsIn(card: HTMLElement): Record<string, string> {
   const dl = card.querySelector("dl");
   if (!dl) {
@@ -209,7 +202,6 @@ describe("RunListScreen", () => {
 
     renderScreen(adapter);
 
-    // Active tab is selected by default: only Silver (active) shows.
     await waitFor(() => {
       expect(screen.getByRole("heading", { name: "Silver Nuzlocke" })).toBeInTheDocument();
     });
@@ -220,7 +212,6 @@ describe("RunListScreen", () => {
       throw new Error("Expected the Silver run card to render as a list item.");
     }
 
-    // Silver: 1 route covered, 1 party, 0 boxed, 0 dead.
     await waitFor(() => {
       expect(statsIn(silverCard)).toEqual({
         "Routes covered": "1",
@@ -234,7 +225,6 @@ describe("RunListScreen", () => {
       `/runs/${runA.id}/routes`,
     );
 
-    // Switch to Finished: Gold (finished) shows, Silver (active) no longer does.
     await userEvent.click(screen.getByRole("tab", { name: /Finished/ }));
     const goldCard = (await screen.findByRole("heading", { name: "Gold Nuzlocke" })).closest("li");
     if (!goldCard) {
@@ -242,8 +232,8 @@ describe("RunListScreen", () => {
     }
     expect(screen.queryByRole("heading", { name: "Silver Nuzlocke" })).not.toBeInTheDocument();
 
-    // Gold: 2 routes covered, 0 party, 1 boxed, 1 dead — proves each card computed its OWN
-    // numbers rather than sharing Silver's.
+    // Distinct counts from Silver's card, proving each card computed its own numbers rather
+    // than sharing state.
     await waitFor(() => {
       expect(statsIn(goldCard)).toEqual({
         "Routes covered": "2",
@@ -271,7 +261,6 @@ describe("RunListScreen", () => {
     expect(await screen.findByRole("tab", { name: "Active (2)" })).toBeInTheDocument();
     expect(screen.getByRole("tab", { name: "Finished (1)" })).toBeInTheDocument();
 
-    // Both active runs show before searching.
     expect(screen.getByRole("heading", { name: "Blaze Nuzlocke" })).toBeInTheDocument();
     expect(screen.getByRole("heading", { name: "Ember Nuzlocke" })).toBeInTheDocument();
 
@@ -280,7 +269,7 @@ describe("RunListScreen", () => {
     expect(screen.getByRole("heading", { name: "Blaze Nuzlocke" })).toBeInTheDocument();
     expect(screen.queryByRole("heading", { name: "Ember Nuzlocke" })).not.toBeInTheDocument();
 
-    // The search is scoped to the current tab: it does not surface Crystal (finished).
+    // Search is scoped to the current tab: it doesn't surface Crystal (finished).
     expect(screen.queryByRole("heading", { name: "Crystal Nuzlocke" })).not.toBeInTheDocument();
   });
 
@@ -300,12 +289,10 @@ describe("RunListScreen", () => {
 
     await screen.findByRole("heading", { name: "Blaze Nuzlocke" });
 
-    // The run survives until the destructive click is made — clicking "Delete" alone only opens
-    // the confirmation, it must not delete anything by itself.
+    // Clicking "Delete" alone only opens the confirmation. It must not delete anything by itself.
     await userEvent.click(screen.getByRole("button", { name: "Delete" }));
     expect(await adapter.runs.get(run.id)).toBeDefined();
 
-    // Names the run and the real numbers being lost: 2 encounters, 2 mons, 1 death.
     expect(
       screen.getByText(
         "Permanently delete Blaze Nuzlocke? This removes 2 encounters, 2 Pokémon and 1 death. This cannot be undone.",
@@ -316,7 +303,6 @@ describe("RunListScreen", () => {
       "/settings",
     );
 
-    // Cancelling leaves the run untouched.
     await userEvent.click(screen.getByRole("button", { name: "Cancel" }));
     expect(screen.queryByText(/permanently delete/i)).not.toBeInTheDocument();
     expect(await adapter.runs.get(run.id)).toBeDefined();
@@ -324,11 +310,9 @@ describe("RunListScreen", () => {
   });
 
   it("shows a death count in the delete confirmation that matches summariseRun for the same fixture", async () => {
-    // Distinct from the test above on purpose: this asserts the death count against a real
-    // `summariseRun` call on the same rows, not a hand-written literal, so a second counting
-    // implementation inside `DeleteConfirm` that drifted from `summariseRun`'s `dead` — exactly
-    // what used to live there (`mons.filter((mon) => mon.status === "dead").length`) — would
-    // fail here even if it still happened to agree with the literal-count test above.
+    // Distinct from the test above on purpose: asserts the death count against a real
+    // `summariseRun` call on the same rows, not a hand-written literal, so a counting
+    // implementation that drifts from `summariseRun`'s dead count would fail here.
     const adapter = createMemoryAdapter();
     const run = await adapter.runs.put(
       makeRunDraft({ name: "Crystal Nuzlocke", status: "active" }),
@@ -373,7 +357,7 @@ describe("RunListScreen", () => {
     await userEvent.click(within(doomedCard).getByRole("button", { name: "Delete" }));
     await userEvent.click(within(doomedCard).getByRole("button", { name: "Delete permanently" }));
 
-    // Gone from the screen without a page reload or manual refetch, and the tab count drops.
+    // Gone without a manual refetch, and the tab count drops.
     await waitFor(() => {
       expect(screen.queryByRole("heading", { name: "Blaze Nuzlocke" })).not.toBeInTheDocument();
     });

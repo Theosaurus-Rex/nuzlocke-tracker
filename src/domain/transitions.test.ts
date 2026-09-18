@@ -100,10 +100,8 @@ function partyInSlots(slots: number[]): Mon[] {
 
 describe("catchEncounter", () => {
   test("moves the encounter to caught and links the new mon", () => {
-    // speciesIdCaught/levelCaught/caughtRouteId are stamped at catch time and never recomputed —
-    // that's what lets a mon's current species/level diverge later (evolution, level-up) while
-    // still remembering what was actually caught. routeId is deliberately non-default here to
-    // prove caughtRouteId is read from the encounter, not hardcoded.
+    // routeId is deliberately non-default here, to prove caughtRouteId is read from the
+    // encounter, not hardcoded.
     const encounter = makeEncounter({ routeId: "route-42" });
     const { encounter: result, mon } = catchEncounter({
       encounter,
@@ -258,8 +256,8 @@ describe("moveMonToParty", () => {
   });
 
   test("re-slotting a mon already in the party does not have it block itself", () => {
-    // The party is "full" at 6, but one of those 6 is the mon being moved: excluding it should
-    // free exactly its own current slot rather than throwing.
+    // The party is full at 6, but one of those 6 is the mon being moved, so excluding it should
+    // free its own slot rather than throwing.
     const mon = makeMon({ id: "already-in-party", status: "party", partySlot: 2 });
     const party = [...partyInSlots([0, 1, 3, 4, 5]), mon];
 
@@ -343,10 +341,9 @@ describe("guard: mon must be alive", () => {
 });
 
 describe("input immutability", () => {
-  // Every transition returns a new object rather than mutating its input — this matters because a
-  // mutating transition would let the caller's existing reference change in place, which makes
-  // React state updates silently fail to re-render (the old and "new" object are the same
-  // reference, so a shallow equality check never sees a change).
+  // Every transition returns a new object rather than mutating its input. A mutating transition
+  // would leave the caller's existing reference unchanged, so a shallow equality check in React
+  // would never see the update and the component would not re-render.
   const catchEncounterInput = makeEncounter();
   const missEncounterInput = makeEncounter();
   const skipEncounterInput = makeEncounter();

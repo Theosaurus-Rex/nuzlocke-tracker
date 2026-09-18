@@ -1,11 +1,6 @@
 /**
- * Tests our routing/nav logic, not the frameworks underneath it. jsdom does not evaluate CSS
- * media queries, so there is no test here asserting "the sidebar is visible at 1024px" or "the
- * tab bar is visible at 375px" — that would assert nothing real. Both variants are always present
- * in the DOM; which one a real browser shows is Tailwind's `hidden md:flex` / `md:hidden`, and
- * needs a visual or Playwright check, not a jsdom unit test.
- *
- * Routing is driven with `createMemoryRouter` so navigation happens in-process.
+ * jsdom does not evaluate CSS media queries, so there is no test here asserting which nav variant
+ * is visible at a given width. That needs a visual or Playwright check, not a jsdom unit test.
  */
 
 import { createMemoryRouter, RouterProvider } from "react-router";
@@ -25,15 +20,10 @@ import { navItemsFor } from "./nav-items";
 import { appRoutes } from "./router";
 
 /**
- * Real composition is `QueryClientProvider` -> `StorageProvider` -> `RouterProvider` (see
- * `app/root.tsx`). This suite only exercises routing/nav, but the settings screen (mounted at
- * `/settings`, exercised below) reads the storage adapter through TanStack Query, so both
- * providers need to be present for that route to render without throwing — a fresh instance of
- * each per call, so no state leaks between tests.
- *
- * `adapter`/`queryClient` are optional so the PER-20 tests below can seed an adapter with runs
- * BEFORE rendering, and keep hold of the same `queryClient` afterwards to drive an invalidation
- * the way a real mutation would (see "counters update after a write" below).
+ * Both providers are required even though this suite mostly tests routing: the settings route
+ * (mounted at `/settings` below) reads storage through TanStack Query and would throw without
+ * them. `adapter`/`queryClient` are optional so a test can seed data before rendering, or reuse
+ * the same `queryClient` afterwards to drive an invalidation.
  */
 function renderAt(
   initialPath: string,
@@ -65,10 +55,6 @@ function shells() {
     tabBar: screen.getByRole("navigation", { name: "Tab bar navigation" }),
   };
 }
-
-// ---------------------------------------------------------------------------
-// PER-20 fixtures — same shape/convention as run-list-screen.test.tsx's local drafts.
-// ---------------------------------------------------------------------------
 
 const RULES_FIXTURE: Rules = {
   dupesClause: false,
@@ -158,10 +144,8 @@ function makeMonDraft(
   };
 }
 
-/** Reads a `RunSwitcher` mount's counters out as a plain label -> value map, the same way
- * `run-list-screen.test.tsx`'s `statsIn` reads a run card's `<dl>` — scoped to a single
- * `<dl>` found within `scope` so sidebar/mobile mounts (or a run card sharing the page) can be
- * asserted on independently. */
+/** Reads a `RunSwitcher` mount's counters into a label -> value map, scoped to `scope` so
+ * sidebar and mobile mounts on the same page can be asserted on independently. */
 function countersIn(scope: HTMLElement): Record<string, string> {
   const dl = scope.querySelector("dl");
   if (!dl) {
@@ -285,24 +269,22 @@ describe("AppShell navigation", () => {
   });
 });
 
-describe("Run switcher and live counters (PER-20)", () => {
+describe("Run switcher and live counters", () => {
   it("shows no counters when there is no active run", async () => {
     const adapter = createMemoryAdapter();
     await adapter.runs.put(makeRunDraft({ name: "Silver Nuzlocke" }));
 
     renderAt("/", { adapter });
 
-    // The switcher itself still renders in the sidebar (it's the "jump into a run" case), but
-    // there is no counter <dl> there. Scoped to the sidebar specifically, not `document`, since
-    // the run list screen underneath renders its OWN per-card `<dl>` of stats (run-list-screen.tsx)
-    // which is a separate surface this ticket doesn't touch.
+    // Scoped to the sidebar, not `document`: the run list screen underneath renders its own
+    // per-card `<dl>` of stats, which would otherwise collide with this query.
     const sidebar = screen.getByRole("navigation", { name: "Sidebar navigation" });
     expect(
       await within(sidebar).findByRole("option", { name: "Silver Nuzlocke" }),
     ).toBeInTheDocument();
     expect(sidebar.querySelector("dl")).not.toBeInTheDocument();
 
-    // No mobile mount at all outside a run — the tab bar's own "Runs" destination covers it.
+    // No mobile mount at all outside a run: the tab bar's own "Runs" destination covers it.
     expect(screen.queryAllByRole("combobox", { name: "Switch run" })).toHaveLength(1);
   });
 
@@ -321,7 +303,7 @@ describe("Run switcher and live counters (PER-20)", () => {
       await adapter.mons.put(makeMonDraft(run.id, { status: "dead", partySlot: null })),
     ];
 
-    // Asserted against a real `summariseRun` call on the same rows, not hand-written literals —
+    // Asserted against a real `summariseRun` call on the same rows, not hand-written literals, so
     // a second counting implementation that drifts from `summariseRun` would fail this.
     const expected = summariseRun({ encounters, mons });
 
@@ -390,14 +372,12 @@ describe("Run switcher and live counters (PER-20)", () => {
     const { sidebar } = shells();
     const main = await screen.findByRole("main");
 
-    // Compare the two renderings against each other, not against a duplicated literal — the same
-    // pattern `app-shell.test.tsx` already uses for nav items above.
+    // Compare the two renderings against each other, not against a duplicated literal.
     await waitFor(() => {
       expect(countersIn(main)).toEqual(countersIn(sidebar));
     });
     expect(countersIn(sidebar)).toEqual({ Routes: "1", Party: "1", Boxed: "1", Dead: "0" });
 
-    // And both switchers show the same run selected.
     const selects = screen.getAllByRole("combobox", { name: "Switch run" });
     expect(selects).toHaveLength(2);
     for (const select of selects) {
@@ -438,9 +418,7 @@ describe("Run switcher and live counters (PER-20)", () => {
     });
 
     // A write through the adapter, then the same invalidation a real mutation performs
-    // (`invalidateRun` — see `mutations.ts`). Nothing here is a manual refetch of the counters
-    // themselves: this is exactly the existing TanStack Query invalidation the ticket says to
-    // rely on rather than adding polling.
+    // (`invalidateRun`). This exercises TanStack Query's own invalidation, not a manual refetch.
     await adapter.mons.put(makeMonDraft(run.id, { status: "party", partySlot: 1 }));
     await invalidateRun(queryClient, run.id);
 

@@ -1,15 +1,10 @@
 /**
- * `navigator.storage.persist()` wiring. See CLAUDE.md hard rule 5.
+ * `navigator.storage.persist()` wiring. This is hygiene only (CLAUDE.md hard rule 5): `persist()`
+ * is a heuristic grant, and nothing here or downstream may treat `"granted"` as a reason to skip
+ * JSON export or assume data survives.
  *
- * This is HYGIENE ONLY. iOS Safari evicts script-writable storage (IndexedDB included) after 7
- * days without interaction, and `persist()` is a heuristic grant even where it exists — there is
- * no browser that guarantees it. Nothing here, or anywhere downstream, may treat `"granted"` as a
- * reason to skip JSON export/import (PER-10) or to assume data survives. The result is
- * diagnostics, surfaced on the settings screen, and nothing else.
- *
- * `navigator.storage` does not exist in jsdom and is absent on older Safari. Accessing it
- * unguarded throws and takes the whole app down at startup, so every path here is feature-detected
- * before touching it.
+ * `navigator.storage` does not exist in jsdom and is absent on older Safari, so every path here
+ * is feature-detected before touching it.
  */
 
 import { useSyncExternalStore } from "react";
@@ -27,11 +22,7 @@ function notify(): void {
   }
 }
 
-/**
- * Feature-detects the Storage API and, when present, requests persistent storage exactly once
- * per call. The caller (`main.tsx`) is responsible for calling this only once at startup per hard
- * rule 5 — this function does not gate rendering and never throws.
- */
+/** Feature-detects the Storage API and, when present, requests persistent storage. Never throws. */
 export async function requestPersistentStorage(): Promise<PersistenceStatus> {
   const status = await detect();
   lastStatus = status;
@@ -48,13 +39,12 @@ async function detect(): Promise<PersistenceStatus> {
     const granted = await navigator.storage.persist();
     return granted ? "granted" : "denied";
   } catch {
-    // A rejected promise here (some browsers throw in restricted contexts, e.g. private
-    // browsing) is diagnostics-worthy, not fatal. Treat it the same as "no API".
+    // Some browsers throw in restricted contexts, e.g. private browsing. Treat it as no API.
     return "unsupported";
   }
 }
 
-/** Current status, or `null` if `requestPersistentStorage()` has not resolved yet. */
+/** `null` until `requestPersistentStorage()` has resolved once. */
 export function getPersistenceStatus(): PersistenceStatus | null {
   return lastStatus;
 }
@@ -70,11 +60,7 @@ export function resetPersistenceStatusForTests(): void {
   listeners.clear();
 }
 
-/**
- * Reactive read of the latest status for display (the settings screen). Returns `null` until
- * `requestPersistentStorage()` — called once at startup by `main.tsx` — resolves. Does not itself
- * call `persist()`; it only observes the result of the startup call.
- */
+/** Reactive read of the latest status. Does not call `persist()` itself, only observes it. */
 export function usePersistenceStatus(): PersistenceStatus | null {
   return useSyncExternalStore(subscribePersistenceStatus, getPersistenceStatus);
 }

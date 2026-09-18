@@ -1,13 +1,12 @@
 /**
- * Pure state transitions between the statuses in spec section 5.
+ * Pure state transitions between mon, encounter and fight statuses.
  *
- * Purity is the point: no `crypto.randomUUID()`, no `Date.now()`, no `new Date()` in here.
- * Anything non-deterministic (new ids, timestamps) is an input the caller supplies, which keeps
- * every transition deterministic and testable without a database. All functions return new
- * objects; inputs are never mutated.
+ * No `crypto.randomUUID()`, no `Date.now()`, no `new Date()`. Non-deterministic inputs (ids,
+ * timestamps) are supplied by the caller. All functions return new objects; inputs are never
+ * mutated.
  *
- * Guards here are invariant checks (programmer errors), not user-input validation — clause
- * enforcement (dupes/species clause) is PER-41, out of scope.
+ * Guards here are invariant checks, not user-input validation. Clause enforcement is out of
+ * scope.
  */
 
 import type { Cause, Draft, Encounter, Fight, Gender, Mon, Death } from "./types";
@@ -32,11 +31,10 @@ function assertMonAlive(mon: Mon): void {
 /**
  * Lowest unoccupied party slot, or null when all six are taken.
  *
- * A slot only counts as occupied when its mon is `status === 'party'` and holds a non-null
- * `partySlot` — a boxed or dead mon that happens to carry a stale `partySlot` value must not
- * reserve that index. Gaps are legitimate and persistent (PER-17 draws them as a fillable
- * "empty · add from box" affordance): `killMon` frees a slot without compacting the survivors, so
- * slot assignment must scan for the lowest free index rather than deriving it from a count.
+ * A slot counts as occupied only when its mon has `status === 'party'` and a non-null
+ * `partySlot`; a boxed or dead mon with a stale `partySlot` must not reserve it. `killMon` frees
+ * a slot without compacting the survivors, so this scans for the lowest free index rather than
+ * deriving it from a count.
  */
 function nextFreeSlot(party: readonly Mon[], excludeMonId?: string): number | null {
   const occupied = new Set(
@@ -53,10 +51,6 @@ function nextFreeSlot(party: readonly Mon[], excludeMonId?: string): number | nu
 
   return null;
 }
-
-// ---------------------------------------------------------------------------
-// catchEncounter
-// ---------------------------------------------------------------------------
 
 /** The attributes of a mon known only at the moment it's caught. */
 export interface CatchDetails {
@@ -122,10 +116,6 @@ export function catchEncounter({
   return { encounter: updatedEncounter, mon };
 }
 
-// ---------------------------------------------------------------------------
-// missEncounter / skipEncounter
-// ---------------------------------------------------------------------------
-
 export function missEncounter(encounter: Encounter): Encounter {
   assertEncounterOpen(encounter);
   return { ...encounter, status: "missed" };
@@ -135,10 +125,6 @@ export function skipEncounter(encounter: Encounter): Encounter {
   assertEncounterOpen(encounter);
   return { ...encounter, status: "skipped" };
 }
-
-// ---------------------------------------------------------------------------
-// moveMonToBox / moveMonToParty
-// ---------------------------------------------------------------------------
 
 export function moveMonToBox(mon: Mon): Mon {
   assertMonAlive(mon);
@@ -156,10 +142,6 @@ export function moveMonToParty({ mon, party }: { mon: Mon; party: readonly Mon[]
 
   return { ...mon, status: "party", partySlot: slot };
 }
-
-// ---------------------------------------------------------------------------
-// killMon
-// ---------------------------------------------------------------------------
 
 /** The attributes of a death known only at the moment it happens. */
 export interface KillDetails {
@@ -196,10 +178,6 @@ export function killMon({
 
   return { mon: updatedMon, death };
 }
-
-// ---------------------------------------------------------------------------
-// clearFight
-// ---------------------------------------------------------------------------
 
 export function clearFight({ fight, clearedAt }: { fight: Fight; clearedAt: string }): Fight {
   if (fight.status !== "pending") {

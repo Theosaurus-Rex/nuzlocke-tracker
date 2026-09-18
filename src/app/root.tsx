@@ -1,7 +1,6 @@
 /**
- * Top-level component: waits for the storage adapter to open before rendering the router.
- * Split out of `main.tsx` so that file stays pure bootstrapping code with no component of its
- * own to fast-refresh.
+ * Waits for the storage adapter to open before rendering the router. Split out of `main.tsx` so
+ * that file stays pure bootstrap code with no component for Fast Refresh to reload.
  */
 
 import { useEffect, useState, type ReactNode } from "react";
@@ -35,8 +34,6 @@ export function Root({
   }, [adapter]);
 
   if (!ready) {
-    // Minimal loading state while IndexedDB opens. No visual design here — see CLAUDE.md's "still
-    // open" section on visual direction.
     return <p className="p-4">Loading…</p>;
   }
 

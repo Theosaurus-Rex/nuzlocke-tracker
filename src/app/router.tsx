@@ -1,11 +1,9 @@
 /**
- * Route table (spec §9). `appRoutes` is exported separately from `router` so tests can build a
- * `createMemoryRouter` from the exact same route objects instead of duplicating the tree.
+ * `appRoutes` is exported separately from `router` so tests can build a `createMemoryRouter` from
+ * the same route objects instead of duplicating the tree.
  *
- * `createBrowserRouter` assumes path-based routing against a real origin. Capacitor's `file://`
- * origin at M6 may need `createHashRouter` instead — that is a one-line swap of this call, since
- * nothing in `AppShell` or the screens below assumes path routing (they only use `NavLink`,
- * `Outlet`, `Navigate` and `useParams`, all of which work the same under either router).
+ * `createBrowserRouter` assumes a real origin. Capacitor's `file://` origin may need
+ * `createHashRouter` instead, a one-line swap here since nothing below assumes path routing.
  */
 
 import { createBrowserRouter, type RouteObject } from "react-router";

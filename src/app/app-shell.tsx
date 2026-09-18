@@ -1,23 +1,6 @@
 /**
- * The responsive app shell: a persistent sidebar at and above the `md` breakpoint (768px), a
- * fixed bottom tab bar below it. Both are rendered unconditionally in the DOM; which one is
- * visible is decided entirely by Tailwind's responsive display utilities (`hidden md:flex` /
- * `md:hidden`), not a `matchMedia` hook or resize listener. CSS deciding what is visible, rather
- * than JS state deciding what is rendered, is what keeps the two variants from ever disagreeing
- * about which nav items exist — see `nav-items.ts`.
- *
- * Active-route highlighting is `NavLink`'s own `isActive` (and the `aria-current="page"` it sets
- * on the anchor), applied identically to both variants.
- *
- * Nav items are run-scoped: the active `runId` (if any) comes from the router, `navItemsFor` is
- * called once, and the SAME resulting array feeds both renderings below — see `nav-items.ts`.
- *
- * The run switcher and its live counters (PER-20) follow the identical pattern: `runs` and
- * `summary` are each read/derived exactly once, here, and the same values are passed into TWO
- * `<RunSwitcher>` mounts below — the sidebar (always, since it has room and is the switcher's
- * most useful moment when no run is open) and a compact strip above the mobile content (only
- * while a run is active, since the tab bar's own "Runs" destination already covers switching when
- * it isn't — see `run-switcher.tsx` for the counter/derivation details).
+ * Both nav variants are always in the DOM. CSS (`hidden md:flex` / `md:hidden`) decides which is
+ * visible, not a `matchMedia` hook, which is also why there's no breakpoint test.
  */
 
 import type { ReactNode } from "react";
@@ -74,8 +57,8 @@ export function AppShell(): ReactNode {
         ))}
       </nav>
 
-      {/* Content area: left margin clears the fixed sidebar on desktop, bottom padding clears
-          the fixed tab bar on mobile. */}
+      {/* Left margin clears the fixed sidebar on desktop, bottom padding clears the fixed tab
+          bar on mobile. */}
       <main className="min-h-screen pb-16 md:ml-56 md:pb-0">
         {runId !== undefined && (
           <div className="border-b border-border p-2 md:hidden">

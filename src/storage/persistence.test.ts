@@ -1,8 +1,7 @@
 /**
  * Covers the feature-detection that keeps `requestPersistentStorage()` from crashing startup in
- * a real browser lacking `navigator.storage` (jsdom, and older Safari) — see CLAUDE.md hard rule
- * 5. Each test restores the original `navigator.storage` descriptor so mocking one case can't
- * leak into another.
+ * a browser lacking `navigator.storage` (jsdom, and older Safari). Each test restores the
+ * original `navigator.storage` descriptor so mocking one case can't leak into another.
  */
 
 import { afterEach, describe, expect, it } from "vitest";

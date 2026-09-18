@@ -1,17 +1,10 @@
 /**
- * Query keys and read hooks over the `StorageAdapter`. See
- * docs/superpowers/specs/2026-09-17-nuzlocke-scaffold-design.md section 8.
+ * Query keys and read hooks over the `StorageAdapter`.
  *
- * Every key lives in `queryKeys` so fetching and invalidation cannot drift apart — a hook that
- * fetched under a hand-written key that invalidation forgot to match is exactly the class of bug
- * a single source of truth for keys removes.
+ * Every key lives in `queryKeys` so fetching and invalidation cannot drift apart.
  *
  * `staleTime` is `Infinity` everywhere: nothing changes this database except this tab, so
  * background refetching is pure waste. Invalidation is explicit, via `invalidateRun`.
- *
- * This module depends ONLY on the `StorageAdapter` interface (via `useStorage`). It must never
- * import Dexie or know which implementation backs the adapter — that boundary is what keeps the
- * M6 SQLite swap a swap.
  */
 
 import { useQuery, type QueryClient, type UseQueryResult } from "@tanstack/react-query";
@@ -57,13 +50,8 @@ export function useRoutes(runId: string): UseQueryResult<Route[]> {
   });
 }
 
-/**
- * `runId` is optional so a caller that may or may not have an active run (`AppShell`'s run
- * switcher, PER-20) can call this hook unconditionally, as the rules of hooks require, rather
- * than skipping it when there's nothing to fetch. `enabled: false` while `runId` is `undefined`
- * means the query simply never runs — no request against `runId: ""`, and `data` stays
- * `undefined` rather than resolving to a misleading empty array.
- */
+/** `runId` is optional so a caller without an active run can still call this hook unconditionally;
+ * `enabled: false` skips the query rather than running one against `runId: ""`. */
 export function useEncounters(runId: string | undefined): UseQueryResult<Encounter[]> {
   const adapter = useStorage();
   return useQuery({
@@ -74,7 +62,6 @@ export function useEncounters(runId: string | undefined): UseQueryResult<Encount
   });
 }
 
-/** See `useEncounters` above — same optional-`runId` reasoning. */
 export function useMons(runId: string | undefined): UseQueryResult<Mon[]> {
   const adapter = useStorage();
   return useQuery({
@@ -104,13 +91,11 @@ export function useFights(runId: string): UseQueryResult<Fight[]> {
 }
 
 /**
- * Invalidates every key belonging to `runId` — the single run row plus its routes, encounters,
- * mons, deaths and fights. Per spec §8, invalidation is per-run rather than per-row: at kilobyte
- * scale with one user, refetching a run's rows is cheaper than fine-grained invalidation and
- * removes a whole class of stale-cache bugs.
+ * Invalidates every key belonging to `runId`: the run row plus its routes, encounters, mons,
+ * deaths and fights.
  *
- * Deliberately does NOT invalidate the plain `['runs']` list key — creating or catching within an
- * existing run does not change which runs exist, so that key does not "belong to" any one run.
+ * Deliberately does not invalidate the plain `['runs']` list key. Creating or catching within an
+ * existing run does not change which runs exist, so that key does not belong to any one run.
  */
 export async function invalidateRun(queryClient: QueryClient, runId: string): Promise<void> {
   await Promise.all([

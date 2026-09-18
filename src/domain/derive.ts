@@ -1,17 +1,8 @@
 /**
- * Derived-state helpers over a run's rows. Pure functions only — no I/O, no storage, no React.
- *
- * PER-20 (sidebar run counters, still to come) calls out explicitly that this kind of number is
- * derived state and should be computed in one place rather than recomputed per screen. PER-13
- * (the run list) needs the same numbers first, so the derivation is built here, once, and both
- * consume it.
+ * Derived-state helpers over a run's rows. Pure functions only, no I/O, no storage, no React.
  */
 
 import type { Encounter, Mon } from "./types";
-
-// ---------------------------------------------------------------------------
-// countByMonStatus
-// ---------------------------------------------------------------------------
 
 export interface MonStatusCounts {
   party: number;
@@ -36,14 +27,9 @@ export function countByMonStatus(mons: readonly Mon[]): MonStatusCounts {
   return counts;
 }
 
-// ---------------------------------------------------------------------------
-// countRoutesCovered
-// ---------------------------------------------------------------------------
-
 /**
- * How many distinct routes have at least one non-`'open'` encounter (caught, missed or skipped —
- * anything the player has actually resolved). Counts routes, not encounters: a route with more
- * than one non-open encounter (unusual, but the type does not forbid it) still counts once.
+ * How many distinct routes have at least one non-`'open'` encounter. Counts routes, not
+ * encounters: a route with more than one non-open encounter still counts once.
  */
 export function countRoutesCovered(encounters: readonly Encounter[]): number {
   const covered = new Set<string>();
@@ -57,10 +43,6 @@ export function countRoutesCovered(encounters: readonly Encounter[]): number {
   return covered.size;
 }
 
-// ---------------------------------------------------------------------------
-// summariseRun
-// ---------------------------------------------------------------------------
-
 export interface RunSummary {
   routesCovered: number;
   party: number;
@@ -69,20 +51,11 @@ export interface RunSummary {
 }
 
 /**
- * The numbers a run's summary card needs, in one call. `party`, `boxed` and `dead` are a
- * PARTITION of `mons` — they are three faces of one status field, so they always sum to
- * `mons.length` — which is why all three come from `countByMonStatus(mons)` rather than `dead`
- * being read off the `deaths` table instead.
- *
- * That's a deliberate choice, not an oversight: `deaths` and "mons whose status is `dead`" agree
- * under every transition this app performs today (`killMon` writes both in the same
- * transaction — see `transitions.ts` and `mutations.ts`), but they are not the same guarantee.
- * `backup.ts` validates that a death's `monId` references a mon present in the bundle, but NOT
- * that mon's `status` — and hand-editing game/run data is an explicitly supported workflow
- * (CLAUDE.md, "Game data is ours once seeded"). A bundle with deaths whose mons are still `party`
- * would make `party + boxed + deaths.length` exceed `mons.length`, silently. Deriving `dead` from
- * `mons` instead keeps the three numbers a true breakdown of the roster no matter how the data
- * arrived. Do not "fix" this back toward `deaths.length` — see `derive.test.ts`'s partition test.
+ * `party`, `boxed` and `dead` all come from `countByMonStatus(mons)`, not `dead` from
+ * `deaths.length`. They agree under every transition today, but `backup.ts` only checks that a
+ * death's `monId` references a mon, not that mon's status, and hand-edited data is supported.
+ * Deriving `dead` from `mons` keeps the three a true partition regardless. See the partition test
+ * in `derive.test.ts` before changing this.
  */
 export function summariseRun({
   encounters,

@@ -1,7 +1,7 @@
 import type { ReactNode } from "react";
 import { Navigate, useParams } from "react-router";
 
-/** `/runs/:runId` has no content of its own — it always redirects to the routes tab. */
+/** `/runs/:runId` has no content of its own. It always redirects to the routes tab. */
 export function RunRedirect(): ReactNode {
   const { runId } = useParams<{ runId: string }>();
 
