@@ -1,9 +1,14 @@
 /**
  * Covers `run-list-screen.tsx`: the empty state, one card per run with its own derived counts,
- * the per-card action link, and (PER-14) search, the Active/Finished/Archived tabs, and archive/
- * unarchive. Each card's counts come from its own `useEncounters`/`useMons`/`useDeaths` queries
- * against the in-memory adapter (spec §10) — this is what actually proves no new aggregate query
- * key crept in, since a bug there would show up as every card sharing one run's numbers.
+ * the per-card action link, and (PER-14) search, the Active/Finished tabs, and delete. Each
+ * card's counts come from its own `useEncounters`/`useMons` queries against the in-memory adapter
+ * (spec §10) — this is what actually proves no new aggregate query key crept in, since a bug there
+ * would show up as every card sharing one run's numbers.
+ *
+ * Row-level proof that delete removes every table's rows (and leaves another run's rows alone)
+ * lives in `src/storage/queries.test.tsx`, against the adapter directly — this file only covers
+ * the screen's own wiring: the confirmation gate, the numbers shown in it, and the card
+ * disappearing without a manual refetch.
  *
  * jsdom does not evaluate CSS media queries, so there is no test here asserting how the grid
  * looks at a given viewport width — see CLAUDE.md's Testing section.
@@ -259,13 +264,11 @@ describe("RunListScreen", () => {
     await adapter.runs.put(makeRunDraft({ name: "Blaze Nuzlocke", status: "active" }));
     await adapter.runs.put(makeRunDraft({ name: "Ember Nuzlocke", status: "active" }));
     await adapter.runs.put(makeRunDraft({ name: "Crystal Nuzlocke", status: "finished" }));
-    await adapter.runs.put(makeRunDraft({ name: "Retired Nuzlocke", status: "archived" }));
 
     renderScreen(adapter);
 
     expect(await screen.findByRole("tab", { name: "Active (2)" })).toBeInTheDocument();
     expect(screen.getByRole("tab", { name: "Finished (1)" })).toBeInTheDocument();
-    expect(screen.getByRole("tab", { name: "Archived (1)" })).toBeInTheDocument();
 
     // Both active runs show before searching.
     expect(screen.getByRole("heading", { name: "Blaze Nuzlocke" })).toBeInTheDocument();
@@ -280,41 +283,77 @@ describe("RunListScreen", () => {
     expect(screen.queryByRole("heading", { name: "Crystal Nuzlocke" })).not.toBeInTheDocument();
   });
 
-  it("archives a run from the Active tab and unarchives it from the Archived tab, with no manual refetch", async () => {
+  it("requires an explicit confirmation naming the run and the numbers lost before deleting", async () => {
     const adapter = createMemoryAdapter();
     const run = await adapter.runs.put(makeRunDraft({ name: "Blaze Nuzlocke", status: "active" }));
+    const route = await adapter.routes.put(makeRouteDraft(run.id));
+    await adapter.encounters.put(makeEncounterDraft(run.id, route.id, { status: "caught" }));
+    await adapter.encounters.put(makeEncounterDraft(run.id, route.id, { status: "missed" }));
+    await adapter.mons.put(makeMonDraft(run.id, { status: "party" }));
+    const deadMon = await adapter.mons.put(
+      makeMonDraft(run.id, { status: "dead", partySlot: null }),
+    );
+    await adapter.deaths.put(makeDeathDraft(run.id, deadMon.id));
 
     renderScreen(adapter);
 
     await screen.findByRole("heading", { name: "Blaze Nuzlocke" });
-    await userEvent.click(screen.getByRole("button", { name: "Archive" }));
 
-    // Disappears from Active without a page reload or manual refetch.
-    await waitFor(() => {
-      expect(screen.queryByRole("heading", { name: "Blaze Nuzlocke" })).not.toBeInTheDocument();
-    });
-    await waitFor(() => {
-      expect(screen.getByRole("tab", { name: "Active (0)" })).toBeInTheDocument();
-    });
-    expect(screen.getByRole("tab", { name: "Archived (1)" })).toBeInTheDocument();
+    // The run survives until the destructive click is made — clicking "Delete" alone only opens
+    // the confirmation, it must not delete anything by itself.
+    await userEvent.click(screen.getByRole("button", { name: "Delete" }));
+    expect(await adapter.runs.get(run.id)).toBeDefined();
 
-    const persisted = await adapter.runs.get(run.id);
-    expect(persisted?.status).toBe("archived");
+    // Names the run and the real numbers being lost: 2 encounters, 2 mons, 1 death.
+    expect(
+      screen.getByText(
+        "Permanently delete Blaze Nuzlocke? This removes 2 encounters, 2 Pokémon and 1 death. This cannot be undone.",
+      ),
+    ).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: /export a backup/i })).toHaveAttribute(
+      "href",
+      "/settings",
+    );
 
-    // Move to Archived and unarchive it back.
-    await userEvent.click(screen.getByRole("tab", { name: /Archived/ }));
+    // Cancelling leaves the run untouched.
+    await userEvent.click(screen.getByRole("button", { name: "Cancel" }));
+    expect(screen.queryByText(/permanently delete/i)).not.toBeInTheDocument();
+    expect(await adapter.runs.get(run.id)).toBeDefined();
+    expect(screen.getByRole("heading", { name: "Blaze Nuzlocke" })).toBeInTheDocument();
+  });
+
+  it("deletes a run on confirmation and removes it from the list without a manual refetch, leaving the other run intact", async () => {
+    const adapter = createMemoryAdapter();
+    const doomed = await adapter.runs.put(
+      makeRunDraft({ name: "Blaze Nuzlocke", status: "active" }),
+    );
+    const survivor = await adapter.runs.put(
+      makeRunDraft({ name: "Ember Nuzlocke", status: "active" }),
+    );
+
+    renderScreen(adapter);
+
     await screen.findByRole("heading", { name: "Blaze Nuzlocke" });
-    await userEvent.click(screen.getByRole("button", { name: "Unarchive" }));
+    const doomedCard = screen.getByRole("heading", { name: "Blaze Nuzlocke" }).closest("li");
+    if (!doomedCard) {
+      throw new Error("Expected the Blaze run card to render as a list item.");
+    }
 
+    await userEvent.click(within(doomedCard).getByRole("button", { name: "Delete" }));
+    await userEvent.click(within(doomedCard).getByRole("button", { name: "Delete permanently" }));
+
+    // Gone from the screen without a page reload or manual refetch, and the tab count drops.
     await waitFor(() => {
       expect(screen.queryByRole("heading", { name: "Blaze Nuzlocke" })).not.toBeInTheDocument();
     });
     await waitFor(() => {
-      expect(screen.getByRole("tab", { name: "Archived (0)" })).toBeInTheDocument();
+      expect(screen.getByRole("tab", { name: "Active (1)" })).toBeInTheDocument();
     });
-    expect(screen.getByRole("tab", { name: "Active (1)" })).toBeInTheDocument();
 
-    const restored = await adapter.runs.get(run.id);
-    expect(restored?.status).toBe("active");
+    expect(await adapter.runs.get(doomed.id)).toBeUndefined();
+
+    // The other run is untouched.
+    expect(screen.getByRole("heading", { name: "Ember Nuzlocke" })).toBeInTheDocument();
+    expect(await adapter.runs.get(survivor.id)).toEqual(survivor);
   });
 });
