@@ -18,7 +18,7 @@ import type { Encounter, Route, Run, Rules } from "@/domain/types";
 
 import type { StorageAdapter } from "./adapter";
 import { createMemoryAdapter } from "./memory-adapter";
-import { useCatchEncounter } from "./mutations";
+import { useArchiveRun, useCatchEncounter, useUnarchiveRun } from "./mutations";
 import { useEncounters, useMons, useRun, useRuns } from "./queries";
 import { StorageProvider } from "./storage-context";
 
@@ -277,5 +277,72 @@ describe("useCatchEncounter", () => {
 
     const allMons = await adapter.mons.getAll();
     expect(allMons).toEqual([]);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// useArchiveRun / useUnarchiveRun — the invalidation trap
+// ---------------------------------------------------------------------------
+
+describe("useArchiveRun / useUnarchiveRun", () => {
+  it("archiving a run updates its status in a mounted useRuns list without a manual refetch", async () => {
+    const adapter = createMemoryAdapter();
+    await adapter.init();
+    const run = await adapter.runs.put(makeRunDraft({ name: "Blaze Nuzlocke", status: "active" }));
+
+    const wrapper = createWrapper(adapter);
+    // `useRuns` itself returns every run regardless of status — the run-list screen is what
+    // filters by tab, and that filter re-derives from whatever `useRuns` currently holds. So the
+    // invalidation trap shows up here as `status` on the mounted row going stale, not as the row
+    // vanishing: see run-list-screen.test.tsx for the screen-level "moves tabs" version of this.
+    const runsList = renderHook(() => useRuns(), { wrapper });
+    const archive = renderHook(() => useArchiveRun(), { wrapper });
+
+    await waitFor(() => {
+      expect(runsList.result.current.data).toEqual([run]);
+    });
+
+    await archive.result.current.mutateAsync(run.id);
+
+    // This is the regression case: `invalidateRun` deliberately does not invalidate the plain
+    // `['runs']` list key (see queries.ts), so archiving MUST also invalidate `queryKeys.runs()`
+    // itself, or this mounted list keeps reporting "active" with nothing erroring.
+    await waitFor(() => {
+      expect(runsList.result.current.data?.[0]?.status).toBe("archived");
+    });
+  });
+
+  it("unarchiving a run restores it to a mounted useRuns list without a manual refetch", async () => {
+    const adapter = createMemoryAdapter();
+    await adapter.init();
+    const run = await adapter.runs.put(
+      makeRunDraft({ name: "Blaze Nuzlocke", status: "archived" }),
+    );
+
+    const wrapper = createWrapper(adapter);
+    const runsList = renderHook(() => useRuns(), { wrapper });
+    const unarchive = renderHook(() => useUnarchiveRun(), { wrapper });
+
+    await waitFor(() => {
+      expect(runsList.result.current.data).toEqual([run]);
+    });
+
+    await unarchive.result.current.mutateAsync(run.id);
+
+    await waitFor(() => {
+      expect(runsList.result.current.data?.[0]?.status).toBe("active");
+    });
+  });
+
+  it("persists the status change on the underlying row", async () => {
+    const adapter = createMemoryAdapter();
+    await adapter.init();
+    const run = await adapter.runs.put(makeRunDraft({ name: "Blaze Nuzlocke", status: "active" }));
+
+    const { result } = renderHook(() => useArchiveRun(), { wrapper: createWrapper(adapter) });
+    await result.current.mutateAsync(run.id);
+
+    const persisted = await adapter.runs.get(run.id);
+    expect(persisted?.status).toBe("archived");
   });
 });

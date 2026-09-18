@@ -1,9 +1,9 @@
 /**
  * Covers `run-list-screen.tsx`: the empty state, one card per run with its own derived counts,
- * and the per-card action link. Each card's counts come from its own `useEncounters`/`useMons`/
- * `useDeaths` queries against the in-memory adapter (spec §10) — this is what actually proves no
- * new aggregate query key crept in, since a bug there would show up as every card sharing one
- * run's numbers.
+ * the per-card action link, and (PER-14) search, the Active/Finished/Archived tabs, and archive/
+ * unarchive. Each card's counts come from its own `useEncounters`/`useMons`/`useDeaths` queries
+ * against the in-memory adapter (spec §10) — this is what actually proves no new aggregate query
+ * key crept in, since a bug there would show up as every card sharing one run's numbers.
  *
  * jsdom does not evaluate CSS media queries, so there is no test here asserting how the grid
  * looks at a given viewport width — see CLAUDE.md's Testing section.
@@ -11,6 +11,7 @@
 
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { render, screen, waitFor, within } from "@testing-library/react";
+import userEvent from "@testing-library/user-event";
 import { describe, expect, it } from "vitest";
 import { MemoryRouter } from "react-router";
 
@@ -167,7 +168,7 @@ describe("RunListScreen", () => {
     expect(link).toHaveAttribute("href", "/runs/new");
   });
 
-  it("renders one card per run, each with its own routes/party/boxed/dead counts", async () => {
+  it("renders one card per run on its matching tab, each with its own routes/party/boxed/dead counts", async () => {
     const adapter = createMemoryAdapter();
 
     const runA = await adapter.runs.put(
@@ -202,14 +203,15 @@ describe("RunListScreen", () => {
 
     renderScreen(adapter);
 
+    // Active tab is selected by default: only Silver (active) shows.
     await waitFor(() => {
       expect(screen.getByRole("heading", { name: "Silver Nuzlocke" })).toBeInTheDocument();
     });
+    expect(screen.queryByRole("heading", { name: "Gold Nuzlocke" })).not.toBeInTheDocument();
 
     const silverCard = screen.getByRole("heading", { name: "Silver Nuzlocke" }).closest("li");
-    const goldCard = screen.getByRole("heading", { name: "Gold Nuzlocke" }).closest("li");
-    if (!silverCard || !goldCard) {
-      throw new Error("Expected both run cards to render as list items.");
+    if (!silverCard) {
+      throw new Error("Expected the Silver run card to render as a list item.");
     }
 
     // Silver: 1 route covered, 1 party, 0 boxed, 0 dead.
@@ -225,6 +227,14 @@ describe("RunListScreen", () => {
       "href",
       `/runs/${runA.id}/routes`,
     );
+
+    // Switch to Finished: Gold (finished) shows, Silver (active) no longer does.
+    await userEvent.click(screen.getByRole("tab", { name: /Finished/ }));
+    const goldCard = (await screen.findByRole("heading", { name: "Gold Nuzlocke" })).closest("li");
+    if (!goldCard) {
+      throw new Error("Expected the Gold run card to render as a list item.");
+    }
+    expect(screen.queryByRole("heading", { name: "Silver Nuzlocke" })).not.toBeInTheDocument();
 
     // Gold: 2 routes covered, 0 party, 1 boxed, 1 dead — proves each card computed its OWN
     // numbers rather than sharing Silver's.
@@ -242,5 +252,69 @@ describe("RunListScreen", () => {
     );
 
     expect(boxedMon.status).toBe("box");
+  });
+
+  it("shows a count on each tab, and filters within the selected tab by name (case-insensitive)", async () => {
+    const adapter = createMemoryAdapter();
+    await adapter.runs.put(makeRunDraft({ name: "Blaze Nuzlocke", status: "active" }));
+    await adapter.runs.put(makeRunDraft({ name: "Ember Nuzlocke", status: "active" }));
+    await adapter.runs.put(makeRunDraft({ name: "Crystal Nuzlocke", status: "finished" }));
+    await adapter.runs.put(makeRunDraft({ name: "Retired Nuzlocke", status: "archived" }));
+
+    renderScreen(adapter);
+
+    expect(await screen.findByRole("tab", { name: "Active (2)" })).toBeInTheDocument();
+    expect(screen.getByRole("tab", { name: "Finished (1)" })).toBeInTheDocument();
+    expect(screen.getByRole("tab", { name: "Archived (1)" })).toBeInTheDocument();
+
+    // Both active runs show before searching.
+    expect(screen.getByRole("heading", { name: "Blaze Nuzlocke" })).toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: "Ember Nuzlocke" })).toBeInTheDocument();
+
+    await userEvent.type(screen.getByRole("searchbox", { name: /search runs/i }), "BLAZE");
+
+    expect(screen.getByRole("heading", { name: "Blaze Nuzlocke" })).toBeInTheDocument();
+    expect(screen.queryByRole("heading", { name: "Ember Nuzlocke" })).not.toBeInTheDocument();
+
+    // The search is scoped to the current tab: it does not surface Crystal (finished).
+    expect(screen.queryByRole("heading", { name: "Crystal Nuzlocke" })).not.toBeInTheDocument();
+  });
+
+  it("archives a run from the Active tab and unarchives it from the Archived tab, with no manual refetch", async () => {
+    const adapter = createMemoryAdapter();
+    const run = await adapter.runs.put(makeRunDraft({ name: "Blaze Nuzlocke", status: "active" }));
+
+    renderScreen(adapter);
+
+    await screen.findByRole("heading", { name: "Blaze Nuzlocke" });
+    await userEvent.click(screen.getByRole("button", { name: "Archive" }));
+
+    // Disappears from Active without a page reload or manual refetch.
+    await waitFor(() => {
+      expect(screen.queryByRole("heading", { name: "Blaze Nuzlocke" })).not.toBeInTheDocument();
+    });
+    await waitFor(() => {
+      expect(screen.getByRole("tab", { name: "Active (0)" })).toBeInTheDocument();
+    });
+    expect(screen.getByRole("tab", { name: "Archived (1)" })).toBeInTheDocument();
+
+    const persisted = await adapter.runs.get(run.id);
+    expect(persisted?.status).toBe("archived");
+
+    // Move to Archived and unarchive it back.
+    await userEvent.click(screen.getByRole("tab", { name: /Archived/ }));
+    await screen.findByRole("heading", { name: "Blaze Nuzlocke" });
+    await userEvent.click(screen.getByRole("button", { name: "Unarchive" }));
+
+    await waitFor(() => {
+      expect(screen.queryByRole("heading", { name: "Blaze Nuzlocke" })).not.toBeInTheDocument();
+    });
+    await waitFor(() => {
+      expect(screen.getByRole("tab", { name: "Archived (0)" })).toBeInTheDocument();
+    });
+    expect(screen.getByRole("tab", { name: "Active (1)" })).toBeInTheDocument();
+
+    const restored = await adapter.runs.get(run.id);
+    expect(restored?.status).toBe("active");
   });
 });
