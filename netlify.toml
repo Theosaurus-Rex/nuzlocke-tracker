@@ -1,0 +1,33 @@
+# Netlify build and routing.
+#
+# The SPA rewrite at the bottom is the important part: the app uses
+# `createBrowserRouter`, so React Router owns paths like /settings and
+# /runs/:runId/party on the client. The build emits only index.html and
+# assets/ — there is no file at /settings — so without this rule any static
+# host returns its own 404 for a deep link, a refresh, or a shared URL.
+# Navigating inside the app works either way, which is what makes the gap
+# easy to miss in local development.
+
+[build]
+  # The full gate, not just `pnpm build`. Builds here take seconds, and a PR
+  # whose tests fail should produce a failed deploy preview rather than a
+  # working preview of broken code. `pnpm build` alone still runs `tsc -b`,
+  # so dropping back to it keeps typecheck but loses lint and tests.
+  command = "pnpm lint && pnpm typecheck && pnpm test && pnpm build"
+  publish = "dist"
+
+[build.environment]
+  # package.json requires >=20; local development is on 24. 22 is the LTS
+  # Netlify supports reliably — raise it if you want exact parity with local.
+  NODE_VERSION = "22"
+
+# Serve index.html for any path that is not a real file, WITHOUT changing the
+# URL. Status 200 is a rewrite; a 301 would redirect the browser to / and
+# discard the path React Router needs to read.
+#
+# This is listed last on purpose: Netlify applies redirect rules in order, so
+# a catch-all placed above a more specific rule would swallow it.
+[[redirects]]
+  from = "/*"
+  to = "/index.html"
+  status = 200
