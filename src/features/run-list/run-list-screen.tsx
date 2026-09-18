@@ -60,15 +60,19 @@ function DeleteConfirm({
   run,
   encounters,
   mons,
+  deathCount,
   onCancel,
 }: {
   run: Run;
   encounters: readonly Encounter[];
   mons: readonly Mon[];
+  /** `summariseRun`'s `dead` count, computed once by the parent (`RunCard`) and passed down —
+   * see that call site's comment for why this isn't re-derived here with a second
+   * `mons.filter(...)`. */
+  deathCount: number;
   onCancel: () => void;
 }): ReactNode {
   const deleteRun = useDeleteRun();
-  const deathCount = mons.filter((mon) => mon.status === "dead").length;
 
   return (
     <div className="space-y-2 rounded border border-destructive/40 bg-destructive/10 p-3 text-sm">
@@ -158,11 +162,16 @@ function RunCard({ run }: { run: Run }): ReactNode {
         ))}
       </dl>
 
-      {confirmingDelete && (
+      {confirmingDelete && summary && (
         <DeleteConfirm
           run={run}
           encounters={encounters}
           mons={mons}
+          // `summary.dead` IS `summariseRun`'s dead count — passed down rather than
+          // re-filtered in `DeleteConfirm` so the two never have a chance to disagree. Gated on
+          // `summary` (rather than a `summary!.dead` assertion) since it's `null` while
+          // loading, and the Delete button that opens this is itself disabled until then.
+          deathCount={summary.dead}
           onCancel={() => setConfirmingDelete(false)}
         />
       )}
