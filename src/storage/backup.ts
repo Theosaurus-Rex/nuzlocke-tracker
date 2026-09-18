@@ -84,7 +84,7 @@ export function downloadBundle(bundle: ExportBundle, filename?: string): void {
 export type ParseResult = { ok: true; bundle: ExportBundle } | { ok: false; errors: string[] };
 
 const GAME_IDS: readonly GameId[] = ["heartgold"];
-const RUN_STATUSES = ["active", "finished", "archived"] as const;
+const RUN_STATUSES = ["active", "finished"] as const;
 const ENCOUNTER_STATUSES = ["open", "caught", "missed", "skipped"] as const;
 const MON_STATUSES = ["party", "box", "dead"] as const;
 const FIGHT_KINDS = ["gym", "elite_four", "champion", "rival", "custom"] as const;

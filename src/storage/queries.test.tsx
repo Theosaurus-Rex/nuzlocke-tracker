@@ -14,11 +14,11 @@ import { renderHook, waitFor } from "@testing-library/react";
 import { describe, expect, it } from "vitest";
 
 import type { CatchDetails } from "@/domain/transitions";
-import type { Encounter, Route, Run, Rules } from "@/domain/types";
+import type { Death, Encounter, Fight, Mon, Route, Run, Rules } from "@/domain/types";
 
 import type { StorageAdapter } from "./adapter";
 import { createMemoryAdapter } from "./memory-adapter";
-import { useCatchEncounter } from "./mutations";
+import { useCatchEncounter, useDeleteRun } from "./mutations";
 import { useEncounters, useMons, useRun, useRuns } from "./queries";
 import { StorageProvider } from "./storage-context";
 
@@ -89,6 +89,66 @@ function makeEncounterDraft(
   };
 }
 
+function makeMonDraft(
+  runId: string,
+  overrides: Partial<Mon> = {},
+): Omit<Mon, "id" | "createdAt" | "updatedAt"> {
+  return {
+    runId,
+    encounterId: null,
+    speciesId: "chikorita",
+    speciesIdCaught: "chikorita",
+    nickname: null,
+    gender: null,
+    level: 5,
+    levelCaught: 5,
+    nature: null,
+    ability: null,
+    heldItem: null,
+    moves: [],
+    status: "party",
+    partySlot: 0,
+    boxOrder: null,
+    caughtRouteId: null,
+    ...overrides,
+  };
+}
+
+function makeDeathDraft(
+  runId: string,
+  monId: string,
+  overrides: Partial<Death> = {},
+): Omit<Death, "id" | "createdAt" | "updatedAt"> {
+  return {
+    runId,
+    monId,
+    level: 10,
+    routeId: null,
+    cause: { type: "wild", species: "geodude", level: 10, move: "Rock Throw" },
+    diedAt: "2026-01-01T00:00:00.000Z",
+    notes: null,
+    ...overrides,
+  };
+}
+
+function makeFightDraft(
+  runId: string,
+  overrides: Partial<Fight> = {},
+): Omit<Fight, "id" | "createdAt" | "updatedAt"> {
+  return {
+    runId,
+    gameFightId: null,
+    name: "Falkner",
+    kind: "gym",
+    order: 1,
+    grantsBadge: true,
+    levelCap: 15,
+    status: "pending",
+    clearedAt: null,
+    ...overrides,
+  };
+}
+
 const CATCH_DETAILS: CatchDetails = {
   speciesId: "chikorita",
   level: 5,
@@ -110,6 +170,33 @@ async function seedOpenEncounter(adapter: StorageAdapter): Promise<{
   const route = await adapter.routes.put(makeRouteDraft(run.id));
   const encounter = await adapter.encounters.put(makeEncounterDraft(run.id, route.id));
   return { run, route, encounter };
+}
+
+/**
+ * Seeds a run with exactly one row in EACH of its five child tables (route, encounter, mon,
+ * death, fight) — used to prove `useDeleteRun` clears every table it owns, not just the obvious
+ * ones, and leaves a second run's rows alone.
+ */
+async function seedFullRun(
+  adapter: StorageAdapter,
+  overrides: Partial<Run> = {},
+): Promise<{
+  run: Run;
+  route: Route;
+  encounter: Encounter;
+  mon: Mon;
+  death: Death;
+  fight: Fight;
+}> {
+  const run = await adapter.runs.put(makeRunDraft(overrides));
+  const route = await adapter.routes.put(makeRouteDraft(run.id));
+  const encounter = await adapter.encounters.put(
+    makeEncounterDraft(run.id, route.id, { status: "caught" }),
+  );
+  const mon = await adapter.mons.put(makeMonDraft(run.id, { status: "dead", partySlot: null }));
+  const death = await adapter.deaths.put(makeDeathDraft(run.id, mon.id));
+  const fight = await adapter.fights.put(makeFightDraft(run.id));
+  return { run, route, encounter, mon, death, fight };
 }
 
 // ---------------------------------------------------------------------------
@@ -158,6 +245,32 @@ function withFailingMonsPut(base: StorageAdapter): StorageAdapter {
     deaths: base.deaths,
     fights: base.fights,
     transaction: (fn) => base.transaction((tx) => fn(withFailingMonsPut(tx))),
+    exportAll: () => base.exportAll(),
+    clear: () => base.clear(),
+    deathsByFight: (fightId) => base.deathsByFight(fightId),
+  };
+}
+
+/**
+ * Wraps a `StorageAdapter` so `mons.delete` always rejects, while every other table's `delete`
+ * (and `mons.where`, which `useDeleteRun` uses to find the rows to delete in the first place)
+ * still goes through to `base`. Used to prove `useDeleteRun`'s six-table delete is genuinely
+ * atomic: a failure partway through must roll back the routes/encounters/deaths/fights/run
+ * deletes that already ran, not just fail to delete the mon.
+ */
+function withFailingMonsDelete(base: StorageAdapter): StorageAdapter {
+  return {
+    init: () => base.init(),
+    runs: base.runs,
+    routes: base.routes,
+    encounters: base.encounters,
+    mons: {
+      ...base.mons,
+      delete: () => Promise.reject(new Error("simulated delete failure")),
+    },
+    deaths: base.deaths,
+    fights: base.fights,
+    transaction: (fn) => base.transaction((tx) => fn(withFailingMonsDelete(tx))),
     exportAll: () => base.exportAll(),
     clear: () => base.clear(),
     deathsByFight: (fightId) => base.deathsByFight(fightId),
@@ -277,5 +390,96 @@ describe("useCatchEncounter", () => {
 
     const allMons = await adapter.mons.getAll();
     expect(allMons).toEqual([]);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// useDeleteRun
+// ---------------------------------------------------------------------------
+
+describe("useDeleteRun", () => {
+  it("deletes the run and every row it owns across all six tables", async () => {
+    const adapter = createMemoryAdapter();
+    await adapter.init();
+    const { run } = await seedFullRun(adapter);
+
+    const { result } = renderHook(() => useDeleteRun(), { wrapper: createWrapper(adapter) });
+    await result.current.mutateAsync(run.id);
+
+    expect(await adapter.runs.get(run.id)).toBeUndefined();
+    expect(await adapter.routes.where("runId", run.id)).toEqual([]);
+    expect(await adapter.encounters.where("runId", run.id)).toEqual([]);
+    expect(await adapter.mons.where("runId", run.id)).toEqual([]);
+    expect(await adapter.deaths.where("runId", run.id)).toEqual([]);
+    expect(await adapter.fights.where("runId", run.id)).toEqual([]);
+  });
+
+  it("does not touch another run's rows", async () => {
+    const adapter = createMemoryAdapter();
+    await adapter.init();
+    const doomed = await seedFullRun(adapter, { name: "Doomed Run" });
+    const survivor = await seedFullRun(adapter, { name: "Survivor Run" });
+
+    const { result } = renderHook(() => useDeleteRun(), { wrapper: createWrapper(adapter) });
+    await result.current.mutateAsync(doomed.run.id);
+
+    expect(await adapter.runs.get(survivor.run.id)).toEqual(survivor.run);
+    expect(await adapter.routes.where("runId", survivor.run.id)).toEqual([survivor.route]);
+    expect(await adapter.encounters.where("runId", survivor.run.id)).toEqual([survivor.encounter]);
+    expect(await adapter.mons.where("runId", survivor.run.id)).toEqual([survivor.mon]);
+    expect(await adapter.deaths.where("runId", survivor.run.id)).toEqual([survivor.death]);
+    expect(await adapter.fights.where("runId", survivor.run.id)).toEqual([survivor.fight]);
+  });
+
+  it("writes atomically: when the transaction rejects, nothing is deleted", async () => {
+    const adapter = createMemoryAdapter();
+    await adapter.init();
+    const { run, route, encounter, mon, death, fight } = await seedFullRun(adapter);
+
+    const failingAdapter = withFailingMonsDelete(adapter);
+    const { result } = renderHook(() => useDeleteRun(), {
+      wrapper: createWrapper(failingAdapter),
+    });
+
+    await expect(result.current.mutateAsync(run.id)).rejects.toThrow("simulated delete failure");
+
+    // Nothing was removed — not even the rows deleted "before" the mon in `persistDeleteRun`,
+    // which is exactly what a rollback (rather than a partial delete) guarantees.
+    expect(await adapter.runs.get(run.id)).toEqual(run);
+    expect(await adapter.routes.get(route.id)).toEqual(route);
+    expect(await adapter.encounters.get(encounter.id)).toEqual(encounter);
+    expect(await adapter.mons.get(mon.id)).toEqual(mon);
+    expect(await adapter.deaths.get(death.id)).toEqual(death);
+    expect(await adapter.fights.get(fight.id)).toEqual(fight);
+  });
+
+  it("invalidates the plain runs list as well as the per-run keys, so mounted lists reflect the deletion without a manual refetch", async () => {
+    const adapter = createMemoryAdapter();
+    await adapter.init();
+    const { run } = await seedFullRun(adapter);
+
+    const wrapper = createWrapper(adapter);
+    const runsList = renderHook(() => useRuns(), { wrapper });
+    const encounters = renderHook(() => useEncounters(run.id), { wrapper });
+    const deleteRun = renderHook(() => useDeleteRun(), { wrapper });
+
+    await waitFor(() => {
+      expect(runsList.result.current.data).toEqual([run]);
+    });
+    await waitFor(() => {
+      expect(encounters.result.current.data).toHaveLength(1);
+    });
+
+    await deleteRun.result.current.mutateAsync(run.id);
+
+    // This is the same invalidation trap `invalidateRun` documents: deleting changes WHICH runs
+    // exist, so `useDeleteRun` MUST invalidate the plain `['runs']` list key as well as the
+    // per-run keys, or this mounted list would keep showing the deleted run with nothing erroring.
+    await waitFor(() => {
+      expect(runsList.result.current.data).toEqual([]);
+    });
+    await waitFor(() => {
+      expect(encounters.result.current.data).toEqual([]);
+    });
   });
 });

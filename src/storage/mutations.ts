@@ -10,6 +10,10 @@
  * The new mon's id is generated with `crypto.randomUUID()` here, at the call site — never inside
  * `catchEncounter` itself, which is pure by design and must stay that way.
  *
+ * `useDeleteRun` (PER-14) is the other mutation here. `RunStatus` originally also grew an
+ * `"archived"` state with `useArchiveRun`/`useUnarchiveRun`, but Theo rejected the archive concept
+ * on review of PER-14: a run is either kept or deleted, no third state. Delete replaces it.
+ *
  * This module depends ONLY on the `StorageAdapter` interface (via `useStorage`) and the pure
  * transition in `src/domain/transitions.ts`. It must never import Dexie.
  */
@@ -20,7 +24,7 @@ import { catchEncounter, type CatchDetails } from "@/domain/transitions";
 import type { Encounter, Mon } from "@/domain/types";
 
 import type { StorageAdapter } from "./adapter";
-import { invalidateRun } from "./queries";
+import { invalidateRun, queryKeys } from "./queries";
 import { useStorage } from "./storage-context";
 
 export interface CatchEncounterInput {
@@ -70,6 +74,67 @@ export function useCatchEncounter(): UseMutationResult<
     mutationFn: (input: CatchEncounterInput) => persistCatch(adapter, input),
     onSuccess: async (result) => {
       await invalidateRun(queryClient, result.encounter.runId);
+    },
+  });
+}
+
+// ---------------------------------------------------------------------------
+// Delete a run (PER-14)
+// ---------------------------------------------------------------------------
+
+/**
+ * Deletes a run's row plus every row that belongs to it — routes, encounters, mons, deaths and
+ * fights — inside ONE `adapter.transaction`, so a failure partway through leaves every row
+ * exactly as it was (see the atomicity test in `queries.test.tsx`) rather than an orphaned
+ * partial delete that would silently bloat every export from then on.
+ *
+ * Built entirely from existing `Repository` primitives (`where` + `delete`) rather than a new
+ * adapter method: hard rule 1 keeps the adapter interface minimal, and the contract suite that
+ * already covers both adapters needs no new capability to exercise this.
+ */
+async function persistDeleteRun(adapter: StorageAdapter, runId: string): Promise<void> {
+  await adapter.transaction(async (tx) => {
+    const [routes, encounters, mons, deaths, fights] = await Promise.all([
+      tx.routes.where("runId", runId),
+      tx.encounters.where("runId", runId),
+      tx.mons.where("runId", runId),
+      tx.deaths.where("runId", runId),
+      tx.fights.where("runId", runId),
+    ]);
+
+    await Promise.all([
+      ...routes.map((row) => tx.routes.delete(row.id)),
+      ...encounters.map((row) => tx.encounters.delete(row.id)),
+      ...mons.map((row) => tx.mons.delete(row.id)),
+      ...deaths.map((row) => tx.deaths.delete(row.id)),
+      ...fights.map((row) => tx.fights.delete(row.id)),
+      tx.runs.delete(runId),
+    ]);
+  });
+}
+
+/**
+ * Deletes a run and all of its rows. Irreversible — the caller (the run list screen) is
+ * responsible for an explicit, informative confirmation step before calling this; there is no
+ * undo at this layer.
+ *
+ * Like the archive mutation this replaces, deleting a run changes WHICH runs exist, so this
+ * invalidates the plain `queryKeys.runs()` list key as well as the per-run keys `invalidateRun`
+ * covers. Skipping that would leave the deleted run visible in the list until a manual reload,
+ * with nothing erroring — see the "Deliberately does NOT invalidate" note on `invalidateRun` in
+ * `queries.ts`.
+ */
+export function useDeleteRun(): UseMutationResult<void, Error, string> {
+  const adapter = useStorage();
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: (runId: string) => persistDeleteRun(adapter, runId),
+    onSuccess: async (_result, runId) => {
+      await Promise.all([
+        invalidateRun(queryClient, runId),
+        queryClient.invalidateQueries({ queryKey: queryKeys.runs() }),
+      ]);
     },
   });
 }

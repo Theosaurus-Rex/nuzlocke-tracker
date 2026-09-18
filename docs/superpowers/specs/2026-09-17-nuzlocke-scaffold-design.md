@@ -105,7 +105,7 @@ Field types below are TypeScript. `?` means the column is nullable.
 | `id` | `string` | uuid |
 | `name` | `string` | |
 | `game` | `GameId` | `'heartgold'` is the only member at V1 |
-| `status` | `'active' \| 'finished' \| 'archived'` | |
+| `status` | `'active' \| 'finished'` | |
 | `rules` | `Rules` | embedded, see below |
 | `createdAt` | `string` | ISO 8601 |
 | `updatedAt` | `string` | |

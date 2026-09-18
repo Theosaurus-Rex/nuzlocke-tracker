@@ -34,7 +34,7 @@ export type Draft<T extends Timestamped> = Omit<T, "id" | "createdAt" | "updated
 /** `'heartgold'` is the only member at V1. */
 export type GameId = "heartgold";
 
-export type RunStatus = "active" | "finished" | "archived";
+export type RunStatus = "active" | "finished";
 
 export type EncounterStatus = "open" | "caught" | "missed" | "skipped";
 
