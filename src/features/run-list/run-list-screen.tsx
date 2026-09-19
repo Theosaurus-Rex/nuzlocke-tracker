@@ -206,14 +206,20 @@ export function RunListScreen(): ReactNode {
           })}
         </div>
 
-        <input
-          type="search"
-          value={search}
-          onChange={handleSearchChange}
-          aria-label="Search runs"
-          placeholder="Search runs by name"
-          className="h-8 w-full rounded border border-border bg-background px-2.5 text-sm sm:w-64"
-        />
+        <div className="flex items-center gap-3">
+          <input
+            type="search"
+            value={search}
+            onChange={handleSearchChange}
+            aria-label="Search runs"
+            placeholder="Search runs by name"
+            className="h-8 w-full rounded border border-border bg-background px-2.5 text-sm sm:w-64"
+          />
+          <Link to="/runs/new" aria-label="New run" className={buttonVariants({ size: "sm" })}>
+            <span className="hidden sm:inline">New run</span>
+            <span className="sm:hidden">+</span>
+          </Link>
+        </div>
       </div>
 
       {visibleRuns.length === 0 ? (

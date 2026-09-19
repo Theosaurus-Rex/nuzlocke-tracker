@@ -4,8 +4,10 @@
  */
 
 import type { ReactNode } from "react";
-import { NavLink, Outlet, useLocation, useNavigate, useParams } from "react-router";
+import { Link, NavLink, Outlet, useLocation, useNavigate, useParams } from "react-router";
+import { cn } from "cn";
 
+import { buttonVariants } from "@/components/ui/button";
 import { summariseRun } from "@/domain/derive";
 import { useEncounters, useMons, useRuns } from "@/storage/queries";
 
@@ -55,6 +57,9 @@ export function AppShell(): ReactNode {
             {item.label}
           </NavLink>
         ))}
+        <Link to="/runs/new" className={cn(buttonVariants({ size: "sm" }), "mt-auto")}>
+          New run
+        </Link>
       </nav>
 
       {/* Left margin clears the fixed sidebar on desktop, bottom padding clears the fixed tab

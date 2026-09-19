@@ -43,9 +43,12 @@ function renderAt(
   return { router, unmount: rendered.unmount, queryClient, adapter };
 }
 
+/** Excludes the sidebar's pinned "New run" link, which is not one of the routed nav items and
+ * has its own tests below. */
 function linksIn(nav: HTMLElement) {
   return within(nav)
     .getAllByRole("link")
+    .filter((link) => link.getAttribute("href") !== "/runs/new")
     .map((link) => ({ label: link.textContent, href: link.getAttribute("href") }));
 }
 
@@ -266,6 +269,33 @@ describe("AppShell navigation", () => {
     renderAt("/this-path-does-not-exist");
 
     expect(screen.getByRole("heading", { name: "Not Found" })).toBeInTheDocument();
+  });
+
+  it("exposes a New run link pinned in the sidebar, pointing at /runs/new, even when a run already exists", async () => {
+    const adapter = createMemoryAdapter();
+    await adapter.runs.put(makeRunDraft({ name: "Silver Nuzlocke" }));
+
+    renderAt("/", { adapter });
+
+    const sidebar = await screen.findByRole("navigation", { name: "Sidebar navigation" });
+    const link = within(sidebar).getByRole("link", { name: "New run" });
+    expect(link).toHaveAttribute("href", "/runs/new");
+
+    // Not in the tab bar: the mobile shell has no room for it, so mobile is covered by the run
+    // list's own header control instead.
+    const tabBar = screen.getByRole("navigation", { name: "Tab bar navigation" });
+    expect(within(tabBar).queryByRole("link", { name: "New run" })).not.toBeInTheDocument();
+  });
+
+  it("navigates to the new-run screen when the sidebar New run link is clicked", async () => {
+    const { router } = renderAt("/");
+
+    const sidebar = screen.getByRole("navigation", { name: "Sidebar navigation" });
+    await userEvent.click(within(sidebar).getByRole("link", { name: "New run" }));
+
+    await waitFor(() => {
+      expect(router.state.location.pathname).toBe("/runs/new");
+    });
   });
 });
 
