@@ -8,10 +8,18 @@ the lint/test harness are in. The data model, storage adapter and app shell are 
 `docs/superpowers/specs/2026-09-17-nuzlocke-scaffold-design.md` for the design this is built to;
 it is the source of truth for table shapes and the adapter interface.
 
-Source design: Claude Design project `52583f86-cc91-43e2-b2f3-b592e7fcec36`
-("Nuzlocke Tracker Wireframes") — 10 screens, each drawn for desktop sidebar and mobile
-bottom-tab shells. These are **wireframes, not a design system**; do not treat the
-Patrick Hand / sketch-border styling as the intended visual direction.
+**Wireframes live in `docs/wireframes/`** — the lo-fi canvas as a PDF, plus one PNG per frame
+under `frames/`. Every Linear issue names the frames it is drawn from (`**Wireframe:** 2b, 1d-2`);
+open `docs/wireframes/frames/2b.png` and `frames/1d-2.png` and look at them before building a
+screen. `all` means the whole set, `—` means nothing was drawn for that issue.
+`docs/wireframes/README.md` indexes every frame by screen name and says how to re-slice the PDF.
+
+Do not read the PDF directly: it is one page over 6000pt tall, so it scales down to an unreadable
+sliver. The same file is attached to the Linear project as "Lo-Fi Wireframe Exports", behind a
+signed URL that expires minutes after it is issued; the copy in the repo is the one to use.
+
+These are **wireframes, not a design system**; do not treat the Patrick Hand / sketch-border
+styling as the intended visual direction.
 
 Backlog, milestones and dependency order:
 https://claude.ai/code/artifact/18a760bb-38e5-4834-98f6-348d08002270

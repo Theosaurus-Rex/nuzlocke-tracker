@@ -73,8 +73,8 @@ src/
   features/      screens, one directory each
   app/           routing and the responsive shell
   components/ui/ shadcn primitives
-scripts/         build-time data generators (not run by the build)
-docs/            design specs
+scripts/         one-shot generators and tooling (not run by the build)
+docs/            design specs and the wireframes
 ```
 
 Dependencies point one way: `features → storage → domain`. `domain/` imports from none of
@@ -90,6 +90,9 @@ Two places, in increasing depth:
   testing conventions and the comment standard. Read this before changing anything structural.
 - **`docs/superpowers/specs/2026-09-17-nuzlocke-scaffold-design.md`** — the M0 design spec:
   table shapes, the adapter interface, the commit plan.
+
+Screens are drawn in `docs/wireframes/`, one PNG per frame under `frames/`. Issues name the
+frames they are built from; `docs/wireframes/README.md` maps each frame to its screen.
 
 Two things worth knowing before you touch the storage layer:
 
@@ -136,6 +139,21 @@ Run `pnpm format` afterwards — the generators do not format their own output, 
 **Correct the data file, not the generator.** If you find an upstream error or want to tune a
 value, edit the committed file directly and say why in a comment beside the change, so the
 next reader knows it was deliberate rather than a transcription slip.
+
+---
+
+## Wireframes
+
+`docs/wireframes/frames/*.png` is one image per wireframe frame, cut from the canvas export in
+`docs/wireframes/nuzlocke-tracker-wireframes.pdf`. Issues cite frames by name (`2b`, `1d-2`), so
+the PNG is what you open. `docs/wireframes/README.md` indexes them.
+
+Re-slice only after re-exporting the canvas — the PNGs are committed:
+
+```bash
+brew install poppler                              # pdftotext and pdftoppm
+node scripts/slice-wireframes.ts --force
+```
 
 ---
 
