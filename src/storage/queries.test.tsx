@@ -21,7 +21,7 @@ import { DEFAULT_RULES } from "@/domain/rules";
 import type { StorageAdapter } from "./adapter";
 import { createMemoryAdapter } from "./memory-adapter";
 import { useCatchEncounter, useCreateRun, useDeleteRun } from "./mutations";
-import { useEncounters, useMons, useRun, useRuns } from "./queries";
+import { useEncounters, useMons, useRoutes, useRun, useRuns } from "./queries";
 import { StorageProvider } from "./storage-context";
 
 const RULES_FIXTURE: Rules = {
@@ -290,6 +290,33 @@ describe("read hooks", () => {
       expect(result.current.data).toEqual(second);
     });
     expect(result.current.data?.id).not.toBe(first.id);
+  });
+});
+
+describe("useRoutes", () => {
+  it("returns routes sorted by order, regardless of the order rows were inserted in", async () => {
+    const adapter = createMemoryAdapter();
+    await adapter.init();
+    const run = await adapter.runs.put(makeRunDraft());
+
+    // Inserted deliberately out of order: a test that inserts already-sorted rows would pass
+    // even if useRoutes did no sorting at all.
+    await adapter.routes.put(makeRouteDraft(run.id, { name: "Route 30", order: 300 }));
+    await adapter.routes.put(makeRouteDraft(run.id, { name: "Route 29", order: 100 }));
+    await adapter.routes.put(makeRouteDraft(run.id, { name: "Route 46", order: 500 }));
+    await adapter.routes.put(makeRouteDraft(run.id, { name: "Route 31", order: 200 }));
+
+    const { result } = renderHook(() => useRoutes(run.id), { wrapper: createWrapper(adapter) });
+
+    await waitFor(() => {
+      expect(result.current.data).toHaveLength(4);
+    });
+    expect(result.current.data?.map((route) => route.name)).toEqual([
+      "Route 29",
+      "Route 31",
+      "Route 30",
+      "Route 46",
+    ]);
   });
 });
 

@@ -9,6 +9,7 @@
 
 import { useQuery, type QueryClient, type UseQueryResult } from "@tanstack/react-query";
 
+import { compareRoutes } from "@/domain/routes";
 import type { Run, Route, Encounter, Mon, Death, Fight } from "@/domain/types";
 
 import { useStorage } from "./storage-context";
@@ -45,7 +46,9 @@ export function useRoutes(runId: string): UseQueryResult<Route[]> {
   const adapter = useStorage();
   return useQuery({
     queryKey: queryKeys.routes(runId),
-    queryFn: () => adapter.routes.where("runId", runId),
+    // where() result order is unspecified, so the traversal order routes are drawn in has to be
+    // imposed here rather than assumed from insertion order.
+    queryFn: async () => (await adapter.routes.where("runId", runId)).slice().sort(compareRoutes),
     staleTime: Infinity,
   });
 }

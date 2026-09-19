@@ -1,0 +1,200 @@
+/**
+ * Route-seeding and custom-route mutations, tested against the in-memory adapter. Covers what
+ * `useCreateRun`, `useAddCustomRoute` and `useDeleteCustomRoute` do with the storage layer: atomic
+ * writes, invalidation, and the guards around deleting a route.
+ */
+
+import type { ReactNode } from "react";
+
+import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import { renderHook } from "@testing-library/react";
+import { describe, expect, it } from "vitest";
+
+import type { Encounter, Route, Run } from "@/domain/types";
+import { heartgold } from "@/game/data/heartgold";
+
+import type { StorageAdapter } from "./adapter";
+import { createMemoryAdapter } from "./memory-adapter";
+import { useAddCustomRoute, useCreateRun, useDeleteCustomRoute } from "./mutations";
+import { StorageProvider } from "./storage-context";
+
+function makeEncounterDraft(
+  runId: string,
+  routeId: string,
+  overrides: Partial<Encounter> = {},
+): Omit<Encounter, "id" | "createdAt" | "updatedAt"> {
+  return {
+    runId,
+    routeId,
+    status: "open",
+    speciesId: null,
+    level: null,
+    monId: null,
+    notes: null,
+    ...overrides,
+  };
+}
+
+function createWrapper(
+  adapter: StorageAdapter,
+): ({ children }: { children: ReactNode }) => ReactNode {
+  const queryClient = new QueryClient({
+    defaultOptions: {
+      queries: { retry: false },
+      mutations: { retry: false },
+    },
+  });
+
+  return function Wrapper({ children }: { children: ReactNode }): ReactNode {
+    return (
+      <QueryClientProvider client={queryClient}>
+        <StorageProvider adapter={adapter}>{children}</StorageProvider>
+      </QueryClientProvider>
+    );
+  };
+}
+
+/**
+ * Wraps a `StorageAdapter` so `routes.putMany` always rejects while everything else goes through
+ * to `base`. `transaction` re-wraps the scoped adapter it hands the callback, so the failure is
+ * visible inside a transaction too, proving a real rollback rather than a rejected promise with
+ * a run row left behind.
+ */
+function withFailingRoutesPutMany(base: StorageAdapter): StorageAdapter {
+  return {
+    init: () => base.init(),
+    runs: base.runs,
+    routes: {
+      ...base.routes,
+      putMany: () => Promise.reject(new Error("simulated route write failure")),
+    },
+    encounters: base.encounters,
+    mons: base.mons,
+    deaths: base.deaths,
+    fights: base.fights,
+    transaction: (fn) => base.transaction((tx) => fn(withFailingRoutesPutMany(tx))),
+    exportAll: () => base.exportAll(),
+    clear: () => base.clear(),
+    deathsByFight: (fightId) => base.deathsByFight(fightId),
+  };
+}
+
+async function createSeededRun(adapter: StorageAdapter): Promise<{ run: Run; routes: Route[] }> {
+  const { result } = renderHook(() => useCreateRun(), { wrapper: createWrapper(adapter) });
+  const run = await result.current.mutateAsync({ name: "Test Run", game: "heartgold" });
+  const routes = await adapter.routes.where("runId", run.id);
+  return { run, routes };
+}
+
+describe("useCreateRun route seeding", () => {
+  it("seeds one route per the game's route list, all belonging to the new run", async () => {
+    const adapter = createMemoryAdapter();
+    await adapter.init();
+
+    const { run, routes } = await createSeededRun(adapter);
+
+    expect(routes).toHaveLength(heartgold.routes.length);
+    expect(routes.every((route) => route.runId === run.id)).toBe(true);
+    expect(routes.every((route) => !route.isCustom)).toBe(true);
+  });
+
+  it("is atomic: when seeding the routes fails, no run row is persisted", async () => {
+    const adapter = createMemoryAdapter();
+    await adapter.init();
+
+    const failingAdapter = withFailingRoutesPutMany(adapter);
+    const { result } = renderHook(() => useCreateRun(), {
+      wrapper: createWrapper(failingAdapter),
+    });
+
+    await expect(
+      result.current.mutateAsync({ name: "Doomed Run", game: "heartgold" }),
+    ).rejects.toThrow("simulated route write failure");
+
+    expect(await adapter.runs.getAll()).toEqual([]);
+  });
+});
+
+describe("useAddCustomRoute", () => {
+  it("appends after every existing route, including seeded ones", async () => {
+    const adapter = createMemoryAdapter();
+    await adapter.init();
+    const { run, routes } = await createSeededRun(adapter);
+    const highestSeededOrder = Math.max(...routes.map((route) => route.order));
+
+    const { result } = renderHook(() => useAddCustomRoute(), { wrapper: createWrapper(adapter) });
+    const custom = await result.current.mutateAsync({
+      runId: run.id,
+      name: "  Secret Cave  ",
+      routes,
+    });
+
+    expect(custom.order).toBeGreaterThan(highestSeededOrder);
+    expect(custom.isCustom).toBe(true);
+    expect(custom.gameRouteId).toBeNull();
+    expect(custom.name).toBe("Secret Cave");
+
+    const persisted = await adapter.routes.get(custom.id);
+    expect(persisted).toEqual(custom);
+  });
+});
+
+describe("useDeleteCustomRoute", () => {
+  it("deletes a custom route with no encounters logged against it", async () => {
+    const adapter = createMemoryAdapter();
+    await adapter.init();
+    const { run, routes } = await createSeededRun(adapter);
+
+    const addWrapper = createWrapper(adapter);
+    const add = renderHook(() => useAddCustomRoute(), { wrapper: addWrapper });
+    const custom = await add.result.current.mutateAsync({
+      runId: run.id,
+      name: "Secret Cave",
+      routes,
+    });
+
+    const del = renderHook(() => useDeleteCustomRoute(), { wrapper: addWrapper });
+    await del.result.current.mutateAsync({ route: custom });
+
+    expect(await adapter.routes.get(custom.id)).toBeUndefined();
+  });
+
+  it("refuses to delete a custom route that has an encounter logged against it", async () => {
+    const adapter = createMemoryAdapter();
+    await adapter.init();
+    const { run, routes } = await createSeededRun(adapter);
+
+    const wrapper = createWrapper(adapter);
+    const add = renderHook(() => useAddCustomRoute(), { wrapper });
+    const custom = await add.result.current.mutateAsync({
+      runId: run.id,
+      name: "Secret Cave",
+      routes,
+    });
+    await adapter.encounters.put(makeEncounterDraft(run.id, custom.id));
+
+    const del = renderHook(() => useDeleteCustomRoute(), { wrapper });
+    await expect(del.result.current.mutateAsync({ route: custom })).rejects.toThrow(
+      /encounter logged/,
+    );
+
+    expect(await adapter.routes.get(custom.id)).toEqual(custom);
+  });
+
+  it("refuses to delete a non-custom (seeded) route", async () => {
+    const adapter = createMemoryAdapter();
+    await adapter.init();
+    const { routes } = await createSeededRun(adapter);
+    const seeded = routes[0];
+    if (seeded === undefined) {
+      throw new Error("expected at least one seeded route");
+    }
+
+    const del = renderHook(() => useDeleteCustomRoute(), { wrapper: createWrapper(adapter) });
+    await expect(del.result.current.mutateAsync({ route: seeded })).rejects.toThrow(
+      /not a custom route/,
+    );
+
+    expect(await adapter.routes.get(seeded.id)).toEqual(seeded);
+  });
+});

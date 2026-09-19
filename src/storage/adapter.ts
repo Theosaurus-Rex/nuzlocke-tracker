@@ -29,7 +29,8 @@ export interface Repository<T extends Timestamped, TIndexed extends keyof T> {
   /**
    * Equality match on an indexed field. Rejects when `value` is `null` or `undefined`, since
    * IndexedDB cannot index `null` and a Dexie-backed adapter and an in-memory one would otherwise
-   * disagree about what `where(field, null)` returns.
+   * disagree about what `where(field, null)` returns. Result order is unspecified; a caller that
+   * needs an order must sort it.
    */
   where<K extends TIndexed>(field: K, value: T[K]): Promise<T[]>;
   put(record: Draft<T>): Promise<T>;
