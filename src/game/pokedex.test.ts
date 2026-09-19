@@ -4,7 +4,14 @@ import { abilities } from "@/game/data/pokedex/abilities";
 import { moves } from "@/game/data/pokedex/moves";
 import { natures } from "@/game/data/pokedex/natures";
 import { species } from "@/game/data/pokedex/species";
-import { getEvolutions, getSpecies, pokedexFor, searchSpecies } from "@/game/pokedex";
+import {
+  getEvolutions,
+  getSpecies,
+  getSpeciesByName,
+  pokedexFor,
+  searchSpecies,
+  speciesDisplayName,
+} from "@/game/pokedex";
 
 describe("per-generation type resolution: the Gen 6 Fairy retcons", () => {
   // Fairy was added in Gen 6. PokeAPI's past_types confirms each of these was some other type
@@ -259,5 +266,30 @@ describe("searchSpecies", () => {
 
   test("getSpecies returns undefined for an unknown id", () => {
     expect(getSpecies(999_999)).toBeUndefined();
+  });
+});
+
+describe("getSpeciesByName", () => {
+  test("finds a species by its stored name", () => {
+    expect(getSpeciesByName("chikorita")?.id).toBe(152);
+  });
+
+  test("returns undefined for a name not in the pokedex", () => {
+    expect(getSpeciesByName("not-a-real-species")).toBeUndefined();
+  });
+});
+
+describe("speciesDisplayName", () => {
+  test("capitalises a single-word species known to the pokedex", () => {
+    expect(speciesDisplayName("chikorita")).toBe("Chikorita");
+  });
+
+  test("turns hyphens into spaces and capitalises each word", () => {
+    expect(speciesDisplayName("mr-mime")).toBe("Mr Mime");
+  });
+
+  test("works on a species absent from the pokedex, without throwing or a placeholder", () => {
+    expect(getSpeciesByName("totally-homebrew-mon")).toBeUndefined();
+    expect(speciesDisplayName("totally-homebrew-mon")).toBe("Totally Homebrew Mon");
   });
 });
