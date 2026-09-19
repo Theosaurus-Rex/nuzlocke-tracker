@@ -1,15 +1,9 @@
 /**
- * Moves: national move dex 1-919.
+ * Moves: national move dex 1-919. Bootstrapped by scripts/extract-pokedex.ts from PokeAPI
+ * (https://pokeapi.co/). Hand-owned now, per CLAUDE.md "Game data".
  *
- * Bootstrapped by scripts/extract-pokedex.ts from PokeAPI (https://pokeapi.co/).
- * This file is hand-owned now (CLAUDE.md "Game data") — edit it directly and note why
- * in a comment beside the change.
- *
- * Spans every generation. Types and move stats are stored as present-day (current) values plus
- * a history (`pastTypes` / `pastValues`); resolve against a specific generation with
- * `pokedexFor(generation)` in src/game/pokedex.ts, never by reading these fields directly. See
- * ./types.ts for the resolution rule and scripts/extract-pokedex.ts for how the history is
- * derived.
+ * Stats are present-day values plus history (`pastValues`). Resolve through `pokedexFor` in
+ * src/game/pokedex.ts rather than reading these fields directly. See ./types.ts for the rule.
  */
 
 import type { DamageClass, PastMoveValue, Type } from "./types";

@@ -1,28 +1,13 @@
 /**
- * `useCatchEncounter` — the one mutation hook built in this commit. See
- * docs/superpowers/specs/2026-09-17-nuzlocke-scaffold-design.md sections 5 and 8.
+ * Mutation hooks over the `StorageAdapter`.
  *
- * Catch is the hard case on purpose: it runs a pure domain transition and then writes TWO rows
- * (the updated encounter and the new mon) inside ONE `adapter.transaction(...)`, so a partial
- * write can never leave an encounter pointing at a mon that does not exist. The rest of the
- * mutation set lands with the features that need them (M1-M4).
+ * `useCatchEncounter` runs a pure domain transition and then writes two rows, the updated
+ * encounter and the new mon, inside one `adapter.transaction(...)`, so a partial write can never
+ * leave an encounter pointing at a mon that does not exist. The new mon's id is generated at the
+ * call site, never inside `catchEncounter` itself, which is pure by design.
  *
- * The new mon's id is generated with `crypto.randomUUID()` here, at the call site — never inside
- * `catchEncounter` itself, which is pure by design and must stay that way.
- *
- * `useDeleteRun` (PER-14) is the other mutation here. `RunStatus` originally also grew an
- * `"archived"` state with `useArchiveRun`/`useUnarchiveRun`, but Theo rejected the archive concept
- * on review of PER-14: a run is either kept or deleted, no third state. Delete replaces it.
- *
- * `useCreateRun` (PER-16) is the third. It does not generate `id`/`createdAt`/`updatedAt` itself
- * — `adapter.runs.put` assigns those, same as every other write through the adapter — and it does
- * not seed routes or fights: seeding a run's route list from game data is PER-22 (M2), and the
- * boss list is PER-33 (M4). A run created here legitimately has no routes yet. PER-18 extended
- * `CreateRunInput` with an optional `rules`, so the new-run screen's (possibly edited) form state
- * can override `DEFAULT_RULES`; enforcing any of those rules is still PER-41.
- *
- * This module depends ONLY on the `StorageAdapter` interface (via `useStorage`) and the pure
- * transition in `src/domain/transitions.ts`. It must never import Dexie.
+ * A run created by `useCreateRun` has no routes or fights yet; seeding those is out of scope
+ * here.
  */
 
 import { useMutation, useQueryClient, type UseMutationResult } from "@tanstack/react-query";
@@ -86,19 +71,10 @@ export function useCatchEncounter(): UseMutationResult<
   });
 }
 
-// ---------------------------------------------------------------------------
-// Delete a run (PER-14)
-// ---------------------------------------------------------------------------
-
 /**
- * Deletes a run's row plus every row that belongs to it — routes, encounters, mons, deaths and
- * fights — inside ONE `adapter.transaction`, so a failure partway through leaves every row
- * exactly as it was (see the atomicity test in `queries.test.tsx`) rather than an orphaned
- * partial delete that would silently bloat every export from then on.
- *
- * Built entirely from existing `Repository` primitives (`where` + `delete`) rather than a new
- * adapter method: hard rule 1 keeps the adapter interface minimal, and the contract suite that
- * already covers both adapters needs no new capability to exercise this.
+ * Deletes a run's row plus every row that belongs to it, inside one `adapter.transaction`, so a
+ * failure partway through leaves every row exactly as it was rather than an orphaned partial
+ * delete.
  */
 async function persistDeleteRun(adapter: StorageAdapter, runId: string): Promise<void> {
   await adapter.transaction(async (tx) => {
@@ -122,15 +98,11 @@ async function persistDeleteRun(adapter: StorageAdapter, runId: string): Promise
 }
 
 /**
- * Deletes a run and all of its rows. Irreversible — the caller (the run list screen) is
- * responsible for an explicit, informative confirmation step before calling this; there is no
- * undo at this layer.
+ * Deletes a run and all of its rows. Irreversible; the caller is responsible for confirming
+ * first.
  *
- * Like the archive mutation this replaces, deleting a run changes WHICH runs exist, so this
- * invalidates the plain `queryKeys.runs()` list key as well as the per-run keys `invalidateRun`
- * covers. Skipping that would leave the deleted run visible in the list until a manual reload,
- * with nothing erroring — see the "Deliberately does NOT invalidate" note on `invalidateRun` in
- * `queries.ts`.
+ * Deleting a run changes which runs exist, so this also invalidates the plain `queryKeys.runs()`
+ * list key, which `invalidateRun` deliberately skips (see `queries.ts`).
  */
 export function useDeleteRun(): UseMutationResult<void, Error, string> {
   const adapter = useStorage();
@@ -147,30 +119,13 @@ export function useDeleteRun(): UseMutationResult<void, Error, string> {
   });
 }
 
-// ---------------------------------------------------------------------------
-// Create a run (PER-16)
-// ---------------------------------------------------------------------------
-
 export interface CreateRunInput {
   name: string;
   game: GameId;
-  /**
-   * PER-18: the rules screen on `new-run-screen.tsx` always passes its (possibly edited) form
-   * state here. Optional only so the pre-PER-18 call sites in this module's own test suite keep
-   * compiling without updating every call; omitting it falls back to `DEFAULT_RULES`, same as
-   * before PER-18 existed.
-   */
+  /** Falls back to `DEFAULT_RULES` when omitted. */
   rules?: Rules;
 }
 
-/**
- * Writes the new run's row. `id`, `createdAt` and `updatedAt` are left for `adapter.runs.put` to
- * assign, per hard rule 2 — never generated here. The run starts `active`, with `finishedAt:
- * null`, and with no routes or fights: seeding those from game data is PER-22 and PER-33.
- *
- * `rules` defaults to `DEFAULT_RULES` when the caller doesn't supply one; PER-18's screen always
- * does, seeded from that same constant so an untouched form round-trips it exactly.
- */
 async function persistCreateRun(adapter: StorageAdapter, input: CreateRunInput): Promise<Run> {
   return adapter.runs.put({
     name: input.name,
@@ -182,11 +137,8 @@ async function persistCreateRun(adapter: StorageAdapter, input: CreateRunInput):
 }
 
 /**
- * Creates a run and switches which runs exist, exactly like `useDeleteRun` does — so, like that
- * mutation, this invalidates the plain `queryKeys.runs()` list key in addition to the newly
- * created run's own per-run keys (via `invalidateRun`). Skipping the list key would leave a
- * mounted run list not showing the new run until a manual reload, with nothing erroring — see the
- * "Deliberately does NOT invalidate" note on `invalidateRun` in `queries.ts`.
+ * Creates a run, which changes which runs exist, so this also invalidates the plain
+ * `queryKeys.runs()` list key in addition to the new run's per-run keys.
  */
 export function useCreateRun(): UseMutationResult<Run, Error, CreateRunInput> {
   const adapter = useStorage();

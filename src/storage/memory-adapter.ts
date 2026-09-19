@@ -1,12 +1,9 @@
 /**
- * In-memory reference implementation of `StorageAdapter`. Backed by `Map`s, not IndexedDB or
- * anything durable — its purpose is spec §10's need for a fast adapter to test the query layer
- * against (commit 9), and to prove that `adapter.contract.ts` is actually executable before the
- * Dexie implementation (commit 8) exists.
+ * In-memory reference implementation of `StorageAdapter`, backed by `Map`s rather than IndexedDB.
  *
  * Rows are never mutated in place: every `put` writes a brand-new object into the table's map.
- * That is what makes `transaction` rollback correct and cheap — a snapshot only needs a shallow
- * copy of each `Map` (`new Map(table)`), because existing entries are never touched again after
+ * That is what makes `transaction` rollback correct and cheap: a snapshot only needs a shallow
+ * copy of each `Map` (`new Map(table)`), since existing entries are never touched again after
  * being copied in.
  */
 
@@ -24,6 +21,7 @@ import type {
   DeathIndexedKey,
   FightIndexedKey,
 } from "./adapter";
+import { restorableRowError, unindexableValueError } from "./repository-guards";
 
 interface Tables {
   runs: Map<string, Run>;
@@ -65,25 +63,6 @@ function restoreTable<T>(live: Map<string, T>, snapshot: Map<string, T>): void {
   }
 }
 
-/** `restoreMany` writes rows that came from outside the type system (a JSON backup file, an
- * M6 migration source) — validate at runtime even though `T` says these fields are required,
- * naming both the missing field and the row's id so a bad restore fails loud. Returns an `Error`
- * rather than throwing, so a caller can turn it into a rejected promise without a synchronous
- * throw escaping the method call. */
-function restorableRowError<T extends Timestamped>(row: T): Error | undefined {
-  const label = typeof row.id === "string" && row.id.length > 0 ? row.id : "(missing id)";
-  if (typeof row.id !== "string" || row.id.length === 0) {
-    return new Error(`restoreMany: row "${label}" is missing "id".`);
-  }
-  if (typeof row.createdAt !== "string" || row.createdAt.length === 0) {
-    return new Error(`restoreMany: row "${label}" is missing "createdAt".`);
-  }
-  if (typeof row.updatedAt !== "string" || row.updatedAt.length === 0) {
-    return new Error(`restoreMany: row "${label}" is missing "updatedAt".`);
-  }
-  return undefined;
-}
-
 function createRepository<T extends Timestamped, TIndexed extends keyof T>(
   table: Map<string, T>,
 ): Repository<T, TIndexed> {
@@ -107,13 +86,7 @@ function createRepository<T extends Timestamped, TIndexed extends keyof T>(
     },
     where(field, value) {
       if (value === null || value === undefined) {
-        return Promise.reject(
-          new Error(
-            `where("${String(field)}", ${String(value)}) is not supported: IndexedDB cannot ` +
-              "index null values, so a nullable field can't be queried through where(). Use a " +
-              "named adapter method instead (see deathsByFight).",
-          ),
-        );
+        return Promise.reject(unindexableValueError(field, value as null | undefined));
       }
       return Promise.resolve(Array.from(table.values()).filter((row) => row[field] === value));
     },
@@ -130,10 +103,10 @@ function createRepository<T extends Timestamped, TIndexed extends keyof T>(
       return Promise.resolve();
     },
     restoreMany(rows) {
-      // Validate every row before writing any of them: a restore either lands whole or not at
-      // all, matching `importBundle`'s single-transaction guarantee. Validation failures are
-      // returned as a rejected promise, not a synchronous throw, so a caller can `await` or
-      // `.catch()` this the same way as every other `Repository` method.
+      // Every row is validated before any of them are written, so a restore either lands whole
+      // or fails whole, matching importBundle's transaction guarantee. Failures reject the
+      // promise rather than throwing synchronously, so callers can await or .catch() this like
+      // any other Repository method.
       for (const row of rows) {
         const error = restorableRowError(row);
         if (error) {

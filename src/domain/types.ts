@@ -1,18 +1,13 @@
 /**
- * Entity types for the Nuzlocke tracker data model.
+ * Entity types for the Nuzlocke tracker data model. Pure types only, no I/O, no storage, no
+ * React.
  *
- * Pure types only — no I/O, no storage, no React. See
- * docs/superpowers/specs/2026-09-17-nuzlocke-scaffold-design.md section 4 for the field-by-field
- * contract this file implements.
+ * Nullable columns are `| null`, never optional `?`. Rows round-trip through IndexedDB and the
+ * export bundle, where `undefined` and absent are not the same as `null`.
  *
- * IDs are plain `string` (no branded/nominal ID types — not wanted yet).
- * Timestamps are ISO 8601 `string`.
- * Nullable columns are `| null`, never optional `?`: a row always carries the key, its value may
- * be null. This matters because rows round-trip through IndexedDB and the export bundle, where
- * `undefined` and "absent" are not the same thing as `null`.
+ * Ids are plain `string`. Branded id types are a deliberate omission, not an oversight.
  */
 
-/** Base shape shared by every table row. */
 export interface Timestamped {
   id: string;
   createdAt: string;
@@ -20,18 +15,12 @@ export interface Timestamped {
 }
 
 /**
- * A row before it has been persisted. `id`, `createdAt` and `updatedAt` become optional so a
- * caller can supply them (round-tripping an existing row) or omit them (the storage adapter
- * assigns an id and stamps timestamps on write).
+ * A row before it is persisted. `id`, `createdAt` and `updatedAt` are optional: supply them to
+ * round-trip an existing row, or omit them and the storage adapter assigns and stamps them.
  */
 export type Draft<T extends Timestamped> = Omit<T, "id" | "createdAt" | "updatedAt"> &
   Partial<Pick<T, "id" | "createdAt" | "updatedAt">>;
 
-// ---------------------------------------------------------------------------
-// Small union types
-// ---------------------------------------------------------------------------
-
-/** `'heartgold'` is the only member at V1. */
 export type GameId = "heartgold";
 
 export type RunStatus = "active" | "finished";
@@ -46,15 +35,6 @@ export type FightStatus = "pending" | "cleared";
 
 export type Gender = "male" | "female" | "genderless";
 
-// ---------------------------------------------------------------------------
-// runs
-// ---------------------------------------------------------------------------
-
-/**
- * Embedded config value object on `Run`. No independent identity, never queried on its own —
- * embedding it does not violate hard rule 3, which is about run-scoped rows (encounters, mons,
- * deaths), not a fixed-shape settings struct.
- */
 export interface Rules {
   dupesClause: boolean;
   speciesClause: boolean;
@@ -76,6 +56,12 @@ export interface Rules {
   customClause: string | null;
 }
 
+export type ClauseField = Exclude<keyof Rules, "randomiser" | "customClause">;
+
+export type RandomiserField = keyof Rules["randomiser"];
+
+export type RandomiserSubField = Exclude<RandomiserField, "enabled">;
+
 export type Run = Timestamped & {
   name: string;
   game: GameId;
@@ -84,24 +70,15 @@ export type Run = Timestamped & {
   finishedAt: string | null;
 };
 
-// ---------------------------------------------------------------------------
-// routes
-// ---------------------------------------------------------------------------
-
 export type Route = Timestamped & {
   runId: string;
   name: string;
-  /** Traversal order; sparse integers to allow insertion. */
+  /** Sparse integers, to leave room for insertion. */
   order: number;
-  /** True for user-appended routes. */
   isCustom: boolean;
   /** Links back to seeded game data; null when custom. */
   gameRouteId: string | null;
 };
-
-// ---------------------------------------------------------------------------
-// encounters
-// ---------------------------------------------------------------------------
 
 export type Encounter = Timestamped & {
   runId: string;
@@ -109,16 +86,11 @@ export type Encounter = Timestamped & {
   status: EncounterStatus;
   /** What was met; null while open. */
   speciesId: string | null;
-  /** Level encountered at. */
   level: number | null;
   /** Set when caught. */
   monId: string | null;
   notes: string | null;
 };
-
-// ---------------------------------------------------------------------------
-// mons
-// ---------------------------------------------------------------------------
 
 export type Mon = Timestamped & {
   runId: string;
@@ -145,18 +117,11 @@ export type Mon = Timestamped & {
   caughtRouteId: string | null;
 };
 
-// ---------------------------------------------------------------------------
-// deaths
-// ---------------------------------------------------------------------------
-
-/** Closed enum of "died from a status/residual effect" causes. Deliberately incomplete. */
+/** Status/residual-effect death causes. Deliberately incomplete. */
 export type StatusCause =
   "poison" | "burn" | "sandstorm" | "hail" | "recoil" | "perish-song" | "confusion";
 
-/**
- * Discriminated union of everything that can kill a mon. Exactly one of `fightId` and
- * `trainerName` is set on the `trainer` variant: a tracked fight, or an untracked trainer.
- */
+/** On the `trainer` variant, exactly one of `fightId` and `trainerName` is set. */
 export type Cause =
   | {
       type: "trainer";
@@ -174,18 +139,12 @@ export type Death = Timestamped & {
   runId: string;
   /** One death per mon. */
   monId: string;
-  /** Level when it died. */
   level: number;
-  /** Where it happened. */
   routeId: string | null;
   cause: Cause;
   diedAt: string;
   notes: string | null;
 };
-
-// ---------------------------------------------------------------------------
-// fights
-// ---------------------------------------------------------------------------
 
 export type Fight = Timestamped & {
   runId: string;

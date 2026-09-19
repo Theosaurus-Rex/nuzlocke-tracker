@@ -2,9 +2,8 @@
  * HeartGold route order, Johto through Kanto, in traversal order.
  *
  * Bootstrapped by scripts/extract-heartgold.ts from domtronn/nuzlocke.data
- * (https://github.com/domtronn/nuzlocke.data), file `routes/hg.txt`. This file is hand-owned
- * now (CLAUDE.md "Game data") — edit it directly and note why in a comment beside the
- * change.
+ * (https://github.com/domtronn/nuzlocke.data), file `routes/hg.txt`. Hand-owned now, per
+ * CLAUDE.md "Game data": edit it directly and note why beside the change.
  */
 
 import type { RouteDef } from "@/game/types";

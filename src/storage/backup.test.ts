@@ -1,32 +1,23 @@
 /**
- * Covers `src/storage/backup.ts` — the JSON export/import that CLAUDE.md hard rule 5 requires as
- * the actual backup for this permadeath tracker. Tested against the in-memory adapter (spec §10),
- * the same reference adapter `adapter.contract.ts` and `queries.test.tsx` use.
- *
- * Three properties matter most here, and each gets a dedicated test: the round trip proves this
- * is really a backup, the atomicity test proves a failed import can never half-apply, and the
- * malformed-row tests prove `parseBundle` actually protects the database rather than rubber-stamping
- * whatever `isExportBundle`'s shallow envelope check let through.
+ * Covers `src/storage/backup.ts`, the JSON export/import backup this permadeath tracker relies on.
+ * A bad import must never destroy good data.
  */
 
 import { describe, expect, it } from "vitest";
 
 import { SCHEMA_VERSION, type ExportBundle } from "@/domain/schema";
-import type { Cause, Death, Fight, Mon, Route, Run } from "@/domain/types";
+import type { Cause, Death, Encounter, Fight, Mon, Route, Run } from "@/domain/types";
 
 import type { StorageAdapter } from "./adapter";
 import {
   exportBundle,
   importBundle,
   parseBundle,
+  previewImport,
   serializeBundle,
   type ImportMode,
 } from "./backup";
 import { createMemoryAdapter } from "./memory-adapter";
-
-// ---------------------------------------------------------------------------
-// Fixtures
-// ---------------------------------------------------------------------------
 
 const RULES_FIXTURE: Run["rules"] = {
   dupesClause: false,
@@ -70,6 +61,23 @@ function makeRouteDraft(
     order: 1,
     isCustom: false,
     gameRouteId: null,
+    ...overrides,
+  };
+}
+
+function makeEncounterDraft(
+  runId: string,
+  routeId: string,
+  overrides: Partial<Encounter> = {},
+): Omit<Encounter, "id" | "createdAt" | "updatedAt"> {
+  return {
+    runId,
+    routeId,
+    status: "open",
+    speciesId: null,
+    level: null,
+    monId: null,
+    notes: null,
     ...overrides,
   };
 }
@@ -155,10 +163,6 @@ function mustExist<T>(row: T | undefined, what: string): T {
   return row;
 }
 
-// ---------------------------------------------------------------------------
-// Round trip
-// ---------------------------------------------------------------------------
-
 describe("round trip", () => {
   it("exporting then importing (replace) into a fresh adapter reproduces the data, including createdAt", async () => {
     const source = createMemoryAdapter();
@@ -173,10 +177,9 @@ describe("round trip", () => {
 
     expect(summary.imported).toEqual([{ id: seeded.run.id, name: seeded.run.name }]);
 
-    // `importBundle` writes through `Repository.restoreMany`, not `put`: a restore is not a
-    // modification, so every row — including `updatedAt` — must come back byte-identical to what
-    // was exported. (Ordinary writes still go through `put`, which stamps `updatedAt` on every
-    // write; that behaviour is unchanged and is asserted separately in `adapter.contract.ts`.)
+    // importBundle writes through restoreMany, not put. A restore is not a modification, so
+    // every row, including updatedAt, must come back byte-identical to what was exported. put
+    // still stamps updatedAt on every write, and that is tested separately in adapter.contract.ts.
     const importedRun = mustExist(await target.runs.get(seeded.run.id), "imported run");
     const importedRoute = mustExist(await target.routes.get(seeded.route.id), "imported route");
     const importedMon = mustExist(await target.mons.get(seeded.mon.id), "imported mon");
@@ -189,8 +192,7 @@ describe("round trip", () => {
     expect(importedDeath).toEqual(seeded.death);
     expect(importedFight).toEqual(seeded.fight);
 
-    // createdAt AND updatedAt are both preserved byte-identically — a restore recovers rows, it
-    // does not modify them.
+    // Both timestamps are checked: a restore recovers rows, it does not modify them.
     expect(importedRun.createdAt).toBe(seeded.run.createdAt);
     expect(importedRun.updatedAt).toBe(seeded.run.updatedAt);
     expect(importedMon.createdAt).toBe(seeded.mon.createdAt);
@@ -202,9 +204,8 @@ describe("round trip", () => {
     await source.init();
     const oldUpdatedAt = "2020-01-01T00:00:00.000Z";
     const run = await source.runs.put(makeRunDraft());
-    // `put` always stamps `updatedAt` fresh (see `adapter.contract.ts`), so back-date the row
-    // directly through `restoreMany` — the same path a real backup restore uses — to get a row
-    // whose `updatedAt` genuinely predates "now" without depending on the clock.
+    // put always stamps updatedAt fresh. Back-date the row through restoreMany, the same path a
+    // real restore uses, so updatedAt predates now without depending on the clock.
     const backdated = { ...run, updatedAt: oldUpdatedAt };
     await source.runs.restoreMany([backdated]);
 
@@ -221,10 +222,6 @@ describe("round trip", () => {
   });
 });
 
-// ---------------------------------------------------------------------------
-// serializeBundle
-// ---------------------------------------------------------------------------
-
 describe("serializeBundle", () => {
   it("is stable: the same data serializes to a byte-identical string", async () => {
     const adapter = createMemoryAdapter();
@@ -232,18 +229,14 @@ describe("serializeBundle", () => {
     await seedFullRun(adapter);
 
     const bundle = await exportBundle(adapter);
-    // exportedAt would otherwise differ by wall-clock time between the two calls below; pin it so
-    // this test is about key ORDER stability, not about the clock.
+    // exportedAt would otherwise differ between the two calls below. Pin it so this test is
+    // about key order stability, not the clock.
     const fixedBundle: ExportBundle = { ...bundle, exportedAt: "2026-01-01T00:00:00.000Z" };
 
     expect(serializeBundle(fixedBundle)).toBe(serializeBundle(fixedBundle));
     expect(serializeBundle(fixedBundle)).toBe(serializeBundle({ ...fixedBundle }));
   });
 });
-
-// ---------------------------------------------------------------------------
-// parseBundle — schemaVersion handling
-// ---------------------------------------------------------------------------
 
 function emptyBundle(overrides: Partial<ExportBundle> = {}): ExportBundle {
   return {
@@ -287,10 +280,6 @@ describe("parseBundle — schemaVersion", () => {
     expect(result.ok).toBe(true);
   });
 });
-
-// ---------------------------------------------------------------------------
-// parseBundle — malformed rows
-// ---------------------------------------------------------------------------
 
 describe("parseBundle — row validation", () => {
   it("refuses a run missing id", () => {
@@ -428,9 +417,148 @@ describe("parseBundle — row validation", () => {
   });
 });
 
-// ---------------------------------------------------------------------------
-// Import modes
-// ---------------------------------------------------------------------------
+/** One valid row per table, cross-linked (route/mon/death/fight all point back at the same run,
+ * the death at the same mon). Deliberately all-valid, so `bundleWithBadField` can break exactly
+ * one field and any resulting error is attributable to that field alone. */
+function baseValidBundle(): ExportBundle {
+  const timestamp = "2026-01-01T00:00:00.000Z";
+  const run: Run = { id: "run-1", createdAt: timestamp, updatedAt: timestamp, ...makeRunDraft() };
+  const route: Route = {
+    id: "route-1",
+    createdAt: timestamp,
+    updatedAt: timestamp,
+    ...makeRouteDraft(run.id),
+  };
+  const encounter: Encounter = {
+    id: "enc-1",
+    createdAt: timestamp,
+    updatedAt: timestamp,
+    ...makeEncounterDraft(run.id, route.id),
+  };
+  const mon: Mon = {
+    id: "mon-1",
+    createdAt: timestamp,
+    updatedAt: timestamp,
+    ...makeMonDraft(run.id, { caughtRouteId: route.id }),
+  };
+  const death: Death = {
+    id: "death-1",
+    createdAt: timestamp,
+    updatedAt: timestamp,
+    ...makeDeathDraft(run.id, mon.id),
+  };
+  const fight: Fight = {
+    id: "fight-1",
+    createdAt: timestamp,
+    updatedAt: timestamp,
+    ...makeFightDraft(run.id),
+  };
+
+  return emptyBundle({
+    runs: [run],
+    routes: [route],
+    encounters: [encounter],
+    mons: [mon],
+    deaths: [death],
+    fights: [fight],
+  });
+}
+
+/** The fixture id `baseValidBundle` gives the one row in each table, so a case's error can be
+ * matched to the exact row it broke. */
+const FIELD_RULE_ROW_ID = {
+  runs: "run-1",
+  routes: "route-1",
+  encounters: "enc-1",
+  mons: "mon-1",
+  deaths: "death-1",
+  fights: "fight-1",
+} as const;
+
+type FieldRuleTable = keyof typeof FIELD_RULE_ROW_ID;
+
+/** The base bundle with a single field of one table's one row replaced by `badValue`. Everything
+ * else stays valid, so a failure is caused by that field's rule and nothing else. */
+function bundleWithBadField(table: FieldRuleTable, field: string, badValue: unknown): ExportBundle {
+  const base = baseValidBundle();
+  const rows = base[table] as unknown as Record<string, unknown>[];
+  const [row] = rows;
+  const patched = { ...row, [field]: badValue };
+  return { ...base, [table]: [patched] };
+}
+
+describe("parseBundle — field rules", () => {
+  it("accepts the base fixture bundle unmodified (control for the cases below)", () => {
+    const result = parseBundle(JSON.stringify(baseValidBundle()));
+    expect(result.ok).toBe(true);
+  });
+
+  it.each<[FieldRuleTable, string, unknown]>([
+    // non-empty-string fields: "" and a number
+    ["runs", "name", ""],
+    ["runs", "name", 42],
+    ["routes", "name", ""],
+    ["routes", "name", 42],
+    ["encounters", "routeId", ""],
+    ["encounters", "routeId", 9],
+    ["mons", "speciesId", ""],
+    ["mons", "speciesId", 1],
+    ["deaths", "monId", ""],
+    ["deaths", "monId", 2],
+    ["fights", "name", ""],
+    ["fights", "name", 8],
+
+    // nullable-string fields: a number
+    ["runs", "finishedAt", 123],
+    ["routes", "gameRouteId", 5],
+    ["encounters", "speciesId", 3],
+    ["mons", "nickname", 5],
+    ["deaths", "routeId", 4],
+    ["fights", "gameFightId", 6],
+
+    // plain string field (not non-empty): a number
+    ["deaths", "diedAt", 12345],
+
+    // number fields: null and a string
+    ["routes", "order", null],
+    ["routes", "order", "1"],
+    ["mons", "level", null],
+    ["mons", "level", "5"],
+    ["deaths", "level", null],
+    ["deaths", "level", "10"],
+    ["fights", "order", null],
+    ["fights", "order", "1"],
+
+    // nullable-number fields: a string
+    ["encounters", "level", "5"],
+    ["mons", "partySlot", "0"],
+    ["fights", "levelCap", "15"],
+
+    // boolean fields: a string
+    ["routes", "isCustom", "yes"],
+    ["fights", "grantsBadge", "true"],
+
+    // enum fields: an unrecognised value
+    ["runs", "status", "in-progress"],
+    ["encounters", "status", "unknown"],
+    ["mons", "gender", "unknown"],
+    ["mons", "status", "fainted"],
+    ["fights", "kind", "boss"],
+
+    // Mon.moves: not an array of strings
+    ["mons", "moves", ["tackle", 5]],
+  ])("rejects %s.%s = %p, naming that table and field", (table, field, badValue) => {
+    const bundle = bundleWithBadField(table, field, badValue);
+
+    const result = parseBundle(JSON.stringify(bundle));
+
+    expect(result.ok).toBe(false);
+    if (!result.ok) {
+      const label = `${table}[${FIELD_RULE_ROW_ID[table]}]`;
+      expect(result.errors.some((e) => e.startsWith(label) && e.includes(`"${field}"`))).toBe(true);
+    }
+  });
+});
 
 describe("importBundle — merge", () => {
   it("adds new runs and leaves an existing run's rows byte-identical", async () => {
@@ -438,7 +566,6 @@ describe("importBundle — merge", () => {
     await adapter.init();
     const existing = await seedFullRun(adapter);
 
-    // A second, independent adapter supplies the incoming bundle's new run.
     const other = createMemoryAdapter();
     await other.init();
     const incoming = await seedFullRun(other);
@@ -457,11 +584,9 @@ describe("importBundle — merge", () => {
       fights: 1,
     });
 
-    // The new run's rows landed.
     expect(await adapter.runs.get(incoming.run.id)).toBeDefined();
     expect(await adapter.mons.get(incoming.mon.id)).toBeDefined();
 
-    // The existing run's rows are untouched, byte-identical.
     expect(await adapter.runs.get(existing.run.id)).toEqual(existing.run);
     expect(await adapter.routes.get(existing.route.id)).toEqual(existing.route);
     expect(await adapter.mons.get(existing.mon.id)).toEqual(existing.mon);
@@ -475,7 +600,7 @@ describe("importBundle — merge", () => {
     const existing = await seedFullRun(adapter);
 
     const bundle = await exportBundle(adapter);
-    // Mutate the incoming (but not the stored) copy, to prove skip means "untouched", not
+    // Mutate the incoming copy, not the stored one, so a pass here means "untouched", not
     // "overwritten with the same value by coincidence".
     const mutatedBundle: ExportBundle = {
       ...bundle,
@@ -514,17 +639,79 @@ describe("importBundle — replace", () => {
   });
 });
 
-// ---------------------------------------------------------------------------
-// Atomicity
-// ---------------------------------------------------------------------------
+/**
+ * previewImport's contract is "what importBundle would do". It shares planImport with
+ * importBundle rather than re-deriving the same rule. These tests build a bundle, preview it,
+ * then actually import it into an adapter seeded with the same starting state, and assert the
+ * preview matches the real result. None of them assert a hand-written expected count, so a bug
+ * in the shared merge filter fails these the same way it fails an importBundle test.
+ */
+describe("previewImport", () => {
+  it("merge mode: agrees with importBundle, including for a colliding run that owns child rows", async () => {
+    const target = createMemoryAdapter();
+    await target.init();
+    const existing = await seedFullRun(target);
+    const existingBundle = await exportBundle(target);
+
+    const other = createMemoryAdapter();
+    await other.init();
+    const incoming = await seedFullRun(other);
+    const incomingBundle = await exportBundle(other);
+
+    // One run, with its route/mon/death/fight, collides with what's already in target. The
+    // other doesn't. A merge filter that selected child rows by the wrong run set would show up
+    // in one half but not the other.
+    const bundle: ExportBundle = {
+      schemaVersion: incomingBundle.schemaVersion,
+      exportedAt: incomingBundle.exportedAt,
+      runs: [...existingBundle.runs, ...incomingBundle.runs],
+      routes: [...existingBundle.routes, ...incomingBundle.routes],
+      encounters: [...existingBundle.encounters, ...incomingBundle.encounters],
+      mons: [...existingBundle.mons, ...incomingBundle.mons],
+      deaths: [...existingBundle.deaths, ...incomingBundle.deaths],
+      fights: [...existingBundle.fights, ...incomingBundle.fights],
+    };
+
+    const existingRuns = await target.runs.getAll();
+    const preview = previewImport(bundle, "merge", existingRuns);
+    const summary = await importBundle(target, bundle, "merge");
+
+    expect(preview.toImport).toEqual(summary.imported);
+    expect(preview.toSkip).toEqual(summary.skipped);
+    expect(preview.rowCounts).toEqual(summary.rowCounts);
+
+    // The agreement above only means something if both halves were actually exercised.
+    expect(preview.toImport).toEqual([{ id: incoming.run.id, name: incoming.run.name }]);
+    expect(preview.toSkip).toEqual([{ id: existing.run.id, name: existing.run.name }]);
+  });
+
+  it("replace mode: agrees with importBundle against an adapter seeded with runs absent from the bundle", async () => {
+    const target = createMemoryAdapter();
+    await target.init();
+    await seedFullRun(target); // present in the adapter, absent from the incoming bundle entirely
+
+    const other = createMemoryAdapter();
+    await other.init();
+    await seedFullRun(other);
+    const bundle = await exportBundle(other);
+
+    const existingRuns = await target.runs.getAll();
+    const preview = previewImport(bundle, "replace", existingRuns);
+    const summary = await importBundle(target, bundle, "replace");
+
+    expect(preview.toImport).toEqual(summary.imported);
+    expect(preview.toSkip).toEqual(summary.skipped);
+    expect(preview.rowCounts).toEqual(summary.rowCounts);
+  });
+});
 
 /** Wraps a `StorageAdapter` so `mons.restoreMany` always rejects, mirroring the failure-injection
  * pattern `queries.test.tsx` uses for `useCatchEncounter`. `transaction` re-wraps the scoped
- * adapter it hands to the callback, so the injected failure is visible from inside a transaction
- * too — which is what proves a real rollback rather than just a rejected outer promise.
+ * adapter it hands to the callback, so the failure is visible inside a transaction too. That is
+ * what proves a real rollback rather than just a rejected outer promise.
  *
- * Targets `restoreMany` rather than `putMany` because `importBundle` writes through `restoreMany`
- * (see the "restore is not a modification" fix) — `putMany` is no longer on its write path. */
+ * Targets `restoreMany`, not `putMany`, because `importBundle` now writes through `restoreMany`
+ * and `putMany` is no longer on its write path. */
 function withFailingMonsPutMany(base: StorageAdapter): StorageAdapter {
   return {
     init: () => base.init(),
@@ -561,9 +748,9 @@ describe("atomicity", () => {
       "simulated write failure",
     );
 
-    // Nothing was written: not the incoming run (mons.putMany failed after runs/routes had
-    // already been written this pass), and — critically — not even the pre-existing run that
-    // `clear()` had already removed before the failure. A real rollback restores that too.
+    // Nothing was written: not the incoming run, since the failing write happens after
+    // runs/routes are written this pass, and not even the pre-existing run that clear() had
+    // already removed before the failure. A real rollback restores that too.
     expect(await adapter.runs.getAll()).toEqual([existing.run]);
     expect(await adapter.routes.getAll()).toEqual([existing.route]);
     expect(await adapter.mons.getAll()).toEqual([existing.mon]);

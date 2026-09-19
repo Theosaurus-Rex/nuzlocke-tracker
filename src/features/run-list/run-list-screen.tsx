@@ -1,38 +1,7 @@
 /**
- * Run list screen (PER-13, M1's first ticket; search/tabs/delete added in PER-14). Every run as a
- * summary card: routes covered and party/boxed/dead counts at a glance, with one action per card.
- *
- * Each card fetches its OWN run's rows via the existing per-run hooks (`useEncounters`,
- * `useMons`) rather than a new aggregate query. `invalidateRun` (`@/storage/queries`) only
- * invalidates the keys it enumerates, so a new aggregate key such as `['runSummaries']` would
- * silently go stale after a catch or a death, with no error anywhere. N runs x 2 cached per-run
- * queries against IndexedDB is fine at this scale, and invalidation already works correctly for
- * it — see that module's doc comment. (No `useDeaths` here: `summariseRun`'s `dead` count is a
- * `mons`-status partition, not a `deaths`-table tally — see `derive.ts`.)
- *
- * No visual design work here: CLAUDE.md's "still open" section leaves the hand-drawn look
- * unresolved, so this is existing shadcn primitives (`buttonVariants`) plus plain Tailwind on the
- * existing tokens — see `settings-screen.tsx` for the same approach on a real screen. Responsive
- * per hard rule 6: the card grid is one column at phone width and widens with the viewport.
- *
- * "Start again" (re-running a finished run) is deliberately absent: it needs run creation
- * (PER-16), which does not exist yet. The empty state below is minimal and functional, not
- * designed — that pass is PER-23 (M5).
- *
- * Tabs and search (PER-14): Active and Finished, each with a count. An earlier draft of this
- * ticket also archived runs into a third state with a third tab; Theo rejected that on review — a
- * run is either kept or deleted, no third state — so `RunStatus` stays two-valued and delete
- * (below) replaces it. Tab counts reflect each status's total regardless of the search text (like
- * an inbox's unread count), so switching tabs while a search is active doesn't move numbers
- * unrelated to the search. The sidebar counters PER-20 will add are a separate, out-of-scope
- * surface.
- *
- * Delete (PER-14) is genuinely destructive — it removes the run's row plus every row across
- * routes/encounters/mons/deaths/fights (`useDeleteRun`, `@/storage/mutations`) — so each card
- * gates it behind an inline expanding confirmation, matching how `settings-screen.tsx` confirms a
- * replace-mode import: name the run, state the numbers actually being lost, point at `/settings`
- * for a backup, and require an explicit second click. No per-run export here — the existing
- * whole-database export already covers it, and building a second one is out of scope.
+ * Each card fetches its own run's rows via `useEncounters`/`useMons` rather than a shared
+ * aggregate query: `invalidateRun` only invalidates the keys it enumerates, so an aggregate key
+ * would silently go stale after a write.
  */
 
 import { useState, type ChangeEvent, type ReactNode } from "react";
@@ -66,9 +35,7 @@ function DeleteConfirm({
   run: Run;
   encounters: readonly Encounter[];
   mons: readonly Mon[];
-  /** `summariseRun`'s `dead` count, computed once by the parent (`RunCard`) and passed down —
-   * see that call site's comment for why this isn't re-derived here with a second
-   * `mons.filter(...)`. */
+  /** `summariseRun`'s dead count, computed once by the parent and passed down, not re-derived. */
   deathCount: number;
   onCancel: () => void;
 }): ReactNode {
@@ -167,10 +134,8 @@ function RunCard({ run }: { run: Run }): ReactNode {
           run={run}
           encounters={encounters}
           mons={mons}
-          // `summary.dead` IS `summariseRun`'s dead count — passed down rather than
-          // re-filtered in `DeleteConfirm` so the two never have a chance to disagree. Gated on
-          // `summary` (rather than a `summary!.dead` assertion) since it's `null` while
-          // loading, and the Delete button that opens this is itself disabled until then.
+          // Gated on `summary` rather than asserting `summary!.dead`, since it is null while
+          // loading and the Delete button that opens this is disabled until then.
           deathCount={summary.dead}
           onCancel={() => setConfirmingDelete(false)}
         />

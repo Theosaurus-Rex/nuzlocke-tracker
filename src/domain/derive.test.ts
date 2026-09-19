@@ -48,8 +48,7 @@ function makeEncounter(overrides: Partial<Encounter> = {}): Encounter {
 
 describe("countByMonStatus", () => {
   test("tallies party, box and dead mons separately", () => {
-    // Boxed (2) and dead (1) are deliberately unequal so a classification bug that swaps them
-    // (e.g. counting a dead mon as boxed) cannot coincidentally still match this assertion.
+    // Boxed and dead counts are deliberately unequal so a bug that swaps them can't pass by luck.
     const mons = [
       makeMon({ id: "a", status: "party" }),
       makeMon({ id: "b", status: "box" }),
@@ -65,9 +64,7 @@ describe("countByMonStatus", () => {
   });
 
   test("party + boxed + dead always sum to the number of mons (partition invariant)", () => {
-    // This is the property `summariseRun` relies on to treat party/boxed/dead as a breakdown of
-    // one roster rather than three independently-sourced numbers — see the comment on
-    // `summariseRun`. Checked across several mixes, including the empty and single-mon cases.
+    // The property `summariseRun` relies on to derive `dead` from `mons` rather than `deaths`.
     const fixtures: Mon[][] = [
       [],
       [makeMon({ status: "party" })],
@@ -135,10 +132,7 @@ describe("summariseRun", () => {
   });
 
   test("dead comes from mons whose status is 'dead', not from a deaths table row count", () => {
-    // A death row's mon that is somehow not (or no longer) marked `dead` — possible via a
-    // hand-edited import, since `backup.ts` validates the `monId` reference but not that mon's
-    // status — must NOT inflate the card's dead count. Only three mons here, none `dead`, so the
-    // count must be 0 regardless of how many `deaths` rows might exist elsewhere for this run.
+    // No mon here is `dead`, so the count is 0 no matter how many `deaths` rows exist elsewhere.
     const summary = summariseRun({
       encounters: [],
       mons: [

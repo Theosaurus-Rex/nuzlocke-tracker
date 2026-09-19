@@ -7,9 +7,8 @@ import { species } from "@/game/data/pokedex/species";
 import { getEvolutions, getSpecies, pokedexFor, searchSpecies } from "@/game/pokedex";
 
 describe("per-generation type resolution: the Gen 6 Fairy retcons", () => {
-  // Fairy was added in Gen 6; PokeAPI's past_types confirms each of these was some other type
-  // through Gen 5. Sources: Bulbapedia's per-species type history, cross-checked against the
-  // cached PokeAPI pokemon/{id}.past_types response used to generate species.ts.
+  // Fairy was added in Gen 6. PokeAPI's past_types confirms each of these was some other type
+  // through Gen 5, cross-checked against Bulbapedia's per-species type history.
   const retcons: { name: string; before: string[]; after: string[] }[] = [
     { name: "clefairy", before: ["normal"], after: ["fairy"] },
     { name: "togepi", before: ["normal"], after: ["fairy"] },
@@ -51,13 +50,10 @@ describe("per-generation type resolution: species whose type never changed (cont
 });
 
 describe("Gen 4 guarantee, expressed as a property of resolution: no species that EXISTED at generation 4 or earlier resolves to Fairy", () => {
-  // Scoped to species introduced at or before the target generation: a species introduced in
-  // Gen 6+ that has been Fairy since its debut (Sylveon, Flabebe, ...) legitimately has no
-  // earlier typing to fall back to and correctly resolves to Fairy at any generation — that is
-  // the "introduced after the target generation" fallback, not a bug. What must never happen is
-  // a species that DID exist at the target generation resolving to Fairy, which is exactly what
-  // would happen if a retcon's pastTypes entry were ever dropped (e.g. Clefairy losing its
-  // { throughGeneration: 5, types: ["normal"] } entry) — this is what this test actually catches.
+  // A species introduced in Gen 6+ (Sylveon, Flabebe) is legitimately Fairy at every
+  // generation, since it has no earlier typing to fall back to. What this test checks is that a
+  // species which existed earlier never resolves to Fairy, which is what would happen if a
+  // retcon's pastTypes entry were dropped (e.g. Clefairy losing its Gen 5 entry).
   for (const gen of [1, 2, 3, 4]) {
     test(`generation ${String(gen)}`, () => {
       const fairyMons = species

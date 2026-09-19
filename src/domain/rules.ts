@@ -1,18 +1,65 @@
 /**
- * Default rules a new run starts from.
- *
- * PER-16 (new run creation) writes these onto every run it creates; PER-18 (the next ticket)
- * builds the rules screen that makes them editable and seeds its form from this constant rather
- * than redefining the values. These are a starting point, not hard-coded policy — nobody reading
- * this file should treat a value here as a decision that can't be revisited from the UI.
- *
- * Chosen to match a standard Nuzlocke: dupes, species and shiny clauses on; level caps on;
- * nicknames-required, set mode and hardcore off; every randomiser sub-toggle off (this run isn't
- * assumed to be a randomiser run); `customClause` null.
+ * Default rules a new run starts from, plus the field lists that keep the import validator
+ * and the new-run form in step with the `Rules` type.
  */
 
-import type { Rules } from "./types";
+import type { ClauseField, RandomiserField, RandomiserSubField, Rules } from "./types";
 
+/** Resolves to `never` when a list below covers its field union. Adding a field to `Rules`
+ * without listing it here fails the build instead of silently skipping validation and UI. */
+type AssertExhaustive<T extends never> = T;
+
+export const CLAUSE_FIELDS = [
+  "dupesClause",
+  "speciesClause",
+  "shinyClause",
+  "nicknamesRequired",
+  "levelCaps",
+  "setMode",
+  "hardcore",
+] as const satisfies readonly ClauseField[];
+
+export type UnlistedClauseField = AssertExhaustive<
+  Exclude<ClauseField, (typeof CLAUSE_FIELDS)[number]>
+>;
+
+export const RANDOMISER_SUB_FIELDS = [
+  "wildEncounters",
+  "trainers",
+  "starters",
+  "abilities",
+  "items",
+  "moves",
+  "evolutions",
+] as const satisfies readonly RandomiserSubField[];
+
+export type UnlistedRandomiserSubField = AssertExhaustive<
+  Exclude<RandomiserSubField, (typeof RANDOMISER_SUB_FIELDS)[number]>
+>;
+
+/** Master toggle first, then the sub-toggles. */
+export const RANDOMISER_FIELDS = [
+  "enabled",
+  ...RANDOMISER_SUB_FIELDS,
+] as const satisfies readonly RandomiserField[];
+
+/** Every randomiser toggle off. The new-run form resets to this when the master toggle is
+ * cleared, so a sub-toggle can never be stored as on while the run itself is not a randomiser. */
+export const RANDOMISER_OFF: Rules["randomiser"] = {
+  enabled: false,
+  wildEncounters: false,
+  trainers: false,
+  starters: false,
+  abilities: false,
+  items: false,
+  moves: false,
+  evolutions: false,
+};
+
+/**
+ * A standard Nuzlocke: dupes, species and shiny clauses on, level caps on, everything else off.
+ * The new-run form seeds itself from this, so these are a starting point rather than policy.
+ */
 export const DEFAULT_RULES: Rules = {
   dupesClause: true,
   speciesClause: true,
@@ -21,15 +68,6 @@ export const DEFAULT_RULES: Rules = {
   levelCaps: true,
   setMode: false,
   hardcore: false,
-  randomiser: {
-    enabled: false,
-    wildEncounters: false,
-    trainers: false,
-    starters: false,
-    abilities: false,
-    items: false,
-    moves: false,
-    evolutions: false,
-  },
+  randomiser: RANDOMISER_OFF,
   customClause: null,
 };

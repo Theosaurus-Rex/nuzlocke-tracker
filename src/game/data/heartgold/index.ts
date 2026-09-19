@@ -1,6 +1,6 @@
 /**
- * Assembles the HeartGold GameData. Generated alongside routes.ts and fights.ts by
- * scripts/extract-heartgold.ts — do not hand-edit.
+ * Assembles the HeartGold GameData from routes.ts and fights.ts. Bootstrapped by
+ * scripts/extract-heartgold.ts; hand-owned now, same as the two files it assembles.
  */
 
 import type { GameData } from "@/game/types";

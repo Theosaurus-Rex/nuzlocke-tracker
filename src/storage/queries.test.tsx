@@ -1,10 +1,10 @@
 /**
- * Query layer and `useCatchEncounter` tested against the in-memory adapter (spec §10). These
- * tests cover what THIS app does with TanStack Query — reading rows through the adapter,
- * invalidating on write, and writing atomically — not TanStack Query's own behaviour.
+ * Query layer and `useCatchEncounter` tested against the in-memory adapter. These tests cover
+ * what this app does with TanStack Query: reading rows through the adapter, invalidating on
+ * write, and writing atomically, not TanStack Query's own behaviour.
  *
- * Each test gets a FRESH `QueryClient` (retry disabled) and a fresh memory adapter. Sharing
- * either across tests would leak cache or rows between them and produce order-dependent passes.
+ * Each test gets a fresh `QueryClient` (retry disabled) and a fresh memory adapter, so cache or
+ * rows can't leak between tests and produce order-dependent passes.
  */
 
 import type { ReactNode } from "react";
@@ -23,10 +23,6 @@ import { createMemoryAdapter } from "./memory-adapter";
 import { useCatchEncounter, useCreateRun, useDeleteRun } from "./mutations";
 import { useEncounters, useMons, useRun, useRuns } from "./queries";
 import { StorageProvider } from "./storage-context";
-
-// ---------------------------------------------------------------------------
-// Fixtures
-// ---------------------------------------------------------------------------
 
 const RULES_FIXTURE: Rules = {
   dupesClause: false,
@@ -175,9 +171,8 @@ async function seedOpenEncounter(adapter: StorageAdapter): Promise<{
 }
 
 /**
- * Seeds a run with exactly one row in EACH of its five child tables (route, encounter, mon,
- * death, fight) — used to prove `useDeleteRun` clears every table it owns, not just the obvious
- * ones, and leaves a second run's rows alone.
+ * Seeds a run with one row in each of its five child tables. Used to prove `useDeleteRun` clears
+ * every table it owns, not just the obvious ones, and leaves a second run's rows alone.
  */
 async function seedFullRun(
   adapter: StorageAdapter,
@@ -201,10 +196,6 @@ async function seedFullRun(
   return { run, route, encounter, mon, death, fight };
 }
 
-// ---------------------------------------------------------------------------
-// Wrapper
-// ---------------------------------------------------------------------------
-
 function createWrapper(
   adapter: StorageAdapter,
 ): ({ children }: { children: ReactNode }) => ReactNode {
@@ -224,15 +215,11 @@ function createWrapper(
   };
 }
 
-// ---------------------------------------------------------------------------
-// Failure injection for the atomicity test
-// ---------------------------------------------------------------------------
-
 /**
- * Wraps a `StorageAdapter` so `mons.put` always rejects, while every other operation (including
- * `encounters.put`) still goes through to `base`. `transaction` re-wraps the scoped adapter it
- * hands to the callback, so the injected failure is visible from inside a transaction too — which
- * is what lets this prove a real rollback rather than just a rejected promise.
+ * Wraps a `StorageAdapter` so `mons.put` always rejects while everything else goes through to
+ * `base`. `transaction` re-wraps the scoped adapter it hands the callback, so the failure is
+ * visible inside a transaction too, which is what proves a real rollback and not just a
+ * rejected promise.
  */
 function withFailingMonsPut(base: StorageAdapter): StorageAdapter {
   return {
@@ -254,11 +241,10 @@ function withFailingMonsPut(base: StorageAdapter): StorageAdapter {
 }
 
 /**
- * Wraps a `StorageAdapter` so `mons.delete` always rejects, while every other table's `delete`
- * (and `mons.where`, which `useDeleteRun` uses to find the rows to delete in the first place)
- * still goes through to `base`. Used to prove `useDeleteRun`'s six-table delete is genuinely
- * atomic: a failure partway through must roll back the routes/encounters/deaths/fights/run
- * deletes that already ran, not just fail to delete the mon.
+ * Wraps a `StorageAdapter` so `mons.delete` always rejects while every other table's `delete`
+ * still goes through to `base`. Proves `useDeleteRun`'s six-table delete is genuinely atomic: a
+ * failure partway through must roll back the deletes that already ran, not just fail to delete
+ * the mon.
  */
 function withFailingMonsDelete(base: StorageAdapter): StorageAdapter {
   return {
@@ -278,10 +264,6 @@ function withFailingMonsDelete(base: StorageAdapter): StorageAdapter {
     deathsByFight: (fightId) => base.deathsByFight(fightId),
   };
 }
-
-// ---------------------------------------------------------------------------
-// Read hooks
-// ---------------------------------------------------------------------------
 
 describe("read hooks", () => {
   it("useRuns returns the rows the adapter holds", async () => {
@@ -310,10 +292,6 @@ describe("read hooks", () => {
     expect(result.current.data?.id).not.toBe(first.id);
   });
 });
-
-// ---------------------------------------------------------------------------
-// useCatchEncounter
-// ---------------------------------------------------------------------------
 
 describe("useCatchEncounter", () => {
   it("persists both the caught encounter and the new mon", async () => {
@@ -395,10 +373,6 @@ describe("useCatchEncounter", () => {
   });
 });
 
-// ---------------------------------------------------------------------------
-// useDeleteRun
-// ---------------------------------------------------------------------------
-
 describe("useDeleteRun", () => {
   it("deletes the run and every row it owns across all six tables", async () => {
     const adapter = createMemoryAdapter();
@@ -445,8 +419,8 @@ describe("useDeleteRun", () => {
 
     await expect(result.current.mutateAsync(run.id)).rejects.toThrow("simulated delete failure");
 
-    // Nothing was removed — not even the rows deleted "before" the mon in `persistDeleteRun`,
-    // which is exactly what a rollback (rather than a partial delete) guarantees.
+    // Nothing was removed, not even the rows deleted before the mon in `persistDeleteRun`. That
+    // is what a rollback guarantees, as opposed to a partial delete.
     expect(await adapter.runs.get(run.id)).toEqual(run);
     expect(await adapter.routes.get(route.id)).toEqual(route);
     expect(await adapter.encounters.get(encounter.id)).toEqual(encounter);
@@ -474,9 +448,9 @@ describe("useDeleteRun", () => {
 
     await deleteRun.result.current.mutateAsync(run.id);
 
-    // This is the same invalidation trap `invalidateRun` documents: deleting changes WHICH runs
-    // exist, so `useDeleteRun` MUST invalidate the plain `['runs']` list key as well as the
-    // per-run keys, or this mounted list would keep showing the deleted run with nothing erroring.
+    // The invalidation trap `invalidateRun` documents: deleting changes which runs exist, so
+    // `useDeleteRun` must invalidate the plain `['runs']` list key too, or this mounted list
+    // would keep showing the deleted run with nothing erroring.
     await waitFor(() => {
       expect(runsList.result.current.data).toEqual([]);
     });
@@ -485,10 +459,6 @@ describe("useDeleteRun", () => {
     });
   });
 });
-
-// ---------------------------------------------------------------------------
-// useCreateRun
-// ---------------------------------------------------------------------------
 
 describe("useCreateRun", () => {
   it("persists a run with the given name and game, active status, and DEFAULT_RULES", async () => {
@@ -509,7 +479,7 @@ describe("useCreateRun", () => {
     expect(persisted).toEqual(run);
   });
 
-  it("persists the caller's rules instead of DEFAULT_RULES when given one (PER-18)", async () => {
+  it("persists the caller's rules instead of DEFAULT_RULES when given one", async () => {
     const adapter = createMemoryAdapter();
     await adapter.init();
 
@@ -543,9 +513,9 @@ describe("useCreateRun", () => {
       game: "heartgold",
     });
 
-    // Same invalidation trap `invalidateRun` documents: creating a run changes WHICH runs exist,
-    // so `useCreateRun` MUST invalidate the plain `['runs']` list key, or this mounted list would
-    // keep showing zero runs with nothing erroring.
+    // Same invalidation trap: creating a run changes which runs exist, so `useCreateRun` must
+    // invalidate the plain `['runs']` list key, or this mounted list would keep showing zero
+    // runs with nothing erroring.
     await waitFor(() => {
       expect(runsList.result.current.data).toEqual([run]);
     });

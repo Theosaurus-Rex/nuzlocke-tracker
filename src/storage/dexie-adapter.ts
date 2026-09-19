@@ -6,11 +6,11 @@
  * `deaths` carries a nested `cause.fightId` index (a dotted keypath Dexie supports directly).
  * The index is sparse: only rows whose `cause` is the `trainer` variant appear in it, which is
  * what makes `deathsByFight` an index lookup rather than a full table scan. The method still
- * filters for `cause.type === 'trainer'` afterwards so its contract holds even if that sparse
+ * filters for `cause.type === 'trainer'` afterwards, so its contract holds even if that sparse
  * behaviour ever changed.
  *
  * `transaction` maps to `db.transaction('rw', ...)`. The scope callback must run with no
- * intervening `await` on anything other than what Dexie itself returns — Dexie tracks the active
+ * intervening `await` on anything other than what Dexie itself returns. Dexie tracks the active
  * transaction through its own promise zone, and an `await` on a non-Dexie promise between opening
  * the transaction and invoking the caller's callback can silently drop out of it.
  */
@@ -32,6 +32,7 @@ import type {
   DeathIndexedKey,
   FightIndexedKey,
 } from "./adapter";
+import { restorableRowError, unindexableValueError } from "./repository-guards";
 
 const DEFAULT_DATABASE_NAME = "nuzlocke-tracker";
 
@@ -39,7 +40,7 @@ const TABLE_NAMES = ["runs", "routes", "encounters", "mons", "deaths", "fights"]
 type TableName = (typeof TABLE_NAMES)[number];
 
 /**
- * The Dexie subclass. Version 1 schema per spec section 7 — plain `id` primary keys throughout
+ * The Dexie subclass. Version 1 schema per spec section 7, plain `id` primary keys throughout
  * (hard rule 2 forbids autoincrement, so none of these use `++id`).
  */
 class NuzlockeDexie extends Dexie {
@@ -77,7 +78,7 @@ function isDexieDb(source: TableSource): source is NuzlockeDexie {
 function getTable<T, TKey>(source: TableSource, name: TableName): Table<T, TKey> {
   // `Dexie#table` and `Transaction#table` are both callable as `(name: string) => Table`, but
   // their overload sets aren't compatible with each other, so TypeScript won't call `.table`
-  // directly on the union — branch on the concrete type instead.
+  // directly on the union. Branch on the concrete type instead.
   if (isDexieDb(source)) {
     return source.table(name);
   }
@@ -104,24 +105,10 @@ function buildTables(source: TableSource): DexieTables {
   };
 }
 
-/** `restoreMany` writes rows that came from outside the type system (a JSON backup file, an
- * M6 migration source) — validate at runtime even though `T` says these fields are required,
- * naming both the missing field and the row's id so a bad restore fails loud. */
-function assertRestorable<T extends Timestamped>(row: T): void {
-  const label = typeof row.id === "string" && row.id.length > 0 ? row.id : "(missing id)";
-  if (typeof row.id !== "string" || row.id.length === 0) {
-    throw new Error(`restoreMany: row "${label}" is missing "id".`);
-  }
-  if (typeof row.createdAt !== "string" || row.createdAt.length === 0) {
-    throw new Error(`restoreMany: row "${label}" is missing "createdAt".`);
-  }
-  if (typeof row.updatedAt !== "string" || row.updatedAt.length === 0) {
-    throw new Error(`restoreMany: row "${label}" is missing "updatedAt".`);
-  }
-}
-
-/** One table's worth of CRUD, backed directly by a Dexie `Table` (top-level, or bound to a
- * running transaction — see `DexieStorageAdapter.transaction`). */
+/**
+ * One table's worth of CRUD, backed directly by a Dexie `Table`: either top-level, or bound to a
+ * running transaction (see `DexieStorageAdapter.transaction`).
+ */
 class DexieRepository<T extends Timestamped, TIndexed extends keyof T> implements Repository<
   T,
   TIndexed
@@ -142,13 +129,7 @@ class DexieRepository<T extends Timestamped, TIndexed extends keyof T> implement
 
   where<K extends TIndexed>(field: K, value: T[K]): Promise<T[]> {
     if (value === null || value === undefined) {
-      return Promise.reject(
-        new Error(
-          `where("${String(field)}", ${String(value)}) is not supported: IndexedDB cannot ` +
-            "index null values, so a nullable field can't be queried through where(). Use a " +
-            "named adapter method instead (see deathsByFight).",
-        ),
-      );
+      return Promise.reject(unindexableValueError(field, value as null | undefined));
     }
 
     return this.table
@@ -181,15 +162,21 @@ class DexieRepository<T extends Timestamped, TIndexed extends keyof T> implement
   }
 
   async restoreMany(rows: T[]): Promise<T[]> {
-    // Validate every row before writing any of them: a restore either lands whole or not at all,
-    // matching `importBundle`'s single-transaction guarantee.
+    // Every row is validated before any of them are written, so a restore either lands whole
+    // or fails whole, matching importBundle's transaction guarantee.
     for (const row of rows) {
-      assertRestorable(row);
+      const error = restorableRowError(row);
+      if (error) {
+        throw error;
+      }
     }
+    const results: T[] = [];
     for (const row of rows) {
-      await this.table.put(row);
+      const next = { ...row };
+      await this.table.put(next);
+      results.push(next);
     }
-    return rows;
+    return results;
   }
 }
 
@@ -223,7 +210,7 @@ class DexieStorageAdapter implements StorageAdapter {
 
   transaction<T>(fn: (tx: StorageAdapter) => Promise<T>): Promise<T> {
     const tableRefs = TABLE_NAMES.map((name) => this.db.table(name));
-    // `fn` is invoked directly as the scope's return value — no `await` sits between entering
+    // `fn` is invoked directly as the scope's return value, with no `await` between entering
     // the transaction and running it, which is what keeps this inside Dexie's transaction zone.
     return this.db.transaction("rw", tableRefs, (trans) =>
       fn(new DexieStorageAdapter(this.db, trans)),

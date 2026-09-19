@@ -1,11 +1,9 @@
 /**
- * Covers `new-run-screen.tsx` (PER-16): the empty/whitespace-name guard, trimming, the game
- * picker's options coming from `GAMES` rather than a hard-coded list, the redirect to the new
- * run's own screen on success, and the cancel link.
+ * Covers the name guard, trimming, the game picker's options, the redirect on success, and the
+ * cancel link.
  *
- * Routing is driven with `createMemoryRouter` (matching `app-shell.test.tsx`'s approach) over a
- * small route table of this screen's own neighbours, rather than the app's full `appRoutes` —
- * this file only needs to prove where `NewRunScreen` navigates to, not the whole shell.
+ * Routing uses `createMemoryRouter` over a small route table of this screen's own neighbours,
+ * not the app's full `appRoutes`, since this only needs to prove where `NewRunScreen` navigates.
  */
 
 import type { ReactNode } from "react";
@@ -25,8 +23,8 @@ import { GAMES } from "@/game/registry";
 
 import { NewRunScreen } from "./new-run-screen";
 
-// One label per clause, in the same order `new-run-screen.tsx` renders them — used to drive every
-// checkbox generically rather than hard-coding seven near-identical `userEvent.click` calls.
+// One label per clause, in the same order new-run-screen.tsx renders them, so every checkbox
+// can be driven generically rather than with seven near-identical userEvent.click calls.
 const CLAUSE_LABELS = [
   "Dupes clause",
   "Species clause",
@@ -172,8 +170,8 @@ describe("NewRunScreen", () => {
     });
 
     // DEFAULT_RULES is itself fully typed as `Rules`, so this is already a full-shape assertion:
-    // a field added to `Rules` without a matching default would fail `Rules` typechecking before
-    // this test ever runs.
+    // a field added to `Rules` without a matching default would fail typechecking before this
+    // test ever runs.
     expect(run?.rules).toEqual(DEFAULT_RULES);
   });
 
@@ -204,9 +202,9 @@ describe("NewRunScreen", () => {
       return runs;
     });
 
-    // Written out against the full `Rules` shape, not `expect.objectContaining`: if `Rules` grows
-    // a new field, this literal fails to typecheck until it's added here too, so a newly added
-    // rule can't be silently dropped from the form without this test noticing.
+    // Written out against the full `Rules` shape, not `expect.objectContaining`: if `Rules`
+    // grows a new field, this literal fails to typecheck until it's added here too, so a newly
+    // added rule can't be silently dropped from the form without this test noticing.
     const expectedRules: Rules = {
       dupesClause: !DEFAULT_RULES.dupesClause,
       speciesClause: !DEFAULT_RULES.speciesClause,

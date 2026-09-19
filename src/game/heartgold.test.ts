@@ -72,16 +72,16 @@ describe("GAMES registry", () => {
 
 /**
  * Independently verified ace (highest-level) Pokémon for each gym leader, Elite Four member and
- * the Champion — the FIRST encounter, not the post-Elite-Four rematch teams (HGSS gym leaders'
- * rematch rosters are much higher level; getting that distinction wrong would inflate every cap).
+ * the Champion, from the first encounter. The post-Elite-Four rematch rosters are much higher
+ * level, so using those would inflate every cap.
  *
  * Cross-checked against:
  *   - https://bulbapedia.bulbagarden.net/wiki/<Leader_name> ("Pokémon HeartGold and SoulSilver"
  *     gym/Elite Four battle section)
  *   - https://www.serebii.net/heartgoldsoulsilver/gym.shtml
  *
- * This table is independent of both nuzlocke.data and scripts/extract-heartgold.ts, so a bad
- * extraction (or a bad upstream value) fails here even if the generator's arithmetic is right.
+ * Independent of both nuzlocke.data and scripts/extract-heartgold.ts, so a bad extraction, or
+ * a bad upstream value, fails here even if the generator's arithmetic is right.
  */
 const VERIFIED_ACE_LEVELS: Record<string, number> = {
   "gym-falkner": 13,
@@ -113,8 +113,8 @@ describe("heartgold spot-check: independently verified ace levels", () => {
   test.each(Object.entries(VERIFIED_ACE_LEVELS))("%s has ace level %i", (id, expectedAce) => {
     const fight = byId.get(id);
     expect(fight).toBeDefined();
-    // Recomputed from the roster itself, not read off `levelCap` — this must catch a bad
-    // roster level even if `levelCap` happens to still agree with it.
+    // Recomputed from the roster itself, not read off `levelCap`, so a bad roster level is
+    // caught even if `levelCap` still agrees with it.
     const ace = Math.max(...(fight?.roster.map((m) => m.level) ?? []));
     expect(ace).toBe(expectedAce);
   });

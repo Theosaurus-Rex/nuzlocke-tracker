@@ -87,7 +87,7 @@ the others, which is what makes the game rules testable without a database.
 Two places, in increasing depth:
 
 - **`CLAUDE.md`** — the decisions and the six hard rules everything answers to, plus the
-  testing conventions. Read this before changing anything structural.
+  testing conventions and the comment standard. Read this before changing anything structural.
 - **`docs/superpowers/specs/2026-09-17-nuzlocke-scaffold-design.md`** — the M0 design spec:
   table shapes, the adapter interface, the commit plan.
 

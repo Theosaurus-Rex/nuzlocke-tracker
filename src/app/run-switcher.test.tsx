@@ -1,10 +1,8 @@
 /**
- * Unit coverage for `run-switcher.tsx` in isolation from `AppShell`: the pure sub-screen
- * extraction, and the `RunSwitcher` component driven directly by props (so these tests don't
- * depend on routing or the storage adapter at all). Integration coverage — the counters actually
- * coming from `summariseRun` against real adapter data, both shells agreeing, and a switch
- * preserving the sub-screen through the real router — lives in `app-shell.test.tsx`, since that's
- * the level those guarantees actually operate at.
+ * Unit coverage for `run-switcher.tsx` in isolation: the pure sub-screen extraction, and
+ * `RunSwitcher` driven directly by props, with no routing or storage adapter involved.
+ * Integration coverage (real `summariseRun` data, both shells agreeing, a switch preserving the
+ * sub-screen) lives in `app-shell.test.tsx`.
  */
 
 import { render, screen } from "@testing-library/react";
