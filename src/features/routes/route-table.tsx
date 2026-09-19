@@ -34,9 +34,16 @@ export interface RouteTableProps {
   encounters: readonly Encounter[];
   onDelete: (route: Route) => void;
   deletePending: boolean;
+  onLogEncounter: (route: Route) => void;
 }
 
-export function RouteTable({ rows, encounters, onDelete, deletePending }: RouteTableProps) {
+export function RouteTable({
+  rows,
+  encounters,
+  onDelete,
+  deletePending,
+  onLogEncounter,
+}: RouteTableProps) {
   const columns = [
     columnHelper.display({
       id: "route",
@@ -55,16 +62,23 @@ export function RouteTable({ rows, encounters, onDelete, deletePending }: RouteT
                 </span>
               )}
             </div>
-            {removable && (
-              <Button
-                size="sm"
-                variant="ghost"
-                disabled={deletePending}
-                onClick={() => onDelete(routeRow.route)}
-              >
-                Remove
-              </Button>
-            )}
+            <div className="flex shrink-0 items-center gap-2">
+              {routeRow.status === "not-encountered" && (
+                <Button size="sm" variant="outline" onClick={() => onLogEncounter(routeRow.route)}>
+                  Log
+                </Button>
+              )}
+              {removable && (
+                <Button
+                  size="sm"
+                  variant="ghost"
+                  disabled={deletePending}
+                  onClick={() => onDelete(routeRow.route)}
+                >
+                  Remove
+                </Button>
+              )}
+            </div>
           </div>
         );
       },

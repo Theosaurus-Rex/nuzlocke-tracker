@@ -75,6 +75,7 @@ function renderTable(input: {
   encounters: Encounter[];
   mons: Mon[];
   onDelete?: (route: Route) => void;
+  onLogEncounter?: (route: Route) => void;
 }) {
   const rows = buildRouteRows({
     routes: input.routes,
@@ -88,6 +89,7 @@ function renderTable(input: {
       encounters={input.encounters}
       onDelete={input.onDelete ?? vi.fn()}
       deletePending={false}
+      onLogEncounter={input.onLogEncounter ?? vi.fn()}
     />,
   );
 }
@@ -241,12 +243,37 @@ describe("RouteTable", () => {
     expect(screen.queryByRole("button", { name: "Remove" })).not.toBeInTheDocument();
   });
 
-  it("renders no log or log-encounter control anywhere in the table", () => {
-    const routes = [makeRoute({ id: "route-1" }), makeRoute({ id: "route-2", isCustom: true })];
+  it("shows a log control for a not-encountered route, which calls onLogEncounter with it", async () => {
+    const route = makeRoute({ id: "route-1" });
+    const onLogEncounter = vi.fn();
 
-    renderTable({ routes, encounters: [], mons: [] });
+    renderTable({ routes: [route], encounters: [], mons: [], onLogEncounter });
 
-    expect(screen.queryByRole("button", { name: /log/i })).not.toBeInTheDocument();
+    await userEvent.click(screen.getByRole("button", { name: "Log" }));
+
+    expect(onLogEncounter).toHaveBeenCalledWith(route);
+  });
+
+  it.each([
+    ["open" as const, [makeEncounter({ status: "open" })], []],
+    ["missed" as const, [makeEncounter({ status: "missed" })], []],
+    ["skipped" as const, [makeEncounter({ status: "skipped" })], []],
+    [
+      "caught" as const,
+      [makeEncounter({ status: "caught", monId: "mon-1" })],
+      [makeMon({ id: "mon-1", status: "party" })],
+    ],
+    [
+      "dead" as const,
+      [makeEncounter({ status: "caught", monId: "mon-1" })],
+      [makeMon({ id: "mon-1", status: "dead" })],
+    ],
+  ])("shows no log control for a %s route", (_status, encounters, mons) => {
+    const routes = [makeRoute({ id: "route-1" })];
+
+    renderTable({ routes, encounters, mons });
+
+    expect(screen.queryByRole("button", { name: "Log" })).not.toBeInTheDocument();
   });
 });
 

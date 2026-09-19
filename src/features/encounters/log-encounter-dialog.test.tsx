@@ -1,0 +1,339 @@
+/**
+ * Covers `log-encounter-dialog.tsx` both directly (species search, level-follow, placement
+ * default, validation) and through `RoutesScreen` (opening from a route row and the row
+ * updating after a successful log). Both shells render at once in jsdom, so every screen-level
+ * query is scoped to the table it queries, per CLAUDE.md.
+ */
+
+import type { ReactNode } from "react";
+
+import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import { render, screen, waitFor, within } from "@testing-library/react";
+import userEvent from "@testing-library/user-event";
+import { describe, expect, it, vi } from "vitest";
+import { MemoryRouter, Route as RouterRoute, Routes } from "react-router";
+
+import { DEFAULT_RULES } from "@/domain/rules";
+import type { Encounter, Mon, Route, Rules } from "@/domain/types";
+import { RoutesScreen } from "@/features/routes/routes-screen";
+import type { StorageAdapter } from "@/storage/adapter";
+import { createMemoryAdapter } from "@/storage/memory-adapter";
+import { StorageProvider } from "@/storage/storage-context";
+
+import { LogEncounterDialog } from "./log-encounter-dialog";
+
+const TIMESTAMP = "2026-09-17T00:00:00.000Z";
+
+function makeRoute(overrides: Partial<Route> = {}): Route {
+  return {
+    id: "route-1",
+    runId: "run-1",
+    name: "Sprout Tower",
+    order: 100,
+    isCustom: false,
+    gameRouteId: "route-1",
+    createdAt: TIMESTAMP,
+    updatedAt: TIMESTAMP,
+    ...overrides,
+  };
+}
+
+function makeMon(overrides: Partial<Mon> = {}): Mon {
+  return {
+    id: "mon-1",
+    runId: "run-1",
+    encounterId: null,
+    speciesId: "chikorita",
+    speciesIdCaught: "chikorita",
+    nickname: null,
+    gender: null,
+    level: 5,
+    levelCaught: 5,
+    nature: null,
+    ability: null,
+    heldItem: null,
+    moves: [],
+    status: "party",
+    partySlot: 0,
+    boxOrder: null,
+    caughtRouteId: null,
+    createdAt: TIMESTAMP,
+    updatedAt: TIMESTAMP,
+    ...overrides,
+  };
+}
+
+function createWrapper(
+  adapter: StorageAdapter,
+): ({ children }: { children: ReactNode }) => ReactNode {
+  const queryClient = new QueryClient({
+    defaultOptions: {
+      queries: { retry: false },
+      mutations: { retry: false },
+    },
+  });
+
+  return function Wrapper({ children }: { children: ReactNode }): ReactNode {
+    return (
+      <QueryClientProvider client={queryClient}>
+        <StorageProvider adapter={adapter}>{children}</StorageProvider>
+      </QueryClientProvider>
+    );
+  };
+}
+
+function renderDialog(overrides: {
+  adapter?: StorageAdapter;
+  route?: Route;
+  rules?: Rules;
+  mons?: Mon[];
+  existingEncounters?: Encounter[];
+  onOpenChange?: (open: boolean) => void;
+}) {
+  const adapter = overrides.adapter ?? createMemoryAdapter();
+  const onOpenChange = overrides.onOpenChange ?? vi.fn();
+  const route = overrides.route ?? makeRoute();
+
+  const view = render(
+    <LogEncounterDialog
+      open
+      onOpenChange={onOpenChange}
+      runId="run-1"
+      route={route}
+      rules={overrides.rules ?? DEFAULT_RULES}
+      mons={overrides.mons ?? []}
+      existingEncounters={overrides.existingEncounters ?? []}
+    />,
+    { wrapper: createWrapper(adapter) },
+  );
+
+  return { ...view, adapter, onOpenChange, route };
+}
+
+async function fillMinimalCatch(user: ReturnType<typeof userEvent.setup>): Promise<void> {
+  await user.type(screen.getByLabelText("Species"), "Chikorita");
+  await user.type(screen.getByLabelText("Level caught"), "6");
+}
+
+describe("LogEncounterDialog", () => {
+  it("shows the route name as the dialog title", () => {
+    renderDialog({ route: makeRoute({ name: "New Bark Town" }) });
+
+    expect(screen.getByRole("dialog", { name: "New Bark Town" })).toBeInTheDocument();
+  });
+
+  it("offers a matching species from a partial search and accepts the pick", async () => {
+    const user = userEvent.setup();
+    const { adapter, onOpenChange } = renderDialog({});
+
+    await user.type(screen.getByLabelText("Species"), "chik");
+    await user.click(await screen.findByRole("option", { name: "Chikorita" }));
+    await user.type(screen.getByLabelText("Level caught"), "6");
+    await user.click(screen.getByRole("button", { name: "Save encounter" }));
+
+    await waitFor(() => {
+      expect(onOpenChange).toHaveBeenCalledWith(false);
+    });
+
+    const [encounter] = await adapter.encounters.where("runId", "run-1");
+    expect(encounter?.speciesId).toBe("chikorita");
+  });
+
+  it("accepts free text that matches no known species", async () => {
+    const user = userEvent.setup();
+    const { adapter, onOpenChange } = renderDialog({});
+
+    await user.type(screen.getByLabelText("Species"), "Not A Real Mon");
+    await user.type(screen.getByLabelText("Level caught"), "6");
+    await user.click(screen.getByRole("button", { name: "Save encounter" }));
+
+    await waitFor(() => {
+      expect(onOpenChange).toHaveBeenCalledWith(false);
+    });
+
+    const [encounter] = await adapter.encounters.where("runId", "run-1");
+    expect(encounter?.speciesId).toBe("not-a-real-mon");
+  });
+
+  it("blocks submit on a missing nickname when the clause is on, and shows nothing was saved", async () => {
+    const user = userEvent.setup();
+    const { adapter, onOpenChange } = renderDialog({
+      rules: { ...DEFAULT_RULES, nicknamesRequired: true },
+    });
+
+    await fillMinimalCatch(user);
+    await user.click(screen.getByRole("button", { name: "Save encounter" }));
+
+    expect(await screen.findByText(/requires a nickname/i)).toBeInTheDocument();
+    expect(onOpenChange).not.toHaveBeenCalled();
+    expect(await adapter.encounters.where("runId", "run-1")).toEqual([]);
+  });
+
+  it("does not require a nickname when the clause is off", async () => {
+    const user = userEvent.setup();
+    const { onOpenChange } = renderDialog({
+      rules: { ...DEFAULT_RULES, nicknamesRequired: false },
+    });
+
+    await fillMinimalCatch(user);
+    await user.click(screen.getByRole("button", { name: "Save encounter" }));
+
+    await waitFor(() => {
+      expect(onOpenChange).toHaveBeenCalledWith(false);
+    });
+  });
+
+  it("a validation failure writes nothing and leaves the dialog open", async () => {
+    const user = userEvent.setup();
+    const { adapter, onOpenChange } = renderDialog({});
+
+    await user.click(screen.getByRole("button", { name: "Save encounter" }));
+
+    expect(await screen.findByText(/choose a species/i)).toBeInTheDocument();
+    expect(onOpenChange).not.toHaveBeenCalled();
+    expect(await adapter.encounters.where("runId", "run-1")).toEqual([]);
+    expect(await adapter.mons.getAll()).toEqual([]);
+  });
+
+  it("current level follows level caught until edited directly, then stops following", async () => {
+    const user = userEvent.setup();
+    renderDialog({});
+
+    const levelCaught = screen.getByLabelText("Level caught");
+    const level = screen.getByLabelText("Current level");
+
+    await user.type(levelCaught, "6");
+    expect(level).toHaveValue("6");
+
+    await user.clear(levelCaught);
+    await user.type(levelCaught, "18");
+    expect(level).toHaveValue("18");
+
+    await user.clear(level);
+    await user.type(level, "25");
+    expect(level).toHaveValue("25");
+
+    await user.clear(levelCaught);
+    await user.type(levelCaught, "30");
+    expect(level).toHaveValue("25");
+  });
+
+  it("defaults placement to box when the party already has six mons", () => {
+    const fullParty = Array.from({ length: 6 }, (_, index) =>
+      makeMon({ id: `mon-${index}`, status: "party", partySlot: index }),
+    );
+
+    renderDialog({ mons: fullParty });
+
+    expect(document.getElementById("log-encounter-placement")).toHaveTextContent(/box/i);
+  });
+
+  it("defaults placement to party when the party has a free slot", () => {
+    renderDialog({ mons: [makeMon({ id: "mon-0", partySlot: 0 })] });
+
+    expect(document.getElementById("log-encounter-placement")).toHaveTextContent(/party/i);
+  });
+
+  it("surfaces a mutation failure instead of swallowing it", async () => {
+    const user = userEvent.setup();
+    const adapter = createMemoryAdapter();
+    const failingAdapter: StorageAdapter = {
+      ...adapter,
+      transaction: () => Promise.reject(new Error("simulated write failure")),
+    };
+
+    renderDialog({ adapter: failingAdapter });
+
+    await fillMinimalCatch(user);
+    await user.click(screen.getByRole("button", { name: "Save encounter" }));
+
+    expect(await screen.findByRole("alert")).toHaveTextContent(/simulated write failure/);
+  });
+});
+
+function makeRunDraft(rules: Rules) {
+  return {
+    name: "Test Run",
+    game: "heartgold" as const,
+    status: "active" as const,
+    rules,
+    finishedAt: null,
+  };
+}
+
+function renderRoutesScreen(adapter: StorageAdapter, runId: string) {
+  const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+  return render(
+    <QueryClientProvider client={queryClient}>
+      <StorageProvider adapter={adapter}>
+        <MemoryRouter initialEntries={[`/runs/${runId}/routes`]}>
+          <Routes>
+            <RouterRoute path="/runs/:runId/routes" element={<RoutesScreen />} />
+          </Routes>
+        </MemoryRouter>
+      </StorageProvider>
+    </QueryClientProvider>,
+  );
+}
+
+describe("logging an encounter from the routes screen", () => {
+  it("opens the dialog from the table's log control, titled with the route name", async () => {
+    const user = userEvent.setup();
+    const adapter = createMemoryAdapter();
+    const run = await adapter.runs.put(makeRunDraft(DEFAULT_RULES));
+    await adapter.routes.put({
+      runId: run.id,
+      name: "Route 29",
+      order: 100,
+      isCustom: false,
+      gameRouteId: null,
+    });
+
+    renderRoutesScreen(adapter, run.id);
+
+    const table = await screen.findByRole("table");
+    await user.click(within(table).getByRole("button", { name: "Log" }));
+
+    expect(
+      await screen.findByText("Route 29", { selector: "h2, [data-slot=dialog-title]" }),
+    ).toBeInTheDocument();
+  });
+
+  it.each([
+    ["Caught" as const, "caught"],
+    ["Missed" as const, "missed"],
+    ["Skipped" as const, "skipped"],
+  ])("logs a %s encounter and updates the table row", async (outcomeLabel, expectedStatus) => {
+    const user = userEvent.setup();
+    const adapter = createMemoryAdapter();
+    const run = await adapter.runs.put(makeRunDraft(DEFAULT_RULES));
+    await adapter.routes.put({
+      runId: run.id,
+      name: "Route 29",
+      order: 100,
+      isCustom: false,
+      gameRouteId: null,
+    });
+
+    renderRoutesScreen(adapter, run.id);
+
+    const table = await screen.findByRole("table");
+    await user.click(within(table).getByRole("button", { name: "Log" }));
+
+    if (outcomeLabel !== "Caught") {
+      await user.click(screen.getByRole("radio", { name: outcomeLabel }));
+    } else {
+      await user.type(screen.getByLabelText("Species"), "Chikorita");
+      await user.type(screen.getByLabelText("Level caught"), "6");
+    }
+
+    await user.click(screen.getByRole("button", { name: "Save encounter" }));
+
+    await waitFor(() => {
+      expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
+    });
+
+    const updatedTable = screen.getByRole("table");
+    expect(within(updatedTable).getByText(expectedStatus)).toBeInTheDocument();
+  });
+});

@@ -13,7 +13,12 @@ import { useMutation, useQueryClient, type UseMutationResult } from "@tanstack/r
 
 import { DEFAULT_RULES } from "@/domain/rules";
 import { canDeleteRoute, nextRouteOrder } from "@/domain/routes";
-import { catchEncounter, type CatchDetails } from "@/domain/transitions";
+import {
+  catchEncounter,
+  missEncounter,
+  skipEncounter,
+  type CatchDetails,
+} from "@/domain/transitions";
 import type { Encounter, GameId, Mon, Route, Rules, Run } from "@/domain/types";
 import { GAMES } from "@/game/registry";
 import { seedRoutes } from "@/game/seed";
@@ -67,6 +72,98 @@ export function useCatchEncounter(): UseMutationResult<
 
   return useMutation({
     mutationFn: (input: CatchEncounterInput) => persistCatch(adapter, input),
+    onSuccess: async (result) => {
+      await invalidateRun(queryClient, result.encounter.runId);
+    },
+  });
+}
+
+export interface LogEncounterInput {
+  runId: string;
+  routeId: string;
+  outcome: "caught" | "missed" | "skipped";
+  /** The current party, used to find the lowest free party slot (or overflow to the box). */
+  party: readonly Mon[];
+  /** Required when `outcome` is `'caught'`. */
+  details?: CatchDetails;
+  /** What was seen, when `outcome` is `'missed'` or `'skipped'`. Optional: a player often does
+   * not know what fled. Ignored when `outcome` is `'caught'`, where `details.speciesId` applies. */
+  speciesId?: string | null;
+  /** The run's current encounters, used to refuse a second log against the same route. */
+  existingEncounters: readonly Encounter[];
+}
+
+export interface LogEncounterResult {
+  encounter: Encounter;
+  mon: Mon | null;
+}
+
+async function persistLogEncounter(
+  adapter: StorageAdapter,
+  input: LogEncounterInput,
+): Promise<LogEncounterResult> {
+  if (input.existingEncounters.some((encounter) => encounter.routeId === input.routeId)) {
+    throw new Error(`Route ${input.routeId} already has an encounter logged against it.`);
+  }
+
+  const details = input.details;
+  if (input.outcome === "caught" && details === undefined) {
+    throw new Error("Logging a caught encounter requires details.");
+  }
+
+  const monId = crypto.randomUUID();
+
+  return adapter.transaction(async (tx) => {
+    const openEncounter = await tx.encounters.put({
+      runId: input.runId,
+      routeId: input.routeId,
+      status: "open",
+      speciesId: null,
+      level: null,
+      monId: null,
+      notes: null,
+    });
+
+    if (input.outcome === "missed") {
+      const encounter = await tx.encounters.put(
+        missEncounter({ ...openEncounter, speciesId: input.speciesId ?? null }),
+      );
+      return { encounter, mon: null };
+    }
+
+    if (input.outcome === "skipped") {
+      const encounter = await tx.encounters.put(
+        skipEncounter({ ...openEncounter, speciesId: input.speciesId ?? null }),
+      );
+      return { encounter, mon: null };
+    }
+
+    if (details === undefined) {
+      throw new Error("Logging a caught encounter requires details.");
+    }
+
+    const { encounter: caughtEncounter, mon: monDraft } = catchEncounter({
+      encounter: openEncounter,
+      party: input.party,
+      monId,
+      details,
+    });
+
+    const [encounter, mon] = await Promise.all([
+      tx.encounters.put(caughtEncounter),
+      tx.mons.put(monDraft),
+    ]);
+
+    return { encounter, mon };
+  });
+}
+
+export function useLogEncounter(): UseMutationResult<LogEncounterResult, Error, LogEncounterInput> {
+  const adapter = useStorage();
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: (input: LogEncounterInput) => persistLogEncounter(adapter, input),
     onSuccess: async (result) => {
       await invalidateRun(queryClient, result.encounter.runId);
     },

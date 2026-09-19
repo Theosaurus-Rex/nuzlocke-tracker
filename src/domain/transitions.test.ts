@@ -74,7 +74,9 @@ function makeFight(overrides: Partial<Fight> = {}): Fight {
 
 const catchDetails: CatchDetails = {
   speciesId: "chikorita",
+  levelCaught: 5,
   level: 5,
+  placement: "party",
   nickname: null,
   gender: "female",
   nature: null,
@@ -204,6 +206,77 @@ describe("catchEncounter", () => {
     expect(() =>
       catchEncounter({ encounter, party: [], monId: "mon-1", details: tooManyMoves }),
     ).toThrow(/4 moves/);
+  });
+
+  test("the encounter records the level met at, not the mon's current level", () => {
+    const details: CatchDetails = { ...catchDetails, levelCaught: 6, level: 18 };
+    const { encounter: result, mon } = catchEncounter({
+      encounter: makeEncounter(),
+      party: [],
+      monId: "mon-1",
+      details,
+    });
+
+    expect(result.level).toBe(6);
+    expect(mon.levelCaught).toBe(6);
+    expect(mon.level).toBe(18);
+  });
+
+  test("placement 'box' boxes the catch with a null party slot even though the party has room", () => {
+    const details: CatchDetails = { ...catchDetails, placement: "box" };
+    const { mon } = catchEncounter({
+      encounter: makeEncounter(),
+      party: [],
+      monId: "mon-1",
+      details,
+    });
+
+    expect(mon.status).toBe("box");
+    expect(mon.partySlot).toBeNull();
+  });
+
+  test("placement 'party' takes the lowest free slot, reusing a gap left by a boxed mon", () => {
+    const staleBoxedMon = makeMon({ id: "boxed", status: "box", partySlot: 1 });
+    const party = [staleBoxedMon, ...partyInSlots([0, 2])];
+    const details: CatchDetails = { ...catchDetails, placement: "party" };
+
+    const { mon } = catchEncounter({
+      encounter: makeEncounter(),
+      party,
+      monId: "mon-new",
+      details,
+    });
+
+    expect(mon.status).toBe("party");
+    expect(mon.partySlot).toBe(1);
+  });
+
+  test("placement 'party' still overflows to the box when the party is full", () => {
+    const details: CatchDetails = { ...catchDetails, placement: "party" };
+    const { mon } = catchEncounter({
+      encounter: makeEncounter(),
+      party: partyInSlots([0, 1, 2, 3, 4, 5]),
+      monId: "mon-7",
+      details,
+    });
+
+    expect(mon.status).toBe("box");
+    expect(mon.partySlot).toBeNull();
+  });
+
+  test("throws when the current level is below the level caught", () => {
+    const encounter = makeEncounter();
+    const details: CatchDetails = { ...catchDetails, levelCaught: 20, level: 19 };
+    let error: unknown;
+    try {
+      catchEncounter({ encounter, party: [], monId: "mon-1", details });
+    } catch (caught) {
+      error = caught;
+    }
+
+    expect(error).toBeInstanceOf(Error);
+    expect((error as Error).message).toContain("20");
+    expect((error as Error).message).toContain("19");
   });
 });
 

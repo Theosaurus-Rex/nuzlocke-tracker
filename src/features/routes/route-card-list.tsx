@@ -1,5 +1,7 @@
 import type { ReactNode } from "react";
 
+import { PlusIcon } from "lucide-react";
+
 import { Button } from "@/components/ui/button";
 import { canDeleteRoute } from "@/domain/routes";
 import type { RouteRow, RouteRowStatus } from "@/domain/route-rows";
@@ -45,6 +47,7 @@ export interface RouteCardListProps {
   encounters: readonly Encounter[];
   onDelete: (route: Route) => void;
   deletePending: boolean;
+  onLogEncounter: (route: Route) => void;
 }
 
 export function RouteCardList({
@@ -52,6 +55,7 @@ export function RouteCardList({
   encounters,
   onDelete,
   deletePending,
+  onLogEncounter,
 }: RouteCardListProps): ReactNode {
   return (
     <ul className="m-0 flex list-none flex-col gap-2 p-0">
@@ -74,16 +78,28 @@ export function RouteCardList({
                     </span>
                   )}
                 </div>
-                {removable && (
-                  <Button
-                    size="sm"
-                    variant="ghost"
-                    disabled={deletePending}
-                    onClick={() => onDelete(row.route)}
-                  >
-                    Remove
-                  </Button>
-                )}
+                <div className="flex shrink-0 items-center gap-2">
+                  {row.status === "not-encountered" && (
+                    <Button
+                      size="icon-sm"
+                      variant="outline"
+                      aria-label="Log encounter"
+                      onClick={() => onLogEncounter(row.route)}
+                    >
+                      <PlusIcon />
+                    </Button>
+                  )}
+                  {removable && (
+                    <Button
+                      size="sm"
+                      variant="ghost"
+                      disabled={deletePending}
+                      onClick={() => onDelete(row.route)}
+                    >
+                      Remove
+                    </Button>
+                  )}
+                </div>
               </div>
               <RouteCardSubtitle row={row} />
             </div>

@@ -2,16 +2,19 @@ import { useState, type FormEvent, type ReactNode } from "react";
 import { Navigate, useParams } from "react-router";
 
 import { Button } from "@/components/ui/button";
+import { DEFAULT_RULES } from "@/domain/rules";
 import { buildRouteRows } from "@/domain/route-rows";
 import type { Route } from "@/domain/types";
+import { LogEncounterDialog } from "@/features/encounters/log-encounter-dialog";
 import { useAddCustomRoute, useDeleteCustomRoute } from "@/storage/mutations";
-import { useEncounters, useMons, useRoutes } from "@/storage/queries";
+import { useEncounters, useMons, useRoutes, useRun } from "@/storage/queries";
 
 import { RouteCardList } from "./route-card-list";
 import { RouteTable } from "./route-table";
 
 export function RoutesScreen(): ReactNode {
   const { runId } = useParams<{ runId: string }>();
+  const runQuery = useRun(runId ?? "");
   const routesQuery = useRoutes(runId ?? "");
   const encountersQuery = useEncounters(runId);
   const monsQuery = useMons(runId);
@@ -20,6 +23,7 @@ export function RoutesScreen(): ReactNode {
 
   const [name, setName] = useState("");
   const [submitted, setSubmitted] = useState(false);
+  const [logRoute, setLogRoute] = useState<Route | null>(null);
 
   if (!runId) {
     return <Navigate to="/" replace />;
@@ -123,6 +127,7 @@ export function RoutesScreen(): ReactNode {
               encounters={encounters}
               onDelete={handleDelete}
               deletePending={deleteRoute.isPending}
+              onLogEncounter={setLogRoute}
             />
           </div>
           <div className="mt-4 md:hidden">
@@ -131,9 +136,26 @@ export function RoutesScreen(): ReactNode {
               encounters={encounters}
               onDelete={handleDelete}
               deletePending={deleteRoute.isPending}
+              onLogEncounter={setLogRoute}
             />
           </div>
         </>
+      )}
+
+      {logRoute && (
+        <LogEncounterDialog
+          open
+          onOpenChange={(nextOpen) => {
+            if (!nextOpen) {
+              setLogRoute(null);
+            }
+          }}
+          runId={activeRunId}
+          route={logRoute}
+          rules={runQuery.data?.rules ?? DEFAULT_RULES}
+          mons={mons}
+          existingEncounters={encounters}
+        />
       )}
     </div>
   );
