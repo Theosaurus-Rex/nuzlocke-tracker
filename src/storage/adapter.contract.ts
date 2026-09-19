@@ -461,6 +461,23 @@ export function runAdapterContractTests(
         expect(await adapter.encounters.getAll()).toEqual([encounterBefore]);
         expect(await adapter.mons.getAll()).toEqual([]);
       });
+
+      it("rolls back an earlier write when a later one rejects of its own accord", async () => {
+        await expect(
+          adapter.transaction(async (tx) => {
+            // Mirrors persistCreateRun: a run, then its routes. The rejection comes from inside
+            // the adapter rather than a throw in the callback, which is the shape a caller
+            // actually hits.
+            const run = await tx.runs.put(makeRunDraft());
+            await tx.routes.restoreMany([
+              { ...makeRouteDraft(run.id), createdAt: "", updatedAt: "" } as Route,
+            ]);
+          }),
+        ).rejects.toThrow(/missing "id"/);
+
+        expect(await adapter.runs.getAll()).toEqual([]);
+        expect(await adapter.routes.getAll()).toEqual([]);
+      });
     });
 
     describe("exportAll", () => {

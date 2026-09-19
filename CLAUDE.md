@@ -182,6 +182,8 @@ cp "$F" /tmp/probe.bak          # NOT `git checkout --` to restore: see below
 # then silently applies nothing, which reads exactly like a passing test
 sed -i '' 's/existing ? existing.createdAt/record.createdAt/' "$F"
 git diff --stat                 # confirm it actually applied before trusting the result
+# `git diff` shows nothing for a file git is not yet tracking, which looks exactly like a probe
+# that applied nothing. For a new file, confirm with `grep` for the changed line instead.
 pnpm test                       # expect FAILURE. green here means the test is fake
 
 cp /tmp/probe.bak "$F"          # safe whether or not the file was committed
