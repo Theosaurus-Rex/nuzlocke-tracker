@@ -95,8 +95,18 @@ function renderScreen(adapter: StorageAdapter, runId: string) {
   );
 }
 
+/**
+ * The screen renders the same rows in both the desktop table and the mobile list, so a plain
+ * `getByText` on a route name matches twice. These tests exercise the list, which is what they
+ * were written against; `route-table.test.tsx` covers the table.
+ */
+async function findRouteInList(name: string): Promise<HTMLElement> {
+  const list = await screen.findByRole("list");
+  return within(list).findByText(name);
+}
+
 function routeItem(name: string): HTMLElement {
-  return screen.getByText(name).closest("li") as HTMLElement;
+  return within(screen.getByRole("list")).getByText(name).closest("li") as HTMLElement;
 }
 
 describe("RoutesScreen", () => {
@@ -109,7 +119,7 @@ describe("RoutesScreen", () => {
 
     renderScreen(adapter, run.id);
 
-    await screen.findByText("New Bark Town");
+    await findRouteInList("New Bark Town");
 
     const items = screen.getAllByRole("listitem").map((item) => item.textContent);
     expect(items).toEqual([
@@ -127,12 +137,12 @@ describe("RoutesScreen", () => {
 
     renderScreen(adapter, run.id);
 
-    await screen.findByText("Route 29");
+    await findRouteInList("Route 29");
 
     await userEvent.type(screen.getByLabelText(/route name/i), "Secret Cave");
     await userEvent.click(screen.getByRole("button", { name: "Add route" }));
 
-    await screen.findByText("Secret Cave");
+    await findRouteInList("Secret Cave");
 
     const items = screen.getAllByRole("listitem").map((item) => item.textContent);
     expect(items[items.length - 1]).toContain("Secret Cave");
@@ -149,7 +159,7 @@ describe("RoutesScreen", () => {
 
     renderScreen(adapter, run.id);
 
-    await screen.findByText("Player's Yard");
+    await findRouteInList("Player's Yard");
 
     const item = routeItem("Player's Yard");
     const removeButton = await within(item).findByRole("button", { name: "Remove" });
@@ -169,7 +179,7 @@ describe("RoutesScreen", () => {
 
     renderScreen(adapter, run.id);
 
-    await screen.findByText("Route 29");
+    await findRouteInList("Route 29");
     const item = routeItem("Route 29");
     expect(within(item).queryByRole("button", { name: "Remove" })).not.toBeInTheDocument();
   });
@@ -184,7 +194,7 @@ describe("RoutesScreen", () => {
 
     renderScreen(adapter, run.id);
 
-    await screen.findByText("Whirl Islands");
+    await findRouteInList("Whirl Islands");
     const item = routeItem("Whirl Islands");
     expect(within(item).queryByRole("button", { name: "Remove" })).not.toBeInTheDocument();
   });
@@ -196,7 +206,7 @@ describe("RoutesScreen", () => {
 
     renderScreen(adapter, run.id);
 
-    await screen.findByText("New Bark Town");
+    await findRouteInList("New Bark Town");
 
     expect(screen.queryByText(/route name is required/i)).not.toBeInTheDocument();
 
