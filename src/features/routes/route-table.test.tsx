@@ -249,3 +249,30 @@ describe("RouteTable", () => {
     expect(screen.queryByRole("button", { name: /log/i })).not.toBeInTheDocument();
   });
 });
+
+describe("RouteTable encounter cell", () => {
+  it("does not claim a missed encounter was never encountered", () => {
+    const routes = [makeRoute({ id: "route-1", name: "Route 29" })];
+    const encounters = [
+      makeEncounter({ id: "encounter-1", routeId: "route-1", status: "missed", speciesId: null }),
+    ];
+
+    renderTable({ routes, encounters, mons: [] });
+
+    const row = screen.getByText("Route 29").closest("tr") as HTMLElement;
+    expect(within(row).getByText("missed")).toBeInTheDocument();
+    expect(within(row).queryByText("not encountered")).not.toBeInTheDocument();
+  });
+
+  // The status pill renders the words "not encountered" too, so these assertions read the
+  // encounter cell by position. Searching the whole row matches the pill and passes whatever
+  // the cell says.
+  it("says not encountered in the encounter cell when the route has no encounter at all", () => {
+    const routes = [makeRoute({ id: "route-1", name: "Route 29" })];
+
+    renderTable({ routes, encounters: [], mons: [] });
+
+    const row = screen.getByText("Route 29").closest("tr") as HTMLElement;
+    expect(within(row).getAllByRole("cell")[1]).toHaveTextContent("not encountered");
+  });
+});

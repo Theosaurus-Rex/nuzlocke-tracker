@@ -8,7 +8,6 @@ import type { Encounter, Route } from "@/domain/types";
 import { useAddCustomRoute, useDeleteCustomRoute } from "@/storage/mutations";
 import { useEncounters, useMons, useRoutes } from "@/storage/queries";
 
-import { DevSeedEncounters } from "./dev-seed-encounters";
 import { RouteTable } from "./route-table";
 
 function RouteListItem({
@@ -141,8 +140,6 @@ export function RoutesScreen(): ReactNode {
           Nothing was removed.
         </p>
       )}
-
-      {import.meta.env.DEV && <DevSeedEncounters runId={activeRunId} routes={routes} />}
 
       {loading ? (
         <p className="text-muted-foreground mt-4 text-sm">Loading routes…</p>

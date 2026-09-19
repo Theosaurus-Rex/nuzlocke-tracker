@@ -25,6 +25,10 @@ function StatusPill({ status }: { status: RouteRowStatus }) {
 }
 
 function EncounterCell({ row }: { row: RouteRow }) {
+  if (row.encounter === null) {
+    return <span className="text-muted-foreground">not encountered</span>;
+  }
+
   if (row.mon !== null) {
     return (
       <span>
@@ -36,11 +40,13 @@ function EncounterCell({ row }: { row: RouteRow }) {
     );
   }
 
-  if (row.encounter?.speciesId != null) {
-    return <span>{speciesDisplayName(row.encounter.speciesId)}</span>;
+  // An encounter can be resolved without recording what was met, so a missed or skipped row
+  // with no species is ordinary data, not a row that was never encountered.
+  if (row.encounter.speciesId === null) {
+    return <span className="text-muted-foreground">&mdash;</span>;
   }
 
-  return <span className="text-muted-foreground">not encountered</span>;
+  return <span>{speciesDisplayName(row.encounter.speciesId)}</span>;
 }
 
 const FEATURES = tableFeatures({});
