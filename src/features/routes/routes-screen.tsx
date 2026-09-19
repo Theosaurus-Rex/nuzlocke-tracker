@@ -3,44 +3,12 @@ import { Navigate, useParams } from "react-router";
 
 import { Button } from "@/components/ui/button";
 import { buildRouteRows } from "@/domain/route-rows";
-import { canDeleteRoute } from "@/domain/routes";
-import type { Encounter, Route } from "@/domain/types";
+import type { Route } from "@/domain/types";
 import { useAddCustomRoute, useDeleteCustomRoute } from "@/storage/mutations";
 import { useEncounters, useMons, useRoutes } from "@/storage/queries";
 
+import { RouteCardList } from "./route-card-list";
 import { RouteTable } from "./route-table";
-
-function RouteListItem({
-  route,
-  encounters,
-  onDelete,
-  deletePending,
-}: {
-  route: Route;
-  encounters: readonly Encounter[];
-  onDelete: (route: Route) => void;
-  deletePending: boolean;
-}): ReactNode {
-  const removable = canDeleteRoute(route, encounters);
-
-  return (
-    <li className="flex items-center justify-between gap-3 rounded border border-border p-3">
-      <div className="min-w-0 truncate">
-        <span>{route.name}</span>
-        {route.isCustom && (
-          <span className="text-muted-foreground ml-2 rounded border border-border px-1.5 py-0.5 text-xs uppercase">
-            Custom
-          </span>
-        )}
-      </div>
-      {removable && (
-        <Button size="sm" variant="ghost" disabled={deletePending} onClick={() => onDelete(route)}>
-          Remove
-        </Button>
-      )}
-    </li>
-  );
-}
 
 export function RoutesScreen(): ReactNode {
   const { runId } = useParams<{ runId: string }>();
@@ -157,17 +125,14 @@ export function RoutesScreen(): ReactNode {
               deletePending={deleteRoute.isPending}
             />
           </div>
-          <ol className="mt-4 flex list-none flex-col gap-2 p-0 md:hidden">
-            {routes.map((route) => (
-              <RouteListItem
-                key={route.id}
-                route={route}
-                encounters={encounters}
-                onDelete={handleDelete}
-                deletePending={deleteRoute.isPending}
-              />
-            ))}
-          </ol>
+          <div className="mt-4 md:hidden">
+            <RouteCardList
+              rows={rows}
+              encounters={encounters}
+              onDelete={handleDelete}
+              deletePending={deleteRoute.isPending}
+            />
+          </div>
         </>
       )}
     </div>
