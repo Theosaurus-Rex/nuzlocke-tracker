@@ -259,7 +259,7 @@ describe("AppShell navigation", () => {
     await waitFor(() => {
       expect(router.state.location.pathname).toBe("/runs/run-123/routes");
     });
-    expect(screen.getByRole("heading", { name: "Routes" })).toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: "Encounter routes" })).toBeInTheDocument();
   });
 
   it("renders the not-found screen for an unknown path", () => {

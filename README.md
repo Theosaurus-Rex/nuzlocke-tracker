@@ -78,7 +78,9 @@ docs/            design specs and the wireframes
 ```
 
 Dependencies point one way: `features → storage → domain`. `domain/` imports from none of
-the others, which is what makes the game rules testable without a database.
+the others, which is what makes the game rules testable without a database. `game/` is a leaf
+holding static game data; both `features/` and `storage/` read it, and it imports only types
+from `domain/`.
 
 ---
 

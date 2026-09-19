@@ -6,15 +6,17 @@
  * leave an encounter pointing at a mon that does not exist. The new mon's id is generated at the
  * call site, never inside `catchEncounter` itself, which is pure by design.
  *
- * A run created by `useCreateRun` has no routes or fights yet; seeding those is out of scope
- * here.
+ * A run created by `useCreateRun` has no fights yet; seeding those is out of scope here.
  */
 
 import { useMutation, useQueryClient, type UseMutationResult } from "@tanstack/react-query";
 
 import { DEFAULT_RULES } from "@/domain/rules";
+import { canDeleteRoute, nextRouteOrder } from "@/domain/routes";
 import { catchEncounter, type CatchDetails } from "@/domain/transitions";
-import type { Encounter, GameId, Mon, Rules, Run } from "@/domain/types";
+import type { Encounter, GameId, Mon, Route, Rules, Run } from "@/domain/types";
+import { GAMES } from "@/game/registry";
+import { seedRoutes } from "@/game/seed";
 
 import type { StorageAdapter } from "./adapter";
 import { invalidateRun, queryKeys } from "./queries";
@@ -127,12 +129,18 @@ export interface CreateRunInput {
 }
 
 async function persistCreateRun(adapter: StorageAdapter, input: CreateRunInput): Promise<Run> {
-  return adapter.runs.put({
-    name: input.name,
-    game: input.game,
-    status: "active",
-    rules: input.rules ?? DEFAULT_RULES,
-    finishedAt: null,
+  return adapter.transaction(async (tx) => {
+    const run = await tx.runs.put({
+      name: input.name,
+      game: input.game,
+      status: "active",
+      rules: input.rules ?? DEFAULT_RULES,
+      finishedAt: null,
+    });
+
+    await tx.routes.putMany(seedRoutes(run.id, GAMES[input.game]));
+
+    return run;
   });
 }
 
@@ -151,6 +159,73 @@ export function useCreateRun(): UseMutationResult<Run, Error, CreateRunInput> {
         invalidateRun(queryClient, run.id),
         queryClient.invalidateQueries({ queryKey: queryKeys.runs() }),
       ]);
+    },
+  });
+}
+
+export interface AddCustomRouteInput {
+  runId: string;
+  name: string;
+  /** The run's current routes, used to place the new route after every existing one. */
+  routes: readonly Route[];
+}
+
+async function persistAddCustomRoute(
+  adapter: StorageAdapter,
+  input: AddCustomRouteInput,
+): Promise<Route> {
+  return adapter.routes.put({
+    runId: input.runId,
+    name: input.name.trim(),
+    order: nextRouteOrder(input.routes),
+    isCustom: true,
+    gameRouteId: null,
+  });
+}
+
+export function useAddCustomRoute(): UseMutationResult<Route, Error, AddCustomRouteInput> {
+  const adapter = useStorage();
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: (input: AddCustomRouteInput) => persistAddCustomRoute(adapter, input),
+    onSuccess: async (route) => {
+      await invalidateRun(queryClient, route.runId);
+    },
+  });
+}
+
+export interface DeleteCustomRouteInput {
+  route: Route;
+}
+
+async function persistDeleteCustomRoute(
+  adapter: StorageAdapter,
+  input: DeleteCustomRouteInput,
+): Promise<void> {
+  await adapter.transaction(async (tx) => {
+    const encounters = await tx.encounters.where("runId", input.route.runId);
+
+    if (!canDeleteRoute(input.route, encounters)) {
+      throw new Error(
+        input.route.isCustom
+          ? `Cannot delete route ${input.route.id}: it has an encounter logged against it.`
+          : `Cannot delete route ${input.route.id}: it is not a custom route.`,
+      );
+    }
+
+    await tx.routes.delete(input.route.id);
+  });
+}
+
+export function useDeleteCustomRoute(): UseMutationResult<void, Error, DeleteCustomRouteInput> {
+  const adapter = useStorage();
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: (input: DeleteCustomRouteInput) => persistDeleteCustomRoute(adapter, input),
+    onSuccess: async (_result, input) => {
+      await invalidateRun(queryClient, input.route.runId);
     },
   });
 }
