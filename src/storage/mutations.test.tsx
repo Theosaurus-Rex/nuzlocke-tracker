@@ -1,21 +1,29 @@
 /**
- * Route-seeding and custom-route mutations, tested against the in-memory adapter. Covers what
- * `useCreateRun`, `useAddCustomRoute` and `useDeleteCustomRoute` do with the storage layer: atomic
- * writes, invalidation, and the guards around deleting a route.
+ * Route-seeding, custom-route and encounter-logging mutations, tested against the in-memory
+ * adapter. Covers what `useCreateRun`, `useAddCustomRoute`, `useDeleteCustomRoute` and
+ * `useLogEncounter` do with the storage layer: atomic writes, invalidation, and the guards
+ * around deleting a route or double-logging an encounter.
  */
 
 import type { ReactNode } from "react";
 
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { renderHook } from "@testing-library/react";
+import { renderHook, waitFor } from "@testing-library/react";
 import { describe, expect, it } from "vitest";
 
+import type { CatchDetails } from "@/domain/transitions";
 import type { Encounter, Route, Run } from "@/domain/types";
 import { heartgold } from "@/game/data/heartgold";
 
 import type { StorageAdapter } from "./adapter";
 import { createMemoryAdapter } from "./memory-adapter";
-import { useAddCustomRoute, useCreateRun, useDeleteCustomRoute } from "./mutations";
+import {
+  useAddCustomRoute,
+  useCreateRun,
+  useDeleteCustomRoute,
+  useLogEncounter,
+} from "./mutations";
+import { useEncounters, useMons } from "./queries";
 import { StorageProvider } from "./storage-context";
 
 function makeEncounterDraft(
@@ -78,6 +86,44 @@ function withFailingRoutesPutMany(base: StorageAdapter): StorageAdapter {
     deathsByFight: (fightId) => base.deathsByFight(fightId),
   };
 }
+
+/**
+ * Wraps a `StorageAdapter` so `mons.put` always rejects while everything else goes through to
+ * `base`. `transaction` re-wraps the scoped adapter it hands the callback, so the failure is
+ * visible inside a transaction, proving a real rollback of the encounter row written just before
+ * it, not merely a rejected promise.
+ */
+function withFailingMonsPut(base: StorageAdapter): StorageAdapter {
+  return {
+    init: () => base.init(),
+    runs: base.runs,
+    routes: base.routes,
+    encounters: base.encounters,
+    mons: {
+      ...base.mons,
+      put: () => Promise.reject(new Error("simulated mon write failure")),
+    },
+    deaths: base.deaths,
+    fights: base.fights,
+    transaction: (fn) => base.transaction((tx) => fn(withFailingMonsPut(tx))),
+    exportAll: () => base.exportAll(),
+    clear: () => base.clear(),
+    deathsByFight: (fightId) => base.deathsByFight(fightId),
+  };
+}
+
+const CATCH_DETAILS: CatchDetails = {
+  speciesId: "chikorita",
+  levelCaught: 6,
+  level: 18,
+  placement: "party",
+  nickname: null,
+  gender: null,
+  nature: null,
+  ability: null,
+  heldItem: null,
+  moves: [],
+};
 
 async function createSeededRun(adapter: StorageAdapter): Promise<{ run: Run; routes: Route[] }> {
   const { result } = renderHook(() => useCreateRun(), { wrapper: createWrapper(adapter) });
@@ -196,5 +242,239 @@ describe("useDeleteCustomRoute", () => {
     );
 
     expect(await adapter.routes.get(seeded.id)).toEqual(seeded);
+  });
+});
+
+describe("useLogEncounter", () => {
+  it("logs a caught encounter, writing the encounter and the mon and linking them", async () => {
+    const adapter = createMemoryAdapter();
+    await adapter.init();
+    const { run, routes } = await createSeededRun(adapter);
+    const route = routes[0];
+    if (route === undefined) {
+      throw new Error("expected at least one seeded route");
+    }
+
+    const { result } = renderHook(() => useLogEncounter(), { wrapper: createWrapper(adapter) });
+    const { encounter, mon } = await result.current.mutateAsync({
+      runId: run.id,
+      routeId: route.id,
+      outcome: "caught",
+      party: [],
+      details: CATCH_DETAILS,
+      existingEncounters: [],
+    });
+
+    expect(encounter.status).toBe("caught");
+    expect(encounter.routeId).toBe(route.id);
+    expect(encounter.monId).toBe(mon?.id);
+    expect(mon).not.toBeNull();
+    expect(mon?.speciesId).toBe("chikorita");
+    expect(mon?.levelCaught).toBe(6);
+    expect(mon?.level).toBe(18);
+
+    const persistedEncounter = await adapter.encounters.get(encounter.id);
+    expect(persistedEncounter?.status).toBe("caught");
+    expect(persistedEncounter?.monId).toBe(mon?.id);
+
+    const persistedMon = mon === null ? undefined : await adapter.mons.get(mon.id);
+    expect(persistedMon).toBeDefined();
+  });
+
+  it("logs a missed encounter, writing the encounter with no mon", async () => {
+    const adapter = createMemoryAdapter();
+    await adapter.init();
+    const { run, routes } = await createSeededRun(adapter);
+    const route = routes[0];
+    if (route === undefined) {
+      throw new Error("expected at least one seeded route");
+    }
+
+    const { result } = renderHook(() => useLogEncounter(), { wrapper: createWrapper(adapter) });
+    const { encounter, mon } = await result.current.mutateAsync({
+      runId: run.id,
+      routeId: route.id,
+      outcome: "missed",
+      party: [],
+      existingEncounters: [],
+    });
+
+    expect(encounter.status).toBe("missed");
+    expect(mon).toBeNull();
+
+    const persistedEncounter = await adapter.encounters.get(encounter.id);
+    expect(persistedEncounter?.status).toBe("missed");
+    expect(await adapter.mons.getAll()).toEqual([]);
+  });
+
+  it("logs a missed encounter's optional species guess onto the encounter", async () => {
+    const adapter = createMemoryAdapter();
+    await adapter.init();
+    const { run, routes } = await createSeededRun(adapter);
+    const route = routes[0];
+    if (route === undefined) {
+      throw new Error("expected at least one seeded route");
+    }
+
+    const { result } = renderHook(() => useLogEncounter(), { wrapper: createWrapper(adapter) });
+    const { encounter } = await result.current.mutateAsync({
+      runId: run.id,
+      routeId: route.id,
+      outcome: "missed",
+      party: [],
+      speciesId: "geodude",
+      existingEncounters: [],
+    });
+
+    expect(encounter.speciesId).toBe("geodude");
+  });
+
+  it("logs a skipped encounter, writing the encounter with no mon", async () => {
+    const adapter = createMemoryAdapter();
+    await adapter.init();
+    const { run, routes } = await createSeededRun(adapter);
+    const route = routes[0];
+    if (route === undefined) {
+      throw new Error("expected at least one seeded route");
+    }
+
+    const { result } = renderHook(() => useLogEncounter(), { wrapper: createWrapper(adapter) });
+    const { encounter, mon } = await result.current.mutateAsync({
+      runId: run.id,
+      routeId: route.id,
+      outcome: "skipped",
+      party: [],
+      existingEncounters: [],
+    });
+
+    expect(encounter.status).toBe("skipped");
+    expect(mon).toBeNull();
+
+    const persistedEncounter = await adapter.encounters.get(encounter.id);
+    expect(persistedEncounter?.status).toBe("skipped");
+    expect(await adapter.mons.getAll()).toEqual([]);
+  });
+
+  it("invalidates the run's encounters and mons queries on success", async () => {
+    const adapter = createMemoryAdapter();
+    await adapter.init();
+    const { run, routes } = await createSeededRun(adapter);
+    const route = routes[0];
+    if (route === undefined) {
+      throw new Error("expected at least one seeded route");
+    }
+
+    const wrapper = createWrapper(adapter);
+    const encounters = renderHook(() => useEncounters(run.id), { wrapper });
+    const mons = renderHook(() => useMons(run.id), { wrapper });
+    const logHook = renderHook(() => useLogEncounter(), { wrapper });
+
+    await waitFor(() => {
+      expect(encounters.result.current.data).toEqual([]);
+    });
+
+    await logHook.result.current.mutateAsync({
+      runId: run.id,
+      routeId: route.id,
+      outcome: "caught",
+      party: [],
+      details: CATCH_DETAILS,
+      existingEncounters: [],
+    });
+
+    await waitFor(() => {
+      expect(encounters.result.current.data).toHaveLength(1);
+    });
+    await waitFor(() => {
+      expect(mons.result.current.data).toHaveLength(1);
+    });
+  });
+
+  it("refuses a second log against a route that already has an encounter", async () => {
+    const adapter = createMemoryAdapter();
+    await adapter.init();
+    const { run, routes } = await createSeededRun(adapter);
+    const route = routes[0];
+    if (route === undefined) {
+      throw new Error("expected at least one seeded route");
+    }
+
+    const alreadyLogged: Encounter = {
+      id: "existing-encounter",
+      runId: run.id,
+      routeId: route.id,
+      status: "caught",
+      speciesId: "chikorita",
+      level: 6,
+      monId: "mon-existing",
+      notes: null,
+      createdAt: "2026-09-17T00:00:00.000Z",
+      updatedAt: "2026-09-17T00:00:00.000Z",
+    };
+
+    const { result } = renderHook(() => useLogEncounter(), { wrapper: createWrapper(adapter) });
+    await expect(
+      result.current.mutateAsync({
+        runId: run.id,
+        routeId: route.id,
+        outcome: "skipped",
+        party: [],
+        existingEncounters: [alreadyLogged],
+      }),
+    ).rejects.toThrow(/already has an encounter/);
+
+    expect(await adapter.encounters.where("runId", run.id)).toEqual([]);
+  });
+
+  it("refuses a caught outcome without details", async () => {
+    const adapter = createMemoryAdapter();
+    await adapter.init();
+    const { run, routes } = await createSeededRun(adapter);
+    const route = routes[0];
+    if (route === undefined) {
+      throw new Error("expected at least one seeded route");
+    }
+
+    const { result } = renderHook(() => useLogEncounter(), { wrapper: createWrapper(adapter) });
+    await expect(
+      result.current.mutateAsync({
+        runId: run.id,
+        routeId: route.id,
+        outcome: "caught",
+        party: [],
+        existingEncounters: [],
+      }),
+    ).rejects.toThrow(/requires details/);
+
+    expect(await adapter.encounters.where("runId", run.id)).toEqual([]);
+  });
+
+  it("is atomic: a failure writing the mon leaves no encounter row behind", async () => {
+    const adapter = createMemoryAdapter();
+    await adapter.init();
+    const { run, routes } = await createSeededRun(adapter);
+    const route = routes[0];
+    if (route === undefined) {
+      throw new Error("expected at least one seeded route");
+    }
+
+    const failingAdapter = withFailingMonsPut(adapter);
+    const { result } = renderHook(() => useLogEncounter(), {
+      wrapper: createWrapper(failingAdapter),
+    });
+
+    await expect(
+      result.current.mutateAsync({
+        runId: run.id,
+        routeId: route.id,
+        outcome: "caught",
+        party: [],
+        details: CATCH_DETAILS,
+        existingEncounters: [],
+      }),
+    ).rejects.toThrow("simulated mon write failure");
+
+    expect(await adapter.encounters.where("runId", run.id)).toEqual([]);
+    expect(await adapter.mons.getAll()).toEqual([]);
   });
 });

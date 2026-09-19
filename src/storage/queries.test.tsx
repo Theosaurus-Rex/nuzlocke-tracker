@@ -149,7 +149,9 @@ function makeFightDraft(
 
 const CATCH_DETAILS: CatchDetails = {
   speciesId: "chikorita",
+  levelCaught: 5,
   level: 5,
+  placement: "party",
   nickname: null,
   gender: "female",
   nature: null,

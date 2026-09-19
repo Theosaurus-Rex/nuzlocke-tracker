@@ -55,7 +55,11 @@ function nextFreeSlot(party: readonly Mon[], excludeMonId?: string): number | nu
 /** The attributes of a mon known only at the moment it's caught. */
 export interface CatchDetails {
   speciesId: string;
+  /** The level it was met at. */
+  levelCaught: number;
+  /** Its level now, which can be well past `levelCaught` by the time it's logged. */
   level: number;
+  placement: "party" | "box";
   nickname: string | null;
   gender: Gender | null;
   nature: string | null;
@@ -83,15 +87,21 @@ export function catchEncounter({
     );
   }
 
+  if (details.level < details.levelCaught) {
+    throw new Error(
+      `A mon's current level (${details.level}) cannot be below the level it was caught at (${details.levelCaught}).`,
+    );
+  }
+
   const updatedEncounter: Encounter = {
     ...encounter,
     status: "caught",
     speciesId: details.speciesId,
-    level: details.level,
+    level: details.levelCaught,
     monId,
   };
 
-  const slot = nextFreeSlot(party);
+  const slot = details.placement === "party" ? nextFreeSlot(party) : null;
 
   const mon: Draft<Mon> = {
     id: monId,
@@ -102,7 +112,7 @@ export function catchEncounter({
     nickname: details.nickname,
     gender: details.gender,
     level: details.level,
-    levelCaught: details.level,
+    levelCaught: details.levelCaught,
     nature: details.nature,
     ability: details.ability,
     heldItem: details.heldItem,
