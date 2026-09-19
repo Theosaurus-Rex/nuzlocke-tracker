@@ -179,7 +179,7 @@ describe("AppShell navigation", () => {
     expect(linksIn(tabBar)).toEqual(expected);
   });
 
-  it("renders the run's five screens in both shells when a run is active", () => {
+  it("renders the run's screens plus a way back to the run list, in both shells", () => {
     renderAt("/runs/run-123/party");
 
     const { sidebar, tabBar } = shells();
@@ -189,6 +189,7 @@ describe("AppShell navigation", () => {
 
     const hrefs = linksIn(sidebar).map((link) => link.href);
     expect(hrefs).toEqual([
+      "/",
       "/runs/run-123/routes",
       "/runs/run-123/party",
       "/runs/run-123/boxes",
@@ -196,6 +197,26 @@ describe("AppShell navigation", () => {
       "/runs/run-123/fights",
     ]);
   });
+
+  it.each([["Sidebar navigation" as const], ["Tab bar navigation" as const]])(
+    "lets %s out of a run, so Settings and its JSON export stay reachable",
+    async (navLabel) => {
+      const { router } = renderAt("/runs/run-123/party");
+
+      const nav = screen.getByRole("navigation", { name: navLabel });
+      await userEvent.click(within(nav).getByRole("link", { name: "Runs" }));
+
+      await waitFor(() => {
+        expect(router.state.location.pathname).toBe("/");
+      });
+
+      const navAfter = screen.getByRole("navigation", { name: navLabel });
+      expect(within(navAfter).getByRole("link", { name: "Settings" })).toHaveAttribute(
+        "href",
+        "/settings",
+      );
+    },
+  );
 
   it("links each global nav item to its configured path", () => {
     renderAt("/");
@@ -238,6 +259,7 @@ describe("AppShell navigation", () => {
   it("updates the nav hrefs when switching runs", () => {
     const first = renderAt("/runs/run-a/party");
     expect(linksIn(shells().sidebar).map((link) => link.href)).toEqual([
+      "/",
       "/runs/run-a/routes",
       "/runs/run-a/party",
       "/runs/run-a/boxes",
@@ -248,6 +270,7 @@ describe("AppShell navigation", () => {
 
     renderAt("/runs/run-b/party");
     expect(linksIn(shells().sidebar).map((link) => link.href)).toEqual([
+      "/",
       "/runs/run-b/routes",
       "/runs/run-b/party",
       "/runs/run-b/boxes",
