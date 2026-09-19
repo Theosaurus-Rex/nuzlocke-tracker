@@ -179,7 +179,12 @@ export function RunListScreen(): ReactNode {
 
   return (
     <div className="p-4">
-      <h1 className="text-xl">Runs</h1>
+      <div className="flex items-center justify-between gap-3">
+        <h1 className="text-xl">Runs</h1>
+        <Link to="/runs/new" className={buttonVariants({ size: "sm" })}>
+          New run
+        </Link>
+      </div>
 
       <div className="mt-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <div role="tablist" aria-label="Run status" className="flex gap-1">
@@ -215,10 +220,6 @@ export function RunListScreen(): ReactNode {
             placeholder="Search runs by name"
             className="h-8 w-full rounded border border-border bg-background px-2.5 text-sm sm:w-64"
           />
-          <Link to="/runs/new" aria-label="New run" className={buttonVariants({ size: "sm" })}>
-            <span className="hidden sm:inline">New run</span>
-            <span className="sm:hidden">+</span>
-          </Link>
         </div>
       </div>
 
