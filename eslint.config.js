@@ -76,5 +76,13 @@ export default tseslint.config(
       "react-refresh/only-export-components": "off",
     },
   },
+  {
+    // route-presentation.tsx co-locates STATUS_LABEL with the components that render it, so
+    // both the table and the card list read the same object rather than two copies.
+    files: ["src/features/routes/route-presentation.tsx"],
+    rules: {
+      "react-refresh/only-export-components": ["error", { allowExportNames: ["STATUS_LABEL"] }],
+    },
+  },
   eslintConfigPrettier,
 );

@@ -4,16 +4,8 @@ import { Button } from "@/components/ui/button";
 import { canDeleteRoute } from "@/domain/routes";
 import type { RouteRow, RouteRowStatus } from "@/domain/route-rows";
 import type { Encounter, Route } from "@/domain/types";
-import { speciesDisplayName } from "@/game/pokedex";
 
-const STATUS_LABEL: Record<RouteRowStatus, string> = {
-  "not-encountered": "not encountered",
-  open: "open",
-  caught: "caught",
-  missed: "missed",
-  skipped: "skipped",
-  dead: "dead",
-};
+import { RowSpecies, STATUS_LABEL } from "./route-presentation";
 
 function StatusPill({ status }: { status: RouteRowStatus }) {
   const className =
@@ -29,24 +21,9 @@ function EncounterCell({ row }: { row: RouteRow }) {
     return <span className="text-muted-foreground">not encountered</span>;
   }
 
-  if (row.mon !== null) {
-    return (
-      <span>
-        {speciesDisplayName(row.mon.speciesId)}
-        {row.mon.nickname !== null && (
-          <span className="text-muted-foreground"> &ldquo;{row.mon.nickname}&rdquo;</span>
-        )}
-      </span>
-    );
-  }
-
-  // An encounter can be resolved without recording what was met, so a missed or skipped row
-  // with no species is ordinary data, not a row that was never encountered.
-  if (row.encounter.speciesId === null) {
-    return <span className="text-muted-foreground">&mdash;</span>;
-  }
-
-  return <span>{speciesDisplayName(row.encounter.speciesId)}</span>;
+  return (
+    <RowSpecies row={row} emptyFallback={<span className="text-muted-foreground">&mdash;</span>} />
+  );
 }
 
 const FEATURES = tableFeatures({});
