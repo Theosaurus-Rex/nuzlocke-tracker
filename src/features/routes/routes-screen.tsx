@@ -2,12 +2,15 @@ import { useState, type FormEvent, type ReactNode } from "react";
 import { Navigate, useParams } from "react-router";
 
 import { Button } from "@/components/ui/button";
+import { buildRouteRows } from "@/domain/route-rows";
 import { canDeleteRoute } from "@/domain/routes";
 import type { Encounter, Route } from "@/domain/types";
 import { useAddCustomRoute, useDeleteCustomRoute } from "@/storage/mutations";
-import { useEncounters, useRoutes } from "@/storage/queries";
+import { useEncounters, useMons, useRoutes } from "@/storage/queries";
 
-function RouteRow({
+import { RouteTable } from "./route-table";
+
+function RouteListItem({
   route,
   encounters,
   onDelete,
@@ -43,6 +46,7 @@ export function RoutesScreen(): ReactNode {
   const { runId } = useParams<{ runId: string }>();
   const routesQuery = useRoutes(runId ?? "");
   const encountersQuery = useEncounters(runId);
+  const monsQuery = useMons(runId);
   const addRoute = useAddCustomRoute();
   const deleteRoute = useDeleteCustomRoute();
 
@@ -80,9 +84,12 @@ export function RoutesScreen(): ReactNode {
     deleteRoute.mutate({ route });
   }
 
-  const loading = routesQuery.isPending || encountersQuery.isPending;
+  const loading = routesQuery.isPending || encountersQuery.isPending || monsQuery.isPending;
   const routes = routesQuery.data ?? [];
   const encounters = encountersQuery.data ?? [];
+  const mons = monsQuery.data ?? [];
+
+  const rows = buildRouteRows({ routes, encounters, mons });
 
   return (
     <div className="p-4">
@@ -141,17 +148,27 @@ export function RoutesScreen(): ReactNode {
           No routes yet. Add one above to get started.
         </p>
       ) : (
-        <ol className="mt-4 flex list-none flex-col gap-2 p-0">
-          {routes.map((route) => (
-            <RouteRow
-              key={route.id}
-              route={route}
+        <>
+          <div className="mt-4 hidden overflow-x-auto rounded border border-border md:block">
+            <RouteTable
+              rows={rows}
               encounters={encounters}
               onDelete={handleDelete}
               deletePending={deleteRoute.isPending}
             />
-          ))}
-        </ol>
+          </div>
+          <ol className="mt-4 flex list-none flex-col gap-2 p-0 md:hidden">
+            {routes.map((route) => (
+              <RouteListItem
+                key={route.id}
+                route={route}
+                encounters={encounters}
+                onDelete={handleDelete}
+                deletePending={deleteRoute.isPending}
+              />
+            ))}
+          </ol>
+        </>
       )}
     </div>
   );

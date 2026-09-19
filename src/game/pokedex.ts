@@ -15,6 +15,7 @@ import { species, type SpeciesDef } from "@/game/data/pokedex/species";
 import type { Type } from "@/game/data/pokedex/types";
 
 const speciesById = new Map<number, SpeciesDef>(species.map((s) => [s.id, s]));
+const speciesByName = new Map<string, SpeciesDef>(species.map((s) => [s.name, s]));
 const moveById = new Map<number, MoveDef>(moves.map((m) => [m.id, m]));
 const abilityById = new Map<number, AbilityDef>(abilities.map((a) => [a.id, a]));
 const abilityByName = new Map<string, AbilityDef>(abilities.map((a) => [a.name, a]));
@@ -22,6 +23,22 @@ const itemByName = new Map<string, ItemDef>(items.map((i) => [i.name, i]));
 
 export function getSpecies(id: number): SpeciesDef | undefined {
   return speciesById.get(id);
+}
+
+export function getSpeciesByName(name: string): SpeciesDef | undefined {
+  return speciesByName.get(name);
+}
+
+/**
+ * A stored species id turned into something renderable: hyphens become spaces and each word is
+ * capitalised. Works on a name absent from the pokedex, since a romhack or randomiser species is
+ * a supported case, not an error.
+ */
+export function speciesDisplayName(name: string): string {
+  return name
+    .split("-")
+    .map((word) => word.charAt(0).toUpperCase() + word.slice(1))
+    .join(" ");
 }
 
 /**
