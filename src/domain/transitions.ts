@@ -189,6 +189,34 @@ export function killMon({
   return { mon: updatedMon, death };
 }
 
+/** The fields of a caught mon that a correction can change. */
+export interface MonAmendments {
+  nickname: string | null;
+  gender: Gender | null;
+  level: number;
+  nature: string | null;
+  ability: string | null;
+  heldItem: string | null;
+}
+
+export function amendMon({ mon, amendments }: { mon: Mon; amendments: MonAmendments }): Mon {
+  if (amendments.level < mon.levelCaught) {
+    throw new Error(
+      `A mon's current level (${amendments.level}) cannot be below the level it was caught at (${mon.levelCaught}).`,
+    );
+  }
+
+  return {
+    ...mon,
+    nickname: amendments.nickname,
+    gender: amendments.gender,
+    level: amendments.level,
+    nature: amendments.nature,
+    ability: amendments.ability,
+    heldItem: amendments.heldItem,
+  };
+}
+
 export function clearFight({ fight, clearedAt }: { fight: Fight; clearedAt: string }): Fight {
   if (fight.status !== "pending") {
     throw new Error(`Cannot clear fight ${fight.id}: status is '${fight.status}', not 'pending'.`);

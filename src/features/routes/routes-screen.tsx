@@ -4,7 +4,8 @@ import { Navigate, useParams } from "react-router";
 import { Button } from "@/components/ui/button";
 import { DEFAULT_RULES } from "@/domain/rules";
 import { buildRouteRows } from "@/domain/route-rows";
-import type { Route } from "@/domain/types";
+import type { Mon, Route } from "@/domain/types";
+import { EditMonDialog } from "@/features/encounters/edit-mon-dialog";
 import { LogEncounterDialog } from "@/features/encounters/log-encounter-dialog";
 import { useAddCustomRoute, useDeleteCustomRoute } from "@/storage/mutations";
 import { useEncounters, useMons, useRoutes, useRun } from "@/storage/queries";
@@ -24,6 +25,7 @@ export function RoutesScreen(): ReactNode {
   const [name, setName] = useState("");
   const [submitted, setSubmitted] = useState(false);
   const [logRoute, setLogRoute] = useState<Route | null>(null);
+  const [editTarget, setEditTarget] = useState<{ route: Route; mon: Mon } | null>(null);
 
   if (!runId) {
     return <Navigate to="/" replace />;
@@ -54,6 +56,10 @@ export function RoutesScreen(): ReactNode {
 
   function handleDelete(route: Route): void {
     deleteRoute.mutate({ route });
+  }
+
+  function handleEditMon(route: Route, mon: Mon): void {
+    setEditTarget({ route, mon });
   }
 
   const loading = routesQuery.isPending || encountersQuery.isPending || monsQuery.isPending;
@@ -128,6 +134,7 @@ export function RoutesScreen(): ReactNode {
               onDelete={handleDelete}
               deletePending={deleteRoute.isPending}
               onLogEncounter={setLogRoute}
+              onEditMon={handleEditMon}
             />
           </div>
           <div className="mt-4 md:hidden">
@@ -137,6 +144,7 @@ export function RoutesScreen(): ReactNode {
               onDelete={handleDelete}
               deletePending={deleteRoute.isPending}
               onLogEncounter={setLogRoute}
+              onEditMon={handleEditMon}
             />
           </div>
         </>
@@ -155,6 +163,20 @@ export function RoutesScreen(): ReactNode {
           rules={runQuery.data?.rules ?? DEFAULT_RULES}
           mons={mons}
           existingEncounters={encounters}
+        />
+      )}
+
+      {editTarget && (
+        <EditMonDialog
+          open
+          onOpenChange={(nextOpen) => {
+            if (!nextOpen) {
+              setEditTarget(null);
+            }
+          }}
+          route={editTarget.route}
+          mon={editTarget.mon}
+          rules={runQuery.data?.rules ?? DEFAULT_RULES}
         />
       )}
     </div>

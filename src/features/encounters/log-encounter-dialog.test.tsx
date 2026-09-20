@@ -184,6 +184,35 @@ describe("LogEncounterDialog", () => {
     expect(await adapter.encounters.where("runId", "run-1")).toEqual([]);
   });
 
+  it("saves every detail field onto the caught mon, not just the species and level", async () => {
+    const user = userEvent.setup();
+    const { adapter, onOpenChange } = renderDialog({});
+
+    await user.type(screen.getByLabelText("Species"), "Chikorita");
+    await user.type(screen.getByLabelText("Level caught"), "6");
+    await user.type(screen.getByLabelText(/^Nickname/), "Sprig");
+    await user.click(
+      within(screen.getByRole("radiogroup", { name: "Gender" })).getByRole("radio", {
+        name: "Male",
+      }),
+    );
+    await user.type(screen.getByLabelText("Ability"), "Overgrow");
+    await user.type(screen.getByLabelText("Held item"), "Miracle Seed");
+    await user.click(screen.getByRole("button", { name: "Save encounter" }));
+
+    await waitFor(() => {
+      expect(onOpenChange).toHaveBeenCalledWith(false);
+    });
+
+    const [mon] = await adapter.mons.where("runId", "run-1");
+    expect(mon).toMatchObject({
+      nickname: "Sprig",
+      gender: "male",
+      ability: "Overgrow",
+      heldItem: "Miracle Seed",
+    });
+  });
+
   it("blocks submit on a missing nickname when the clause is on, and shows nothing was saved", async () => {
     const user = userEvent.setup();
     const { adapter, onOpenChange } = renderDialog({

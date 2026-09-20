@@ -1,11 +1,11 @@
 import type { ReactNode } from "react";
 
-import { PlusIcon } from "lucide-react";
+import { PencilIcon, PlusIcon } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import { canDeleteRoute } from "@/domain/routes";
 import type { RouteRow, RouteRowStatus } from "@/domain/route-rows";
-import type { Encounter, Route } from "@/domain/types";
+import type { Encounter, Mon, Route } from "@/domain/types";
 import { cn } from "@/lib/utils";
 
 import { RowSpecies, STATUS_LABEL } from "./route-presentation";
@@ -48,6 +48,7 @@ export interface RouteCardListProps {
   onDelete: (route: Route) => void;
   deletePending: boolean;
   onLogEncounter: (route: Route) => void;
+  onEditMon: (route: Route, mon: Mon) => void;
 }
 
 export function RouteCardList({
@@ -56,11 +57,14 @@ export function RouteCardList({
   onDelete,
   deletePending,
   onLogEncounter,
+  onEditMon,
 }: RouteCardListProps): ReactNode {
   return (
     <ul className="m-0 flex list-none flex-col gap-2 p-0">
       {rows.map((row) => {
         const removable = canDeleteRoute(row.route, encounters);
+        const mon = row.mon;
+        const editable = (row.status === "caught" || row.status === "dead") && mon !== null;
 
         return (
           <li
@@ -87,6 +91,16 @@ export function RouteCardList({
                       onClick={() => onLogEncounter(row.route)}
                     >
                       <PlusIcon />
+                    </Button>
+                  )}
+                  {editable && mon !== null && (
+                    <Button
+                      size="icon-sm"
+                      variant="outline"
+                      aria-label="Edit mon"
+                      onClick={() => onEditMon(row.route, mon)}
+                    >
+                      <PencilIcon />
                     </Button>
                   )}
                   {removable && (

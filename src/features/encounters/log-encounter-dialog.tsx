@@ -15,10 +15,10 @@ import { countByMonStatus } from "@/domain/derive";
 import { validateEncounter, type EncounterField } from "@/domain/encounter-validation";
 import type { CatchDetails } from "@/domain/transitions";
 import type { Encounter, Gender, Mon, Route, Rules } from "@/domain/types";
-import { getAllNatures } from "@/game/pokedex";
 import { useLogEncounter } from "@/storage/mutations";
 import { cn } from "@/lib/utils";
 
+import { AbilityField, GenderField, HeldItemField, NatureField, NicknameField } from "./mon-fields";
 import { SpeciesPicker } from "./species-picker";
 
 type Outcome = "caught" | "missed" | "skipped";
@@ -27,12 +27,6 @@ const OUTCOMES: { value: Outcome; label: string }[] = [
   { value: "caught", label: "Caught" },
   { value: "missed", label: "Missed" },
   { value: "skipped", label: "Skipped" },
-];
-
-const GENDERS: { value: Gender; label: string }[] = [
-  { value: "male", label: "Male" },
-  { value: "female", label: "Female" },
-  { value: "genderless", label: "Genderless" },
 ];
 
 function levelFromText(text: string): number {
@@ -220,42 +214,15 @@ function LogEncounterForm({
             )}
           </div>
 
-          <div>
-            <Label htmlFor="log-encounter-nickname">
-              Nickname{rules.nicknamesRequired && <span aria-hidden="true"> *</span>}
-            </Label>
-            <Input
-              id="log-encounter-nickname"
-              value={nickname}
-              onChange={(event) => setNickname(event.target.value)}
-              aria-invalid={errors.nickname !== undefined}
-              aria-describedby={errors.nickname ? "log-encounter-nickname-error" : undefined}
-            />
-            {errors.nickname && (
-              <p id="log-encounter-nickname-error" className="mt-1 text-sm text-destructive">
-                {errors.nickname}
-              </p>
-            )}
-          </div>
+          <NicknameField
+            id="log-encounter-nickname"
+            value={nickname}
+            onChange={setNickname}
+            required={rules.nicknamesRequired}
+            error={errors.nickname}
+          />
 
-          <div>
-            <span className="mb-1 block text-sm font-medium">Gender</span>
-            <div role="radiogroup" aria-label="Gender" className="flex gap-2">
-              {GENDERS.map((option) => (
-                <Button
-                  key={option.value}
-                  type="button"
-                  size="sm"
-                  variant={gender === option.value ? "secondary" : "outline"}
-                  role="radio"
-                  aria-checked={gender === option.value}
-                  onClick={() => setGender(gender === option.value ? null : option.value)}
-                >
-                  {option.label}
-                </Button>
-              ))}
-            </div>
-          </div>
+          <GenderField value={gender} onChange={setGender} />
 
           <div>
             <Label htmlFor="log-encounter-level-caught">Level caught</Label>
@@ -291,39 +258,11 @@ function LogEncounterForm({
             )}
           </div>
 
-          <div>
-            <Label htmlFor="log-encounter-nature">Nature</Label>
-            <Select value={nature} onValueChange={(value) => setNature(value)}>
-              <SelectTrigger id="log-encounter-nature" className="w-full">
-                <SelectValue placeholder="Select a nature" />
-              </SelectTrigger>
-              <SelectContent>
-                {getAllNatures().map((option) => (
-                  <SelectItem key={option.name} value={option.name}>
-                    {option.name}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
+          <NatureField id="log-encounter-nature" value={nature} onChange={setNature} />
 
-          <div>
-            <Label htmlFor="log-encounter-ability">Ability</Label>
-            <Input
-              id="log-encounter-ability"
-              value={ability}
-              onChange={(event) => setAbility(event.target.value)}
-            />
-          </div>
+          <AbilityField id="log-encounter-ability" value={ability} onChange={setAbility} />
 
-          <div>
-            <Label htmlFor="log-encounter-held-item">Held item</Label>
-            <Input
-              id="log-encounter-held-item"
-              value={heldItem}
-              onChange={(event) => setHeldItem(event.target.value)}
-            />
-          </div>
+          <HeldItemField id="log-encounter-held-item" value={heldItem} onChange={setHeldItem} />
 
           <div>
             <Label htmlFor="log-encounter-placement">Placement</Label>

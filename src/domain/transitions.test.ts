@@ -1,6 +1,7 @@
 import { describe, expect, test } from "vitest";
 
 import {
+  amendMon,
   catchEncounter,
   clearFight,
   killMon,
@@ -10,6 +11,7 @@ import {
   skipEncounter,
   type CatchDetails,
   type KillDetails,
+  type MonAmendments,
 } from "@/domain/transitions";
 import type { Encounter, Fight, Mon } from "@/domain/types";
 
@@ -368,6 +370,96 @@ describe("killMon", () => {
   });
 });
 
+describe("amendMon", () => {
+  const amendments: MonAmendments = {
+    nickname: "Sprout",
+    gender: "male",
+    level: 20,
+    nature: "adamant",
+    ability: "overgrow",
+    heldItem: "oran-berry",
+  };
+
+  test("changes nickname, gender, level, nature, ability and heldItem", () => {
+    const mon = makeMon({
+      nickname: null,
+      gender: "female",
+      level: 10,
+      levelCaught: 10,
+      nature: null,
+      ability: null,
+      heldItem: null,
+    });
+
+    const result = amendMon({ mon, amendments });
+
+    expect(result.nickname).toBe("Sprout");
+    expect(result.gender).toBe("male");
+    expect(result.level).toBe(20);
+    expect(result.nature).toBe("adamant");
+    expect(result.ability).toBe("overgrow");
+    expect(result.heldItem).toBe("oran-berry");
+  });
+
+  test("preserves everything an amendment does not touch", () => {
+    const mon = makeMon({
+      speciesId: "bayleef",
+      speciesIdCaught: "chikorita",
+      levelCaught: 10,
+      moves: ["tackle", "razor-leaf"],
+      status: "box",
+      partySlot: null,
+      boxOrder: 3,
+      caughtRouteId: "route-9",
+      encounterId: "encounter-77",
+      runId: "run-9",
+      id: "mon-77",
+    });
+
+    const result = amendMon({ mon, amendments: { ...amendments, level: 15 } });
+
+    expect(result.speciesId).toBe("bayleef");
+    expect(result.speciesIdCaught).toBe("chikorita");
+    expect(result.levelCaught).toBe(10);
+    expect(result.moves).toEqual(["tackle", "razor-leaf"]);
+    expect(result.status).toBe("box");
+    expect(result.partySlot).toBeNull();
+    expect(result.boxOrder).toBe(3);
+    expect(result.caughtRouteId).toBe("route-9");
+    expect(result.encounterId).toBe("encounter-77");
+    expect(result.runId).toBe("run-9");
+    expect(result.id).toBe("mon-77");
+  });
+
+  test("amending a dead mon works and leaves it dead", () => {
+    const mon = makeMon({ status: "dead", partySlot: null, levelCaught: 10 });
+    const result = amendMon({ mon, amendments: { ...amendments, level: 15 } });
+    expect(result.status).toBe("dead");
+    expect(result.nickname).toBe("Sprout");
+  });
+
+  test("amending a party mon keeps its exact partySlot, gap included", () => {
+    const mon = makeMon({ status: "party", partySlot: 4, levelCaught: 10 });
+    const result = amendMon({ mon, amendments: { ...amendments, level: 15 } });
+    expect(result.status).toBe("party");
+    expect(result.partySlot).toBe(4);
+  });
+
+  test("throws when the amended level is below levelCaught", () => {
+    const mon = makeMon({ levelCaught: 18 });
+    let error: unknown;
+    try {
+      amendMon({ mon, amendments: { ...amendments, level: 6 } });
+    } catch (caught) {
+      error = caught;
+    }
+
+    expect(error).toBeInstanceOf(Error);
+    expect((error as Error).message).toContain("18");
+    expect((error as Error).message).toContain("6");
+  });
+});
+
 describe("clearFight", () => {
   test("clears a pending fight and stamps clearedAt", () => {
     const fight = makeFight();
@@ -423,6 +515,7 @@ describe("input immutability", () => {
   const moveMonToBoxInput = makeMon({ status: "party", partySlot: 2 });
   const moveMonToPartyInput = makeMon({ id: "boxed-mon", status: "box", partySlot: null });
   const killMonInput = makeMon({ status: "party", partySlot: 1 });
+  const amendMonInput = makeMon({ levelCaught: 5 });
   const clearFightInput = makeFight();
 
   const cases: { label: string; input: object; run: () => void }[] = [
@@ -471,6 +564,23 @@ describe("input immutability", () => {
       input: killMonInput,
       run: () => {
         killMon({ mon: killMonInput, deathId: "death-1", details: killDetails });
+      },
+    },
+    {
+      label: "amendMon",
+      input: amendMonInput,
+      run: () => {
+        amendMon({
+          mon: amendMonInput,
+          amendments: {
+            nickname: "Sprout",
+            gender: "male",
+            level: 20,
+            nature: "adamant",
+            ability: "overgrow",
+            heldItem: "oran-berry",
+          },
+        });
       },
     },
     {
