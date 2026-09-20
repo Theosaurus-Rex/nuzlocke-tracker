@@ -320,11 +320,14 @@ describe("logging an encounter from the routes screen", () => {
     const table = await screen.findByRole("table");
     await user.click(within(table).getByRole("button", { name: "Log" }));
 
-    if (outcomeLabel !== "Caught") {
-      await user.click(screen.getByRole("radio", { name: outcomeLabel }));
-    } else {
+    if (outcomeLabel === "Caught") {
       await user.type(screen.getByLabelText("Species"), "Chikorita");
       await user.type(screen.getByLabelText("Level caught"), "6");
+    } else {
+      await user.click(screen.getByRole("radio", { name: outcomeLabel }));
+      if (outcomeLabel === "Missed") {
+        await user.type(screen.getByLabelText("Species"), "Geodude");
+      }
     }
 
     await user.click(screen.getByRole("button", { name: "Save encounter" }));
@@ -335,5 +338,56 @@ describe("logging an encounter from the routes screen", () => {
 
     const updatedTable = screen.getByRole("table");
     expect(within(updatedTable).getByText(expectedStatus)).toBeInTheDocument();
+  });
+
+  it("refuses a missed encounter with no species, and writes nothing", async () => {
+    const user = userEvent.setup();
+    const adapter = createMemoryAdapter();
+    const run = await adapter.runs.put(makeRunDraft(DEFAULT_RULES));
+    await adapter.routes.put({
+      runId: run.id,
+      name: "Route 29",
+      order: 100,
+      isCustom: false,
+      gameRouteId: null,
+    });
+
+    renderRoutesScreen(adapter, run.id);
+
+    const table = await screen.findByRole("table");
+    await user.click(within(table).getByRole("button", { name: "Log" }));
+    await user.click(screen.getByRole("radio", { name: "Missed" }));
+    await user.click(screen.getByRole("button", { name: "Save encounter" }));
+
+    expect(await screen.findByText("Choose a species.")).toBeInTheDocument();
+    expect(screen.getByRole("dialog")).toBeInTheDocument();
+    expect(await adapter.encounters.where("runId", run.id)).toEqual([]);
+  });
+
+  it("still allows a skipped encounter with no species", async () => {
+    const user = userEvent.setup();
+    const adapter = createMemoryAdapter();
+    const run = await adapter.runs.put(makeRunDraft(DEFAULT_RULES));
+    await adapter.routes.put({
+      runId: run.id,
+      name: "Route 29",
+      order: 100,
+      isCustom: false,
+      gameRouteId: null,
+    });
+
+    renderRoutesScreen(adapter, run.id);
+
+    const table = await screen.findByRole("table");
+    await user.click(within(table).getByRole("button", { name: "Log" }));
+    await user.click(screen.getByRole("radio", { name: "Skipped" }));
+    await user.click(screen.getByRole("button", { name: "Save encounter" }));
+
+    await waitFor(() => {
+      expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
+    });
+
+    const encounters = await adapter.encounters.where("runId", run.id);
+    expect(encounters.map((encounter) => encounter.speciesId)).toEqual([null]);
   });
 });

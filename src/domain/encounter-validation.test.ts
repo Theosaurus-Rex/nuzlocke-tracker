@@ -1,6 +1,6 @@
 import { describe, expect, test } from "vitest";
 
-import { validateCatch } from "@/domain/encounter-validation";
+import { validateCatch, validateEncounter, validateMiss } from "@/domain/encounter-validation";
 import { DEFAULT_RULES } from "@/domain/rules";
 import type { CatchDetails } from "@/domain/transitions";
 import type { Rules } from "@/domain/types";
@@ -116,5 +116,53 @@ describe("validateCatch", () => {
     const details = makeDetails({ nickname: "Sprout" });
     const errors = validateCatch({ details, rules: rulesRequiringNicknames });
     expect(errors.nickname).toBeUndefined();
+  });
+});
+
+describe("validateMiss", () => {
+  test("requires a species", () => {
+    expect(validateMiss({ speciesId: "" }).speciesId).toBeDefined();
+  });
+
+  test("rejects a whitespace-only species", () => {
+    expect(validateMiss({ speciesId: "   " }).speciesId).toBeDefined();
+  });
+
+  test("accepts a named species", () => {
+    expect(validateMiss({ speciesId: "geodude" })).toEqual({});
+  });
+});
+
+describe("validateEncounter", () => {
+  const noRules = rulesWithoutNicknames;
+
+  test("applies the catch rules when the outcome is caught", () => {
+    const details = makeDetails({ speciesId: "", levelCaught: 0 });
+    const errors = validateEncounter({ outcome: "caught", details, rules: noRules });
+    expect(errors.speciesId).toBeDefined();
+    expect(errors.levelCaught).toBeDefined();
+  });
+
+  test("requires only a species when the outcome is missed, ignoring the level fields", () => {
+    const details = makeDetails({ speciesId: "", levelCaught: 0, level: 0 });
+    const errors = validateEncounter({ outcome: "missed", details, rules: noRules });
+    expect(errors.speciesId).toBeDefined();
+    expect(errors.levelCaught).toBeUndefined();
+    expect(errors.level).toBeUndefined();
+  });
+
+  test("asks nothing of a skipped encounter, even with no species", () => {
+    const details = makeDetails({ speciesId: "", levelCaught: 0, level: 0 });
+    expect(validateEncounter({ outcome: "skipped", details, rules: noRules })).toEqual({});
+  });
+
+  test("does not require a nickname on a missed encounter when the clause is on", () => {
+    const details = makeDetails({ speciesId: "geodude", nickname: null });
+    const errors = validateEncounter({
+      outcome: "missed",
+      details,
+      rules: rulesRequiringNicknames,
+    });
+    expect(errors).toEqual({});
   });
 });
