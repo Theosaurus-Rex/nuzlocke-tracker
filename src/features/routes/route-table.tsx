@@ -3,7 +3,7 @@ import { createColumnHelper, tableFeatures, useTable } from "@tanstack/react-tab
 import { Button } from "@/components/ui/button";
 import { canDeleteRoute } from "@/domain/routes";
 import type { RouteRow, RouteRowStatus } from "@/domain/route-rows";
-import type { Encounter, Route } from "@/domain/types";
+import type { Encounter, Mon, Route } from "@/domain/types";
 
 import { RowSpecies, STATUS_LABEL } from "./route-presentation";
 
@@ -35,6 +35,7 @@ export interface RouteTableProps {
   onDelete: (route: Route) => void;
   deletePending: boolean;
   onLogEncounter: (route: Route) => void;
+  onEditMon: (route: Route, mon: Mon) => void;
 }
 
 export function RouteTable({
@@ -43,6 +44,7 @@ export function RouteTable({
   onDelete,
   deletePending,
   onLogEncounter,
+  onEditMon,
 }: RouteTableProps) {
   const columns = [
     columnHelper.display({
@@ -51,6 +53,9 @@ export function RouteTable({
       cell: ({ row }) => {
         const routeRow = row.original;
         const removable = canDeleteRoute(routeRow.route, encounters);
+        const mon = routeRow.mon;
+        const editable =
+          (routeRow.status === "caught" || routeRow.status === "dead") && mon !== null;
 
         return (
           <div className="flex items-center justify-between gap-3">
@@ -66,6 +71,11 @@ export function RouteTable({
               {routeRow.status === "not-encountered" && (
                 <Button size="sm" variant="outline" onClick={() => onLogEncounter(routeRow.route)}>
                   Log
+                </Button>
+              )}
+              {editable && mon !== null && (
+                <Button size="sm" variant="outline" onClick={() => onEditMon(routeRow.route, mon)}>
+                  Edit
                 </Button>
               )}
               {removable && (

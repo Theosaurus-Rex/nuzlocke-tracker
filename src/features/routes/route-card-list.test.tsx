@@ -76,6 +76,7 @@ function renderCards(input: {
   mons: Mon[];
   onDelete?: (route: Route) => void;
   onLogEncounter?: (route: Route) => void;
+  onEditMon?: (route: Route, mon: Mon) => void;
 }) {
   const rows = buildRouteRows({
     routes: input.routes,
@@ -90,6 +91,7 @@ function renderCards(input: {
       onDelete={input.onDelete ?? vi.fn()}
       deletePending={false}
       onLogEncounter={input.onLogEncounter ?? vi.fn()}
+      onEditMon={input.onEditMon ?? vi.fn()}
     />,
   );
 }
@@ -237,5 +239,44 @@ describe("RouteCardList", () => {
     renderCards({ routes, encounters, mons });
 
     expect(screen.queryByRole("button", { name: "Log encounter" })).not.toBeInTheDocument();
+  });
+
+  it("shows an edit control for a caught row, which calls onEditMon with the route and mon", async () => {
+    const route = makeRoute({ id: "route-1" });
+    const encounters = [
+      makeEncounter({ id: "encounter-1", routeId: "route-1", status: "caught", monId: "mon-1" }),
+    ];
+    const mon = makeMon({ id: "mon-1", status: "party" });
+    const onEditMon = vi.fn();
+
+    renderCards({ routes: [route], encounters, mons: [mon], onEditMon });
+
+    await userEvent.click(screen.getByRole("button", { name: "Edit mon" }));
+
+    expect(onEditMon).toHaveBeenCalledWith(route, mon);
+  });
+
+  it("shows an edit control for a dead row", () => {
+    const routes = [makeRoute({ id: "route-1" })];
+    const encounters = [
+      makeEncounter({ id: "encounter-1", routeId: "route-1", status: "caught", monId: "mon-1" }),
+    ];
+    const mons = [makeMon({ id: "mon-1", status: "dead" })];
+
+    renderCards({ routes, encounters, mons });
+
+    expect(screen.getByRole("button", { name: "Edit mon" })).toBeInTheDocument();
+  });
+
+  it.each([
+    ["not-encountered" as const, [], []],
+    ["missed" as const, [makeEncounter({ status: "missed" })], []],
+    ["skipped" as const, [makeEncounter({ status: "skipped" })], []],
+  ])("shows no edit control for a %s route", (_status, encounters, mons) => {
+    const routes = [makeRoute({ id: "route-1" })];
+
+    renderCards({ routes, encounters, mons });
+
+    expect(screen.queryByRole("button", { name: "Edit mon" })).not.toBeInTheDocument();
   });
 });

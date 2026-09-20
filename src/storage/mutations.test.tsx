@@ -11,7 +11,7 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { renderHook, waitFor } from "@testing-library/react";
 import { describe, expect, it } from "vitest";
 
-import type { CatchDetails } from "@/domain/transitions";
+import type { CatchDetails, MonAmendments } from "@/domain/transitions";
 import type { Encounter, Route, Run } from "@/domain/types";
 import { heartgold } from "@/game/data/heartgold";
 
@@ -19,6 +19,7 @@ import type { StorageAdapter } from "./adapter";
 import { createMemoryAdapter } from "./memory-adapter";
 import {
   useAddCustomRoute,
+  useAmendMon,
   useCreateRun,
   useDeleteCustomRoute,
   useLogEncounter,
@@ -476,5 +477,106 @@ describe("useLogEncounter", () => {
 
     expect(await adapter.encounters.where("runId", run.id)).toEqual([]);
     expect(await adapter.mons.getAll()).toEqual([]);
+  });
+});
+
+describe("useAmendMon", () => {
+  const amendments: MonAmendments = {
+    nickname: "Sprout",
+    gender: "male",
+    level: 20,
+    nature: "adamant",
+    ability: "overgrow",
+    heldItem: "oran-berry",
+  };
+
+  it("persists the amended fields and leaves other rows alone", async () => {
+    const adapter = createMemoryAdapter();
+    await adapter.init();
+    const { run, routes } = await createSeededRun(adapter);
+    const [routeA, routeB] = routes;
+    if (routeA === undefined || routeB === undefined) {
+      throw new Error("expected at least two seeded routes");
+    }
+
+    const logWrapper = createWrapper(adapter);
+    const log = renderHook(() => useLogEncounter(), { wrapper: logWrapper });
+
+    const { mon: targetMon } = await log.result.current.mutateAsync({
+      runId: run.id,
+      routeId: routeA.id,
+      outcome: "caught",
+      party: [],
+      details: CATCH_DETAILS,
+      existingEncounters: [],
+    });
+    if (targetMon === null) {
+      throw new Error("expected a mon from a caught encounter");
+    }
+
+    const { mon: otherMon } = await log.result.current.mutateAsync({
+      runId: run.id,
+      routeId: routeB.id,
+      outcome: "caught",
+      party: [],
+      details: CATCH_DETAILS,
+      existingEncounters: [],
+    });
+    if (otherMon === null) {
+      throw new Error("expected a mon from a caught encounter");
+    }
+
+    const amend = renderHook(() => useAmendMon(), { wrapper: logWrapper });
+    const result = await amend.result.current.mutateAsync({ mon: targetMon, amendments });
+
+    expect(result.nickname).toBe("Sprout");
+    expect(result.gender).toBe("male");
+    expect(result.level).toBe(20);
+    expect(result.nature).toBe("adamant");
+    expect(result.ability).toBe("overgrow");
+    expect(result.heldItem).toBe("oran-berry");
+    expect(result.speciesId).toBe(targetMon.speciesId);
+
+    const persisted = await adapter.mons.get(targetMon.id);
+    expect(persisted?.nickname).toBe("Sprout");
+
+    const untouched = await adapter.mons.get(otherMon.id);
+    expect(untouched).toEqual(otherMon);
+  });
+
+  it("invalidates the run's mons query on success", async () => {
+    const adapter = createMemoryAdapter();
+    await adapter.init();
+    const { run, routes } = await createSeededRun(adapter);
+    const route = routes[0];
+    if (route === undefined) {
+      throw new Error("expected at least one seeded route");
+    }
+
+    const wrapper = createWrapper(adapter);
+    const log = renderHook(() => useLogEncounter(), { wrapper });
+    const { mon } = await log.result.current.mutateAsync({
+      runId: run.id,
+      routeId: route.id,
+      outcome: "caught",
+      party: [],
+      details: CATCH_DETAILS,
+      existingEncounters: [],
+    });
+    if (mon === null) {
+      throw new Error("expected a mon from a caught encounter");
+    }
+
+    const mons = renderHook(() => useMons(run.id), { wrapper });
+    await waitFor(() => {
+      expect(mons.result.current.data).toHaveLength(1);
+    });
+
+    const amend = renderHook(() => useAmendMon(), { wrapper });
+    await amend.result.current.mutateAsync({ mon, amendments });
+
+    await waitFor(() => {
+      expect(mons.result.current.data?.[0]?.nickname).toBe("Sprout");
+    });
   });
 });

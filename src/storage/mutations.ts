@@ -14,10 +14,12 @@ import { useMutation, useQueryClient, type UseMutationResult } from "@tanstack/r
 import { DEFAULT_RULES } from "@/domain/rules";
 import { canDeleteRoute, nextRouteOrder } from "@/domain/routes";
 import {
+  amendMon,
   catchEncounter,
   missEncounter,
   skipEncounter,
   type CatchDetails,
+  type MonAmendments,
 } from "@/domain/transitions";
 import type { Encounter, GameId, Mon, Route, Rules, Run } from "@/domain/types";
 import { GAMES } from "@/game/registry";
@@ -166,6 +168,28 @@ export function useLogEncounter(): UseMutationResult<LogEncounterResult, Error, 
     mutationFn: (input: LogEncounterInput) => persistLogEncounter(adapter, input),
     onSuccess: async (result) => {
       await invalidateRun(queryClient, result.encounter.runId);
+    },
+  });
+}
+
+export interface AmendMonInput {
+  mon: Mon;
+  amendments: MonAmendments;
+}
+
+async function persistAmendMon(adapter: StorageAdapter, input: AmendMonInput): Promise<Mon> {
+  const amended = amendMon({ mon: input.mon, amendments: input.amendments });
+  return adapter.mons.put(amended);
+}
+
+export function useAmendMon(): UseMutationResult<Mon, Error, AmendMonInput> {
+  const adapter = useStorage();
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: (input: AmendMonInput) => persistAmendMon(adapter, input),
+    onSuccess: async (mon) => {
+      await invalidateRun(queryClient, mon.runId);
     },
   });
 }

@@ -1,8 +1,13 @@
 import { describe, expect, test } from "vitest";
 
-import { validateCatch, validateEncounter, validateMiss } from "@/domain/encounter-validation";
+import {
+  validateAmendment,
+  validateCatch,
+  validateEncounter,
+  validateMiss,
+} from "@/domain/encounter-validation";
 import { DEFAULT_RULES } from "@/domain/rules";
-import type { CatchDetails } from "@/domain/transitions";
+import type { CatchDetails, MonAmendments } from "@/domain/transitions";
 import type { Rules } from "@/domain/types";
 
 function makeDetails(overrides: Partial<CatchDetails> = {}): CatchDetails {
@@ -130,6 +135,92 @@ describe("validateMiss", () => {
 
   test("accepts a named species", () => {
     expect(validateMiss({ speciesId: "geodude" })).toEqual({});
+  });
+});
+
+function makeAmendments(overrides: Partial<MonAmendments> = {}): MonAmendments {
+  return {
+    nickname: null,
+    gender: null,
+    level: 18,
+    nature: null,
+    ability: null,
+    heldItem: null,
+    ...overrides,
+  };
+}
+
+describe("validateAmendment", () => {
+  test("returns no errors for a valid amendment", () => {
+    const errors = validateAmendment({
+      amendments: makeAmendments(),
+      levelCaught: 6,
+      rules: rulesWithoutNicknames,
+    });
+    expect(errors).toEqual({});
+  });
+
+  test("a level equal to levelCaught is valid", () => {
+    const errors = validateAmendment({
+      amendments: makeAmendments({ level: 12 }),
+      levelCaught: 12,
+      rules: rulesWithoutNicknames,
+    });
+    expect(errors.level).toBeUndefined();
+  });
+
+  test.each([0, 101, 1.5, -3])("rejects an out-of-range level: %s", (level) => {
+    const errors = validateAmendment({
+      amendments: makeAmendments({ level }),
+      levelCaught: 1,
+      rules: rulesWithoutNicknames,
+    });
+    expect(errors.level).toBeDefined();
+  });
+
+  test("rejects a level below levelCaught", () => {
+    const errors = validateAmendment({
+      amendments: makeAmendments({ level: 19 }),
+      levelCaught: 20,
+      rules: rulesWithoutNicknames,
+    });
+    expect(errors.level).toBeDefined();
+  });
+
+  test("nickname is optional when nicknamesRequired is off", () => {
+    const errors = validateAmendment({
+      amendments: makeAmendments({ nickname: null }),
+      levelCaught: 6,
+      rules: rulesWithoutNicknames,
+    });
+    expect(errors.nickname).toBeUndefined();
+  });
+
+  test("nickname is required when nicknamesRequired is on", () => {
+    const errors = validateAmendment({
+      amendments: makeAmendments({ nickname: null }),
+      levelCaught: 6,
+      rules: rulesRequiringNicknames,
+    });
+    expect(errors.nickname).toBeDefined();
+  });
+
+  test("a real nickname satisfies nicknamesRequired", () => {
+    const errors = validateAmendment({
+      amendments: makeAmendments({ nickname: "Sprout" }),
+      levelCaught: 6,
+      rules: rulesRequiringNicknames,
+    });
+    expect(errors.nickname).toBeUndefined();
+  });
+
+  test("does not validate nature, ability or heldItem", () => {
+    const errors = validateAmendment({
+      amendments: makeAmendments({ nature: "", ability: "", heldItem: "" }),
+      levelCaught: 6,
+      rules: rulesWithoutNicknames,
+    });
+    expect(errors).toEqual({});
   });
 });
 

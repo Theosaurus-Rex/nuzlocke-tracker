@@ -3,7 +3,7 @@
  * `transitions.ts` enforces invariants, not user input; this is where the form's own rules live.
  */
 
-import type { CatchDetails } from "./transitions";
+import type { CatchDetails, MonAmendments } from "./transitions";
 import type { EncounterStatus, Rules } from "./types";
 
 export type EncounterField = "speciesId" | "levelCaught" | "level" | "nickname";
@@ -13,6 +13,24 @@ export type EncounterOutcome = Exclude<EncounterStatus, "open">;
 
 function isValidLevel(level: number): boolean {
   return Number.isInteger(level) && level >= 1 && level <= 100;
+}
+
+function validateLevelAgainstCaught(level: number, levelCaught: number): string | undefined {
+  if (!isValidLevel(level)) {
+    return "Enter a level from 1 to 100.";
+  }
+
+  if (isValidLevel(levelCaught) && level < levelCaught) {
+    return "Current level cannot be below the level it was caught at.";
+  }
+
+  return undefined;
+}
+
+function validateNickname(nickname: string | null, rules: Rules): string | undefined {
+  return rules.nicknamesRequired && (nickname === null || nickname.trim() === "")
+    ? "This run requires a nickname."
+    : undefined;
 }
 
 export function validateCatch(input: {
@@ -30,14 +48,35 @@ export function validateCatch(input: {
     errors.levelCaught = "Enter a level from 1 to 100.";
   }
 
-  if (!isValidLevel(details.level)) {
-    errors.level = "Enter a level from 1 to 100.";
-  } else if (isValidLevel(details.levelCaught) && details.level < details.levelCaught) {
-    errors.level = "Current level cannot be below the level it was caught at.";
+  const levelError = validateLevelAgainstCaught(details.level, details.levelCaught);
+  if (levelError !== undefined) {
+    errors.level = levelError;
   }
 
-  if (rules.nicknamesRequired && (details.nickname === null || details.nickname.trim() === "")) {
-    errors.nickname = "This run requires a nickname.";
+  const nicknameError = validateNickname(details.nickname, rules);
+  if (nicknameError !== undefined) {
+    errors.nickname = nicknameError;
+  }
+
+  return errors;
+}
+
+export function validateAmendment(input: {
+  amendments: MonAmendments;
+  levelCaught: number;
+  rules: Rules;
+}): Partial<Record<EncounterField, string>> {
+  const { amendments, levelCaught, rules } = input;
+  const errors: Partial<Record<EncounterField, string>> = {};
+
+  const levelError = validateLevelAgainstCaught(amendments.level, levelCaught);
+  if (levelError !== undefined) {
+    errors.level = levelError;
+  }
+
+  const nicknameError = validateNickname(amendments.nickname, rules);
+  if (nicknameError !== undefined) {
+    errors.nickname = nicknameError;
   }
 
   return errors;
