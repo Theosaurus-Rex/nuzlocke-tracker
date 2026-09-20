@@ -17,6 +17,7 @@ import type { Type } from "@/game/data/pokedex/types";
 const speciesById = new Map<number, SpeciesDef>(species.map((s) => [s.id, s]));
 const speciesByName = new Map<string, SpeciesDef>(species.map((s) => [s.name, s]));
 const moveById = new Map<number, MoveDef>(moves.map((m) => [m.id, m]));
+const moveByName = new Map<string, MoveDef>(moves.map((m) => [m.name, m]));
 const abilityById = new Map<number, AbilityDef>(abilities.map((a) => [a.id, a]));
 const abilityByName = new Map<string, AbilityDef>(abilities.map((a) => [a.name, a]));
 const itemByName = new Map<string, ItemDef>(items.map((i) => [i.name, i]));
@@ -56,6 +57,28 @@ export function searchSpecies(query: string): SpeciesDef[] {
 
 export function getMove(id: number): MoveDef | undefined {
   return moveById.get(id);
+}
+
+export function getMoveByName(name: string): MoveDef | undefined {
+  return moveByName.get(name);
+}
+
+/**
+ * A stored move id turned into something renderable: hyphens become spaces and each word is
+ * capitalised. Works on a name absent from the pokedex, since a romhack or randomiser move is a
+ * supported case, not an error.
+ */
+export function moveDisplayName(name: string): string {
+  return name
+    .split("-")
+    .map((word) => word.charAt(0).toUpperCase() + word.slice(1))
+    .join(" ");
+}
+
+/** Case-insensitive prefix match on move name, across every generation. */
+export function searchMoves(query: string): MoveDef[] {
+  const q = query.toLowerCase();
+  return moves.filter((m) => m.name.toLowerCase().startsWith(q));
 }
 
 export function getAbility(id: number): AbilityDef | undefined {

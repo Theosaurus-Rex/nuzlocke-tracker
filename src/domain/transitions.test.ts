@@ -378,9 +378,10 @@ describe("amendMon", () => {
     nature: "adamant",
     ability: "overgrow",
     heldItem: "oran-berry",
+    moves: ["vine-whip", "growth"],
   };
 
-  test("changes nickname, gender, level, nature, ability and heldItem", () => {
+  test("changes nickname, gender, level, nature, ability, heldItem and moves", () => {
     const mon = makeMon({
       nickname: null,
       gender: "female",
@@ -389,6 +390,7 @@ describe("amendMon", () => {
       nature: null,
       ability: null,
       heldItem: null,
+      moves: ["tackle"],
     });
 
     const result = amendMon({ mon, amendments });
@@ -399,6 +401,7 @@ describe("amendMon", () => {
     expect(result.nature).toBe("adamant");
     expect(result.ability).toBe("overgrow");
     expect(result.heldItem).toBe("oran-berry");
+    expect(result.moves).toEqual(["vine-whip", "growth"]);
   });
 
   test("preserves everything an amendment does not touch", () => {
@@ -416,12 +419,14 @@ describe("amendMon", () => {
       id: "mon-77",
     });
 
-    const result = amendMon({ mon, amendments: { ...amendments, level: 15 } });
+    const result = amendMon({
+      mon,
+      amendments: { ...amendments, level: 15, moves: mon.moves },
+    });
 
     expect(result.speciesId).toBe("bayleef");
     expect(result.speciesIdCaught).toBe("chikorita");
     expect(result.levelCaught).toBe(10);
-    expect(result.moves).toEqual(["tackle", "razor-leaf"]);
     expect(result.status).toBe("box");
     expect(result.partySlot).toBeNull();
     expect(result.boxOrder).toBe(3);
@@ -429,6 +434,31 @@ describe("amendMon", () => {
     expect(result.encounterId).toBe("encounter-77");
     expect(result.runId).toBe("run-9");
     expect(result.id).toBe("mon-77");
+  });
+
+  test("replaces the mon's moves with the amendment's list", () => {
+    const mon = makeMon({ moves: ["tackle"] });
+    const result = amendMon({ mon, amendments: { ...amendments, moves: ["surf", "dig"] } });
+    expect(result.moves).toEqual(["surf", "dig"]);
+  });
+
+  test("preserves the mon's moves when the amendment carries the same list", () => {
+    const mon = makeMon({ moves: ["tackle", "growl"] });
+    const result = amendMon({ mon, amendments: { ...amendments, moves: ["tackle", "growl"] } });
+    expect(result.moves).toEqual(["tackle", "growl"]);
+  });
+
+  test("throws when the amendment carries more than 4 moves", () => {
+    const mon = makeMon();
+    expect(() =>
+      amendMon({
+        mon,
+        amendments: {
+          ...amendments,
+          moves: ["tackle", "growl", "vine-whip", "razor-leaf", "synthesis"],
+        },
+      }),
+    ).toThrow(/4 moves/);
   });
 
   test("amending a dead mon works and leaves it dead", () => {
@@ -579,6 +609,7 @@ describe("input immutability", () => {
             nature: "adamant",
             ability: "overgrow",
             heldItem: "oran-berry",
+            moves: ["tackle"],
           },
         });
       },
