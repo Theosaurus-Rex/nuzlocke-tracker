@@ -4,9 +4,12 @@
  */
 
 import type { CatchDetails } from "./transitions";
-import type { Rules } from "./types";
+import type { EncounterStatus, Rules } from "./types";
 
 export type EncounterField = "speciesId" | "levelCaught" | "level" | "nickname";
+
+/** What an encounter is being resolved to. An encounter is only `open` before it is logged. */
+export type EncounterOutcome = Exclude<EncounterStatus, "open">;
 
 function isValidLevel(level: number): boolean {
   return Number.isInteger(level) && level >= 1 && level <= 100;
@@ -20,7 +23,7 @@ export function validateCatch(input: {
   const errors: Partial<Record<EncounterField, string>> = {};
 
   if (details.speciesId.trim() === "") {
-    errors.speciesId = "Choose a species.";
+    errors.speciesId = "Choose a species from the list.";
   }
 
   if (!isValidLevel(details.levelCaught)) {
@@ -38,4 +41,33 @@ export function validateCatch(input: {
   }
 
   return errors;
+}
+
+/**
+ * A missed encounter names what was met. The game shows a species before it flees or faints, so
+ * a blank one is information lost rather than a state worth recording.
+ *
+ * Skipping is different and stays unvalidated: passing on a route can mean never encountering
+ * anything there at all.
+ */
+export function validateMiss(input: {
+  speciesId: string;
+}): Partial<Record<EncounterField, string>> {
+  return input.speciesId.trim() === "" ? { speciesId: "Choose a species from the list." } : {};
+}
+
+export function validateEncounter(input: {
+  outcome: EncounterOutcome;
+  details: CatchDetails;
+  rules: Rules;
+}): Partial<Record<EncounterField, string>> {
+  if (input.outcome === "caught") {
+    return validateCatch({ details: input.details, rules: input.rules });
+  }
+
+  if (input.outcome === "missed") {
+    return validateMiss({ speciesId: input.details.speciesId });
+  }
+
+  return {};
 }

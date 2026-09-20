@@ -12,7 +12,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { countByMonStatus } from "@/domain/derive";
-import { validateCatch, type EncounterField } from "@/domain/encounter-validation";
+import { validateEncounter, type EncounterField } from "@/domain/encounter-validation";
 import type { CatchDetails } from "@/domain/transitions";
 import type { Encounter, Gender, Mon, Route, Rules } from "@/domain/types";
 import { getAllNatures } from "@/game/pokedex";
@@ -129,8 +129,9 @@ function LogEncounterForm({
     moves: [],
   };
 
-  const errors: Partial<Record<EncounterField, string>> =
-    submitted && outcome === "caught" ? validateCatch({ details, rules }) : {};
+  const errors: Partial<Record<EncounterField, string>> = submitted
+    ? validateEncounter({ outcome, details, rules })
+    : {};
 
   function handleLevelCaughtChange(text: string): void {
     setLevelCaughtText(text);
@@ -148,7 +149,7 @@ function LogEncounterForm({
     event.preventDefault();
     setSubmitted(true);
 
-    if (outcome === "caught" && Object.keys(validateCatch({ details, rules })).length > 0) {
+    if (Object.keys(validateEncounter({ outcome, details, rules })).length > 0) {
       return;
     }
 
@@ -185,8 +186,21 @@ function LogEncounterForm({
 
       {outcome !== "caught" ? (
         <div>
-          <Label htmlFor="log-encounter-species">Species (optional)</Label>
-          <SpeciesPicker id="log-encounter-species" value={speciesId} onChange={setSpeciesId} />
+          <Label htmlFor="log-encounter-species">
+            {outcome === "missed" ? "Species" : "Species (optional)"}
+          </Label>
+          <SpeciesPicker
+            id="log-encounter-species"
+            value={speciesId}
+            onChange={setSpeciesId}
+            aria-invalid={errors.speciesId !== undefined}
+            aria-describedby={errors.speciesId ? "log-encounter-species-error" : undefined}
+          />
+          {errors.speciesId && (
+            <p id="log-encounter-species-error" className="mt-1 text-sm text-destructive">
+              {errors.speciesId}
+            </p>
+          )}
         </div>
       ) : (
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">

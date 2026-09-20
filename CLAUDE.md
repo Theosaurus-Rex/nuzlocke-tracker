@@ -300,11 +300,20 @@ output directory unless passed `--force`. See README.md "Game data" for the how.
 are a community convention, not a game mechanic, so no API will ever return them.
 
 **Pickers are never constrained to one generation — decided 2026-09-17.** Species, ability, move
-and item pickers are free-text search over **all generations**. A randomiser or a romhack can put
-anything anywhere, so a picker scoped to the tracked game cannot represent what the player
-actually caught, and blocking them from logging it is worse than showing too many options. The
-randomiser sub-toggles already existed to defeat these constraints; a constraint that must be
-defeatable was never a constraint.
+and item pickers search **all generations**. A randomiser or a romhack can put anything anywhere,
+so a picker scoped to the tracked game cannot represent what the player actually caught, and
+blocking them from logging it is worse than showing too many options. The randomiser sub-toggles
+already existed to defeat these constraints; a constraint that must be defeatable was never a
+constraint.
+
+**The species picker takes a selection, not free text — decided 2026-09-21.** Typing filters the
+list and a fully typed name counts as choosing it, but a name the pokedex does not know leaves
+the field unset and the form refuses to save. This narrows the rule above: *all generations*
+still holds, *anything typed* does not. A romhack's fakemon is hand-authored into
+`src/game/data/pokedex/species.ts` first, which is already how game data is meant to be added.
+
+Ability and held item are still free text. There is no `searchAbilities` or `searchItems` to
+select from, only `searchSpecies`, so the same rule cannot apply to them yet.
 
 Consequences, all deliberate:
 
