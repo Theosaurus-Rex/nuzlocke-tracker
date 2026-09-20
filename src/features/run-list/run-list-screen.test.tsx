@@ -11,7 +11,7 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { describe, expect, it } from "vitest";
-import { MemoryRouter } from "react-router";
+import { MemoryRouter, Route as RouterRoute, Routes } from "react-router";
 
 import { summariseRun } from "@/domain/derive";
 import type { Death, Encounter, Mon, Route, Run, Rules } from "@/domain/types";
@@ -165,6 +165,41 @@ describe("RunListScreen", () => {
     expect(await screen.findByText(/no runs yet/i)).toBeInTheDocument();
     const link = screen.getByRole("link", { name: /start a new run/i });
     expect(link).toHaveAttribute("href", "/runs/new");
+  });
+
+  it("shows a New run control in the header, pointing at /runs/new, even when runs already exist", async () => {
+    const adapter = createMemoryAdapter();
+    await adapter.runs.put(makeRunDraft({ name: "Blaze Nuzlocke", status: "active" }));
+
+    renderScreen(adapter);
+
+    await screen.findByRole("heading", { name: "Runs" });
+    const link = screen.getByRole("link", { name: "New run" });
+    expect(link).toHaveAttribute("href", "/runs/new");
+  });
+
+  it("navigates to the new-run screen when the header New run control is clicked", async () => {
+    const adapter = createMemoryAdapter();
+    await adapter.runs.put(makeRunDraft({ name: "Blaze Nuzlocke", status: "active" }));
+
+    const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+    render(
+      <QueryClientProvider client={queryClient}>
+        <StorageProvider adapter={adapter}>
+          <MemoryRouter initialEntries={["/"]}>
+            <Routes>
+              <RouterRoute path="/" element={<RunListScreen />} />
+              <RouterRoute path="/runs/new" element={<p>New run screen</p>} />
+            </Routes>
+          </MemoryRouter>
+        </StorageProvider>
+      </QueryClientProvider>,
+    );
+
+    await screen.findByRole("heading", { name: "Runs" });
+    await userEvent.click(screen.getByRole("link", { name: "New run" }));
+
+    expect(await screen.findByText("New run screen")).toBeInTheDocument();
   });
 
   it("renders one card per run on its matching tab, each with its own routes/party/boxed/dead counts", async () => {

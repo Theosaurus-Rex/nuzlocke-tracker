@@ -41,8 +41,14 @@ export function subScreenFromPath(pathname: string): string {
     : DEFAULT_RUN_SUB_SCREEN;
 }
 
+/** The run nav keeps a link back to the run list. Without it a run is a dead end: the run
+ * switcher only moves between runs, so there would be no way to reach Settings, and no way to
+ * reach JSON export, which is the only backup this app has. */
 function runNavItems(runId: string): NavItem[] {
-  return RUN_SUB_SCREENS.map(({ slug, label }) => ({ label, to: `/runs/${runId}/${slug}` }));
+  return [
+    { label: "Runs", to: "/", end: true },
+    ...RUN_SUB_SCREENS.map(({ slug, label }) => ({ label, to: `/runs/${runId}/${slug}` })),
+  ];
 }
 
 export function navItemsFor(runId: string | undefined): NavItem[] {
