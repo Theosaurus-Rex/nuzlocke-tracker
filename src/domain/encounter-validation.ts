@@ -23,7 +23,7 @@ export function validateCatch(input: {
   const errors: Partial<Record<EncounterField, string>> = {};
 
   if (details.speciesId.trim() === "") {
-    errors.speciesId = "Choose a species.";
+    errors.speciesId = "Choose a species from the list.";
   }
 
   if (!isValidLevel(details.levelCaught)) {
@@ -53,7 +53,7 @@ export function validateCatch(input: {
 export function validateMiss(input: {
   speciesId: string;
 }): Partial<Record<EncounterField, string>> {
-  return input.speciesId.trim() === "" ? { speciesId: "Choose a species." } : {};
+  return input.speciesId.trim() === "" ? { speciesId: "Choose a species from the list." } : {};
 }
 
 export function validateEncounter(input: {

@@ -1,13 +1,22 @@
 import { useState, type ReactNode } from "react";
 
 import { Input } from "@/components/ui/input";
-import { searchSpecies, speciesDisplayName } from "@/game/pokedex";
+import { getSpeciesByName, searchSpecies, speciesDisplayName } from "@/game/pokedex";
 import { cn } from "@/lib/utils";
 
 const MAX_RESULTS = 8;
 
 function toSpeciesId(text: string): string {
   return text.trim().toLowerCase().replace(/\s+/g, "-");
+}
+
+/**
+ * Text only becomes a value once it names a real species, so typing something the pokedex does
+ * not know leaves the field unset rather than logging a species that does not exist. Typing a
+ * full name counts as choosing it, so the keyboard path needs no click.
+ */
+function resolveSpeciesId(text: string): string {
+  return getSpeciesByName(toSpeciesId(text))?.name ?? "";
 }
 
 export interface SpeciesPickerProps {
@@ -49,7 +58,7 @@ export function SpeciesPicker({
           const text = event.target.value;
           setQuery(text);
           setIsOpen(true);
-          onChange(toSpeciesId(text));
+          onChange(resolveSpeciesId(text));
         }}
         onFocus={() => setIsOpen(true)}
         onBlur={() => setIsOpen(false)}
@@ -64,10 +73,10 @@ export function SpeciesPicker({
               <button
                 type="button"
                 role="option"
-                aria-selected={toSpeciesId(query) === species.name}
+                aria-selected={value === species.name}
                 className={cn(
                   "block w-full px-2.5 py-1 text-left hover:bg-muted",
-                  toSpeciesId(query) === species.name && "bg-muted",
+                  value === species.name && "bg-muted",
                 )}
                 onMouseDown={(event) => event.preventDefault()}
                 onClick={() => {
