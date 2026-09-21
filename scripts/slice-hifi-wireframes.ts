@@ -19,8 +19,10 @@
  * own box measures 942x5095 against its siblings' 942x629. Clipping by children excludes them
  * without hardcoding anything about 5b.
  *
- * The viewport is fixed at 1600 CSS px: narrower clips 3d, wider reflows the canvas into more
- * columns and shrinks the frames sharing a row.
+ * The viewport is fixed at 1600 CSS px wide: narrower clips 3d, wider reflows the canvas into
+ * more columns and shrinks the frames sharing a row. It also has to be taller than the tallest
+ * frame, because a screenshot clip is silently truncated to the viewport rather than erroring,
+ * which reads as a frame that was simply drawn short.
  *
  * This is a one-shot bootstrapper, not part of the build. The PNGs it writes are committed and
  * are what the tickets point at. It refuses to overwrite a populated output directory unless
