@@ -344,3 +344,25 @@ describe("moveDisplayName", () => {
     expect(moveDisplayName("totally-homebrew-move")).toBe("Totally Homebrew Move");
   });
 });
+
+describe("searching a name that runs to a second word", () => {
+  test("a trailing space still matches, rather than clearing the results", () => {
+    const names = searchMoves("bug ").map((move) => move.name);
+    expect(names).toContain("bug-bite");
+    expect(names).toContain("bug-buzz");
+  });
+
+  test("a space partway through narrows rather than breaking the match", () => {
+    const names = searchMoves("bug bi").map((move) => move.name);
+    expect(names).toContain("bug-bite");
+    expect(names).not.toContain("bug-buzz");
+  });
+
+  test("a fully typed two-word move matches", () => {
+    expect(searchMoves("Bug Bite").map((move) => move.name)).toEqual(["bug-bite"]);
+  });
+
+  test("species search handles the same, since names like mr-mime are hyphenated", () => {
+    expect(searchSpecies("mr mime").map((s) => s.name)).toEqual(["mr-mime"]);
+  });
+});

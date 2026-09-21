@@ -50,8 +50,16 @@ export function speciesDisplayName(name: string): string {
  * is `"mimikyu-disguised"` and id 386 is `"deoxys-normal"`, for around 24 species. Prefix
  * search and ids are unaffected, but rendering `name` raw will show those suffixes.
  */
+/**
+ * Names are hyphenated, so "Bug Bite" is stored as "bug-bite". A typed space has to become a
+ * hyphen or a search stops matching the moment a name runs to a second word.
+ */
+function toNameForm(query: string): string {
+  return query.trim().toLowerCase().replace(/\s+/g, "-");
+}
+
 export function searchSpecies(query: string): SpeciesDef[] {
-  const q = query.toLowerCase();
+  const q = toNameForm(query);
   return species.filter((s) => s.name.toLowerCase().startsWith(q));
 }
 
@@ -77,7 +85,7 @@ export function moveDisplayName(name: string): string {
 
 /** Case-insensitive prefix match on move name, across every generation. */
 export function searchMoves(query: string): MoveDef[] {
-  const q = query.toLowerCase();
+  const q = toNameForm(query);
   return moves.filter((m) => m.name.toLowerCase().startsWith(q));
 }
 
