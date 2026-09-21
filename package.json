@@ -52,6 +52,7 @@
     "eslint-plugin-react-refresh": "0.5.7",
     "fake-indexeddb": "6.2.x",
     "jsdom": "30.0.1",
+    "playwright": "^1.63.0",
     "prettier": "3.9.7",
     "tailwindcss": "^4.3.3",
     "typescript": "^6.0.3",

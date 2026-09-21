@@ -8,18 +8,25 @@ the lint/test harness are in. The data model, storage adapter and app shell are 
 `docs/superpowers/specs/2026-09-17-nuzlocke-scaffold-design.md` for the design this is built to;
 it is the source of truth for table shapes and the adapter interface.
 
-**Wireframes live in `docs/wireframes/`** — the lo-fi canvas as a PDF, plus one PNG per frame
-under `frames/`. Every Linear issue names the frames it is drawn from (`**Wireframe:** 2b, 1d-2`);
-open `docs/wireframes/frames/2b.png` and `frames/1d-2.png` and look at them before building a
-screen. `all` means the whole set, `—` means nothing was drawn for that issue.
-`docs/wireframes/README.md` indexes every frame by screen name and says how to re-slice the PDF.
+**Wireframes live in `docs/wireframes/`**, one PNG per frame. Every Linear issue names the
+frames it is drawn from (`**Wireframe:** 5h, 6d (hi-fi) · 2g, 1d-4 (lo-fi)`); open them and look
+at them before building a screen. `all` means the whole set, `—` means nothing was drawn.
+`docs/wireframes/README.md` indexes every frame by screen name.
 
-Do not read the PDF directly: it is one page over 6000pt tall, so it scales down to an unreadable
-sliver. The same file is attached to the Linear project as "Lo-Fi Wireframe Exports", behind a
-signed URL that expires minutes after it is issued; the copy in the repo is the one to use.
+**Build to the hi-fi frames.** They are `docs/wireframes/hifi/frames/*.png`, cut from an HTML
+canvas export in the same directory, and they are the finished design. The lo-fi set under
+`docs/wireframes/frames/` stays for history, because the issues still cite it and it carries flow
+detail the hi-fi frames do not repeat. Where the two disagree, hi-fi wins.
 
-These are **wireframes, not a design system**; do not treat the Patrick Hand / sketch-border
-styling as the intended visual direction.
+Do not read the lo-fi PDF directly: it is one page over 6000pt tall, so it scales down to an
+unreadable sliver. Both canvases are also attached to the Linear project, behind signed URLs that
+expire minutes after they are issued; the copies in the repo are the ones to use.
+
+**The visual direction is Block Shadow**, decided 2026-09-22 from four drawn alternatives.
+Hairline black borders, hard offset shadows, three loud accents. `docs/design/block-shadow.md`
+has the palette, the type rules and the component shapes, measured out of the canvas markup
+rather than eyeballed from a PNG. The lo-fi set's Patrick Hand / sketch-border styling was never
+the intended look.
 
 Backlog, milestones and dependency order:
 https://claude.ai/code/artifact/18a760bb-38e5-4834-98f6-348d08002270
@@ -346,8 +353,9 @@ in the app may assume a game's data came from `nuzlocke.data`.
 
 ## Still open — do not assume
 
-- **Visual direction.** shadcn defers this rather than answering it. Do not invest in a
-  polish pass until Theo decides whether the hand-drawn look is real.
+- ~~**Visual direction.** shadcn defers this rather than answering it.~~ **Resolved
+  2026-09-22:** Block Shadow, chosen from four directions and drawn across every screen. See
+  `docs/design/block-shadow.md`. M0–M2 shipped on stock shadcn, so applying it is its own work.
 - **Desktop/mobile issue split.** Currently one responsive issue per screen.
 - ~~The randomiser toggle ("hides known encounter tables")~~ **Resolved 2026-09-17:** the app does
   not show expected encounters per route. PER-8 is closed and no encounter tables are stored.
