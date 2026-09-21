@@ -5,3 +5,7 @@ pnpm-lock.yaml
 # Prose is hand-authored. Prettier realigns tables and rewrites
 # emphasis markers, producing large diffs for no content change.
 *.md
+
+# A bundled canvas export, not hand-authored source. Reformatting it produces
+# a multi-megabyte diff for no content change and risks corrupting the bundle.
+docs/wireframes/hifi/nuzlocke-tracker-wireframes.html
