@@ -74,7 +74,7 @@ src/
   app/           routing and the responsive shell
   components/ui/ shadcn primitives
 scripts/         one-shot generators and tooling (not run by the build)
-docs/            design specs and the wireframes
+docs/            design specs, the visual direction, and the wireframes
 ```
 
 Dependencies point one way: `features → storage → domain`. `domain/` imports from none of
@@ -93,8 +93,12 @@ Two places, in increasing depth:
 - **`docs/superpowers/specs/2026-09-17-nuzlocke-scaffold-design.md`** — the M0 design spec:
   table shapes, the adapter interface, the commit plan.
 
-Screens are drawn in `docs/wireframes/`, one PNG per frame under `frames/`. Issues name the
-frames they are built from; `docs/wireframes/README.md` maps each frame to its screen.
+Screens are drawn in `docs/wireframes/`, one PNG per frame. Build to the hi-fi frames under
+`hifi/frames/`; the lo-fi set under `frames/` is history. Issues name the frames they are built
+from, and `docs/wireframes/README.md` maps each frame to its screen.
+
+- **`docs/design/block-shadow.md`** — the visual direction: palette, type, borders and shadows,
+  chips. Read it before styling anything.
 
 Two things worth knowing before you touch the storage layer:
 
@@ -146,14 +150,21 @@ next reader knows it was deliberate rather than a transcription slip.
 
 ## Wireframes
 
-`docs/wireframes/frames/*.png` is one image per wireframe frame, cut from the canvas export in
-`docs/wireframes/nuzlocke-tracker-wireframes.pdf`. Issues cite frames by name (`2b`, `1d-2`), so
-the PNG is what you open. `docs/wireframes/README.md` indexes them.
+One image per frame, cut from a canvas export. Issues cite frames by name
+(`**Wireframe:** 5h, 6d (hi-fi) · 2g, 1d-4 (lo-fi)`), so the PNG is what you open.
+`docs/wireframes/README.md` indexes them and maps each lo-fi frame to its hi-fi replacement.
 
-Re-slice only after re-exporting the canvas — the PNGs are committed:
+- **`docs/wireframes/hifi/frames/*.png`** — the finished design, in the Block Shadow direction.
+  Build to these.
+- `docs/wireframes/frames/*.png` — the earlier lo-fi set, kept because the issues still cite it.
+
+Re-slice only after re-exporting a canvas — the PNGs are committed:
 
 ```bash
-brew install poppler                              # pdftotext and pdftoppm
+pnpm exec playwright install chromium             # headless Chromium, for the HTML export
+node scripts/slice-hifi-wireframes.ts --force
+
+brew install poppler                              # pdftotext and pdftoppm, for the PDF
 node scripts/slice-wireframes.ts --force
 ```
 
