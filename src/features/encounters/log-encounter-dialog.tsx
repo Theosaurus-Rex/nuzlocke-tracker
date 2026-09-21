@@ -19,6 +19,7 @@ import { useLogEncounter } from "@/storage/mutations";
 import { cn } from "@/lib/utils";
 
 import { AbilityField, GenderField, HeldItemField, NatureField, NicknameField } from "./mon-fields";
+import { MovesetField } from "./moveset-field";
 import { SpeciesPicker } from "./species-picker";
 
 type Outcome = "caught" | "missed" | "skipped";
@@ -105,6 +106,7 @@ function LogEncounterForm({
   const [nature, setNature] = useState<string | null>(null);
   const [ability, setAbility] = useState("");
   const [heldItem, setHeldItem] = useState("");
+  const [moves, setMoves] = useState<string[]>([]);
   const [placement, setPlacement] = useState<"party" | "box">(
     countByMonStatus(mons).party < 6 ? "party" : "box",
   );
@@ -120,7 +122,7 @@ function LogEncounterForm({
     nature,
     ability: ability.trim() === "" ? null : ability,
     heldItem: heldItem.trim() === "" ? null : heldItem,
-    moves: [],
+    moves,
   };
 
   const errors: Partial<Record<EncounterField, string>> = submitted
@@ -263,6 +265,10 @@ function LogEncounterForm({
           <AbilityField id="log-encounter-ability" value={ability} onChange={setAbility} />
 
           <HeldItemField id="log-encounter-held-item" value={heldItem} onChange={setHeldItem} />
+
+          <div className="sm:col-span-2">
+            <MovesetField id="log-encounter-move" value={moves} onChange={setMoves} />
+          </div>
 
           <div>
             <Label htmlFor="log-encounter-placement">Placement</Label>

@@ -12,6 +12,7 @@ import { useAmendMon } from "@/storage/mutations";
 import { cn } from "@/lib/utils";
 
 import { AbilityField, GenderField, HeldItemField, NatureField, NicknameField } from "./mon-fields";
+import { MovesetField } from "./moveset-field";
 
 function levelFromText(text: string): number {
   return Number(text);
@@ -64,6 +65,7 @@ function EditMonForm({ mon, rules, onDone }: EditMonFormProps): ReactNode {
   const [nature, setNature] = useState<string | null>(mon.nature);
   const [ability, setAbility] = useState(mon.ability ?? "");
   const [heldItem, setHeldItem] = useState(mon.heldItem ?? "");
+  const [moves, setMoves] = useState<string[]>(mon.moves);
   const [submitted, setSubmitted] = useState(false);
 
   const amendments: MonAmendments = {
@@ -73,6 +75,7 @@ function EditMonForm({ mon, rules, onDone }: EditMonFormProps): ReactNode {
     nature,
     ability: ability.trim() === "" ? null : ability,
     heldItem: heldItem.trim() === "" ? null : heldItem,
+    moves,
   };
 
   const errors: Partial<Record<EncounterField, string>> = submitted
@@ -137,6 +140,10 @@ function EditMonForm({ mon, rules, onDone }: EditMonFormProps): ReactNode {
         <AbilityField id="edit-mon-ability" value={ability} onChange={setAbility} />
 
         <HeldItemField id="edit-mon-held-item" value={heldItem} onChange={setHeldItem} />
+
+        <div className="sm:col-span-2">
+          <MovesetField id="edit-mon-move" value={moves} onChange={setMoves} />
+        </div>
       </div>
 
       {amendMon.isError && (

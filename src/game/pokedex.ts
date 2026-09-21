@@ -17,6 +17,7 @@ import type { Type } from "@/game/data/pokedex/types";
 const speciesById = new Map<number, SpeciesDef>(species.map((s) => [s.id, s]));
 const speciesByName = new Map<string, SpeciesDef>(species.map((s) => [s.name, s]));
 const moveById = new Map<number, MoveDef>(moves.map((m) => [m.id, m]));
+const moveByName = new Map<string, MoveDef>(moves.map((m) => [m.name, m]));
 const abilityById = new Map<number, AbilityDef>(abilities.map((a) => [a.id, a]));
 const abilityByName = new Map<string, AbilityDef>(abilities.map((a) => [a.name, a]));
 const itemByName = new Map<string, ItemDef>(items.map((i) => [i.name, i]));
@@ -49,13 +50,43 @@ export function speciesDisplayName(name: string): string {
  * is `"mimikyu-disguised"` and id 386 is `"deoxys-normal"`, for around 24 species. Prefix
  * search and ids are unaffected, but rendering `name` raw will show those suffixes.
  */
+/**
+ * Names are hyphenated, so "Bug Bite" is stored as "bug-bite". A typed space has to become a
+ * hyphen or a search stops matching the moment a name runs to a second word.
+ */
+function toNameForm(query: string): string {
+  return query.trim().toLowerCase().replace(/\s+/g, "-");
+}
+
 export function searchSpecies(query: string): SpeciesDef[] {
-  const q = query.toLowerCase();
+  const q = toNameForm(query);
   return species.filter((s) => s.name.toLowerCase().startsWith(q));
 }
 
 export function getMove(id: number): MoveDef | undefined {
   return moveById.get(id);
+}
+
+export function getMoveByName(name: string): MoveDef | undefined {
+  return moveByName.get(name);
+}
+
+/**
+ * A stored move id turned into something renderable: hyphens become spaces and each word is
+ * capitalised. Works on a name absent from the pokedex, since a romhack or randomiser move is a
+ * supported case, not an error.
+ */
+export function moveDisplayName(name: string): string {
+  return name
+    .split("-")
+    .map((word) => word.charAt(0).toUpperCase() + word.slice(1))
+    .join(" ");
+}
+
+/** Case-insensitive prefix match on move name, across every generation. */
+export function searchMoves(query: string): MoveDef[] {
+  const q = toNameForm(query);
+  return moves.filter((m) => m.name.toLowerCase().startsWith(q));
 }
 
 export function getAbility(id: number): AbilityDef | undefined {

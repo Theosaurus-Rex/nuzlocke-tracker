@@ -488,6 +488,7 @@ describe("useAmendMon", () => {
     nature: "adamant",
     ability: "overgrow",
     heldItem: "oran-berry",
+    moves: ["vine-whip", "growth"],
   };
 
   it("persists the amended fields and leaves other rows alone", async () => {
@@ -535,6 +536,7 @@ describe("useAmendMon", () => {
     expect(result.nature).toBe("adamant");
     expect(result.ability).toBe("overgrow");
     expect(result.heldItem).toBe("oran-berry");
+    expect(result.moves).toEqual(["vine-whip", "growth"]);
     expect(result.speciesId).toBe(targetMon.speciesId);
 
     const persisted = await adapter.mons.get(targetMon.id);

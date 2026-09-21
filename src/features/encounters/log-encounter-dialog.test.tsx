@@ -213,6 +213,24 @@ describe("LogEncounterDialog", () => {
     });
   });
 
+  it("saves the chosen moves onto the caught mon", async () => {
+    const user = userEvent.setup();
+    const { adapter, onOpenChange } = renderDialog({});
+
+    await user.type(screen.getByLabelText("Species"), "Chikorita");
+    await user.type(screen.getByLabelText("Level caught"), "6");
+    await user.type(screen.getAllByPlaceholderText("+ move")[0]!, "Tackle");
+    await user.type(screen.getAllByPlaceholderText("+ move")[0]!, "Growl");
+    await user.click(screen.getByRole("button", { name: "Save encounter" }));
+
+    await waitFor(() => {
+      expect(onOpenChange).toHaveBeenCalledWith(false);
+    });
+
+    const [mon] = await adapter.mons.where("runId", "run-1");
+    expect(mon?.moves).toEqual(["tackle", "growl"]);
+  });
+
   it("blocks submit on a missing nickname when the clause is on, and shows nothing was saved", async () => {
     const user = userEvent.setup();
     const { adapter, onOpenChange } = renderDialog({

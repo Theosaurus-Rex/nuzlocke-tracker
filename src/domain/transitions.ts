@@ -12,7 +12,7 @@
 import type { Cause, Draft, Encounter, Fight, Gender, Mon, Death } from "./types";
 
 const MAX_PARTY_SIZE = 6;
-const MAX_MOVES = 4;
+export const MAX_MOVES = 4;
 
 function assertEncounterOpen(encounter: Encounter): void {
   if (encounter.status !== "open") {
@@ -197,12 +197,19 @@ export interface MonAmendments {
   nature: string | null;
   ability: string | null;
   heldItem: string | null;
+  moves: string[];
 }
 
 export function amendMon({ mon, amendments }: { mon: Mon; amendments: MonAmendments }): Mon {
   if (amendments.level < mon.levelCaught) {
     throw new Error(
       `A mon's current level (${amendments.level}) cannot be below the level it was caught at (${mon.levelCaught}).`,
+    );
+  }
+
+  if (amendments.moves.length > MAX_MOVES) {
+    throw new Error(
+      `A mon cannot have more than ${MAX_MOVES} moves (got ${amendments.moves.length}).`,
     );
   }
 
@@ -214,6 +221,7 @@ export function amendMon({ mon, amendments }: { mon: Mon; amendments: MonAmendme
     nature: amendments.nature,
     ability: amendments.ability,
     heldItem: amendments.heldItem,
+    moves: amendments.moves,
   };
 }
 

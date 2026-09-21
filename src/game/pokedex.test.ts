@@ -6,9 +6,12 @@ import { natures } from "@/game/data/pokedex/natures";
 import { species } from "@/game/data/pokedex/species";
 import {
   getEvolutions,
+  getMoveByName,
   getSpecies,
   getSpeciesByName,
+  moveDisplayName,
   pokedexFor,
+  searchMoves,
   searchSpecies,
   speciesDisplayName,
 } from "@/game/pokedex";
@@ -291,5 +294,75 @@ describe("speciesDisplayName", () => {
   test("works on a species absent from the pokedex, without throwing or a placeholder", () => {
     expect(getSpeciesByName("totally-homebrew-mon")).toBeUndefined();
     expect(speciesDisplayName("totally-homebrew-mon")).toBe("Totally Homebrew Mon");
+  });
+});
+
+describe("searchMoves", () => {
+  test("is case-insensitive", () => {
+    const lower = searchMoves("tackle");
+    const upper = searchMoves("TACKLE");
+    const mixed = searchMoves("TaCkLe");
+    expect(lower.map((m) => m.name)).toEqual(["tackle"]);
+    expect(upper.map((m) => m.name)).toEqual(["tackle"]);
+    expect(mixed.map((m) => m.name)).toEqual(["tackle"]);
+  });
+
+  test("matches on prefix", () => {
+    const results = searchMoves("razor");
+    const names = results.map((m) => m.name);
+    expect(names).toContain("razor-leaf");
+    // Prefix, not substring: "double-edge" contains no "razor" prefix match target.
+    expect(names).not.toContain("double-edge");
+  });
+
+  test("finds no match for a name not in the pokedex", () => {
+    expect(searchMoves("not-a-real-move")).toEqual([]);
+  });
+});
+
+describe("getMoveByName", () => {
+  test("finds a move by its stored name", () => {
+    expect(getMoveByName("vine-whip")?.name).toBe("vine-whip");
+  });
+
+  test("returns undefined for a name not in the pokedex", () => {
+    expect(getMoveByName("not-a-real-move")).toBeUndefined();
+  });
+});
+
+describe("moveDisplayName", () => {
+  test("capitalises a single-word move known to the pokedex", () => {
+    expect(moveDisplayName("tackle")).toBe("Tackle");
+  });
+
+  test("turns hyphens into spaces and capitalises each word", () => {
+    expect(moveDisplayName("vine-whip")).toBe("Vine Whip");
+  });
+
+  test("works on a move absent from the pokedex, without throwing or a placeholder", () => {
+    expect(getMoveByName("totally-homebrew-move")).toBeUndefined();
+    expect(moveDisplayName("totally-homebrew-move")).toBe("Totally Homebrew Move");
+  });
+});
+
+describe("searching a name that runs to a second word", () => {
+  test("a trailing space still matches, rather than clearing the results", () => {
+    const names = searchMoves("bug ").map((move) => move.name);
+    expect(names).toContain("bug-bite");
+    expect(names).toContain("bug-buzz");
+  });
+
+  test("a space partway through narrows rather than breaking the match", () => {
+    const names = searchMoves("bug bi").map((move) => move.name);
+    expect(names).toContain("bug-bite");
+    expect(names).not.toContain("bug-buzz");
+  });
+
+  test("a fully typed two-word move matches", () => {
+    expect(searchMoves("Bug Bite").map((move) => move.name)).toEqual(["bug-bite"]);
+  });
+
+  test("species search handles the same, since names like mr-mime are hyphenated", () => {
+    expect(searchSpecies("mr mime").map((s) => s.name)).toEqual(["mr-mime"]);
   });
 });

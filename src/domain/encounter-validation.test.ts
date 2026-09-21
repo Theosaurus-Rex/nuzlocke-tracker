@@ -146,6 +146,7 @@ function makeAmendments(overrides: Partial<MonAmendments> = {}): MonAmendments {
     nature: null,
     ability: null,
     heldItem: null,
+    moves: [],
     ...overrides,
   };
 }

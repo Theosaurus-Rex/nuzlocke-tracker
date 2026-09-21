@@ -120,6 +120,28 @@ describe("EditMonDialog", () => {
     expect(screen.getByLabelText("Held item")).toHaveValue("Miracle Seed");
   });
 
+  it("pre-fills the moveset from the mon being edited", () => {
+    renderDialog({ mon: makeMon({ moves: ["vine-whip", "growth"] }) });
+
+    expect(screen.getByText("Vine Whip")).toBeInTheDocument();
+    expect(screen.getByText("Growth")).toBeInTheDocument();
+    expect(screen.getAllByPlaceholderText("+ move")).toHaveLength(2);
+  });
+
+  it("saves changed moves onto the mon", async () => {
+    const user = userEvent.setup();
+    const { adapter, mon } = renderDialog({ mon: makeMon({ moves: ["vine-whip", "growth"] }) });
+
+    await user.click(screen.getByRole("button", { name: "Remove Growth" }));
+    await user.type(screen.getAllByPlaceholderText("+ move")[0]!, "Tackle");
+    await user.click(screen.getByRole("button", { name: "Save changes" }));
+
+    await waitFor(async () => {
+      const saved = await adapter.mons.get(mon.id);
+      expect(saved?.moves).toEqual(["vine-whip", "tackle"]);
+    });
+  });
+
   it("shows species and level caught, read-only", async () => {
     const user = userEvent.setup();
     renderDialog({ mon: makeMon({ speciesId: "bellsprout", levelCaught: 6 }) });

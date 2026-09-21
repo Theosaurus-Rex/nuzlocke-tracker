@@ -315,10 +315,16 @@ still holds, *anything typed* does not. A romhack's fakemon is hand-authored int
 Ability and held item are still free text. There is no `searchAbilities` or `searchItems` to
 select from, only `searchSpecies`, so the same rule cannot apply to them yet.
 
+**The moveset editor takes a selection too — decided 2026-09-21.** Same rule as the species
+picker: typing filters `searchMoves`, a fully typed move name counts as choosing it, and a name
+the pokedex does not know leaves the slot empty. This amends the "free-text" half of the
+consequence below; the "over every move" half stands, since a move picked here is never filtered
+by a species' learnset.
+
 Consequences, all deliberate:
 
-- **Learnsets are not stored.** The moveset editor is free-text over every move. Filtering by a
-  species' legal set is exactly the constraint being removed.
+- **Learnsets are not stored.** The moveset editor is a selection over every move, not filtered
+  by species. Filtering by a species' legal set is exactly the constraint being removed.
 - **Wild encounter tables are not stored.** The app does not show expected encounters per route
   (PER-8 closed). The randomiser toggle labelled "hides known encounter tables" is therefore
   misleading and needs rewording when PER-18 builds the rules screen.
