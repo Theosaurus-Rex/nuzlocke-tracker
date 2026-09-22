@@ -81,6 +81,18 @@ Two families, no third.
 "Every number" is the rule as drawn, and honouring it precisely is most of what makes the
 direction read the way it does.
 
+It has bitten three times, so it is worth knowing what putting a number in its own element costs:
+
+- **Inside a flex container the parent's `gap` opens up around it.** `12 CAUGHT` lost its space
+  and read `12CAUGHT`; `Active (1)` gained two and read `Active ( 1 )`. Make the whole label one
+  flex item.
+- **Inside a sentence it splits the text across sibling nodes**, and Testing Library's default
+  `getByText` reads only an element's own direct text children, so a query that matched the
+  sentence stops matching. Use a function matcher against `textContent`.
+
+Neither kind shows up in a test run. The first is layout, which jsdom does not evaluate, and the
+second only surfaces once a query already exists.
+
 Uppercase labels, meaning section eyebrows and chips, are `500 9px` or `500 10px` with
 `letter-spacing` between `.12em` and `.14em`.
 

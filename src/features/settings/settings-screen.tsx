@@ -6,6 +6,8 @@ import { useQueryClient } from "@tanstack/react-query";
 
 import { Button } from "@/components/ui/button";
 import type { ExportBundle } from "@/domain/schema";
+import { SquareCheckbox } from "@/components/square-checkbox";
+import { FIELD_LABEL_CLASS } from "@/features/encounters/mon-fields";
 import {
   downloadBundle,
   exportBundle,
@@ -114,174 +116,190 @@ export function SettingsScreen(): ReactNode {
   const canConfirm = mode === "merge" || replaceAcknowledged;
 
   return (
-    <div className="mx-auto max-w-2xl space-y-8 p-4">
-      <div>
-        <h1 className="text-xl">Settings</h1>
-        <p className="mt-4 text-sm">Storage persistence: {status ?? "checking…"}</p>
+    <div>
+      <div className="border-b-[1.5px] border-border p-4">
+        <h1 className="text-xl font-bold sm:text-2xl">Settings</h1>
+        <p className="mt-1 text-sm text-muted-foreground">
+          Storage persistence: {status ?? "checking…"}
+        </p>
       </div>
 
-      <section className="space-y-2 border-t border-border pt-4">
-        <h2 className="font-medium">Export</h2>
-        <p className="text-muted-foreground text-sm">
-          Downloads every run as a single JSON file. This is the app's only backup — do this before
-          switching devices, and periodically otherwise.
-        </p>
-        <Button onClick={() => void handleExport()}>Export data</Button>
-        {exportError && (
-          <p role="alert" className="text-sm text-destructive">
-            Export failed: {exportError}. Nothing was saved.
+      <div className="max-w-2xl space-y-8 p-4">
+        <section className="space-y-2">
+          <h2 className={FIELD_LABEL_CLASS}>Export</h2>
+          <p className="text-sm text-muted-foreground">
+            Downloads every run as a single JSON file. This is the app&rsquo;s only backup — do this
+            before switching devices, and periodically otherwise.
           </p>
-        )}
-      </section>
-
-      <section className="space-y-3 border-t border-border pt-4">
-        <h2 className="font-medium">Import</h2>
-        <p className="text-muted-foreground text-sm">
-          Restores from a JSON file previously produced by Export.
-        </p>
-
-        <input
-          type="file"
-          accept="application/json"
-          onChange={(event) => void handleFileChange(event)}
-          className="text-sm"
-        />
-
-        {parseErrors && (
-          <div
-            role="alert"
-            className="space-y-1 rounded border border-destructive/40 bg-destructive/10 p-3 text-sm"
-          >
-            <p className="font-medium text-destructive">
-              This file could not be imported. {parseErrors.length}{" "}
-              {parseErrors.length === 1 ? "problem" : "problems"} found:
+          <Button onClick={() => void handleExport()}>Export data</Button>
+          {exportError && (
+            <p role="alert" className="text-sm text-destructive">
+              Export failed: {exportError}. Nothing was saved.
             </p>
-            <ul className="list-inside list-disc">
-              {parseErrors.map((error, index) => (
-                <li key={index}>{error}</li>
-              ))}
-            </ul>
-          </div>
-        )}
+          )}
+        </section>
 
-        {importError && (
-          <p role="alert" className="text-sm text-destructive">
-            Import failed: {importError}. Nothing was written — imports are all-or-nothing.
+        <section className="space-y-3 border-t-[1.5px] border-border pt-6">
+          <h2 className={FIELD_LABEL_CLASS}>Import</h2>
+          <p className="text-sm text-muted-foreground">
+            Restores from a JSON file previously produced by Export.
           </p>
-        )}
 
-        {importSummary && (
-          <div className="space-y-1 rounded border border-border p-3 text-sm">
-            <p className="font-medium">Import complete ({importSummary.mode}).</p>
-            <p>
-              Imported {importSummary.imported.length}{" "}
-              {importSummary.imported.length === 1 ? "run" : "runs"}
-              {importSummary.imported.length > 0
-                ? `: ${importSummary.imported.map((run) => run.name).join(", ")}`
-                : "."}
-            </p>
-            {importSummary.skipped.length > 0 && (
-              <p>
-                Skipped {importSummary.skipped.length} existing{" "}
-                {importSummary.skipped.length === 1 ? "run" : "runs"} (left untouched):{" "}
-                {importSummary.skipped.map((run) => run.name).join(", ")}
+          {/* `file:` styles the control's own button, so the picker keeps its native behaviour
+              and its accessible name. */}
+          <input
+            type="file"
+            accept="application/json"
+            onChange={(event) => void handleFileChange(event)}
+            className="text-sm text-muted-foreground file:mr-3 file:cursor-pointer file:border-[1.5px] file:border-border file:bg-background file:px-3 file:py-1.5 file:text-sm file:font-medium file:text-foreground file:shadow-block hover:file:bg-muted"
+          />
+
+          {parseErrors && (
+            <div
+              role="alert"
+              className="space-y-1 border-[1.5px] border-destructive bg-destructive/10 p-3 text-sm shadow-block-alert"
+            >
+              <p className="font-medium text-destructive">
+                This file could not be imported.{" "}
+                <span className="font-mono">{parseErrors.length}</span>{" "}
+                {parseErrors.length === 1 ? "problem" : "problems"} found:
               </p>
-            )}
-            <p className="text-muted-foreground">
-              Rows written — routes: {importSummary.rowCounts.routes}, encounters:{" "}
-              {importSummary.rowCounts.encounters}, mons: {importSummary.rowCounts.mons}, deaths:{" "}
-              {importSummary.rowCounts.deaths}, fights: {importSummary.rowCounts.fights}
-            </p>
-          </div>
-        )}
-
-        {preview && (
-          <div className="space-y-3 rounded border border-border p-3 text-sm">
-            <p className="font-medium">Preview: {pending?.fileName}</p>
-
-            <fieldset className="flex gap-4">
-              <legend className="mb-1 text-muted-foreground">Mode</legend>
-              <label className="flex items-center gap-1.5">
-                <input
-                  type="radio"
-                  name="import-mode"
-                  checked={mode === "merge"}
-                  onChange={() => handleModeChange("merge")}
-                />
-                Merge — add new runs only
-              </label>
-              <label className="flex items-center gap-1.5">
-                <input
-                  type="radio"
-                  name="import-mode"
-                  checked={mode === "replace"}
-                  onChange={() => handleModeChange("replace")}
-                />
-                Replace — erase everything first
-              </label>
-            </fieldset>
-
-            <p>
-              {preview.toImport.length} {preview.toImport.length === 1 ? "run" : "runs"} would be
-              imported
-              {preview.toImport.length > 0
-                ? `: ${preview.toImport.map((run) => run.name).join(", ")}`
-                : "."}
-            </p>
-            {mode === "merge" && preview.toSkip.length > 0 && (
-              <p>
-                {preview.toSkip.length} existing {preview.toSkip.length === 1 ? "run" : "runs"}{" "}
-                would be skipped (already present, left untouched):{" "}
-                {preview.toSkip.map((run) => run.name).join(", ")}
-              </p>
-            )}
-            <p className="text-muted-foreground">
-              Rows to write — routes: {preview.rowCounts.routes}, encounters:{" "}
-              {preview.rowCounts.encounters}, mons: {preview.rowCounts.mons}, deaths:{" "}
-              {preview.rowCounts.deaths}, fights: {preview.rowCounts.fights}
-            </p>
-
-            {mode === "replace" && (
-              <div className="space-y-2 rounded border border-destructive/40 bg-destructive/10 p-3">
-                <p className="font-medium text-destructive">
-                  Replace erases ALL current runs and their data before writing this file. This
-                  cannot be undone.
-                </p>
-                <Button variant="outline" size="sm" onClick={() => void handleExport()}>
-                  Export current data first
-                </Button>
-                {exportError && (
-                  <p role="alert" className="text-sm text-destructive">
-                    Export failed: {exportError}. Nothing was saved.
-                  </p>
-                )}
-                <label className="flex items-start gap-2">
-                  <input
-                    type="checkbox"
-                    checked={replaceAcknowledged}
-                    onChange={(event) => setReplaceAcknowledged(event.target.checked)}
-                    className="mt-0.5"
-                  />
-                  I understand this will permanently erase all current data.
-                </label>
-              </div>
-            )}
-
-            <div className="flex gap-2">
-              <Button
-                variant={mode === "replace" ? "destructive" : "default"}
-                disabled={!canConfirm || busy}
-                onClick={() => void handleConfirmImport()}
-              >
-                {busy ? "Importing…" : mode === "replace" ? "Erase and import" : "Import"}
-              </Button>
-              <Button variant="ghost" disabled={busy} onClick={handleCancelImport}>
-                Cancel
-              </Button>
+              <ul className="list-inside list-disc">
+                {parseErrors.map((error, index) => (
+                  <li key={index}>{error}</li>
+                ))}
+              </ul>
             </div>
-          </div>
-        )}
-      </section>
+          )}
+
+          {importError && (
+            <p role="alert" className="text-sm text-destructive">
+              Import failed: {importError}. Nothing was written — imports are all-or-nothing.
+            </p>
+          )}
+
+          {importSummary && (
+            <div className="space-y-1 border-[1.5px] border-border bg-card p-3 text-sm shadow-block">
+              <p className="font-medium">Import complete ({importSummary.mode}).</p>
+              <p>
+                Imported <span className="font-mono">{importSummary.imported.length}</span>{" "}
+                {importSummary.imported.length === 1 ? "run" : "runs"}
+                {importSummary.imported.length > 0
+                  ? `: ${importSummary.imported.map((run) => run.name).join(", ")}`
+                  : "."}
+              </p>
+              {importSummary.skipped.length > 0 && (
+                <p>
+                  Skipped <span className="font-mono">{importSummary.skipped.length}</span> existing{" "}
+                  {importSummary.skipped.length === 1 ? "run" : "runs"} (left untouched):{" "}
+                  {importSummary.skipped.map((run) => run.name).join(", ")}
+                </p>
+              )}
+              <p className="text-muted-foreground">
+                Rows written — routes:{" "}
+                <span className="font-mono">{importSummary.rowCounts.routes}</span>, encounters:{" "}
+                <span className="font-mono">{importSummary.rowCounts.encounters}</span>, mons:{" "}
+                <span className="font-mono">{importSummary.rowCounts.mons}</span>, deaths:{" "}
+                <span className="font-mono">{importSummary.rowCounts.deaths}</span>, fights:{" "}
+                <span className="font-mono">{importSummary.rowCounts.fights}</span>
+              </p>
+            </div>
+          )}
+
+          {preview && (
+            <div className="space-y-3 border-[1.5px] border-border bg-card p-3 text-sm shadow-block">
+              <p className="font-medium">Preview: {pending?.fileName}</p>
+
+              <fieldset className="space-y-2">
+                <legend className={FIELD_LABEL_CLASS}>Mode</legend>
+                <div className="flex flex-wrap gap-4">
+                  <label className="flex items-center gap-1.5">
+                    <input
+                      type="radio"
+                      name="import-mode"
+                      checked={mode === "merge"}
+                      onChange={() => handleModeChange("merge")}
+                    />
+                    Merge — add new runs only
+                  </label>
+                  <label className="flex items-center gap-1.5">
+                    <input
+                      type="radio"
+                      name="import-mode"
+                      checked={mode === "replace"}
+                      onChange={() => handleModeChange("replace")}
+                    />
+                    Replace — erase everything first
+                  </label>
+                </div>
+              </fieldset>
+
+              <p>
+                <span className="font-mono">{preview.toImport.length}</span>{" "}
+                {preview.toImport.length === 1 ? "run" : "runs"} would be imported
+                {preview.toImport.length > 0
+                  ? `: ${preview.toImport.map((run) => run.name).join(", ")}`
+                  : "."}
+              </p>
+              {mode === "merge" && preview.toSkip.length > 0 && (
+                <p>
+                  <span className="font-mono">{preview.toSkip.length}</span> existing{" "}
+                  {preview.toSkip.length === 1 ? "run" : "runs"} would be skipped (already present,
+                  left untouched): {preview.toSkip.map((run) => run.name).join(", ")}
+                </p>
+              )}
+              <p className="text-muted-foreground">
+                Rows to write — routes:{" "}
+                <span className="font-mono">{preview.rowCounts.routes}</span>, encounters:{" "}
+                <span className="font-mono">{preview.rowCounts.encounters}</span>, mons:{" "}
+                <span className="font-mono">{preview.rowCounts.mons}</span>, deaths:{" "}
+                <span className="font-mono">{preview.rowCounts.deaths}</span>, fights:{" "}
+                <span className="font-mono">{preview.rowCounts.fights}</span>
+              </p>
+
+              {mode === "replace" && (
+                <div className="space-y-2 border-[1.5px] border-destructive bg-destructive/10 p-3 shadow-block-alert">
+                  <p className="font-medium text-destructive">
+                    Replace erases ALL current runs and their data before writing this file. This
+                    cannot be undone.
+                  </p>
+                  <Button variant="outline" size="sm" onClick={() => void handleExport()}>
+                    Export current data first
+                  </Button>
+                  {exportError && (
+                    <p role="alert" className="text-sm text-destructive">
+                      Export failed: {exportError}. Nothing was saved.
+                    </p>
+                  )}
+                  <label className="flex items-start gap-2">
+                    <SquareCheckbox
+                      id="replace-acknowledged"
+                      checked={replaceAcknowledged}
+                      onChange={() => {
+                        setReplaceAcknowledged((previous) => !previous);
+                      }}
+                    />
+                    I understand this will permanently erase all current data.
+                  </label>
+                </div>
+              )}
+
+              <div className="flex gap-2">
+                <Button
+                  variant={mode === "replace" ? "destructive" : "default"}
+                  disabled={!canConfirm || busy}
+                  onClick={() => void handleConfirmImport()}
+                >
+                  {busy ? "Importing…" : mode === "replace" ? "Erase and import" : "Import"}
+                </Button>
+                <Button variant="ghost" disabled={busy} onClick={handleCancelImport}>
+                  Cancel
+                </Button>
+              </div>
+            </div>
+          )}
+        </section>
+      </div>
     </div>
   );
 }
