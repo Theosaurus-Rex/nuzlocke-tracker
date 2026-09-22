@@ -7,6 +7,7 @@ import type { MoveDef } from "@/game/data/pokedex/moves";
 import { getMoveByName, moveDisplayName, searchMoves } from "@/game/pokedex";
 
 import { ComboboxField } from "./combobox-field";
+import { FIELD_LABEL_CLASS } from "./mon-fields";
 
 function toMoveId(text: string): string {
   return text.trim().toLowerCase().replace(/\s+/g, "-");
@@ -35,12 +36,12 @@ export function MovesetField({ id, value, onChange }: MovesetFieldProps): ReactN
 
   return (
     <div>
-      <span className="mb-1 block text-sm font-medium">Moveset</span>
+      <span className={FIELD_LABEL_CLASS}>Moveset</span>
       <div className="grid grid-cols-2 gap-2">
         {value.map((moveId, index) => (
           <div
             key={moveId}
-            className="flex h-8 items-center justify-between rounded-lg border border-border px-2.5 text-sm"
+            className="flex h-8 items-center justify-between border-[1.5px] border-border px-2.5 text-sm"
           >
             <span>{moveDisplayName(moveId)}</span>
             <Button
@@ -79,6 +80,7 @@ function MoveSlotPicker({ id, existing, onAdd }: MoveSlotPickerProps): ReactNode
       id={id}
       value=""
       placeholder="+ move"
+      inputClassName="border-dashed border-placeholder placeholder:text-muted-foreground"
       onChange={(moveId) => {
         if (moveId !== "") onAdd(moveId);
       }}

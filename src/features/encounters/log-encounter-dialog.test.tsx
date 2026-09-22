@@ -122,6 +122,37 @@ describe("LogEncounterDialog", () => {
     expect(screen.getByRole("dialog", { name: "New Bark Town" })).toBeInTheDocument();
   });
 
+  it("can be filled and saved entirely from the keyboard", async () => {
+    const user = userEvent.setup();
+    const { adapter, onOpenChange } = renderDialog({});
+
+    const species = screen.getByLabelText("Species");
+    await user.type(species, "chik");
+    await user.keyboard("{ArrowDown}{Enter}");
+    await user.type(screen.getByLabelText("Level caught"), "6");
+
+    // Back in the species field its list reopens, with nothing arrowed to. Enter must fall
+    // through to the form rather than being swallowed by the combobox.
+    await user.click(species);
+    await user.keyboard("{Enter}");
+
+    await waitFor(() => {
+      expect(onOpenChange).toHaveBeenCalledWith(false);
+    });
+
+    const [encounter] = await adapter.encounters.where("runId", "run-1");
+    expect(encounter?.speciesId).toBe("chikorita");
+  });
+
+  it("shows the species' resolved type inline once it matches", async () => {
+    const user = userEvent.setup();
+    renderDialog({});
+
+    await user.type(screen.getByLabelText("Species"), "Chikorita");
+
+    expect(await screen.findByText("grass")).toBeInTheDocument();
+  });
+
   it("offers a matching species from a partial search and accepts the pick", async () => {
     const user = userEvent.setup();
     const { adapter, onOpenChange } = renderDialog({});
