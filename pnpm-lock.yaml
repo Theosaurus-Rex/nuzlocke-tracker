@@ -11,6 +11,12 @@ importers:
       '@base-ui/react':
         specifier: ^1.8.0
         version: 1.8.0(@types/react@19.3.0)(react-dom@19.3.0(react@19.3.0))(react@19.3.0)
+      '@fontsource/share-tech-mono':
+        specifier: ^5.3.0
+        version: 5.3.0
+      '@fontsource/space-grotesk':
+        specifier: ^5.3.0
+        version: 5.3.0
       '@tanstack/react-query':
         specifier: ^5.103.1
         version: 5.103.1(react@19.3.0)
@@ -410,6 +416,12 @@ packages:
 
   '@floating-ui/utils@0.2.12':
     resolution: {integrity: sha512-HpCo8tmWzLVad5s2d19EhAz5zqrrQ6s69qd6moPMQvkOuSwDT1YgRfWSVuc4ennqrgv3OHppiOGMQ7oC13yIww==}
+
+  '@fontsource/share-tech-mono@5.3.0':
+    resolution: {integrity: sha512-hVEzVCzEid/fBfhggMyvkfDzn9ODrMihxC0EiOeQK3BuQNvdjmith2ERnoDNUkbW8zhufbKNuCgaSoT8LUNpuQ==}
+
+  '@fontsource/space-grotesk@5.3.0':
+    resolution: {integrity: sha512-ksnGizDPXIDuvqcTYTSrmZ+evx9sDlS8rp7+42BQ7wU+spt3twEoXfbJz672C+5CLg6VeUQwRy5RXshWb67LcQ==}
 
   '@hono/node-server@2.1.1':
     resolution: {integrity: sha512-ELuehkj5VCBdgEw9zs+ivkKwyzzUCSQuE96YmiPvn1ECBoZCczbFXJLeEGMTYjphP6gydh4pHMqEYPVMYUVgQg==}
@@ -3057,6 +3069,10 @@ snapshots:
       react-dom: 19.3.0(react@19.3.0)
 
   '@floating-ui/utils@0.2.12': {}
+
+  '@fontsource/share-tech-mono@5.3.0': {}
+
+  '@fontsource/space-grotesk@5.3.0': {}
 
   '@hono/node-server@2.1.1(hono@4.13.8)':
     dependencies:
