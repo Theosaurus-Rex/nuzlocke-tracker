@@ -4,10 +4,6 @@ import type { ReactNode } from "react";
 import { Button } from "@/components/ui/button";
 import { DialogClose, DialogTitle } from "@/components/ui/dialog";
 
-/**
- * The flag-tinted strip shared by the log and edit dialogs: the route name, a quiet subtitle,
- * and a bordered square close button, sitting above a hairline rule.
- */
 export function EncounterDialogHeader({ title }: { title: string }): ReactNode {
   return (
     <div className="flex shrink-0 items-center justify-between gap-3 border-b-[1.5px] border-border bg-flag-tint px-4 py-3">

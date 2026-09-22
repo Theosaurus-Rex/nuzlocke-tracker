@@ -1,9 +1,7 @@
 /**
- * Covers the settings screen's import flow against the in-memory adapter: a malformed file is
- * refused with legible errors, a valid file previews before anything is written, and replace
- * mode can't be confirmed until the destructive checkbox is ticked. Validation, atomicity and
- * round-trip properties live in `@/storage/backup.test.ts`. This file only covers the screen's
- * own wiring.
+ * Covers the import flow: malformed files are refused, valid ones preview before anything is
+ * written, and replace mode needs the checkbox ticked. Atomicity and round-trip properties are
+ * covered in `@/storage/backup.test.ts`.
  */
 
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
@@ -150,7 +148,6 @@ describe("SettingsScreen — import", () => {
     });
 
     expect(await adapter.runs.get("incoming-run")).toBeDefined();
-    // Left completely untouched.
     expect(await adapter.runs.get(existing.id)).toEqual(existing);
   });
 

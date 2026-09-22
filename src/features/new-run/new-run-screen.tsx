@@ -1,12 +1,7 @@
 /**
- * The game picker is populated from the `GAMES` registry, not a hard-coded list. The name
- * field validates on submit, so an untouched form doesn't greet the user with an error.
- *
- * The randomiser sub-toggles and the rule clauses are real checkboxes throughout: styling them
- * as chips or square ticks never trades away their native role, name or keyboard operation. A
- * chip's visible caption is short (frame 5g/6b draw WILD, TRAINERS, ...), so each checkbox
- * carries its full sentence as `aria-label`, which wins over the wrapping label's own text for
- * the accessible name a screen reader or `getByLabelText` sees.
+ * The randomiser sub-toggles and rule clauses render as chips, but stay real checkboxes so they
+ * keep their native role and keyboard behaviour. Each chip's caption is short, so `aria-label`
+ * carries the full accessible name instead of the visible text.
  */
 
 import { useState, type ChangeEvent, type FormEvent, type ReactNode } from "react";
@@ -53,8 +48,8 @@ const RANDOMISER_SUB_LABELS: Record<RandomiserSubField, string> = {
   evolutions: "Evolutions are randomised",
 };
 
-// Frame 5g/6b only draw five of these as chips; `moves` and `evolutions` still need a control
-// since the stored rules keep all seven, so they get a caption in the same shape.
+// The wireframe only draws five of these as chips. `moves` and `evolutions` still need a
+// caption in the same shape, since the stored rules keep all seven.
 const RANDOMISER_SUB_CHIP_LABELS: Record<RandomiserSubField, string> = {
   wildEncounters: "Wild",
   trainers: "Trainers",

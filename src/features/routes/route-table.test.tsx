@@ -115,7 +115,6 @@ describe("RouteTable", () => {
     expect(screen.getByRole("columnheader", { name: "Status" })).toBeInTheDocument();
 
     const rows = screen.getAllByRole("row");
-    // One header row plus one row per route.
     expect(rows).toHaveLength(routes.length + 1);
   });
 

@@ -36,23 +36,9 @@ const INPUT_CLASS = cn(
 );
 
 /**
- * Type-to-filter input backing both the species and move pickers, built on Base UI's
- * `Autocomplete` so the popup lives in a portal rather than a descendant of whatever scroll
- * container the field sits in. Text only becomes a value once it resolves to a real option, so
- * typing something `resolve` does not know leaves the value unset rather than committing raw
- * text. Typing a full name counts as choosing it, so the keyboard path needs no click.
- *
- * `Autocomplete` owns arrow navigation, wrapping, Escape-to-close and Enter falling through to
- * the form when nothing is highlighted. Selection itself is committed from each `Item`'s
- * `onClick`, which Base UI also fires for an Enter press on the highlighted item, rather than
- * from `onValueChange`, since that callback only ever carries the item's string label.
- *
- * `open` is kept explicitly rather than left uncontrolled: Base UI aria-hides everything outside
- * the popup and its input while the popup is open, including sibling form controls such as the
- * dialog's own submit button, since the input renders outside the popup. Typing a full match
- * commits the value without the user ever pressing Enter or clicking an option, so nothing tells
- * Base UI to close the list on its own in that case; closing it ourselves once `resolve` finds a
- * value avoids leaving the rest of the form hidden from assistive tech.
+ * Type-to-filter input backing the species and move pickers. Text only becomes a value once it
+ * resolves to a real option. A full name typed counts as choosing it, so the keyboard path needs
+ * no click. See docs/notes/features.md#combobox-field for the Base UI integration details.
  */
 export function ComboboxField({
   id,

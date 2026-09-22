@@ -64,12 +64,9 @@ export interface RouteRowChip {
 }
 
 /**
- * The one place `RouteRowStatus` becomes a chip. Both `RouteTable` and `RouteCardList` call
- * this rather than each deciding for themselves, so the two views cannot drift.
- *
- * A `caught` row shows where the mon actually is (party or box), not the generic word "caught",
- * per the hi-fi frames. A row's mon can go missing from hand-edited or partially-imported data;
- * that falls back to the generic "caught" chip rather than guessing a location.
+ * The one place `RouteRowStatus` becomes a chip, so `RouteTable` and `RouteCardList` cannot
+ * drift. A `caught` row shows where the mon actually is, falling back to the generic word only
+ * when hand-edited or partial data leaves the mon missing.
  */
 export function chipForRouteRow(row: RouteRow): RouteRowChip {
   switch (row.status) {
@@ -89,10 +86,9 @@ export function chipForRouteRow(row: RouteRow): RouteRowChip {
 }
 
 /**
- * Whether a row's chip is also its log affordance. `open` shows the same "log" chip text as
- * `not-encountered` but stays a plain chip: an open encounter already exists, and today's app
- * never leaves one open for a user to act on again, so there is nothing for a second log action
- * to do.
+ * Whether a row's chip is also its log affordance. `open` shows the same "log" text as
+ * `not-encountered` but stays a plain chip: an encounter already exists, so there is nothing for
+ * a second log action to do.
  */
 export function canLogEncounter(row: RouteRow): boolean {
   return row.status === "not-encountered";
@@ -100,9 +96,8 @@ export function canLogEncounter(row: RouteRow): boolean {
 
 /**
  * Resolves a row's primary type against the run's generation, never the species' present-day
- * types. Clefairy is Normal in a HeartGold (gen 4) run and Fairy from gen 6 on; reading
- * `species.types` directly would always show the latter. A dual-type mon shows only its primary
- * type, matching the hi-fi frames, which never draw a second badge.
+ * types. Clefairy is Normal in a HeartGold (gen 4) run and Fairy from gen 6 on. Only the primary
+ * type is shown. A dual-type mon's second type never renders.
  */
 export function typeForRow(row: RouteRow, generation: number): TypeBadgeType | null {
   const speciesId = rowSpeciesId(row);
@@ -146,10 +141,9 @@ export interface RouteCounters {
 }
 
 /**
- * Tallies rows into the four buckets the hi-fi frames draw, plus the covered/total figure.
- * `skipped` rows count toward neither bucket nor `pending`, the same way the frame's four chips
- * never sum to the route total: a skipped route is resolved (it counts toward `covered`) but has
- * no chip of its own.
+ * Tallies rows into four buckets plus the covered/total figure. `skipped` rows count toward
+ * neither bucket nor `pending`: a skipped route is resolved, so it counts toward `covered`, but
+ * has no chip of its own.
  */
 export function summariseRouteRows(rows: readonly RouteRow[]): RouteCounters {
   let caught = 0;
@@ -179,8 +173,8 @@ export const ROUTE_FILTER_BUCKETS: readonly RouteFilterBucket[] = [
 
 /**
  * Empty `active` means no filter is applied and every row shows, `skipped` included. A skipped
- * route has no checkbox of its own (the frame draws none), so it always shows once a filter is
- * applied too, rather than becoming unreachable through a bucket nobody can select.
+ * route has no checkbox of its own, so it always shows once a filter is applied too, rather than
+ * becoming unreachable through a bucket nobody can select.
  */
 export function filterRouteRows(
   rows: readonly RouteRow[],
