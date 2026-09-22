@@ -1,8 +1,6 @@
 /**
- * React context carrying the `StorageAdapter`.
- *
- * A context rather than a module singleton, so tests can inject their own adapter without one
- * test's adapter leaking into another's.
+ * React context carrying the StorageAdapter, rather than a module singleton, so tests can
+ * inject their own adapter without one test's adapter leaking into another's.
  */
 
 import { createContext, useContext, type ReactNode } from "react";

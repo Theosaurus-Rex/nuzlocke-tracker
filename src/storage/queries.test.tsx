@@ -1,10 +1,7 @@
 /**
- * Query layer and `useCatchEncounter` tested against the in-memory adapter. These tests cover
- * what this app does with TanStack Query: reading rows through the adapter, invalidating on
- * write, and writing atomically, not TanStack Query's own behaviour.
- *
- * Each test gets a fresh `QueryClient` (retry disabled) and a fresh memory adapter, so cache or
- * rows can't leak between tests and produce order-dependent passes.
+ * Query layer and useCatchEncounter tested against the in-memory adapter: reading rows,
+ * invalidating on write, and writing atomically. Each test gets a fresh QueryClient and a
+ * fresh adapter, so cache or rows can't leak between tests.
  */
 
 import type { ReactNode } from "react";
@@ -218,10 +215,9 @@ function createWrapper(
 }
 
 /**
- * Wraps a `StorageAdapter` so `mons.put` always rejects while everything else goes through to
- * `base`. `transaction` re-wraps the scoped adapter it hands the callback, so the failure is
- * visible inside a transaction too, which is what proves a real rollback and not just a
- * rejected promise.
+ * Wraps a StorageAdapter so mons.put always rejects. transaction re-wraps the scoped adapter it
+ * hands the callback, so the failure is visible inside a transaction, proving a real rollback
+ * rather than a rejected promise.
  */
 function withFailingMonsPut(base: StorageAdapter): StorageAdapter {
   return {
@@ -243,10 +239,9 @@ function withFailingMonsPut(base: StorageAdapter): StorageAdapter {
 }
 
 /**
- * Wraps a `StorageAdapter` so `mons.delete` always rejects while every other table's `delete`
- * still goes through to `base`. Proves `useDeleteRun`'s six-table delete is genuinely atomic: a
- * failure partway through must roll back the deletes that already ran, not just fail to delete
- * the mon.
+ * Wraps a StorageAdapter so mons.delete always rejects. Proves useDeleteRun's six-table delete
+ * is genuinely atomic: a failure partway through must roll back the deletes that already ran,
+ * not just fail to delete the mon.
  */
 function withFailingMonsDelete(base: StorageAdapter): StorageAdapter {
   return {

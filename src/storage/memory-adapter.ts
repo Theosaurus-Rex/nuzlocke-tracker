@@ -1,10 +1,5 @@
 /**
- * In-memory reference implementation of `StorageAdapter`, backed by `Map`s rather than IndexedDB.
- *
- * Rows are never mutated in place: every `put` writes a brand-new object into the table's map.
- * That is what makes `transaction` rollback correct and cheap: a snapshot only needs a shallow
- * copy of each `Map` (`new Map(table)`), since existing entries are never touched again after
- * being copied in.
+ * In-memory reference implementation of StorageAdapter, backed by Maps rather than IndexedDB.
  */
 
 import type { Draft, Timestamped, Run, Route, Encounter, Mon, Death, Fight } from "@/domain/types";
@@ -55,7 +50,6 @@ function cloneTables(tables: Tables): Tables {
   };
 }
 
-/** Restores `live` to hold exactly the entries `snapshot` held, in place. */
 function restoreTable<T>(live: Map<string, T>, snapshot: Map<string, T>): void {
   live.clear();
   for (const [id, value] of snapshot) {
@@ -103,10 +97,9 @@ function createRepository<T extends Timestamped, TIndexed extends keyof T>(
       return Promise.resolve();
     },
     restoreMany(rows) {
-      // Every row is validated before any of them are written, so a restore either lands whole
-      // or fails whole, matching importBundle's transaction guarantee. Failures reject the
-      // promise rather than throwing synchronously, so callers can await or .catch() this like
-      // any other Repository method.
+      // Every row is validated before any is written, so a restore lands whole or fails whole,
+      // matching importBundle's transaction guarantee. Rejects rather than throwing
+      // synchronously, so callers can await or .catch() like any other Repository method.
       for (const row of rows) {
         const error = restorableRowError(row);
         if (error) {

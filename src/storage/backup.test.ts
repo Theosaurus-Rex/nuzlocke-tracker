@@ -177,9 +177,9 @@ describe("round trip", () => {
 
     expect(summary.imported).toEqual([{ id: seeded.run.id, name: seeded.run.name }]);
 
-    // importBundle writes through restoreMany, not put. A restore is not a modification, so
-    // every row, including updatedAt, must come back byte-identical to what was exported. put
-    // still stamps updatedAt on every write, and that is tested separately in adapter.contract.ts.
+    // importBundle writes via restoreMany, not put: a restore is not a modification, so every
+    // row, including updatedAt, must come back byte-identical. put's own stamping is tested
+    // separately in adapter.contract.ts.
     const importedRun = mustExist(await target.runs.get(seeded.run.id), "imported run");
     const importedRoute = mustExist(await target.routes.get(seeded.route.id), "imported route");
     const importedMon = mustExist(await target.mons.get(seeded.mon.id), "imported mon");
@@ -640,11 +640,9 @@ describe("importBundle — replace", () => {
 });
 
 /**
- * previewImport's contract is "what importBundle would do". It shares planImport with
- * importBundle rather than re-deriving the same rule. These tests build a bundle, preview it,
- * then actually import it into an adapter seeded with the same starting state, and assert the
- * preview matches the real result. None of them assert a hand-written expected count, so a bug
- * in the shared merge filter fails these the same way it fails an importBundle test.
+ * previewImport shares planImport with importBundle rather than re-deriving the rule. These
+ * tests build and preview a bundle, then actually import it, and assert the two agree, so a bug
+ * in the shared filter fails both the same way.
  */
 describe("previewImport", () => {
   it("merge mode: agrees with importBundle, including for a colliding run that owns child rows", async () => {
@@ -658,9 +656,8 @@ describe("previewImport", () => {
     const incoming = await seedFullRun(other);
     const incomingBundle = await exportBundle(other);
 
-    // One run, with its route/mon/death/fight, collides with what's already in target. The
-    // other doesn't. A merge filter that selected child rows by the wrong run set would show up
-    // in one half but not the other.
+    // One run collides with what's already in target. The other doesn't. A merge filter that
+    // selected child rows by the wrong run set would show up in one half but not the other.
     const bundle: ExportBundle = {
       schemaVersion: incomingBundle.schemaVersion,
       exportedAt: incomingBundle.exportedAt,
@@ -705,13 +702,11 @@ describe("previewImport", () => {
   });
 });
 
-/** Wraps a `StorageAdapter` so `mons.restoreMany` always rejects, mirroring the failure-injection
- * pattern `queries.test.tsx` uses for `useCatchEncounter`. `transaction` re-wraps the scoped
- * adapter it hands to the callback, so the failure is visible inside a transaction too. That is
- * what proves a real rollback rather than just a rejected outer promise.
- *
- * Targets `restoreMany`, not `putMany`, because `importBundle` now writes through `restoreMany`
- * and `putMany` is no longer on its write path. */
+/**
+ * Wraps a StorageAdapter so mons.restoreMany always rejects. transaction re-wraps the scoped
+ * adapter it hands the callback, so the failure is visible inside a transaction, proving a real
+ * rollback rather than a rejected outer promise.
+ */
 function withFailingMonsPutMany(base: StorageAdapter): StorageAdapter {
   return {
     init: () => base.init(),
@@ -748,9 +743,8 @@ describe("atomicity", () => {
       "simulated write failure",
     );
 
-    // Nothing was written: not the incoming run, since the failing write happens after
-    // runs/routes are written this pass, and not even the pre-existing run that clear() had
-    // already removed before the failure. A real rollback restores that too.
+    // Nothing was written, not even the pre-existing run that clear() had already removed
+    // before the failure. A real rollback restores that too.
     expect(await adapter.runs.getAll()).toEqual([existing.run]);
     expect(await adapter.routes.getAll()).toEqual([existing.route]);
     expect(await adapter.mons.getAll()).toEqual([existing.mon]);

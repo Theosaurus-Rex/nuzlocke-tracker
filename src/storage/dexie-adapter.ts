@@ -1,18 +1,5 @@
 /**
- * Dexie/IndexedDB storage adapter. See
- * docs/superpowers/specs/2026-09-17-nuzlocke-scaffold-design.md section 7 and CLAUDE.md hard
- * rules 1-5.
- *
- * `deaths` carries a nested `cause.fightId` index (a dotted keypath Dexie supports directly).
- * The index is sparse: only rows whose `cause` is the `trainer` variant appear in it, which is
- * what makes `deathsByFight` an index lookup rather than a full table scan. The method still
- * filters for `cause.type === 'trainer'` afterwards, so its contract holds even if that sparse
- * behaviour ever changed.
- *
- * `transaction` maps to `db.transaction('rw', ...)`. The scope callback must run with no
- * intervening `await` on anything other than what Dexie itself returns. Dexie tracks the active
- * transaction through its own promise zone, and an `await` on a non-Dexie promise between opening
- * the transaction and invoking the caller's callback can silently drop out of it.
+ * Dexie/IndexedDB storage adapter, the concrete implementation behind StorageAdapter.
  */
 
 import Dexie from "dexie";
@@ -39,10 +26,8 @@ const DEFAULT_DATABASE_NAME = "nuzlocke-tracker";
 const TABLE_NAMES = ["runs", "routes", "encounters", "mons", "deaths", "fights"] as const;
 type TableName = (typeof TABLE_NAMES)[number];
 
-/**
- * The Dexie subclass. Version 1 schema per spec section 7, plain `id` primary keys throughout
- * (hard rule 2 forbids autoincrement, so none of these use `++id`).
- */
+/** Dexie schema. Plain `id` primary keys throughout. Never `++id`, since autoincrement keys are
+ * forbidden here. */
 class NuzlockeDexie extends Dexie {
   declare runs: Table<Run, string>;
   declare routes: Table<Route, string>;
@@ -76,9 +61,8 @@ function isDexieDb(source: TableSource): source is NuzlockeDexie {
 }
 
 function getTable<T, TKey>(source: TableSource, name: TableName): Table<T, TKey> {
-  // `Dexie#table` and `Transaction#table` are both callable as `(name: string) => Table`, but
-  // their overload sets aren't compatible with each other, so TypeScript won't call `.table`
-  // directly on the union. Branch on the concrete type instead.
+  // Dexie#table and Transaction#table have incompatible overload sets, so TypeScript won't call
+  // .table directly on the union. Branch on the concrete type instead.
   if (isDexieDb(source)) {
     return source.table(name);
   }
@@ -251,6 +235,8 @@ class DexieStorageAdapter implements StorageAdapter {
   }
 
   async deathsByFight(fightId: string): Promise<Death[]> {
+    // `cause.fightId` is a sparse index: only trainer deaths appear in it. The filter below
+    // still checks cause.type, so this holds even if that sparse behaviour ever changed.
     const matches = await this.tables.deaths.where("cause.fightId").equals(fightId).toArray();
     return matches.filter(
       (death) => death.cause.type === "trainer" && death.cause.fightId === fightId,

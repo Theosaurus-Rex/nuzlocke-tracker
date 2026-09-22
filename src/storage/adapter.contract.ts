@@ -1,9 +1,7 @@
 /**
- * Reusable contract test suite for `StorageAdapter`, named `.contract.ts` rather than `.test.ts`
- * so Vitest does not collect it on its own. Test files invoke it directly.
- *
- * Every assertion is written against the promises `StorageAdapter`'s interface makes, never
- * against one implementation's internals.
+ * Reusable contract test suite for StorageAdapter, named `.contract.ts` so Vitest does not
+ * collect it directly. Test files invoke it themselves. Every assertion targets the promises
+ * StorageAdapter's interface makes, not one implementation's internals.
  */
 
 import { describe, it, expect, beforeEach } from "vitest";
@@ -14,8 +12,6 @@ import { SCHEMA_VERSION, isExportBundle } from "@/domain/schema";
 import type { StorageAdapter } from "./adapter";
 
 const UUID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
-
-// Honest domain fixtures: real Run/Route/Encounter/Mon/Death/Fight drafts, not `as any` stubs.
 
 function makeRunDraft(overrides: Partial<Draft<Run>> = {}): Draft<Run> {
   return {
@@ -164,10 +160,9 @@ export function runAdapterContractTests(
       });
 
       it("stamps updatedAt on write and recovers createdAt from the stored row when the update draft carries no timestamps", async () => {
-        // `src/domain/transitions.ts` returns `Draft<T>` with an `id` and no timestamps: this is
-        // the path the app actually takes on every write after the first. Spreading a full
-        // returned row here (`{ ...first }`) would let the draft carry `createdAt` itself and
-        // pass even if the adapter never consulted the stored row, so this deliberately doesn't.
+        // transitions.ts returns Draft<T> with no timestamps, the real write path. Spreading a
+        // full row here would let the draft carry createdAt itself, passing even if the adapter
+        // never consulted the stored row.
         const first = await adapter.runs.put(makeRunDraft({ id: "run-1" }));
         await tick();
         const second = await adapter.runs.put({
@@ -181,8 +176,6 @@ export function runAdapterContractTests(
       });
 
       it("recovers createdAt from the stored row for mons, matching what catchEncounter actually returns", async () => {
-        // Same shape of regression, exercised on the other table where a `Draft<Mon>` with no
-        // timestamps is the real production path (`catchEncounter` in transitions.ts).
         const run = await adapter.runs.put(makeRunDraft());
         const first = await adapter.mons.put(makeMonDraft(run.id, { id: "mon-1" }));
         await tick();
@@ -197,9 +190,9 @@ export function runAdapterContractTests(
       });
 
       it("ignores a supplied createdAt on update, preserving the stored row's original", async () => {
-        // The round-trip path: a caller supplies a full row, including `createdAt`, on an
-        // update. `adapter.ts` promises the stored row's original always wins. This uses a
-        // deliberately wrong value to prove it's discarded rather than accepted by coincidence.
+        // A caller can supply createdAt on update. The stored row's original must always win.
+        // Uses a deliberately wrong value so a pass proves it's discarded, not accepted by
+        // coincidence.
         const first = await adapter.runs.put(makeRunDraft({ id: "run-1" }));
         await tick();
         const second = await adapter.runs.put({
@@ -213,11 +206,9 @@ export function runAdapterContractTests(
       });
 
       it("ignores a supplied updatedAt on update, always stamping the current time", async () => {
-        // Mirrors the createdAt round-trip test above, for the other timestamp. Import replays
-        // whole rows carrying their own old `updatedAt`, and every downstream merge/sync
-        // heuristic reads it. `adapter.ts` promises it's stamped on every write regardless of
-        // what the draft carries. This proves the stale supplied value is discarded, not
-        // accepted because it happened to be unset.
+        // Import replays whole rows carrying an old updatedAt. put must stamp fresh regardless,
+        // so this proves the stale value is discarded, not accepted because it happened to be
+        // unset.
         const first = await adapter.runs.put(makeRunDraft({ id: "run-1" }));
         await tick();
         const second = await adapter.runs.put({
@@ -231,9 +222,8 @@ export function runAdapterContractTests(
       });
 
       it("ignores a supplied updatedAt on insert, always stamping the current time", async () => {
-        // The insert half of the same promise: a brand-new id whose draft already carries a
-        // stale `updatedAt` (an imported row that has never touched this store before) must
-        // still be stamped fresh, not have the supplied value honoured.
+        // The insert half: a brand-new id whose draft already carries a stale updatedAt must
+        // still be stamped fresh.
         const run = await adapter.runs.put(
           makeRunDraft({ id: "run-imported", updatedAt: "1999-01-01T00:00:00.000Z" }),
         );
@@ -266,9 +256,8 @@ export function runAdapterContractTests(
     });
 
     describe("restoreMany", () => {
-      // `put`'s "ignores a supplied updatedAt" tests above are the other half of this contract.
-      // They stay unchanged, so a future edit can't quietly swap the two methods' semantics.
-      // `put` always re-stamps `updatedAt`. `restoreMany` never does.
+      // put always re-stamps updatedAt. restoreMany never does. The put tests above stay as the
+      // other half of this contract, so a future edit can't quietly merge the two semantics.
 
       it("preserves id, createdAt and updatedAt exactly, including a deliberately old updatedAt", async () => {
         const run: Run = {
@@ -411,10 +400,9 @@ export function runAdapterContractTests(
       });
 
       it("rejects null on an indexed nullable field: IndexedDB cannot index null", async () => {
-        // Both implementations must agree here. The in-memory adapter could otherwise happily
-        // match rows whose field is null, while IndexedDB simply never indexes them. Two
-        // implementations of one interface quietly disagreeing is exactly what this suite exists
-        // to catch.
+        // The in-memory adapter could otherwise match rows whose field is null, while IndexedDB
+        // never indexes them. Two adapters silently disagreeing is exactly what this suite
+        // exists to catch.
         const run = await adapter.runs.put(makeRunDraft());
         await adapter.mons.put(makeMonDraft(run.id, { encounterId: null }));
 
@@ -449,7 +437,7 @@ export function runAdapterContractTests(
 
         await expect(
           adapter.transaction(async (tx) => {
-            // Mirrors catchEncounter (spec §5): an encounter update and a new mon, together.
+            // Mirrors catchEncounter: an encounter update and a new mon, together.
             await tx.encounters.put({ ...encounterBefore, status: "caught", monId: "mon-1" });
             await tx.mons.put(makeMonDraft(run.id, { id: "mon-1" }));
             throw new Error("simulated failure mid-transaction");
@@ -583,14 +571,9 @@ export function runAdapterContractTests(
       });
 
       it("excludes a non-trainer cause carrying a stray fightId, as a malformed JSON import could produce", async () => {
-        // `Cause`'s type system forbids `fightId` outside the `trainer` variant, so this row
-        // cannot arise from any write path this app makes today. But `isExportBundle` (see
-        // domain/schema.ts) validates only the export envelope, not individual rows, and JSON
-        // import hands the adapter whatever a user's file contains, hand-edited or written by an
-        // older schema. The cast below reproduces exactly that: data the type system says cannot
-        // exist, but that a real import can still put in front of this method. Without the
-        // `cause.type === 'trainer'` filter, the sparse `cause.fightId` index would match this
-        // row and report a poison death as a casualty of the named fight.
+        // Cause's type system forbids this shape, but isExportBundle only validates the
+        // envelope, not individual rows, so a hand-edited import can still produce it. Without
+        // the cause.type === 'trainer' filter, the sparse fightId index would match this row.
         const run = await adapter.runs.put(makeRunDraft());
 
         const matching = await adapter.deaths.put(

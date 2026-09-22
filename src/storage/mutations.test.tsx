@@ -1,8 +1,7 @@
 /**
  * Route-seeding, custom-route and encounter-logging mutations, tested against the in-memory
- * adapter. Covers what `useCreateRun`, `useAddCustomRoute`, `useDeleteCustomRoute` and
- * `useLogEncounter` do with the storage layer: atomic writes, invalidation, and the guards
- * around deleting a route or double-logging an encounter.
+ * adapter: atomic writes, invalidation, and the guards around deleting a route or
+ * double-logging an encounter.
  */
 
 import type { ReactNode } from "react";
@@ -64,10 +63,9 @@ function createWrapper(
 }
 
 /**
- * Wraps a `StorageAdapter` so `routes.putMany` always rejects while everything else goes through
- * to `base`. `transaction` re-wraps the scoped adapter it hands the callback, so the failure is
- * visible inside a transaction too, proving a real rollback rather than a rejected promise with
- * a run row left behind.
+ * Wraps a StorageAdapter so routes.putMany always rejects. transaction re-wraps the scoped
+ * adapter it hands the callback, so the failure is visible inside a transaction, proving a real
+ * rollback rather than a rejected promise with a run row left behind.
  */
 function withFailingRoutesPutMany(base: StorageAdapter): StorageAdapter {
   return {
@@ -89,10 +87,9 @@ function withFailingRoutesPutMany(base: StorageAdapter): StorageAdapter {
 }
 
 /**
- * Wraps a `StorageAdapter` so `mons.put` always rejects while everything else goes through to
- * `base`. `transaction` re-wraps the scoped adapter it hands the callback, so the failure is
- * visible inside a transaction, proving a real rollback of the encounter row written just before
- * it, not merely a rejected promise.
+ * Wraps a StorageAdapter so mons.put always rejects. transaction re-wraps the scoped adapter it
+ * hands the callback, so the failure is visible inside a transaction, proving a real rollback of
+ * the encounter row written just before it.
  */
 function withFailingMonsPut(base: StorageAdapter): StorageAdapter {
   return {

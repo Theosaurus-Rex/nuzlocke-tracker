@@ -1,10 +1,7 @@
 /**
- * Query keys and read hooks over the `StorageAdapter`.
- *
- * Every key lives in `queryKeys` so fetching and invalidation cannot drift apart.
- *
- * `staleTime` is `Infinity` everywhere: nothing changes this database except this tab, so
- * background refetching is pure waste. Invalidation is explicit, via `invalidateRun`.
+ * Query keys and read hooks over the StorageAdapter. Every key lives in queryKeys so fetching
+ * and invalidation cannot drift apart. staleTime is Infinity everywhere: nothing but this tab
+ * changes the database, so background refetching is pure waste. Invalidation is explicit.
  */
 
 import { useQuery, type QueryClient, type UseQueryResult } from "@tanstack/react-query";
@@ -53,8 +50,8 @@ export function useRoutes(runId: string): UseQueryResult<Route[]> {
   });
 }
 
-/** `runId` is optional so a caller without an active run can still call this hook unconditionally;
- * `enabled: false` skips the query rather than running one against `runId: ""`. */
+/** `runId` is optional so a caller without an active run can still call this hook unconditionally.
+ * With `enabled: false` it skips the query rather than running one against `runId: ""`. */
 export function useEncounters(runId: string | undefined): UseQueryResult<Encounter[]> {
   const adapter = useStorage();
   return useQuery({
@@ -94,11 +91,9 @@ export function useFights(runId: string): UseQueryResult<Fight[]> {
 }
 
 /**
- * Invalidates every key belonging to `runId`: the run row plus its routes, encounters, mons,
- * deaths and fights.
- *
- * Deliberately does not invalidate the plain `['runs']` list key. Creating or catching within an
- * existing run does not change which runs exist, so that key does not belong to any one run.
+ * Invalidates every key belonging to runId: the run, its routes, encounters, mons, deaths and
+ * fights. Deliberately skips the plain ['runs'] list key, since catching or creating within an
+ * existing run doesn't change which runs exist.
  */
 export async function invalidateRun(queryClient: QueryClient, runId: string): Promise<void> {
   await Promise.all([
