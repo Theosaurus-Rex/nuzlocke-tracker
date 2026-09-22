@@ -1,40 +1,7 @@
 /**
- * Generator for the pokedex data: species, moves, abilities, items and evolution links across
- * every generation (National Dex, currently 1-1025) plus hidden abilities (Gen 5+).
- *
- * Source: PokeAPI (https://pokeapi.co/), free and unauthenticated. This fetches several
- * thousand resources, so every response is cached to disk (see CACHE_DIR below) and re-read on
- * rerun, with requests throttled to a modest concurrency.
- *
- * This script does not run at build or test time; the emitted modules under
- * src/game/data/pokedex/ are what ships, because the app must never call PokeAPI at runtime
- * (see CLAUDE.md "Why no backend"). It is a one-shot bootstrapper: run it once, by hand:
- *
- *   POKEDEX_CACHE_DIR=/path/to/scratch/cache node scripts/extract-pokedex.ts
- *
- * POKEDEX_CACHE_DIR defaults to a directory under the OS temp dir if unset. The cache is never
- * committed; only the generated src/game/data/pokedex/*.ts files are.
- *
- * After that first seed, the emitted files are ours. Hand-edit them directly for corrections,
- * trims or tuning, and note why beside the change. This script refuses to overwrite a
- * populated output directory; pass --force only if you mean to re-seed from scratch.
- *
- * PokeAPI serves present-day values by default, not the value for a particular generation.
- * Pickers are free-text across all generations, so this dataset keeps the full history and
- * resolves it at read time; see ./types.ts for the resolution rule this script's output feeds.
- * This file's job is to convert PokeAPI's two tagging schemes into that one shape:
- *
- * - `past_types` is generation-tagged the same way our `pastTypes` is, so it copies straight
- *   across as `{ throughGeneration: N, types: V }`, sorted ascending.
- * - `past_values` is version-group-tagged and runs the opposite direction, so each entry is
- *   converted with `throughGeneration = generationOf(taggedVersionGroup) - 1`. This collapses
- *   to whole-generation granularity: a change strictly within a generation rounds down to the
- *   previous boundary. This is accepted and does not affect any generation this dataset is
- *   tested against (src/game/pokedex.test.ts): the one intra-Gen-4 case PokeAPI records, Vine
- *   Whip's diamond-pearl tag, still resolves through the following entry for every Gen 4
- *   target, exactly as the rounded-down value predicts.
- *
- * Spot-checked against Bulbapedia (src/game/pokedex.test.ts): Vine Whip, Tackle, Bite.
+ * Generator for the pokedex data: species, moves, abilities, items and evolution links,
+ * from PokeAPI (https://pokeapi.co/). One-shot bootstrapper: see README.md "Game data" for
+ * usage. See docs/notes/scripts.md for how past_types/past_values are converted and resolved.
  */
 
 import { mkdirSync, readFileSync, rmSync, writeFileSync, existsSync } from "node:fs";
@@ -51,10 +18,8 @@ const API_BASE = "https://pokeapi.co/api/v2";
 const CONCURRENCY = 8;
 
 /**
- * Committed files under src/game/data/ are hand-owned once seeded (CLAUDE.md "Game data"): a
- * generator is a one-shot bootstrapper, not something re-run for data that already exists. A
- * stray re-run would silently overwrite every hand correction with today's upstream values, so
- * this refuses outright unless the caller explicitly forces it.
+ * Refuses to overwrite already-seeded output: a stray re-run would silently discard hand
+ * corrections. See README.md "Game data".
  */
 function refuseIfAlreadyPopulated(
   outDir: string,
@@ -84,11 +49,9 @@ function refuseIfAlreadyPopulated(
  */
 const SHADOW_MOVE_ID_FLOOR = 10000;
 
-// Curated: held items, evolution items and stones, and a representative set of berries. Not
-// exhaustive; PokeAPI has ~2000 items and most (TMs, key items, mail) are out of scope. Mega
-// stones, Z-crystals and Dynamax items are excluded too, since those mechanics don't exist
-// outside the generations that introduced them, unlike a held item a randomiser can hand out
-// anywhere.
+// Curated: held items, evolution items and berries relevant to a Nuzlocke tracker, not the
+// full ~2000 PokeAPI item list. Mega stones, Z-crystals and Dynamax items are excluded since
+// those mechanics don't exist outside the generations that introduced them.
 const CURATED_ITEM_SLUGS: readonly string[] = [
   // Evolution items and stones
   "fire-stone",
@@ -253,8 +216,6 @@ function idFromUrl(url: string): number {
   return Number(match[1]);
 }
 
-// Minimal shapes of the PokeAPI JSON we read: only the fields we use.
-
 interface NamedRef {
   name: string;
   url: string;
@@ -367,7 +328,7 @@ function abilitiesOf(pokemon: PokemonJson): { name: string; isHidden: boolean }[
 
 /**
  * Converts one move's past_values into the "throughGeneration" shape past_types already uses
- * natively. See the module header for the direction flip this involves.
+ * natively. See docs/notes/scripts.md for the direction flip this involves.
  */
 function pastValuesOf(
   move: MoveJson,

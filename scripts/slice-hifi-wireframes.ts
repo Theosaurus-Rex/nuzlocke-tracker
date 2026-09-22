@@ -1,37 +1,12 @@
 /**
- * Slices the hi-fi wireframe canvas export into one PNG per frame.
- *
- * Source: docs/wireframes/hifi/nuzlocke-tracker-wireframes.html, a self-unpacking bundle
- * exported from the Claude Design canvas. Its inline script decodes a base64 manifest on load
- * and replaces the document with the real page. Each frame is a `div.dv-opt` whose id is the
- * ticket-facing name ("5b", "6a").
- *
- * Requires a Playwright-managed Chromium (`pnpm exec playwright install chromium`).
- *
- *   node scripts/slice-hifi-wireframes.ts [path-to-html] [--force]
- *
- * Only the 23 hi-fi frames are cut. 1a, 1d and 2a-2h sit on the same canvas but were already
- * cut from the PDF at better fidelity by scripts/slice-wireframes.ts.
- *
- * A frame is clipped to the union of its direct children that are not themselves `.dv-opt`,
- * rather than to its own bounding box. This looks redundant, and for 22 frames it is. A missing
- * closing tag in the canvas markup leaves 5b holding 5c through 5i as real DOM children, so its
- * own box measures 942x5095 against its siblings' 942x629. Clipping by children excludes them
- * without hardcoding anything about 5b.
- *
- * The viewport is fixed at 1600 CSS px wide: narrower clips 3d, wider reflows the canvas into
- * more columns and shrinks the frames sharing a row. It also has to be taller than the tallest
- * frame, because a screenshot clip is silently truncated to the viewport rather than erroring,
- * which reads as a frame that was simply drawn short.
- *
- * This is a one-shot bootstrapper, not part of the build. The PNGs it writes are committed and
- * are what the tickets point at. It refuses to overwrite a populated output directory unless
- * passed --force.
+ * Slices docs/wireframes/hifi/nuzlocke-tracker-wireframes.html into one PNG per hi-fi frame.
+ * One-shot bootstrapper: see README.md "Wireframes" for usage. Requires a Playwright-managed
+ * Chromium (`pnpm exec playwright install chromium`).
  */
 
 /// <reference lib="dom" />
-// The reference above is for the page.evaluate callback bodies only: those run in the
-// browser, not this Node script, but tsconfig.node.json's lib list has no DOM to type them with.
+// For the page.evaluate callbacks only: those run in the browser, but tsconfig.node.json's
+// lib list has no DOM to type them with.
 
 import { chromium } from "playwright";
 import { existsSync, mkdirSync, readdirSync } from "node:fs";
@@ -42,10 +17,14 @@ const REPO_ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..
 const DEFAULT_HTML = path.join(REPO_ROOT, "docs/wireframes/hifi/nuzlocke-tracker-wireframes.html");
 const OUT_DIR = path.join(REPO_ROOT, "docs/wireframes/hifi/frames");
 
+// 1600 CSS px wide: narrower clips 3d, wider reflows the canvas into more columns. Height
+// must exceed the tallest frame, since a screenshot clip is silently truncated to the viewport.
 const VIEWPORT = { width: 1600, height: 1550 };
 const DEVICE_SCALE_FACTOR = 2;
 const WAIT_TIMEOUT_MS = 30_000;
 
+// Only the 23 hi-fi frames. 1a, 1d and 2a-2h sit on the same canvas but were already cut
+// from the PDF at better fidelity by scripts/slice-wireframes.ts.
 // prettier-ignore
 const FRAME_IDS = [
   "3a", "3b", "3c", "3d", "4a",
@@ -105,6 +84,8 @@ async function main() {
     const clip: ClipBox = await page.evaluate((frameId) => {
       const el = document.querySelector(`[id="${frameId}"]`);
       if (!el) throw new Error(`frame ${frameId} not found`);
+      // Clips to each frame's own children, not its bounding box: a markup bug nests 5c-5i
+      // inside 5b's DOM, which would otherwise inflate its box to cover them too.
       const ownContent = Array.from(el.children).filter(
         (child) => !child.classList.contains("dv-opt"),
       );
