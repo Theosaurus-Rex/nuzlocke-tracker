@@ -135,7 +135,13 @@ describe("SettingsScreen — import", () => {
     await waitFor(() => {
       expect(screen.getByText(/Preview: backup\.json/)).toBeInTheDocument();
     });
-    expect(screen.getByText(/1 run would be imported: Incoming Run/)).toBeInTheDocument();
+    // A plain regex match won't do: the count now renders in its own `font-mono` span, so the
+    // sentence is split across sibling nodes rather than living in one text node.
+    expect(
+      screen.getByText(
+        (_, element) => element?.textContent === "1 run would be imported: Incoming Run",
+      ),
+    ).toBeInTheDocument();
 
     await userEvent.click(screen.getByRole("button", { name: "Import" }));
 
