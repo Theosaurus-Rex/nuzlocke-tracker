@@ -7,14 +7,16 @@
 import { useState, type ChangeEvent, type ReactNode } from "react";
 import { Link } from "react-router";
 
+import { StatusChip } from "@/components/status-chip";
 import { Button, buttonVariants } from "@/components/ui/button";
 import { summariseRun } from "@/domain/derive";
 import type { Encounter, Mon, Run, RunStatus } from "@/domain/types";
+import { GAMES } from "@/game/registry";
+import { cn } from "@/lib/utils";
 import { useDeleteRun } from "@/storage/mutations";
-import { useEncounters, useMons, useRuns } from "@/storage/queries";
+import { useEncounters, useMons, useRoutes, useRuns } from "@/storage/queries";
 
 const STAT_LABELS = [
-  { key: "routesCovered", label: "Routes covered" },
   { key: "party", label: "Party" },
   { key: "boxed", label: "Boxed" },
   { key: "dead", label: "Dead" },
@@ -42,7 +44,7 @@ function DeleteConfirm({
   const deleteRun = useDeleteRun();
 
   return (
-    <div className="space-y-2 rounded border border-destructive/40 bg-destructive/10 p-3 text-sm">
+    <div className="space-y-2 border-[1.5px] border-destructive bg-destructive/10 p-3 text-sm shadow-block-alert">
       <p className="font-medium text-destructive">
         Permanently delete {run.name}? This removes {encounters.length}{" "}
         {encounters.length === 1 ? "encounter" : "encounters"}, {mons.length} Pokémon and{" "}
@@ -83,51 +85,91 @@ function DeleteConfirm({
 function RunCard({ run }: { run: Run }): ReactNode {
   const encountersQuery = useEncounters(run.id);
   const monsQuery = useMons(run.id);
+  // A third per-card query, for the same reason as the other two: the run's own route count is
+  // the only honest denominator, since a run can add custom routes beyond the seeded set.
+  const routesQuery = useRoutes(run.id);
   const [confirmingDelete, setConfirmingDelete] = useState(false);
 
-  const loading = encountersQuery.isPending || monsQuery.isPending;
+  const loading = encountersQuery.isPending || monsQuery.isPending || routesQuery.isPending;
   const encounters = encountersQuery.data ?? [];
   const mons = monsQuery.data ?? [];
+  const routeTotal = routesQuery.data?.length ?? 0;
 
   const summary = loading ? null : summariseRun({ encounters, mons });
+  const covered = summary?.routesCovered ?? 0;
 
   const actionLabel = run.status === "active" ? "Resume" : "View";
+  const chipStatus = run.status === "active" ? "active" : "complete";
 
   return (
-    <li className="flex flex-col gap-3 rounded border border-border p-4">
+    <li className="flex flex-col gap-3 border-[1.5px] border-border bg-card p-4 shadow-block">
       <div className="flex items-start justify-between gap-3">
         <div className="min-w-0">
-          <h2 className="truncate font-medium">{run.name}</h2>
-          <p className="text-muted-foreground text-xs uppercase">{run.status}</p>
+          <h2 className="truncate font-bold">{run.name}</h2>
+          <p className="text-sm text-muted-foreground">
+            {GAMES[run.game].name}
+            {run.rules.randomiser.enabled ? " · randomised" : ""}
+          </p>
         </div>
-        <div className="flex shrink-0 items-center gap-2">
-          {!confirmingDelete && (
-            <Button
-              size="sm"
-              variant="ghost"
-              disabled={loading}
-              onClick={() => setConfirmingDelete(true)}
-            >
-              Delete
-            </Button>
-          )}
-          <Link
-            to={`/runs/${run.id}/routes`}
-            className={buttonVariants({ size: "sm", variant: "outline" })}
-          >
-            {actionLabel}
-          </Link>
-        </div>
+        <StatusChip status={chipStatus} className="shrink-0" />
       </div>
 
-      <dl className="grid grid-cols-2 gap-3 text-sm sm:grid-cols-4">
+      {routeTotal > 0 && (
+        <div
+          role="progressbar"
+          aria-label="Routes covered"
+          aria-valuemin={0}
+          aria-valuemax={routeTotal}
+          aria-valuenow={covered}
+          className="h-2.5 border-[1.5px] border-border bg-background"
+        >
+          <span
+            className="block h-full bg-primary"
+            style={{ width: `${String(Math.round((covered / routeTotal) * 100))}%` }}
+          />
+        </div>
+      )}
+
+      <dl className="flex flex-wrap gap-x-4 gap-y-1">
+        <div className="flex items-baseline gap-1 text-muted-foreground">
+          <dd className="font-mono text-sm">
+            {summary ? `${String(covered)}/${String(routeTotal)}` : "…"}
+          </dd>
+          <dt className="text-xs">routes</dt>
+        </div>
         {STAT_LABELS.map(({ key, label }) => (
-          <div key={key}>
-            <dt className="text-muted-foreground text-xs">{label}</dt>
-            <dd>{summary ? summary[key] : "…"}</dd>
+          <div
+            key={key}
+            className={cn(
+              "flex items-baseline gap-1",
+              key === "dead" ? "text-destructive" : "text-muted-foreground",
+            )}
+          >
+            <dd className="font-mono text-sm">{summary ? summary[key] : "…"}</dd>
+            <dt className="text-xs">{label}</dt>
           </div>
         ))}
       </dl>
+
+      <div className="flex items-center justify-end gap-2 border-t border-muted pt-3">
+        {!confirmingDelete && (
+          <Button
+            size="sm"
+            variant="outline"
+            className="text-destructive hover:bg-destructive/10 hover:text-destructive"
+            disabled={loading}
+            onClick={() => setConfirmingDelete(true)}
+          >
+            Delete
+          </Button>
+        )}
+        <Link
+          to={`/runs/${run.id}/routes`}
+          className={buttonVariants({ size: "sm", variant: "outline" })}
+        >
+          {actionLabel}
+        </Link>
+      </div>
 
       {confirmingDelete && summary && (
         <DeleteConfirm
@@ -178,15 +220,31 @@ export function RunListScreen(): ReactNode {
   }
 
   return (
-    <div className="p-4">
-      <div className="flex items-center justify-between gap-3">
-        <h1 className="text-xl">Runs</h1>
-        <Link to="/runs/new" className={buttonVariants({ size: "sm" })}>
-          New run
-        </Link>
+    <div>
+      <div className="flex flex-wrap items-center justify-between gap-3 border-b-[1.5px] border-border p-4">
+        <h1 className="text-xl font-bold sm:text-2xl">Runs</h1>
+        <div className="flex flex-wrap items-center gap-2">
+          <input
+            type="search"
+            value={search}
+            onChange={handleSearchChange}
+            aria-label="Search runs"
+            placeholder="search runs…"
+            className="h-8 w-full border-[1.5px] border-border bg-background px-2.5 text-sm sm:w-56"
+          />
+          <Link
+            to="/runs/new"
+            className={cn(
+              buttonVariants({ size: "sm" }),
+              "bg-flag text-foreground shadow-block hover:bg-flag/90",
+            )}
+          >
+            <span aria-hidden="true">+ </span>New run
+          </Link>
+        </div>
       </div>
 
-      <div className="mt-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+      <div className="flex flex-wrap items-center justify-between gap-3 p-4">
         <div role="tablist" aria-label="Run status" className="flex gap-1">
           {TABS.map(({ status, label }) => {
             const count = runs.filter((run) => run.status === status).length;
@@ -205,35 +263,37 @@ export function RunListScreen(): ReactNode {
                   variant: selected ? "secondary" : "ghost",
                 })}
               >
-                {label} ({count})
+                {/* One flex item, so the button's gap does not open up inside the brackets. */}
+                <span>
+                  {label} (<span className="font-mono">{count}</span>)
+                </span>
               </button>
             );
           })}
         </div>
-
-        <div className="flex items-center gap-3">
-          <input
-            type="search"
-            value={search}
-            onChange={handleSearchChange}
-            aria-label="Search runs"
-            placeholder="Search runs by name"
-            className="h-8 w-full rounded border border-border bg-background px-2.5 text-sm sm:w-64"
-          />
-        </div>
       </div>
 
-      {visibleRuns.length === 0 ? (
-        <p className="text-muted-foreground mt-6 text-sm">
-          {query ? `No ${activeTab} runs match "${search.trim()}".` : `No ${activeTab} runs yet.`}
-        </p>
-      ) : (
-        <ul className="mt-4 grid list-none grid-cols-1 gap-3 p-0 sm:grid-cols-2 lg:grid-cols-3">
-          {visibleRuns.map((run) => (
-            <RunCard key={run.id} run={run} />
-          ))}
-        </ul>
-      )}
+      <div className="px-4 pb-4">
+        {visibleRuns.length === 0 ? (
+          <p className="text-muted-foreground text-sm">
+            {query ? `No ${activeTab} runs match "${search.trim()}".` : `No ${activeTab} runs yet.`}
+          </p>
+        ) : (
+          <ul className="grid list-none grid-cols-1 gap-4 p-0 sm:grid-cols-2">
+            {visibleRuns.map((run) => (
+              <RunCard key={run.id} run={run} />
+            ))}
+            <li>
+              <Link
+                to="/runs/new"
+                className="flex h-full min-h-40 items-center justify-center border-[1.5px] border-dashed border-placeholder p-4 text-sm text-muted-foreground"
+              >
+                + New run
+              </Link>
+            </li>
+          </ul>
+        )}
+      </div>
     </div>
   );
 }

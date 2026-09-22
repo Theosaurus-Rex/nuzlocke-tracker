@@ -81,9 +81,9 @@ describe("NewRunScreen", () => {
     const adapter = createMemoryAdapter();
     renderScreen(adapter);
 
-    await userEvent.click(screen.getByRole("button", { name: "Create run" }));
+    await userEvent.click(screen.getByRole("button", { name: "Start run" }));
 
-    const nameInput = screen.getByLabelText("Name");
+    const nameInput = screen.getByLabelText("Run name");
     const error = await screen.findByText("Name is required.");
     expect(nameInput).toHaveAttribute("aria-describedby", error.id);
     expect(nameInput).toHaveAttribute("aria-invalid", "true");
@@ -95,8 +95,8 @@ describe("NewRunScreen", () => {
     const adapter = createMemoryAdapter();
     renderScreen(adapter);
 
-    await userEvent.type(screen.getByLabelText("Name"), "   ");
-    await userEvent.click(screen.getByRole("button", { name: "Create run" }));
+    await userEvent.type(screen.getByLabelText("Run name"), "   ");
+    await userEvent.click(screen.getByRole("button", { name: "Start run" }));
 
     expect(await screen.findByText("Name is required.")).toBeInTheDocument();
     expect(await adapter.runs.getAll()).toEqual([]);
@@ -106,8 +106,8 @@ describe("NewRunScreen", () => {
     const adapter = createMemoryAdapter();
     renderScreen(adapter);
 
-    await userEvent.type(screen.getByLabelText("Name"), "  Test Run  ");
-    await userEvent.click(screen.getByRole("button", { name: "Create run" }));
+    await userEvent.type(screen.getByLabelText("Run name"), "  Test Run  ");
+    await userEvent.click(screen.getByRole("button", { name: "Start run" }));
 
     await waitFor(async () => {
       expect(await adapter.runs.getAll()).toHaveLength(1);
@@ -135,8 +135,8 @@ describe("NewRunScreen", () => {
     const adapter = createMemoryAdapter();
     const { router } = renderScreen(adapter);
 
-    await userEvent.type(screen.getByLabelText("Name"), "Test Run");
-    await userEvent.click(screen.getByRole("button", { name: "Create run" }));
+    await userEvent.type(screen.getByLabelText("Run name"), "Test Run");
+    await userEvent.click(screen.getByRole("button", { name: "Start run" }));
 
     const [run] = await waitFor(async () => {
       const runs = await adapter.runs.getAll();
@@ -160,8 +160,8 @@ describe("NewRunScreen", () => {
     const adapter = createMemoryAdapter();
     renderScreen(adapter);
 
-    await userEvent.type(screen.getByLabelText("Name"), "Untouched Rules Run");
-    await userEvent.click(screen.getByRole("button", { name: "Create run" }));
+    await userEvent.type(screen.getByLabelText("Run name"), "Untouched Rules Run");
+    await userEvent.click(screen.getByRole("button", { name: "Start run" }));
 
     const [run] = await waitFor(async () => {
       const runs = await adapter.runs.getAll();
@@ -179,7 +179,7 @@ describe("NewRunScreen", () => {
     const adapter = createMemoryAdapter();
     renderScreen(adapter);
 
-    await userEvent.type(screen.getByLabelText("Name"), "Modified Rules Run");
+    await userEvent.type(screen.getByLabelText("Run name"), "Modified Rules Run");
 
     // Flip every clause checkbox away from its DEFAULT_RULES value.
     for (const label of CLAUSE_LABELS) {
@@ -194,7 +194,7 @@ describe("NewRunScreen", () => {
 
     await userEvent.type(screen.getByLabelText("Custom clause (optional)"), "  No held items  ");
 
-    await userEvent.click(screen.getByRole("button", { name: "Create run" }));
+    await userEvent.click(screen.getByRole("button", { name: "Start run" }));
 
     const [run] = await waitFor(async () => {
       const runs = await adapter.runs.getAll();
@@ -265,11 +265,11 @@ describe("NewRunScreen", () => {
       const adapter = createMemoryAdapter();
       renderScreen(adapter);
 
-      await userEvent.type(screen.getByLabelText("Name"), "Custom Clause Run");
+      await userEvent.type(screen.getByLabelText("Run name"), "Custom Clause Run");
       if (input.length > 0) {
         await userEvent.type(screen.getByLabelText("Custom clause (optional)"), input);
       }
-      await userEvent.click(screen.getByRole("button", { name: "Create run" }));
+      await userEvent.click(screen.getByRole("button", { name: "Start run" }));
 
       const [run] = await waitFor(async () => {
         const runs = await adapter.runs.getAll();
