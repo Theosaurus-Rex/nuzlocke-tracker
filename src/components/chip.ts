@@ -1,12 +1,7 @@
 /**
- * The one chip shape. Status chips and type badges differ only in their fill.
- *
- * The size is in px, not rem: chip text sits below the type scale on purpose and should not
- * grow with it.
- *
- * `gap-1` stands in for the space between a chip's parts. A flex container drops whitespace
- * between its items, so "12 caught" written as a mono count beside a label renders as "12caught"
- * without it. A chip with one child is unaffected.
+ * The one chip shape. Status chips and type badges only differ in fill. Size is in px, not rem,
+ * since chip text sits below the type scale and must not grow with it. `gap-1` matters because
+ * a flex container drops whitespace between children, which would merge "12" and "caught".
  */
 export const CHIP_SHAPE =
   "inline-flex items-center gap-1 border-[1.5px] border-border px-[7px] py-[3px] text-[11px] font-medium uppercase tracking-[0.12em]";

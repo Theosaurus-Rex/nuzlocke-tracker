@@ -1,7 +1,5 @@
-/**
- * The counters that used to render here moved to `AppShell`'s nav rows, next to the screens
- * they describe. This component only switches runs and shows the active one's game and mode.
- */
+/** Switches the active run and shows its game and mode. Per-screen counters live in
+ * `AppShell`'s nav rows, not here. */
 
 import type { ChangeEvent, ReactNode } from "react";
 

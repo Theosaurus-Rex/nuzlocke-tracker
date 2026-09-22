@@ -1,9 +1,7 @@
 /**
- * `appRoutes` is exported separately from `router` so tests can build a `createMemoryRouter` from
- * the same route objects instead of duplicating the tree.
- *
- * `createBrowserRouter` assumes a real origin. Capacitor's `file://` origin may need
- * `createHashRouter` instead, a one-line swap here since nothing below assumes path routing.
+ * `appRoutes` is separate from `router` so tests build a `createMemoryRouter` from the same
+ * route objects. `createBrowserRouter` assumes a real origin. Swap in `createHashRouter` if
+ * Capacitor's `file://` origin ever needs it.
  */
 
 import { createBrowserRouter, type RouteObject } from "react-router";
