@@ -44,12 +44,17 @@ function renderAt(
 }
 
 /** Excludes the sidebar's pinned "New run" link, which is not one of the routed nav items and
- * has its own tests below. */
+ * has its own tests below. Reads the label from its own span rather than the link's full
+ * `textContent`, since a routed nav row's `textContent` also includes its counter, when it has
+ * one. */
 function linksIn(nav: HTMLElement) {
   return within(nav)
     .getAllByRole("link")
-    .filter((link) => link.getAttribute("href") !== "/runs/new")
-    .map((link) => ({ label: link.textContent, href: link.getAttribute("href") }));
+    .filter((link) => link.closest('[data-slot="sidebar-actions"]') === null)
+    .map((link) => ({
+      label: link.querySelector('[data-slot="nav-label"]')?.textContent ?? link.textContent,
+      href: link.getAttribute("href"),
+    }));
 }
 
 function shells() {
@@ -147,17 +152,14 @@ function makeMonDraft(
   };
 }
 
-/** Reads a `RunSwitcher` mount's counters into a label -> value map, scoped to `scope` so
- * sidebar and mobile mounts on the same page can be asserted on independently. */
+/** Reads a nav's row counters into a label -> value map, scoped to `scope` so the sidebar and
+ * the tab bar can be asserted on independently. Counters are `aria-hidden` (the row's accessible
+ * name stays just its label), so this reads the DOM directly rather than through a role query. */
 function countersIn(scope: HTMLElement): Record<string, string> {
-  const dl = scope.querySelector("dl");
-  if (!dl) {
-    throw new Error("Expected a <dl> of run counters within scope.");
-  }
   const counters: Record<string, string> = {};
-  for (const entry of dl.querySelectorAll(":scope > div")) {
-    const label = entry.querySelector("dt")?.textContent;
-    const value = entry.querySelector("dd")?.textContent;
+  for (const row of scope.querySelectorAll("a")) {
+    const label = row.querySelector('[data-slot="nav-label"]')?.textContent;
+    const value = row.querySelector('[data-slot="nav-counter"]')?.textContent;
     if (label && value !== undefined && value !== null) {
       counters[label] = value;
     }
@@ -310,6 +312,19 @@ describe("AppShell navigation", () => {
     expect(within(tabBar).queryByRole("link", { name: "New run" })).not.toBeInTheDocument();
   });
 
+  it("reaches Settings from inside a run without going back to the run list first", async () => {
+    const adapter = createMemoryAdapter();
+    const run = await adapter.runs.put(makeRunDraft({ name: "Johto Hardcore" }));
+
+    renderAt(`/runs/${run.id}/routes`, { adapter });
+
+    const sidebar = await screen.findByRole("navigation", { name: "Sidebar navigation" });
+    expect(within(sidebar).getByRole("link", { name: "Settings" })).toHaveAttribute(
+      "href",
+      "/settings",
+    );
+  });
+
   it("navigates to the new-run screen when the sidebar New run link is clicked", async () => {
     const { router } = renderAt("/");
 
@@ -329,23 +344,22 @@ describe("Run switcher and live counters", () => {
 
     renderAt("/", { adapter });
 
-    // Scoped to the sidebar, not `document`: the run list screen underneath renders its own
-    // per-card `<dl>` of stats, which would otherwise collide with this query.
     const sidebar = screen.getByRole("navigation", { name: "Sidebar navigation" });
     expect(
       await within(sidebar).findByRole("option", { name: "Silver Nuzlocke" }),
     ).toBeInTheDocument();
-    expect(sidebar.querySelector("dl")).not.toBeInTheDocument();
+    expect(countersIn(sidebar)).toEqual({});
 
     // No mobile mount at all outside a run: the tab bar's own "Runs" destination covers it.
     expect(screen.queryAllByRole("combobox", { name: "Switch run" })).toHaveLength(1);
   });
 
-  it("shows the active run's routes/party/boxed/dead counters, matching summariseRun for the same fixture", async () => {
+  it("shows the active run's routes/party/boxes/graveyard counters, matching summariseRun for the same fixture", async () => {
     const adapter = createMemoryAdapter();
     const run = await adapter.runs.put(makeRunDraft({ name: "Silver Nuzlocke" }));
     const routeA = await adapter.routes.put(makeRouteDraft(run.id, { name: "Route 29" }));
     const routeB = await adapter.routes.put(makeRouteDraft(run.id, { name: "Route 30", order: 2 }));
+    const routes = [routeA, routeB];
     const encounters = [
       await adapter.encounters.put(makeEncounterDraft(run.id, routeA.id, { status: "caught" })),
       await adapter.encounters.put(makeEncounterDraft(run.id, routeB.id, { status: "missed" })),
@@ -365,10 +379,10 @@ describe("Run switcher and live counters", () => {
     const sidebar = await screen.findByRole("navigation", { name: "Sidebar navigation" });
     await waitFor(() => {
       expect(countersIn(sidebar)).toEqual({
-        Routes: String(expected.routesCovered),
+        Routes: `${String(expected.routesCovered)}/${String(routes.length)}`,
         Party: String(expected.party),
-        Boxed: String(expected.boxed),
-        Dead: String(expected.dead),
+        Boxes: String(expected.boxed),
+        Graveyard: String(expected.dead),
       });
     });
   });
@@ -393,10 +407,10 @@ describe("Run switcher and live counters", () => {
     const first = renderAt(`/runs/${runA.id}/party`, { adapter });
     await waitFor(() => {
       expect(countersIn(screen.getByRole("navigation", { name: "Sidebar navigation" }))).toEqual({
-        Routes: "1",
+        Routes: "1/1",
         Party: "1",
-        Boxed: "0",
-        Dead: "0",
+        Boxes: "0",
+        Graveyard: "0",
       });
     });
     first.unmount();
@@ -404,15 +418,20 @@ describe("Run switcher and live counters", () => {
     renderAt(`/runs/${runB.id}/party`, { adapter });
     await waitFor(() => {
       expect(countersIn(screen.getByRole("navigation", { name: "Sidebar navigation" }))).toEqual({
-        Routes: "2",
+        Routes: "2/2",
         Party: "0",
-        Boxed: "1",
-        Dead: "1",
+        Boxes: "1",
+        Graveyard: "1",
       });
     });
   });
 
-  it("both shells render the same counter values from the one source", async () => {
+  // The counters used to render twice, once inside each shell's own RunSwitcher mount, so this
+  // test compared them against each other. They now live only on the sidebar's nav rows: the tab
+  // bar doesn't show them at all (6c draws no numbers on its tabs), so the mobile run switcher no
+  // longer carries any either. What's left to guarantee is that both switchers still agree on
+  // which run is open.
+  it("shows the sidebar's nav-row counters, with both run switchers still agreeing on the open run", async () => {
     const adapter = createMemoryAdapter();
     const run = await adapter.runs.put(makeRunDraft({ name: "Silver Nuzlocke" }));
     const route = await adapter.routes.put(makeRouteDraft(run.id));
@@ -422,20 +441,39 @@ describe("Run switcher and live counters", () => {
 
     renderAt(`/runs/${run.id}/party`, { adapter });
 
-    const { sidebar } = shells();
-    const main = await screen.findByRole("main");
-
-    // Compare the two renderings against each other, not against a duplicated literal.
+    const { sidebar, tabBar } = shells();
     await waitFor(() => {
-      expect(countersIn(main)).toEqual(countersIn(sidebar));
+      expect(countersIn(sidebar)).toEqual({
+        Routes: "1/1",
+        Party: "1",
+        Boxes: "1",
+        Graveyard: "0",
+      });
     });
-    expect(countersIn(sidebar)).toEqual({ Routes: "1", Party: "1", Boxed: "1", Dead: "0" });
+    expect(countersIn(tabBar)).toEqual({});
 
     const selects = screen.getAllByRole("combobox", { name: "Switch run" });
     expect(selects).toHaveLength(2);
     for (const select of selects) {
       expect(select).toHaveValue(run.id);
     }
+  });
+
+  it("keeps a counted row's accessible name as just its label, once the counter has loaded", async () => {
+    const adapter = createMemoryAdapter();
+    const run = await adapter.runs.put(makeRunDraft({ name: "Silver Nuzlocke" }));
+    await adapter.mons.put(makeMonDraft(run.id, { status: "box", partySlot: null }));
+
+    renderAt(`/runs/${run.id}/party`, { adapter });
+
+    const sidebar = screen.getByRole("navigation", { name: "Sidebar navigation" });
+    await waitFor(() => {
+      expect(countersIn(sidebar)).toEqual({ Routes: "0", Party: "0", Boxes: "1", Graveyard: "0" });
+    });
+
+    // The row's own counter, "1", is aria-hidden. If it weren't, this query would fail: the
+    // row's accessible name would be "Boxes 1", not "Boxes".
+    expect(within(sidebar).getByRole("link", { name: "Boxes" })).toBeInTheDocument();
   });
 
   it("preserves the sub-screen when switching runs: /runs/A/party -> /runs/B/party, not B's routes", async () => {
@@ -467,7 +505,7 @@ describe("Run switcher and live counters", () => {
 
     const sidebar = await screen.findByRole("navigation", { name: "Sidebar navigation" });
     await waitFor(() => {
-      expect(countersIn(sidebar)).toEqual({ Routes: "0", Party: "1", Boxed: "0", Dead: "0" });
+      expect(countersIn(sidebar)).toEqual({ Routes: "0", Party: "1", Boxes: "0", Graveyard: "0" });
     });
 
     // A write through the adapter, then the same invalidation a real mutation performs
@@ -476,7 +514,7 @@ describe("Run switcher and live counters", () => {
     await invalidateRun(queryClient, run.id);
 
     await waitFor(() => {
-      expect(countersIn(sidebar)).toEqual({ Routes: "0", Party: "2", Boxed: "0", Dead: "0" });
+      expect(countersIn(sidebar)).toEqual({ Routes: "0", Party: "2", Boxes: "0", Graveyard: "0" });
     });
   });
 });
