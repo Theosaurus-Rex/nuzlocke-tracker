@@ -9,7 +9,6 @@ import { render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { describe, expect, it, vi } from "vitest";
 
-import type { RunSummary } from "@/domain/derive";
 import type { Run } from "@/domain/types";
 
 import { subScreenFromPath } from "./nav-items";
@@ -67,25 +66,16 @@ const RUN_A: Run = {
 
 const RUN_B: Run = { ...RUN_A, id: "run-b", name: "Gold Nuzlocke" };
 
-const SUMMARY: RunSummary = { routesCovered: 3, party: 2, boxed: 1, dead: 0 };
-
 describe("RunSwitcher", () => {
   it("renders nothing when there are no runs to switch between", () => {
     const { container } = render(
-      <RunSwitcher runs={[]} activeRunId={undefined} summary={undefined} onSwitch={vi.fn()} />,
+      <RunSwitcher runs={[]} activeRunId={undefined} onSwitch={vi.fn()} />,
     );
     expect(container).toBeEmptyDOMElement();
   });
 
   it("lists every run and selects the active one", () => {
-    render(
-      <RunSwitcher
-        runs={[RUN_A, RUN_B]}
-        activeRunId={RUN_B.id}
-        summary={undefined}
-        onSwitch={vi.fn()}
-      />,
-    );
+    render(<RunSwitcher runs={[RUN_A, RUN_B]} activeRunId={RUN_B.id} onSwitch={vi.fn()} />);
 
     const select = screen.getByRole("combobox", { name: "Switch run" });
     expect(select).toHaveValue(RUN_B.id);
@@ -95,14 +85,7 @@ describe("RunSwitcher", () => {
 
   it("calls onSwitch with the chosen run's id when a different run is picked", async () => {
     const onSwitch = vi.fn();
-    render(
-      <RunSwitcher
-        runs={[RUN_A, RUN_B]}
-        activeRunId={RUN_A.id}
-        summary={undefined}
-        onSwitch={onSwitch}
-      />,
-    );
+    render(<RunSwitcher runs={[RUN_A, RUN_B]} activeRunId={RUN_A.id} onSwitch={onSwitch} />);
 
     await userEvent.selectOptions(screen.getByRole("combobox", { name: "Switch run" }), RUN_B.id);
 
@@ -112,14 +95,7 @@ describe("RunSwitcher", () => {
 
   it("still lists every run and lets you jump into one when no run is active", async () => {
     const onSwitch = vi.fn();
-    render(
-      <RunSwitcher
-        runs={[RUN_A, RUN_B]}
-        activeRunId={undefined}
-        summary={undefined}
-        onSwitch={onSwitch}
-      />,
-    );
+    render(<RunSwitcher runs={[RUN_A, RUN_B]} activeRunId={undefined} onSwitch={onSwitch} />);
 
     const select = screen.getByRole("combobox", { name: "Switch run" });
     expect(select).not.toBeDisabled();
@@ -129,24 +105,27 @@ describe("RunSwitcher", () => {
     expect(onSwitch).toHaveBeenCalledWith(RUN_A.id);
   });
 
-  it("renders the given summary's counters when there is one", () => {
-    render(
-      <RunSwitcher runs={[RUN_A]} activeRunId={RUN_A.id} summary={SUMMARY} onSwitch={vi.fn()} />,
-    );
+  it("shows the active run's game below the switcher", () => {
+    render(<RunSwitcher runs={[RUN_A]} activeRunId={RUN_A.id} onSwitch={vi.fn()} />);
 
-    expect(screen.getByText("Routes")).toBeInTheDocument();
-    expect(screen.getByText("3")).toBeInTheDocument();
-    expect(screen.getByText("Party")).toBeInTheDocument();
-    expect(screen.getByText("2")).toBeInTheDocument();
-    expect(screen.getByText("Boxed")).toBeInTheDocument();
-    expect(screen.getByText("Dead")).toBeInTheDocument();
+    expect(screen.getByText("HeartGold")).toBeInTheDocument();
   });
 
-  it("renders no counters at all when summary is undefined, rather than zeroes", () => {
+  it("appends the mode when the active run is a randomiser", () => {
+    const randomised: Run = {
+      ...RUN_A,
+      rules: { ...RUN_A.rules, randomiser: { ...RUN_A.rules.randomiser, enabled: true } },
+    };
+    render(<RunSwitcher runs={[randomised]} activeRunId={randomised.id} onSwitch={vi.fn()} />);
+
+    expect(screen.getByText("HeartGold · randomised")).toBeInTheDocument();
+  });
+
+  it("shows no game or mode line when no run is active", () => {
     const { container } = render(
-      <RunSwitcher runs={[RUN_A]} activeRunId={RUN_A.id} summary={undefined} onSwitch={vi.fn()} />,
+      <RunSwitcher runs={[RUN_A]} activeRunId={undefined} onSwitch={vi.fn()} />,
     );
 
-    expect(container.querySelector("dl")).not.toBeInTheDocument();
+    expect(container.querySelector("p")).not.toBeInTheDocument();
   });
 });

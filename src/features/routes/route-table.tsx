@@ -1,29 +1,48 @@
 import { createColumnHelper, tableFeatures, useTable } from "@tanstack/react-table";
 
+import { StatusChip } from "@/components/status-chip";
+import { TypeBadge } from "@/components/type-badge";
 import { Button } from "@/components/ui/button";
 import { canDeleteRoute } from "@/domain/routes";
-import type { RouteRow, RouteRowStatus } from "@/domain/route-rows";
+import type { RouteRow } from "@/domain/route-rows";
 import type { Encounter, Mon, Route } from "@/domain/types";
+import { cn } from "@/lib/utils";
 
-import { RowSpecies, STATUS_LABEL } from "./route-presentation";
+import { canLogEncounter, chipForRouteRow, RowSpecies, typeForRow } from "./route-presentation";
 
-function StatusPill({ status }: { status: RouteRowStatus }) {
-  const className =
-    status === "dead"
-      ? "rounded-full border border-destructive px-2 py-0.5 text-xs text-destructive"
-      : "rounded-full border border-border px-2 py-0.5 text-xs text-muted-foreground";
+function StatusCell({ row, onLogEncounter }: { row: RouteRow; onLogEncounter: () => void }) {
+  const chip = chipForRouteRow(row);
 
-  return <span className={className}>{STATUS_LABEL[status]}</span>;
+  if (canLogEncounter(row)) {
+    return (
+      <button
+        type="button"
+        aria-label="Log encounter"
+        onClick={onLogEncounter}
+        className="cursor-pointer"
+      >
+        <StatusChip status={chip.status}>{chip.label}</StatusChip>
+      </button>
+    );
+  }
+
+  return <StatusChip status={chip.status}>{chip.label}</StatusChip>;
 }
 
 function EncounterCell({ row }: { row: RouteRow }) {
   if (row.encounter === null) {
-    return <span className="text-muted-foreground">not encountered</span>;
+    return <span className="text-muted-foreground">not encountered yet</span>;
   }
 
   return (
     <RowSpecies row={row} emptyFallback={<span className="text-muted-foreground">&mdash;</span>} />
   );
+}
+
+function TypeCell({ row, generation }: { row: RouteRow; generation: number }) {
+  const type = typeForRow(row, generation);
+  if (type === null) return null;
+  return <TypeBadge type={type} />;
 }
 
 const FEATURES = tableFeatures({});
@@ -32,6 +51,7 @@ const columnHelper = createColumnHelper<typeof FEATURES, RouteRow>();
 export interface RouteTableProps {
   rows: RouteRow[];
   encounters: readonly Encounter[];
+  generation: number;
   onDelete: (route: Route) => void;
   deletePending: boolean;
   onLogEncounter: (route: Route) => void;
@@ -41,6 +61,7 @@ export interface RouteTableProps {
 export function RouteTable({
   rows,
   encounters,
+  generation,
   onDelete,
   deletePending,
   onLogEncounter,
@@ -60,19 +81,21 @@ export function RouteTable({
         return (
           <div className="flex items-center justify-between gap-3">
             <div className="min-w-0 truncate">
-              <span>{routeRow.route.name}</span>
+              <span
+                className={cn(
+                  "font-medium",
+                  routeRow.status === "missed" && "text-muted-foreground",
+                )}
+              >
+                {routeRow.route.name}
+              </span>
               {routeRow.route.isCustom && (
-                <span className="text-muted-foreground ml-2 rounded border border-border px-1.5 py-0.5 text-xs uppercase">
+                <span className="text-muted-foreground ml-2 border-[1.5px] border-border px-1.5 py-0.5 text-[9px] font-medium tracking-[0.12em] uppercase">
                   Custom
                 </span>
               )}
             </div>
             <div className="flex shrink-0 items-center gap-2">
-              {routeRow.status === "not-encountered" && (
-                <Button size="sm" variant="outline" onClick={() => onLogEncounter(routeRow.route)}>
-                  Log
-                </Button>
-              )}
               {editable && mon !== null && (
                 <Button size="sm" variant="outline" onClick={() => onEditMon(routeRow.route, mon)}>
                   Edit
@@ -99,18 +122,25 @@ export function RouteTable({
       cell: ({ row }) => <EncounterCell row={row.original} />,
     }),
     columnHelper.display({
+      id: "type",
+      header: "Type",
+      cell: ({ row }) => <TypeCell row={row.original} generation={generation} />,
+    }),
+    columnHelper.display({
       id: "level",
       header: "Lvl",
       cell: ({ row }) => {
         const routeRow = row.original;
         const level = routeRow.mon?.level ?? routeRow.encounter?.level ?? null;
-        return <span>{level ?? "—"}</span>;
+        return <span className="font-mono text-lg">{level ?? "—"}</span>;
       },
     }),
     columnHelper.display({
       id: "status",
       header: "Status",
-      cell: ({ row }) => <StatusPill status={row.original.status} />,
+      cell: ({ row }) => (
+        <StatusCell row={row.original} onLogEncounter={() => onLogEncounter(row.original.route)} />
+      ),
     }),
   ];
 
@@ -125,11 +155,11 @@ export function RouteTable({
     <table className="w-full border-collapse bg-background text-left text-sm">
       <thead>
         {table.getHeaderGroups().map((headerGroup) => (
-          <tr key={headerGroup.id} className="border-b border-border">
+          <tr key={headerGroup.id} className="border-y-[1.5px] border-border bg-muted">
             {headerGroup.headers.map((header) => (
               <th
                 key={header.id}
-                className="text-muted-foreground px-3 py-2 text-xs font-normal uppercase"
+                className="px-3 py-2 text-[10px] font-medium tracking-[0.12em] text-foreground uppercase"
               >
                 {header.isPlaceholder ? null : <table.FlexRender header={header} />}
               </th>
@@ -139,7 +169,13 @@ export function RouteTable({
       </thead>
       <tbody>
         {table.getRowModel().rows.map((row) => (
-          <tr key={row.id} className="border-b border-border last:border-b-0">
+          <tr
+            key={row.id}
+            className={cn(
+              "border-b border-muted last:border-b-0",
+              canLogEncounter(row.original) && "bg-flag-tint",
+            )}
+          >
             {row.getAllCells().map((cell) => (
               <td key={cell.id} className="px-3 py-2">
                 <table.FlexRender cell={cell} />

@@ -1,50 +1,79 @@
 import type { ReactNode } from "react";
 
-import { PencilIcon, PlusIcon } from "lucide-react";
+import { PencilIcon } from "lucide-react";
 
+import { StatusChip } from "@/components/status-chip";
+import { TypeBadge } from "@/components/type-badge";
 import { Button } from "@/components/ui/button";
 import { canDeleteRoute } from "@/domain/routes";
-import type { RouteRow, RouteRowStatus } from "@/domain/route-rows";
+import type { RouteRow } from "@/domain/route-rows";
 import type { Encounter, Mon, Route } from "@/domain/types";
 import { cn } from "@/lib/utils";
 
-import { RowSpecies, STATUS_LABEL } from "./route-presentation";
-
-function StatusIndicator({ status }: { status: RouteRowStatus }): ReactNode {
-  const dashed = status === "not-encountered" || status === "open";
-
-  return (
-    <span
-      aria-hidden="true"
-      className={cn(
-        "mt-0.5 h-4 w-4 shrink-0 rounded-full border-2",
-        dashed ? "border-dashed" : "border-solid",
-        status === "dead" ? "border-destructive" : "border-border",
-      )}
-    />
-  );
-}
+import {
+  canLogEncounter,
+  chipForRouteRow,
+  RowSpecies,
+  STATUS_LABEL,
+  typeForRow,
+} from "./route-presentation";
 
 function RouteCardSubtitle({ row }: { row: RouteRow }): ReactNode {
   if (row.encounter === null) {
-    return <p className="text-muted-foreground text-sm">not encountered</p>;
+    return <p className="text-muted-foreground text-sm">tap to log encounter</p>;
   }
 
-  // A living catch shows its level instead of the word "caught". The nickname and species
-  // already say it was caught, and level is what a run with caps is played against.
-  const detail =
-    row.status === "caught" && row.mon !== null ? `L${row.mon.level}` : STATUS_LABEL[row.status];
+  if (row.status === "missed") {
+    return (
+      <p className="text-muted-foreground text-sm">
+        <RowSpecies row={row} emptyFallback={<span>&mdash;</span>} />
+      </p>
+    );
+  }
+
+  // A dead mon's info (nickname, species, gender, level) is still known, so it renders the same
+  // as a living catch. The graveyard chip, not this line, is what says it died.
+  if ((row.status === "caught" || row.status === "dead") && row.mon !== null) {
+    return (
+      <p className="text-muted-foreground text-sm">
+        <RowSpecies row={row} /> &middot; <span className="font-mono">L{row.mon.level}</span>
+      </p>
+    );
+  }
+
+  return <p className="text-muted-foreground text-sm">{STATUS_LABEL[row.status]}</p>;
+}
+
+function RouteCardBadges({
+  row,
+  generation,
+  onLog,
+}: {
+  row: RouteRow;
+  generation: number;
+  onLog: () => void;
+}): ReactNode {
+  const type = typeForRow(row, generation);
+  const chip = chipForRouteRow(row);
 
   return (
-    <p className="text-muted-foreground text-sm">
-      <RowSpecies row={row} emptyFallback={<span>&mdash;</span>} /> &middot; {detail}
-    </p>
+    <div className="flex shrink-0 items-center gap-1.5">
+      {type !== null && <TypeBadge type={type} />}
+      {canLogEncounter(row) ? (
+        <button type="button" aria-label="Log encounter" onClick={onLog}>
+          <StatusChip status={chip.status}>{chip.label}</StatusChip>
+        </button>
+      ) : (
+        <StatusChip status={chip.status}>{chip.label}</StatusChip>
+      )}
+    </div>
   );
 }
 
 export interface RouteCardListProps {
   rows: RouteRow[];
   encounters: readonly Encounter[];
+  generation: number;
   onDelete: (route: Route) => void;
   deletePending: boolean;
   onLogEncounter: (route: Route) => void;
@@ -54,13 +83,14 @@ export interface RouteCardListProps {
 export function RouteCardList({
   rows,
   encounters,
+  generation,
   onDelete,
   deletePending,
   onLogEncounter,
   onEditMon,
 }: RouteCardListProps): ReactNode {
   return (
-    <ul className="m-0 flex list-none flex-col gap-2 p-0">
+    <ul className="m-0 flex list-none flex-col border-[1.5px] border-border bg-card p-0">
       {rows.map((row) => {
         const removable = canDeleteRoute(row.route, encounters);
         const mon = row.mon;
@@ -69,54 +99,53 @@ export function RouteCardList({
         return (
           <li
             key={row.route.id}
-            className="flex items-start gap-3 rounded border border-border p-3"
+            className={cn(
+              "flex items-start justify-between gap-3 border-b border-muted p-3 last:border-b-0",
+              canLogEncounter(row) && "bg-flag-tint",
+            )}
           >
-            <StatusIndicator status={row.status} />
             <div className="min-w-0 flex-1">
-              <div className="flex items-center justify-between gap-3">
-                <div className="min-w-0 truncate">
-                  <span>{row.route.name}</span>
-                  {row.route.isCustom && (
-                    <span className="text-muted-foreground ml-2 rounded border border-border px-1.5 py-0.5 text-xs uppercase">
-                      Custom
-                    </span>
-                  )}
-                </div>
-                <div className="flex shrink-0 items-center gap-2">
-                  {row.status === "not-encountered" && (
-                    <Button
-                      size="icon-sm"
-                      variant="outline"
-                      aria-label="Log encounter"
-                      onClick={() => onLogEncounter(row.route)}
-                    >
-                      <PlusIcon />
-                    </Button>
-                  )}
-                  {editable && mon !== null && (
-                    <Button
-                      size="icon-sm"
-                      variant="outline"
-                      aria-label="Edit mon"
-                      onClick={() => onEditMon(row.route, mon)}
-                    >
-                      <PencilIcon />
-                    </Button>
-                  )}
-                  {removable && (
-                    <Button
-                      size="sm"
-                      variant="ghost"
-                      disabled={deletePending}
-                      onClick={() => onDelete(row.route)}
-                    >
-                      Remove
-                    </Button>
-                  )}
-                </div>
+              <div className="min-w-0 truncate">
+                <span
+                  className={cn("font-bold", row.status === "missed" && "text-muted-foreground")}
+                >
+                  {row.route.name}
+                </span>
+                {row.route.isCustom && (
+                  <span className="text-muted-foreground ml-2 border-[1.5px] border-border px-1.5 py-0.5 text-[9px] font-medium tracking-[0.12em] uppercase">
+                    Custom
+                  </span>
+                )}
               </div>
               <RouteCardSubtitle row={row} />
+              <div className="mt-2 flex items-center gap-2">
+                {editable && mon !== null && (
+                  <Button
+                    size="icon-sm"
+                    variant="outline"
+                    aria-label="Edit mon"
+                    onClick={() => onEditMon(row.route, mon)}
+                  >
+                    <PencilIcon />
+                  </Button>
+                )}
+                {removable && (
+                  <Button
+                    size="sm"
+                    variant="ghost"
+                    disabled={deletePending}
+                    onClick={() => onDelete(row.route)}
+                  >
+                    Remove
+                  </Button>
+                )}
+              </div>
             </div>
+            <RouteCardBadges
+              row={row}
+              generation={generation}
+              onLog={() => onLogEncounter(row.route)}
+            />
           </li>
         );
       })}

@@ -70,6 +70,8 @@ function makeMon(overrides: Partial<Mon> = {}): Mon {
   };
 }
 
+const HEARTGOLD_GENERATION = 4;
+
 function renderCards(input: {
   routes: Route[];
   encounters: Encounter[];
@@ -88,6 +90,7 @@ function renderCards(input: {
     <RouteCardList
       rows={rows}
       encounters={input.encounters}
+      generation={HEARTGOLD_GENERATION}
       onDelete={input.onDelete ?? vi.fn()}
       deletePending={false}
       onLogEncounter={input.onLogEncounter ?? vi.fn()}
@@ -114,7 +117,7 @@ describe("RouteCardList", () => {
   });
 
   it.each([
-    ["not-encountered" as const, "not encountered", []],
+    ["not-encountered" as const, "log", []],
     ["open" as const, "open", [makeEncounter({ status: "open" })]],
     ["missed" as const, "missed", [makeEncounter({ status: "missed" })]],
     ["skipped" as const, "skipped", [makeEncounter({ status: "skipped" })]],
@@ -124,7 +127,7 @@ describe("RouteCardList", () => {
     renderCards({ routes, encounters, mons: [] });
 
     const item = screen.getByRole("listitem");
-    expect(within(item).getByText(new RegExp(label, "i"))).toBeInTheDocument();
+    expect(within(item).getAllByText(new RegExp(label, "i")).length).toBeGreaterThan(0);
   });
 
   it("shows a living catch's level rather than the word caught", () => {
@@ -156,23 +159,28 @@ describe("RouteCardList", () => {
     expect(subtitle).not.toHaveTextContent("L5");
   });
 
-  it("renders dead, not caught, for a caught encounter whose mon has died", () => {
+  it("shows the fainted chip, not caught, for a caught encounter whose mon has died", () => {
     const routes = [makeRoute({ id: "route-1" })];
     const encounters = [
       makeEncounter({ id: "encounter-1", routeId: "route-1", status: "caught", monId: "mon-1" }),
     ];
-    const mons = [makeMon({ id: "mon-1", status: "dead" })];
+    const mons = [makeMon({ id: "mon-1", status: "dead", level: 6 })];
 
-    // The fixture's own encounter status is "caught": only the mon's death flips the label, so a
-    // naive render of `encounter.status` would show "caught" here and this assertion would fail.
+    // The fixture's own encounter status is "caught": only the mon's death flips the chip, so a
+    // naive render of `encounter.status` would show "party" here and this assertion would fail.
     expect(encounters[0]?.status).toBe("caught");
 
     renderCards({ routes, encounters, mons });
 
     const item = screen.getByRole("listitem");
+    expect(item).toHaveTextContent("fainted");
+    expect(item).not.toHaveTextContent("party");
+    expect(item).not.toHaveTextContent("boxed");
+
+    // The mon's info is still known even though it died, so the subtitle shows its level, the
+    // same as a living catch, rather than the word "dead": the chip is what carries that.
     const subtitle = item.querySelector("p");
-    expect(subtitle).toHaveTextContent("dead");
-    expect(subtitle).not.toHaveTextContent("caught");
+    expect(subtitle).toHaveTextContent("L6");
   });
 
   it("shows the species display name and nickname for a caught mon", () => {

@@ -368,7 +368,7 @@ describe("logging an encounter from the routes screen", () => {
     renderRoutesScreen(adapter, run.id);
 
     const table = await screen.findByRole("table");
-    await user.click(within(table).getByRole("button", { name: "Log" }));
+    await user.click(within(table).getByRole("button", { name: "Log encounter" }));
 
     expect(
       await screen.findByText("Route 29", { selector: "h2, [data-slot=dialog-title]" }),
@@ -376,7 +376,7 @@ describe("logging an encounter from the routes screen", () => {
   });
 
   it.each([
-    ["Caught" as const, "caught"],
+    ["Caught" as const, "party"],
     ["Missed" as const, "missed"],
     ["Skipped" as const, "skipped"],
   ])("logs a %s encounter and updates the table row", async (outcomeLabel, expectedStatus) => {
@@ -394,7 +394,7 @@ describe("logging an encounter from the routes screen", () => {
     renderRoutesScreen(adapter, run.id);
 
     const table = await screen.findByRole("table");
-    await user.click(within(table).getByRole("button", { name: "Log" }));
+    await user.click(within(table).getByRole("button", { name: "Log encounter" }));
 
     if (outcomeLabel === "Caught") {
       await user.type(screen.getByLabelText("Species"), "Chikorita");
@@ -431,7 +431,7 @@ describe("logging an encounter from the routes screen", () => {
     renderRoutesScreen(adapter, run.id);
 
     const table = await screen.findByRole("table");
-    await user.click(within(table).getByRole("button", { name: "Log" }));
+    await user.click(within(table).getByRole("button", { name: "Log encounter" }));
     await user.click(screen.getByRole("radio", { name: "Missed" }));
     await user.click(screen.getByRole("button", { name: "Save encounter" }));
 
@@ -455,7 +455,7 @@ describe("logging an encounter from the routes screen", () => {
     renderRoutesScreen(adapter, run.id);
 
     const table = await screen.findByRole("table");
-    await user.click(within(table).getByRole("button", { name: "Log" }));
+    await user.click(within(table).getByRole("button", { name: "Log encounter" }));
     await user.click(screen.getByRole("radio", { name: "Skipped" }));
     await user.click(screen.getByRole("button", { name: "Save encounter" }));
 
