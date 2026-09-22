@@ -1,8 +1,6 @@
 /**
- * Covers `log-encounter-dialog.tsx` both directly (species search, level-follow, placement
- * default, validation) and through `RoutesScreen` (opening from a route row and the row
- * updating after a successful log). Both shells render at once in jsdom, so every screen-level
- * query is scoped to the table it queries, per CLAUDE.md.
+ * Covers `log-encounter-dialog.tsx` directly and through `RoutesScreen`. Both shells render at
+ * once in jsdom, so every screen-level query here is scoped to the table it queries.
  */
 
 import type { ReactNode } from "react";

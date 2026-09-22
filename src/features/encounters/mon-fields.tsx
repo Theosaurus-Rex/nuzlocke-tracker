@@ -19,7 +19,7 @@ const GENDERS: { value: Gender; label: string }[] = [
   { value: "genderless", label: "Genderless" },
 ];
 
-/** The small uppercase tracked eyebrow every field label uses, per the Block Shadow direction. */
+/** The small uppercase tracked eyebrow shared by every field label. */
 export const FIELD_LABEL_CLASS =
   "mb-1 block text-[13px] font-medium tracking-[0.12em] text-muted-foreground uppercase";
 

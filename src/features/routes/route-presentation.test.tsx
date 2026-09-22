@@ -1,8 +1,6 @@
 /**
- * Covers the pure helpers in `route-presentation.tsx` directly: the status chip mapping, the
- * generation-aware type resolution, the counter tallies and the filter. `route-table.test.tsx`
- * and `route-card-list.test.tsx` cover these rendered into each view; this file covers the
- * mapping itself, once, so the two views can't drift without a test here catching it.
+ * Covers the pure helpers in `route-presentation.tsx` directly, once, so `route-table.test.tsx`
+ * and `route-card-list.test.tsx` don't each need to prove the same mapping when rendering it.
  */
 
 import { describe, expect, it } from "vitest";

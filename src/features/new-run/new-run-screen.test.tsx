@@ -1,7 +1,4 @@
 /**
- * Covers the name guard, trimming, the game picker's options, the redirect on success, and the
- * cancel link.
- *
  * Routing uses `createMemoryRouter` over a small route table of this screen's own neighbours,
  * not the app's full `appRoutes`, since this only needs to prove where `NewRunScreen` navigates.
  */
@@ -181,12 +178,10 @@ describe("NewRunScreen", () => {
 
     await userEvent.type(screen.getByLabelText("Run name"), "Modified Rules Run");
 
-    // Flip every clause checkbox away from its DEFAULT_RULES value.
     for (const label of CLAUSE_LABELS) {
       await userEvent.click(screen.getByLabelText(label));
     }
 
-    // Turn the randomiser on, then flip every sub-toggle on too.
     await userEvent.click(screen.getByLabelText("This is a randomiser run"));
     for (const label of RANDOMISER_SUB_LABELS) {
       await userEvent.click(screen.getByLabelText(label));

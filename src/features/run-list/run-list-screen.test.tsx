@@ -1,10 +1,6 @@
 /**
- * Covers `run-list-screen.tsx`'s own wiring: the empty state, per-card counts, search, tabs, and
- * the delete confirmation. Row-level proof that delete removes every table's rows lives in
- * `src/storage/queries.test.tsx`, against the adapter directly.
- *
- * jsdom does not evaluate CSS media queries, so there is no test here asserting how the grid
- * looks at a given viewport width.
+ * Row-level proof that delete removes every table's rows lives in `src/storage/queries.test.tsx`.
+ * jsdom does not evaluate CSS media queries, so there is no test here for the grid's breakpoint.
  */
 
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
@@ -282,7 +278,6 @@ describe("RunListScreen", () => {
       "href",
       `/runs/${runB.id}/routes`,
     );
-    // A finished run's chip reads COMPLETE, not ACTIVE, distinguishing the two statuses.
     expect(within(goldCard).getByText("complete")).toBeInTheDocument();
 
     expect(boxedMon.status).toBe("box");
@@ -405,7 +400,6 @@ describe("RunListScreen", () => {
 
     expect(await adapter.runs.get(doomed.id)).toBeUndefined();
 
-    // The other run is untouched.
     expect(screen.getByRole("heading", { name: "Ember Nuzlocke" })).toBeInTheDocument();
     expect(await adapter.runs.get(survivor.id)).toEqual(survivor);
   });
