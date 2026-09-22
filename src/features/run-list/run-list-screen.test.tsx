@@ -249,7 +249,7 @@ describe("RunListScreen", () => {
 
     await waitFor(() => {
       expect(statsIn(silverCard)).toEqual({
-        "Routes covered": "1",
+        routes: "1/1",
         Party: "1",
         Boxed: "0",
         Dead: "0",
@@ -259,6 +259,7 @@ describe("RunListScreen", () => {
       "href",
       `/runs/${runA.id}/routes`,
     );
+    expect(within(silverCard).getByText("active")).toBeInTheDocument();
 
     await userEvent.click(screen.getByRole("tab", { name: /Finished/ }));
     const goldCard = (await screen.findByRole("heading", { name: "Gold Nuzlocke" })).closest("li");
@@ -271,7 +272,7 @@ describe("RunListScreen", () => {
     // than sharing state.
     await waitFor(() => {
       expect(statsIn(goldCard)).toEqual({
-        "Routes covered": "2",
+        routes: "2/2",
         Party: "0",
         Boxed: "1",
         Dead: "1",
@@ -281,6 +282,8 @@ describe("RunListScreen", () => {
       "href",
       `/runs/${runB.id}/routes`,
     );
+    // A finished run's chip reads COMPLETE, not ACTIVE, distinguishing the two statuses.
+    expect(within(goldCard).getByText("complete")).toBeInTheDocument();
 
     expect(boxedMon.status).toBe("box");
   });
