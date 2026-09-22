@@ -19,6 +19,10 @@ const GENDERS: { value: Gender; label: string }[] = [
   { value: "genderless", label: "Genderless" },
 ];
 
+/** The small uppercase tracked eyebrow every field label uses, per the Block Shadow direction. */
+export const FIELD_LABEL_CLASS =
+  "mb-1 block text-[10px] font-medium tracking-[0.12em] text-muted-foreground uppercase";
+
 export interface NicknameFieldProps {
   id: string;
   value: string;
@@ -38,7 +42,9 @@ export function NicknameField({
 
   return (
     <div>
-      <Label htmlFor={id}>Nickname{required && <span aria-hidden="true"> *</span>}</Label>
+      <Label htmlFor={id} className={FIELD_LABEL_CLASS}>
+        Nickname{required && <span aria-hidden="true"> *</span>}
+      </Label>
       <Input
         id={id}
         value={value}
@@ -63,7 +69,7 @@ export interface GenderFieldProps {
 export function GenderField({ value, onChange }: GenderFieldProps): ReactNode {
   return (
     <div>
-      <span className="mb-1 block text-sm font-medium">Gender</span>
+      <span className={FIELD_LABEL_CLASS}>Gender</span>
       <div role="radiogroup" aria-label="Gender" className="flex gap-2">
         {GENDERS.map((option) => (
           <Button
@@ -92,7 +98,9 @@ export interface NatureFieldProps {
 export function NatureField({ id, value, onChange }: NatureFieldProps): ReactNode {
   return (
     <div>
-      <Label htmlFor={id}>Nature</Label>
+      <Label htmlFor={id} className={FIELD_LABEL_CLASS}>
+        Nature
+      </Label>
       <Select value={value} onValueChange={(nextValue) => onChange(nextValue)}>
         <SelectTrigger id={id} className="w-full">
           <SelectValue placeholder="Select a nature" />
@@ -123,7 +131,9 @@ export function AbilityField({ id, value, onChange, error }: AbilityFieldProps):
 
   return (
     <div>
-      <Label htmlFor={id}>Ability</Label>
+      <Label htmlFor={id} className={FIELD_LABEL_CLASS}>
+        Ability
+      </Label>
       <Input
         id={id}
         value={value}
@@ -153,7 +163,9 @@ export function HeldItemField({ id, value, onChange, error }: HeldItemFieldProps
 
   return (
     <div>
-      <Label htmlFor={id}>Held item</Label>
+      <Label htmlFor={id} className={FIELD_LABEL_CLASS}>
+        Held item
+      </Label>
       <Input
         id={id}
         value={value}

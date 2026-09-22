@@ -1,8 +1,10 @@
 import type { ReactNode } from "react";
 
+import { TypeBadge } from "@/components/type-badge";
 import { getSpeciesByName, searchSpecies, speciesDisplayName } from "@/game/pokedex";
 
 import { ComboboxField } from "./combobox-field";
+import { resolveSpeciesType } from "./species-type";
 
 function toSpeciesId(text: string): string {
   return text.trim().toLowerCase().replace(/\s+/g, "-");
@@ -21,6 +23,8 @@ export interface SpeciesPickerProps {
   id: string;
   value: string;
   onChange: (speciesId: string) => void;
+  /** Resolves the inline type badge once a species matches. Omitted, no badge shows. */
+  generation?: number;
   "aria-invalid"?: boolean;
   "aria-describedby"?: string;
   placeholder?: string;
@@ -30,10 +34,14 @@ export function SpeciesPicker({
   id,
   value,
   onChange,
+  generation,
   placeholder,
   "aria-invalid": ariaInvalid,
   "aria-describedby": ariaDescribedBy,
 }: SpeciesPickerProps): ReactNode {
+  const type =
+    generation === undefined || value === "" ? null : resolveSpeciesType(value, generation);
+
   return (
     <ComboboxField
       id={id}
@@ -44,6 +52,7 @@ export function SpeciesPicker({
       aria-describedby={ariaDescribedBy}
       resolve={resolveSpeciesId}
       displayName={speciesDisplayName}
+      suffix={type ? <TypeBadge type={type} /> : undefined}
       search={(query) =>
         searchSpecies(query).map((s) => ({ id: s.name, label: speciesDisplayName(s.name) }))
       }
