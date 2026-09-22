@@ -70,19 +70,8 @@ describe("GAMES registry", () => {
   });
 });
 
-/**
- * Independently verified ace (highest-level) Pokémon for each gym leader, Elite Four member and
- * the Champion, from the first encounter. The post-Elite-Four rematch rosters are much higher
- * level, so using those would inflate every cap.
- *
- * Cross-checked against:
- *   - https://bulbapedia.bulbagarden.net/wiki/<Leader_name> ("Pokémon HeartGold and SoulSilver"
- *     gym/Elite Four battle section)
- *   - https://www.serebii.net/heartgoldsoulsilver/gym.shtml
- *
- * Independent of both nuzlocke.data and scripts/extract-heartgold.ts, so a bad extraction, or
- * a bad upstream value, fails here even if the generator's arithmetic is right.
- */
+/** Independently sourced ace levels, not derived from our own data or generator. See
+ * docs/notes/game-data.md for the sources and why. */
 const VERIFIED_ACE_LEVELS: Record<string, number> = {
   "gym-falkner": 13,
   "gym-bugsy": 17,

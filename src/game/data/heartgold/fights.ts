@@ -1,14 +1,7 @@
 /**
- * HeartGold boss rosters: gyms, Elite Four, Champion, and rivals.
- *
- * Bootstrapped by scripts/extract-heartgold.ts from domtronn/nuzlocke.data
- * (https://github.com/domtronn/nuzlocke.data), files `routes/hg.txt` (fight order and names)
- * and `leagues/hgss.txt` (rosters). Hand-owned now, per CLAUDE.md "Game data": edit it
- * directly and note why beside the change.
- *
- * `levelCap` is computed from each fight's own `roster` (the ace's level), never
- * hand-entered. Rivals carry no cap. See scripts/extract-heartgold.ts for one known
- * correction against an independent source (Brock's Kabutops).
+ * HeartGold boss rosters: gyms, Elite Four, Champion, and rivals. Bootstrapped from
+ * domtronn/nuzlocke.data (routes/hg.txt, leagues/hgss.txt) by scripts/extract-heartgold.ts.
+ * Hand-owned now: edit directly, per CLAUDE.md "Game data".
  */
 
 import type { FightDef } from "@/game/types";
@@ -343,11 +336,9 @@ export const fights: FightDef[] = [
       { species: "starmie", level: 54 },
     ],
   },
-  // Kabutops corrected from upstream (domtronn/nuzlocke.data): it lists this at level 54, but
-  // both Bulbapedia (https://bulbapedia.bulbagarden.net/wiki/Brock, "Pokémon HeartGold and
-  // SoulSilver" gym battle section) and Serebii (https://www.serebii.net/heartgoldsoulsilver/
-  // gym.shtml) independently list it at level 52, which is what's recorded here. Brock's ace
-  // (Onix, level 54) is unaffected either way, so this does not change his level cap.
+  // Kabutops corrected from upstream: nuzlocke.data lists level 54, but Bulbapedia and Serebii
+  // both list level 52, which is what's recorded here. Brock's ace, Onix, stays level 54, so
+  // his level cap is unaffected.
   {
     id: "gym-brock",
     name: "Brock",

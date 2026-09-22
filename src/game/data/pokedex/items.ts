@@ -1,8 +1,7 @@
 /**
- * Curated held items, evolution items and berries relevant to a Nuzlocke tracker.
- * CURATED_ITEM_SLUGS in the generator lists them and says why each is included. Bootstrapped by
- * scripts/extract-pokedex.ts from PokeAPI (https://pokeapi.co/). Hand-owned now, per CLAUDE.md
- * "Game data".
+ * Curated held items, evolution items and berries. Bootstrapped by scripts/extract-pokedex.ts
+ * from PokeAPI (https://pokeapi.co/). Hand-owned now, per CLAUDE.md "Game data". See
+ * CURATED_ITEM_SLUGS in the generator for what's included and why.
  */
 
 export interface ItemDef {
