@@ -1,12 +1,5 @@
 /**
- * Mutation hooks over the `StorageAdapter`.
- *
- * `useCatchEncounter` runs a pure domain transition and then writes two rows, the updated
- * encounter and the new mon, inside one `adapter.transaction(...)`, so a partial write can never
- * leave an encounter pointing at a mon that does not exist. The new mon's id is generated at the
- * call site, never inside `catchEncounter` itself, which is pure by design.
- *
- * A run created by `useCreateRun` has no fights yet; seeding those is out of scope here.
+ * Mutation hooks over the StorageAdapter.
  */
 
 import { useMutation, useQueryClient, type UseMutationResult } from "@tanstack/react-query";
@@ -41,6 +34,11 @@ export interface CatchEncounterResult {
   mon: Mon;
 }
 
+/**
+ * Writes the updated encounter and new mon in one transaction, so a partial write never leaves
+ * an encounter pointing at a mon that doesn't exist. monId is generated here, not inside
+ * catchEncounter, which stays pure.
+ */
 async function persistCatch(
   adapter: StorageAdapter,
   input: CatchEncounterInput,
@@ -221,11 +219,8 @@ async function persistDeleteRun(adapter: StorageAdapter, runId: string): Promise
 }
 
 /**
- * Deletes a run and all of its rows. Irreversible; the caller is responsible for confirming
- * first.
- *
- * Deleting a run changes which runs exist, so this also invalidates the plain `queryKeys.runs()`
- * list key, which `invalidateRun` deliberately skips (see `queries.ts`).
+ * Deletes a run and all its rows. Irreversible, and this also invalidates the plain
+ * queryKeys.runs() list key, which invalidateRun deliberately skips (see queries.ts).
  */
 export function useDeleteRun(): UseMutationResult<void, Error, string> {
   const adapter = useStorage();

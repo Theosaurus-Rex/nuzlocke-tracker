@@ -1,10 +1,7 @@
 /**
- * `navigator.storage.persist()` wiring. This is hygiene only (CLAUDE.md hard rule 5): `persist()`
- * is a heuristic grant, and nothing here or downstream may treat `"granted"` as a reason to skip
- * JSON export or assume data survives.
- *
- * `navigator.storage` does not exist in jsdom and is absent on older Safari, so every path here
- * is feature-detected before touching it.
+ * navigator.storage.persist() wiring: hygiene only. It's a heuristic grant, so nothing may treat
+ * "granted" as a reason to skip JSON export. navigator.storage is absent in jsdom and older
+ * Safari, so every path here is feature-detected first.
  */
 
 import { useSyncExternalStore } from "react";

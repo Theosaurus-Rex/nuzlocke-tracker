@@ -1,8 +1,7 @@
 /**
- * JSON export and import: the backup CLAUDE.md hard rule 5 requires.
- *
- * A file handed to `parseBundle` has been off the device, so every field is re-validated from
- * `unknown`, and every problem found accumulates instead of the parse stopping at the first.
+ * JSON export and import: the backup this permadeath tracker requires. A file handed to
+ * parseBundle has come from outside the app, so every field is re-validated from unknown, and
+ * every problem accumulates instead of the parse stopping at the first.
  */
 
 import { SCHEMA_VERSION, isExportBundle, migrateBundle, type ExportBundle } from "@/domain/schema";
@@ -479,10 +478,9 @@ function validateBundleContents(bundle: ExportBundle): string[] {
 }
 
 /**
- * Parses and validates a file's raw text into an `ExportBundle`, never throwing. Checks run in
- * order: valid JSON, the envelope shape, `schemaVersion` (a newer version is refused outright, an
- * older one is migrated or refused if there's no path), then row-level and referential
- * validation, both accumulating every error rather than stopping at the first.
+ * Parses and validates raw text into an ExportBundle, never throwing. Checks run in order:
+ * valid JSON, envelope shape, schemaVersion, then row and reference validation, all
+ * accumulating errors rather than stopping at the first.
  */
 export function parseBundle(text: string): ParseResult {
   let parsed: unknown;
@@ -558,10 +556,9 @@ interface ImportPlan {
 }
 
 /**
- * The one merge/replace selection rule, shared by `importBundle` (which writes the plan) and
- * `previewImport` (which only describes it). "replace" takes every table verbatim. "merge" takes
- * runs not already in `existingRunIds`, plus the child rows belonging to those newly imported
- * runs. Everything else becomes `skippedRuns`.
+ * The one merge/replace selection rule, shared by importBundle (which writes the plan) and
+ * previewImport (which only describes it). "replace" takes every table verbatim. "merge" takes
+ * runs not already in existingRunIds, plus their child rows. Everything else is skippedRuns.
  */
 function planImport(
   bundle: ExportBundle,
@@ -617,15 +614,9 @@ export interface ImportSummary {
 }
 
 /**
- * Imports `bundle` into `adapter` under `mode`. The whole import runs inside one
- * `adapter.transaction`, so a throw partway through rolls everything back and nothing is
- * written.
- *
- * "merge" adds only runs whose `id` isn't already present, plus their rows. Existing runs are
- * left untouched and reported as skipped. This is deliberately not conflict resolution: no
- * overwrite, no merge-within-a-run, no last-write-wins.
- *
- * "replace" clears every table, then writes the whole bundle.
+ * Imports bundle into adapter under mode, inside one transaction: a throw partway through rolls
+ * everything back. "merge" adds only runs not already present, leaving existing runs untouched
+ * and reported as skipped, not conflict-resolved. "replace" clears every table first.
  */
 export async function importBundle(
   adapter: StorageAdapter,
