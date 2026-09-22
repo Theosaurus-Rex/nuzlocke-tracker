@@ -49,11 +49,11 @@
   --color-placeholder: oklch(0.82 0.02 90.6); /* #C9C4B6 dashed empty-slot border */
   --color-placeholder-soft: oklch(0.858 0.019 89.4); /* #D5D0C3 */
 
-  --shadow-block: 3px 3px 0 oklch(0.191 0 89.9); /* #141414 the default */
-  --shadow-block-lg: 4px 4px 0 oklch(0.191 0 89.9);
-  --shadow-block-xl: 5px 5px 0 oklch(0.191 0 89.9);
-  --shadow-block-modal: 8px 8px 0 oklch(0.191 0 89.9); /* #141414 */
-  --shadow-block-alert: 4px 4px 0 oklch(0.552 0.187 31.5); /* #C8351F */
+  --shadow-block: 4px 4px 0 oklch(0.191 0 89.9); /* #141414 the default */
+  --shadow-block-lg: 5px 5px 0 oklch(0.191 0 89.9);
+  --shadow-block-xl: 6px 6px 0 oklch(0.191 0 89.9);
+  --shadow-block-modal: 10px 10px 0 oklch(0.191 0 89.9); /* #141414 */
+  --shadow-block-alert: 5px 5px 0 oklch(0.552 0.187 31.5); /* #C8351F */
 
   --color-type-normal: oklch(0.919 0.017 91.6); /* #E8E4D8 drawn */
   --color-type-water: oklch(0.79 0.092 236.3); /* #7FC4EE drawn */
@@ -76,6 +76,14 @@
 
   --font-sans: "Space Grotesk", ui-sans-serif, system-ui, sans-serif;
   --font-mono: "Share Tech Mono", ui-monospace, monospace;
+
+  /* Pinned in px because the root font size is scaled below. Tailwind's own breakpoints are
+     rem, so leaving them would move the mobile shell's boundary from 768px to 960px. */
+  --breakpoint-sm: 640px;
+  --breakpoint-md: 768px;
+  --breakpoint-lg: 1024px;
+  --breakpoint-xl: 1280px;
+  --breakpoint-2xl: 1536px;
 }
 
 :root {
@@ -109,6 +117,18 @@
 }
 
 @layer base {
+  /* Desktop only. The mobile frames are drawn at 340px wide with the same type sizes, so a
+     phone already reads at the right scale, and scaling it wraps the headers and crowds the tab
+     bar. The desktop frames are drawn at 940px, so spread across a real desktop viewport their
+     sizes read small. Scaling the root moves every rem-based size at once: type, control
+     heights, padding and gaps. Borders stay 1.5px, since a hairline does not scale.
+
+     The query is in px to match the pinned breakpoints above. */
+  @media (min-width: 768px) {
+    html {
+      font-size: 125%;
+    }
+  }
   * {
     @apply border-border outline-ring/50;
   }

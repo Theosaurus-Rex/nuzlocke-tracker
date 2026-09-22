@@ -90,7 +90,7 @@ export function RouteTable({
                 {routeRow.route.name}
               </span>
               {routeRow.route.isCustom && (
-                <span className="text-muted-foreground ml-2 border-[1.5px] border-border px-1.5 py-0.5 text-[9px] font-medium tracking-[0.12em] uppercase">
+                <span className="text-muted-foreground ml-2 border-[1.5px] border-border px-1.5 py-0.5 text-[11px] font-medium tracking-[0.12em] uppercase">
                   Custom
                 </span>
               )}
@@ -159,7 +159,7 @@ export function RouteTable({
             {headerGroup.headers.map((header) => (
               <th
                 key={header.id}
-                className="px-3 py-2 text-[10px] font-medium tracking-[0.12em] text-foreground uppercase"
+                className="px-3 py-2 text-[13px] font-medium tracking-[0.12em] text-foreground uppercase"
               >
                 {header.isPlaceholder ? null : <table.FlexRender header={header} />}
               </th>
