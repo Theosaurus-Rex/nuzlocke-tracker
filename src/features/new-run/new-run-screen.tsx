@@ -177,7 +177,7 @@ export function NewRunScreen(): ReactNode {
   }
 
   return (
-    <form onSubmit={handleSubmit} noValidate>
+    <form onSubmit={handleSubmit} noValidate className="flex min-h-screen flex-col">
       <div className="flex flex-wrap items-center justify-between gap-3 border-b-[1.5px] border-border p-4">
         <h1 className="text-xl font-bold sm:text-2xl">New run</h1>
         <div className="flex items-center gap-2">
@@ -198,7 +198,7 @@ export function NewRunScreen(): ReactNode {
         </p>
       )}
 
-      <div className="grid grid-cols-1 md:grid-cols-2 md:divide-x-[1.5px] md:divide-border">
+      <div className="grid flex-1 grid-cols-1 md:grid-cols-2 md:divide-x-[1.5px] md:divide-border">
         <div className="space-y-4 p-4">
           <div>
             <label htmlFor="run-name" className={FIELD_LABEL_CLASS}>
