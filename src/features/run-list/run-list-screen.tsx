@@ -263,7 +263,10 @@ export function RunListScreen(): ReactNode {
                   variant: selected ? "secondary" : "ghost",
                 })}
               >
-                {label} (<span className="font-mono">{count}</span>)
+                {/* One flex item, so the button's gap does not open up inside the brackets. */}
+                <span>
+                  {label} (<span className="font-mono">{count}</span>)
+                </span>
               </button>
             );
           })}
