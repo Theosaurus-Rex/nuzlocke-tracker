@@ -53,33 +53,32 @@ export default tseslint.config(
     },
   },
   {
+    // The storage boundary rule above (no-restricted-imports) is off here on purpose:
+    // src/storage/** is the one place allowed to import Dexie directly.
     files: ["src/storage/**/*.{ts,tsx}"],
     rules: {
       "no-restricted-imports": "off",
     },
   },
   {
-    // storage-context.tsx co-locates `StorageProvider` with the `useStorage` hook that reads it
-    // by design (spec section 3): the pairing is the point, not something to split into two
-    // files just to satisfy fast-refresh's one-component-per-file heuristic.
+    // StorageProvider and useStorage are deliberately co-located here, not split across two
+    // files to satisfy fast-refresh's one-component-per-file heuristic.
     files: ["src/storage/storage-context.tsx"],
     rules: {
       "react-refresh/only-export-components": ["error", { allowExportNames: ["useStorage"] }],
     },
   },
   {
-    // shadcn/ui generates components that co-locate a cva() variants helper next
-    // to the component export (e.g. `export { Button, buttonVariants }`). That is
-    // upstream, regenerated-by-CLI code, not an app fast-refresh boundary.
+    // shadcn/ui generates components that co-locate a cva() variants helper with the
+    // component export. That's upstream, CLI-regenerated code, not an app fast-refresh boundary.
     files: ["src/components/ui/**/*.{ts,tsx}"],
     rules: {
       "react-refresh/only-export-components": "off",
     },
   },
   {
-    // route-presentation.tsx co-locates STATUS_LABEL and the row-status/type helpers with the
-    // components that render them, so the table and the card list read the same mapping rather
-    // than two copies (see the file's own doc comments).
+    // These helpers are co-located with the components that render them, so the table and
+    // card list read the same mapping instead of keeping two copies.
     files: ["src/features/routes/route-presentation.tsx"],
     rules: {
       "react-refresh/only-export-components": [

@@ -8,7 +8,6 @@
     "allowArbitraryExtensions": true,
     "skipLibCheck": true,
 
-    /* Bundler mode */
     "moduleResolution": "bundler",
     "allowImportingTsExtensions": true,
     "verbatimModuleSyntax": true,
@@ -16,18 +15,15 @@
     "noEmit": true,
     "jsx": "react-jsx",
 
-    /* Path aliases. No baseUrl: deprecated in TS 6, removed in TS 7.
-       paths resolve relative to this file's directory. */
+    // No baseUrl: deprecated in TS 6, removed in TS 7. paths resolves relative to this file.
     "paths": {
       "@/*": ["./src/*"]
     },
 
-    /* Strictness */
     "strict": true,
     "noUncheckedIndexedAccess": true,
     "noImplicitOverride": true,
 
-    /* Linting */
     "noUnusedLocals": true,
     "noUnusedParameters": true,
     "erasableSyntaxOnly": true,

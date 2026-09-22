@@ -1,25 +1,7 @@
 /**
- * Slices the wireframe canvas export into one PNG per frame.
- *
- * Source: docs/wireframes/nuzlocke-tracker-wireframes.pdf, exported from the Claude Design
- * canvas and attached to the Linear project as "Lo-Fi Wireframe Exports". The export is a
- * single page 828pt wide and over 6000pt tall, with every frame stacked on it. Read whole it
- * scales down to an unreadable sliver, so each frame is cropped out into its own PNG that can
- * be opened directly.
- *
+ * Slices docs/wireframes/nuzlocke-tracker-wireframes.pdf (a single page over 6000pt tall)
+ * into one PNG per frame. One-shot bootstrapper: see README.md "Wireframes" for usage.
  * Requires poppler on PATH (`brew install poppler`) for pdftotext and pdftoppm.
- *
- *   node scripts/slice-wireframes.ts [path-to-pdf] [--force]
- *
- * Frame tops are read from the labels the canvas draws in its left margin ("2b", "1d"), so
- * adding or reordering frames upstream needs no change here. Frame 1d is different: it holds
- * nine mobile screens in one 3x3 grid, and the tickets number them 1d-1 to 1d-9 in reading
- * order, so that grid is measured rather than labelled. Those measurements are specific to
- * this export. Re-check them against a rendered 1d.png if the canvas is ever re-exported.
- *
- * This is a one-shot bootstrapper, not part of the build. The PNGs it writes are committed and
- * are what the tickets point at. It refuses to overwrite a populated output directory unless
- * passed --force.
  */
 
 import { execFileSync } from "node:child_process";
@@ -36,6 +18,9 @@ const LEFT_MARGIN_X = 45;
 const LABEL_HEADROOM = 3;
 const FRAME_GUTTER = 8;
 
+// 1d holds nine mobile screens in a 3x3 grid, numbered 1d-1 to 1d-9 in reading order, so it's
+// measured rather than read from a label. Specific to this export: re-check against a rendered
+// 1d.png if the canvas is ever re-exported.
 const MOBILE_FLOW_FRAME = "1d";
 const MOBILE_FLOW_GRID = {
   columns: 3,
@@ -68,6 +53,8 @@ function refuseIfAlreadyPopulated(outDir: string, forceOverride: boolean) {
   process.exit(1);
 }
 
+// Frame tops are read from the labels the canvas draws in its left margin, so adding or
+// reordering frames upstream needs no change here.
 function readLayout(file: string) {
   const xml = execFileSync("pdftotext", ["-bbox", file, "-"], { encoding: "utf8" });
 

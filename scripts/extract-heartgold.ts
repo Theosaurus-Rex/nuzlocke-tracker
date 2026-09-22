@@ -1,32 +1,7 @@
 /**
- * Generator for the HeartGold route order and boss rosters.
- *
- * Source: domtronn/nuzlocke.data (https://github.com/domtronn/nuzlocke.data), specifically
- * `routes/hg.txt` (traversal order, with gym/rival/etc. fight anchors interleaved) and
- * `leagues/hgss.txt` (boss rosters, keyed by the same fight keys).
- *
- * This does not vendor that repo (see CLAUDE.md "Game data"). It is cloned to a scratch
- * location, read once by this script, and only the HeartGold subset is emitted into typed
- * modules of our own under `src/game/data/heartgold/`, each crediting the source in its
- * header. The upstream repo is never copied into this project and is not a dependency.
- *
- * This script does not run at build or test time; the emitted modules are what ships. It is a
- * one-shot bootstrapper: run it once to seed a new game, pointing at a local clone of the
- * upstream repo:
- *
- *   node scripts/extract-heartgold.ts /path/to/local/clone/of/nuzlocke.data
- *
- * After that, the emitted files are ours. Hand-edit them directly for corrections, trims or
- * tuning, and note why beside the change. This script refuses to overwrite a populated output
- * directory; pass --force only if you mean to re-seed from scratch.
- *
- * To extract a second game from the same upstream project, copy this script, point it at a
- * different `routes/<id>.txt` / `leagues/<id>.txt` pair, and re-derive `LEVEL_CORRECTIONS`
- * against an independent source such as Bulbapedia or Serebii. Do not assume the upstream
- * levels are correct.
- *
- * Level caps are never read from the source data. They are computed here, from `roster`, for
- * every fight that grants a badge plus the Elite Four and Champion. Rivals get no cap.
+ * Generator for the HeartGold route order and boss rosters, from domtronn/nuzlocke.data.
+ * One-shot bootstrapper: see README.md "Game data" for usage and docs/notes/scripts.md for
+ * extracting a second game. Level caps are computed here, never read from source data.
  */
 
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
@@ -49,10 +24,8 @@ const ROUTES_SRC = "routes/hg.txt";
 const LEAGUE_SRC = "leagues/hgss.txt";
 
 /**
- * Committed files under src/game/data/ are hand-owned once seeded (CLAUDE.md "Game data"): a
- * generator is a one-shot bootstrapper, not something re-run for a game that already exists. A
- * stray re-run would silently overwrite every hand correction with today's upstream values, so
- * this refuses outright unless the caller explicitly forces it.
+ * Refuses to overwrite already-seeded output: a stray re-run would silently discard hand
+ * corrections. See README.md "Game data".
  */
 function refuseIfAlreadyPopulated(
   outDir: string,
@@ -76,16 +49,9 @@ function refuseIfAlreadyPopulated(
 }
 
 /**
- * Overrides applied on top of the upstream roster data, keyed by league fight key then species.
- *
- * Brock's HGSS Kanto team (`k6`): nuzlocke.data lists Kabutops at level 54, but both
- * Bulbapedia (https://bulbapedia.bulbagarden.net/wiki/Brock, "Pokémon HeartGold and
- * SoulSilver" gym battle section) and Serebii (https://www.serebii.net/heartgoldsoulsilver/
- * gym.shtml) independently list it at level 52. Brock's ace, Onix at level 54, is unaffected,
- * so this does not change his level cap, but the roster itself was wrong.
- *
- * fights.ts carries this same correction directly on Brock's entry and is the source of truth
- * now. This table only matters if the game is ever re-bootstrapped from scratch.
+ * Overrides on top of the upstream roster data, keyed by league fight key then species.
+ * Only matters if the game is ever re-bootstrapped from scratch. See docs/notes/scripts.md
+ * for the sourcing behind each entry.
  */
 const LEVEL_CORRECTIONS: Record<string, Record<string, number>> = {
   k6: { kabutops: 52 },
@@ -109,7 +75,6 @@ interface RawFightAnchor {
 /** Fight kinds we keep. Mini-bosses and evil-team executives are dropped. */
 const KEPT_KINDS: ReadonlySet<RawFightKind> = new Set(["gym-leader", "elite-four", "rival"]);
 
-/** The route name at which the traversal crosses from Johto into Kanto. */
 const KANTO_START_ROUTE = "Vermillion City";
 
 function parseRoutesFile(text: string): { routes: RawRoute[]; fights: RawFightAnchor[] } {
@@ -255,11 +220,8 @@ function emitRoutesModule(routes: RawRoute[]): string {
     .join("\n");
 
   return `/**
- * HeartGold route order, Johto through Kanto, in traversal order.
- *
- * Bootstrapped by scripts/extract-heartgold.ts from domtronn/nuzlocke.data
- * (https://github.com/domtronn/nuzlocke.data), file \`${ROUTES_SRC}\`. Hand-owned now, per
- * CLAUDE.md "Game data": edit it directly and note why beside the change.
+ * HeartGold route order, Johto through Kanto. Bootstrapped from domtronn/nuzlocke.data
+ * (https://github.com/domtronn/nuzlocke.data). Hand-owned now, see CLAUDE.md "Game data".
  */
 
 import type { RouteDef } from "@/game/types";
@@ -301,15 +263,9 @@ ${roster}
     .join("\n");
 
   return `/**
- * HeartGold boss rosters: gyms, Elite Four, Champion, and rivals.
- *
- * Bootstrapped by scripts/extract-heartgold.ts from domtronn/nuzlocke.data
- * (https://github.com/domtronn/nuzlocke.data), files \`${ROUTES_SRC}\` (fight order and names)
- * and \`${LEAGUE_SRC}\` (rosters). Hand-owned now, per CLAUDE.md "Game data": edit it
- * directly and note why beside the change.
- *
- * \`levelCap\` is computed from each fight's own \`roster\` (the ace's level), never
- * hand-entered. Rivals carry no cap.
+ * HeartGold boss rosters, bootstrapped from domtronn/nuzlocke.data
+ * (https://github.com/domtronn/nuzlocke.data). Hand-owned now, see CLAUDE.md "Game data".
+ * levelCap is computed from each fight's own roster, never hand-entered. Rivals have no cap.
  */
 
 import type { FightDef } from "@/game/types";
@@ -322,8 +278,8 @@ ${entries}
 
 function emitIndexModule(): string {
   return `/**
- * Assembles the HeartGold GameData from routes.ts and fights.ts. Bootstrapped by
- * scripts/extract-heartgold.ts; hand-owned now, same as the two files it assembles.
+ * Assembles the HeartGold GameData from routes.ts and fights.ts. Hand-owned now, same as
+ * the files it assembles.
  */
 
 import type { GameData } from "@/game/types";
