@@ -112,7 +112,7 @@ export function RouteCardList({
                   {row.route.name}
                 </span>
                 {row.route.isCustom && (
-                  <span className="text-muted-foreground ml-2 border-[1.5px] border-border px-1.5 py-0.5 text-[9px] font-medium tracking-[0.12em] uppercase">
+                  <span className="text-muted-foreground ml-2 border-[1.5px] border-border px-1.5 py-0.5 text-[11px] font-medium tracking-[0.12em] uppercase">
                     Custom
                   </span>
                 )}

@@ -70,7 +70,7 @@ export function AppShell(): ReactNode {
       >
         {runs.length > 0 && (
           <div className="mb-4">
-            <p className="mb-1.5 text-[10px] font-medium tracking-[0.12em] text-muted-foreground uppercase">
+            <p className="mb-1.5 text-[13px] font-medium tracking-[0.12em] text-muted-foreground uppercase">
               Current run
             </p>
             <RunSwitcher runs={runs} activeRunId={runId} onSwitch={handleSwitchRun} />

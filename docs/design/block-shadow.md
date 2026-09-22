@@ -10,6 +10,28 @@ that point is in it. The other three survive only as history: `3a` DMG (Game Boy
 Everything below is measured out of the canvas markup, not eyeballed from a PNG. Prefer these
 numbers to whatever a screenshot looks like at your zoom level.
 
+## On desktop the app renders at 1.25 times these sizes
+
+The desktop frames are drawn on a 940px canvas. Spread across a real desktop viewport those pixel
+sizes read small, so from 768px up the app sets a root font size of 125% and every rem-based size
+follows: type, control heights, padding, gaps. A size recorded here as 15px renders at about 19px.
+
+**Below 768px the sizes are exactly as recorded.** The mobile frames are drawn at 340px wide with
+the same type sizes, so a phone already reads at the right scale. Scaling it wraps the headers and
+crowds the tab bar.
+
+Three things deliberately do not follow:
+
+- **Hairline borders stay `1.5px`.** A hairline is a hairline, and it is the measurement this
+  direction is named after.
+- **Shadow offsets were scaled once, by hand**, and the values in this file are the scaled ones.
+  The canvas draws `3px`, the app uses `4px`.
+- **Chip and eyebrow text is written in px**, because it sits below the type scale on purpose.
+  The canvas draws 9px and 10px; the app uses 11px and 13px.
+
+Tailwind's breakpoints are rem, so they are pinned to px in `src/index.css`. Without that, raising
+the root would move the mobile shell's boundary from 768px to 960px.
+
 The same reference is on the Linear project as the document "Block Shadow — visual direction",
 which links back here. This file is the one to correct.
 
@@ -71,8 +93,9 @@ face on a phone mid-run with no signal.
 - The hairline border is `1.5px solid #141414`. Not 1px, not 2px. The canvas uses it 419 times
   against 9 uses of `2px`.
 - Corners are square everywhere. shadcn/base-nova defaults to rounded, so this is an override.
-- The shadow is a hard offset with no blur and no spread. `3px 3px 0 #141414` is the default.
-  `4px 4px 0` and `5px 5px 0` raise a card, and the modal takes `8px 8px 0`.
+- The shadow is a hard offset with no blur and no spread. The app's default is `4px 4px 0
+  #141414`, with `5px` and `6px` raising a card and `10px` on the modal. The canvas draws these
+  one step smaller, at `3px`, `4px`, `5px` and `8px`, before the scaling described above.
 - There is no `6px` shadow in the app. The `6px` offsets in the canvas belong to the phone
   outline drawn around each mobile frame, not to anything inside it.
 - An alert surface takes the same shadow in alert: `4px 4px 0 #C8351F`, `5px 5px 0 #C8351F`.
