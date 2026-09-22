@@ -50,13 +50,7 @@ export interface RunSummary {
   dead: number;
 }
 
-/**
- * `party`, `boxed` and `dead` all come from `countByMonStatus(mons)`, not `dead` from
- * `deaths.length`. They agree under every transition today, but `backup.ts` only checks that a
- * death's `monId` references a mon, not that mon's status, and hand-edited data is supported.
- * Deriving `dead` from `mons` keeps the three a true partition regardless. See the partition test
- * in `derive.test.ts` before changing this.
- */
+/** `dead` comes from `countByMonStatus(mons)`, not `deaths.length`. See docs/notes/domain.md. */
 export function summariseRun({
   encounters,
   mons,

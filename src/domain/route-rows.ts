@@ -13,7 +13,6 @@ export interface RouteRow {
   status: RouteRowStatus;
 }
 
-/** The earliest of `encounters` by `createdAt`, or undefined if `encounters` is empty. */
 function earliestEncounter(encounters: readonly Encounter[]): Encounter | undefined {
   return encounters.reduce<Encounter | undefined>((earliest, encounter) => {
     if (earliest === undefined || encounter.createdAt < earliest.createdAt) {
@@ -25,8 +24,8 @@ function earliestEncounter(encounters: readonly Encounter[]): Encounter | undefi
 
 /**
  * One row per route, in the order `routes` arrives. A `caught` encounter whose mon is dead
- * renders `"dead"`, per the design spec: death is derived from `encounter.monId -> mon.status`,
- * never stored on the encounter itself.
+ * renders `"dead"`: status is derived from `encounter.monId -> mon.status`, never stored on
+ * the encounter itself.
  */
 export function buildRouteRows(input: {
   routes: readonly Route[];

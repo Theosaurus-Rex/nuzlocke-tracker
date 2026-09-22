@@ -1,6 +1,6 @@
 /**
  * Form validation for logging a catch. Pure, so the rules are testable without a DOM.
- * `transitions.ts` enforces invariants, not user input; this is where the form's own rules live.
+ * `transitions.ts` enforces invariants, not user input. This is where the form's own rules live.
  */
 
 import type { CatchDetails, MonAmendments } from "./transitions";
@@ -8,7 +8,7 @@ import type { EncounterStatus, Rules } from "./types";
 
 export type EncounterField = "speciesId" | "levelCaught" | "level" | "nickname";
 
-/** What an encounter is being resolved to. An encounter is only `open` before it is logged. */
+/** An encounter is only `open` before it is logged. */
 export type EncounterOutcome = Exclude<EncounterStatus, "open">;
 
 function isValidLevel(level: number): boolean {
@@ -83,11 +83,8 @@ export function validateAmendment(input: {
 }
 
 /**
- * A missed encounter names what was met. The game shows a species before it flees or faints, so
- * a blank one is information lost rather than a state worth recording.
- *
- * Skipping is different and stays unvalidated: passing on a route can mean never encountering
- * anything there at all.
+ * A missed encounter must name what was met, since the game shows a species before it flees.
+ * Skipping needs no species: a route can go entirely unencountered.
  */
 export function validateMiss(input: {
   speciesId: string;

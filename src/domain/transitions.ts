@@ -1,12 +1,7 @@
 /**
- * Pure state transitions between mon, encounter and fight statuses.
- *
- * No `crypto.randomUUID()`, no `Date.now()`, no `new Date()`. Non-deterministic inputs (ids,
- * timestamps) are supplied by the caller. All functions return new objects; inputs are never
- * mutated.
- *
- * Guards here are invariant checks, not user-input validation. Clause enforcement is out of
- * scope.
+ * Pure state transitions between mon, encounter and fight statuses. No random ids or
+ * timestamps: callers supply them, and every function returns a new object rather than
+ * mutating its input.
  */
 
 import type { Cause, Draft, Encounter, Fight, Gender, Mon, Death } from "./types";
@@ -29,12 +24,9 @@ function assertMonAlive(mon: Mon): void {
 }
 
 /**
- * Lowest unoccupied party slot, or null when all six are taken.
- *
- * A slot counts as occupied only when its mon has `status === 'party'` and a non-null
- * `partySlot`; a boxed or dead mon with a stale `partySlot` must not reserve it. `killMon` frees
- * a slot without compacting the survivors, so this scans for the lowest free index rather than
- * deriving it from a count.
+ * Lowest unoccupied party slot, or null when full. A boxed or dead mon can carry a stale
+ * `partySlot`, so occupancy checks status too. Scans for the lowest free index rather than
+ * counting, since `killMon` leaves gaps instead of compacting survivors.
  */
 function nextFreeSlot(party: readonly Mon[], excludeMonId?: string): number | null {
   const occupied = new Set(
@@ -55,7 +47,6 @@ function nextFreeSlot(party: readonly Mon[], excludeMonId?: string): number | nu
 /** The attributes of a mon known only at the moment it's caught. */
 export interface CatchDetails {
   speciesId: string;
-  /** The level it was met at. */
   levelCaught: number;
   /** Its level now, which can be well past `levelCaught` by the time it's logged. */
   level: number;

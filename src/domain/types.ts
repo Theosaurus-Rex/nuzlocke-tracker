@@ -1,12 +1,10 @@
 /**
- * Entity types for the Nuzlocke tracker data model. Pure types only, no I/O, no storage, no
- * React.
- *
- * Nullable columns are `| null`, never optional `?`. Rows round-trip through IndexedDB and the
- * export bundle, where `undefined` and absent are not the same as `null`.
- *
- * Ids are plain `string`. Branded id types are a deliberate omission, not an oversight.
+ * Entity types for the Nuzlocke tracker data model, no I/O. Nullable columns are `| null`,
+ * never optional `?`: IndexedDB and the export bundle treat `undefined` and absent differently
+ * from `null`.
  */
+
+/** Ids are plain `string`. Branded id types are a deliberate omission, not an oversight. */
 
 export interface Timestamped {
   id: string;
@@ -76,7 +74,7 @@ export type Route = Timestamped & {
   /** Sparse integers, to leave room for insertion. */
   order: number;
   isCustom: boolean;
-  /** Links back to seeded game data; null when custom. */
+  /** Links back to seeded game data. Null when custom. */
   gameRouteId: string | null;
 };
 
@@ -84,7 +82,7 @@ export type Encounter = Timestamped & {
   runId: string;
   routeId: string;
   status: EncounterStatus;
-  /** What was met; null while open. */
+  /** What was met. Null while open. */
   speciesId: string | null;
   level: number | null;
   /** Set when caught. */
@@ -96,7 +94,7 @@ export type Mon = Timestamped & {
   runId: string;
   /** Null for starters and gifts. */
   encounterId: string | null;
-  /** Current species; mutates on evolve. */
+  /** Current species. Mutates on evolve. */
   speciesId: string;
   /** Fixed at catch. */
   speciesIdCaught: string;
@@ -111,7 +109,7 @@ export type Mon = Timestamped & {
   /** Max 4, validated in `domain`. */
   moves: string[];
   status: MonStatus;
-  /** 0–5; set iff `status === 'party'`. */
+  /** 0–5. Set iff `status === 'party'`. */
   partySlot: number | null;
   boxOrder: number | null;
   caughtRouteId: string | null;
@@ -148,7 +146,7 @@ export type Death = Timestamped & {
 
 export type Fight = Timestamped & {
   runId: string;
-  /** Links to seeded roster data; null when custom. */
+  /** Links to seeded roster data. Null when custom. */
   gameFightId: string | null;
   name: string;
   kind: FightKind;

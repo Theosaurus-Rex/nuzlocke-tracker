@@ -6,7 +6,6 @@ import type { Encounter, Route } from "./types";
 
 export const ROUTE_ORDER_STEP = 100;
 
-/** The order for a new route appended after every route in `routes`. */
 export function nextRouteOrder(routes: readonly Route[]): number {
   if (routes.length === 0) {
     return ROUTE_ORDER_STEP;

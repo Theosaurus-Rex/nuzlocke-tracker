@@ -20,10 +20,9 @@ import { navItemsFor } from "./nav-items";
 import { appRoutes } from "./router";
 
 /**
- * Both providers are required even though this suite mostly tests routing: the settings route
- * (mounted at `/settings` below) reads storage through TanStack Query and would throw without
- * them. `adapter`/`queryClient` are optional so a test can seed data before rendering, or reuse
- * the same `queryClient` afterwards to drive an invalidation.
+ * Both providers are required: the settings route reads storage through TanStack Query and
+ * would throw without them, even though this suite mostly tests routing. `adapter` and
+ * `queryClient` are optional so a test can seed data first, or reuse the client to invalidate.
  */
 function renderAt(
   initialPath: string,
@@ -43,10 +42,9 @@ function renderAt(
   return { router, unmount: rendered.unmount, queryClient, adapter };
 }
 
-/** Excludes the sidebar's pinned "New run" link, which is not one of the routed nav items and
- * has its own tests below. Reads the label from its own span rather than the link's full
- * `textContent`, since a routed nav row's `textContent` also includes its counter, when it has
- * one. */
+/** Excludes the sidebar's pinned "New run" link, which isn't a routed nav item and has its own
+ * tests below. Reads the label from its own span, since a nav row's full `textContent` also
+ * includes its counter. */
 function linksIn(nav: HTMLElement) {
   return within(nav)
     .getAllByRole("link")
@@ -426,11 +424,8 @@ describe("Run switcher and live counters", () => {
     });
   });
 
-  // The counters used to render twice, once inside each shell's own RunSwitcher mount, so this
-  // test compared them against each other. They now live only on the sidebar's nav rows: the tab
-  // bar doesn't show them at all (6c draws no numbers on its tabs), so the mobile run switcher no
-  // longer carries any either. What's left to guarantee is that both switchers still agree on
-  // which run is open.
+  // The tab bar shows no counters, so this only needs to guarantee both run switchers still
+  // agree on which run is open.
   it("shows the sidebar's nav-row counters, with both run switchers still agreeing on the open run", async () => {
     const adapter = createMemoryAdapter();
     const run = await adapter.runs.put(makeRunDraft({ name: "Silver Nuzlocke" }));

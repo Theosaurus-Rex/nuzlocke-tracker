@@ -1,8 +1,6 @@
 /**
- * Unit coverage for `run-switcher.tsx` in isolation: the pure sub-screen extraction, and
- * `RunSwitcher` driven directly by props, with no routing or storage adapter involved.
- * Integration coverage (real `summariseRun` data, both shells agreeing, a switch preserving the
- * sub-screen) lives in `app-shell.test.tsx`.
+ * Unit coverage for `run-switcher.tsx` in isolation, with no routing or storage adapter.
+ * Integration coverage (real data, both shells agreeing) lives in `app-shell.test.tsx`.
  */
 
 import { render, screen } from "@testing-library/react";
