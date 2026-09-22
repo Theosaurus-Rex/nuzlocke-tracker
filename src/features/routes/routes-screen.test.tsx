@@ -10,7 +10,7 @@ import userEvent from "@testing-library/user-event";
 import { describe, expect, it } from "vitest";
 import { MemoryRouter, Route, Routes } from "react-router";
 
-import type { Encounter, Route as RouteRow, Run, Rules } from "@/domain/types";
+import type { Encounter, Mon, Route as RouteRow, Run, Rules } from "@/domain/types";
 import { createMemoryAdapter } from "@/storage/memory-adapter";
 import { StorageProvider } from "@/storage/storage-context";
 import type { StorageAdapter } from "@/storage/adapter";
@@ -80,6 +80,32 @@ function makeEncounterDraft(
   };
 }
 
+function makeMonDraft(
+  runId: string,
+  encounterId: string,
+  overrides: Partial<Mon> = {},
+): Omit<Mon, "id" | "createdAt" | "updatedAt"> {
+  return {
+    runId,
+    encounterId,
+    speciesId: "chikorita",
+    speciesIdCaught: "chikorita",
+    nickname: null,
+    gender: null,
+    level: 5,
+    levelCaught: 5,
+    nature: null,
+    ability: null,
+    heldItem: null,
+    moves: [],
+    status: "party",
+    partySlot: 0,
+    boxOrder: null,
+    caughtRouteId: null,
+    ...overrides,
+  };
+}
+
 function renderScreen(adapter: StorageAdapter, runId: string) {
   const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } });
   return render(
@@ -139,8 +165,9 @@ describe("RoutesScreen", () => {
 
     await findRouteInList("Route 29");
 
+    await userEvent.click(screen.getByRole("button", { name: "+ Add route" }));
     await userEvent.type(screen.getByLabelText(/route name/i), "Secret Cave");
-    await userEvent.click(screen.getByRole("button", { name: "Add route" }));
+    await userEvent.click(screen.getByRole("button", { name: "Add" }));
 
     await findRouteInList("Secret Cave");
 
@@ -148,6 +175,21 @@ describe("RoutesScreen", () => {
     expect(items[items.length - 1]).toContain("Secret Cave");
 
     expect(screen.getByLabelText(/route name/i)).toHaveValue("");
+  });
+
+  it("keeps the add-route field hidden until the control asks for it", async () => {
+    const adapter = createMemoryAdapter();
+    const run = await adapter.runs.put(makeRunDraft());
+    await adapter.routes.put(makeRouteDraft(run.id, { name: "New Bark Town", order: 100 }));
+
+    renderScreen(adapter, run.id);
+    await findRouteInList("New Bark Town");
+
+    expect(screen.queryByLabelText(/route name/i)).not.toBeInTheDocument();
+
+    await userEvent.click(screen.getByRole("button", { name: "+ Add route" }));
+
+    expect(screen.getByLabelText(/route name/i)).toBeInTheDocument();
   });
 
   it("shows a remove control on a custom route with no encounters, and removes it on use", async () => {
@@ -210,10 +252,70 @@ describe("RoutesScreen", () => {
 
     expect(screen.queryByText(/route name is required/i)).not.toBeInTheDocument();
 
+    await userEvent.click(screen.getByRole("button", { name: "+ Add route" }));
     await userEvent.type(screen.getByLabelText(/route name/i), "   ");
-    await userEvent.click(screen.getByRole("button", { name: "Add route" }));
+    await userEvent.click(screen.getByRole("button", { name: "Add" }));
 
     expect(await screen.findByText(/route name is required/i)).toBeInTheDocument();
     expect(screen.getAllByRole("listitem")).toHaveLength(1);
+  });
+
+  it("shows a counter chip per bucket and the covered/total figure", async () => {
+    const adapter = createMemoryAdapter();
+    const run = await adapter.runs.put(makeRunDraft());
+    const caughtRoute = await adapter.routes.put(
+      makeRouteDraft(run.id, { name: "New Bark Town", order: 100 }),
+    );
+    const caughtEncounter = await adapter.encounters.put(
+      makeEncounterDraft(run.id, caughtRoute.id, { status: "caught" }),
+    );
+    await adapter.mons.put(makeMonDraft(run.id, caughtEncounter.id));
+    const missedRoute = await adapter.routes.put(
+      makeRouteDraft(run.id, { name: "Route 46", order: 200 }),
+    );
+    await adapter.encounters.put(makeEncounterDraft(run.id, missedRoute.id, { status: "missed" }));
+    await adapter.routes.put(makeRouteDraft(run.id, { name: "Route 29", order: 300 }));
+
+    renderScreen(adapter, run.id);
+
+    await findRouteInList("New Bark Town");
+
+    const counters = screen.getByRole("group", { name: "Route counters" });
+    expect(within(counters).getByText("caught")).toBeInTheDocument();
+    expect(within(counters).getByText("missed")).toBeInTheDocument();
+    expect(within(counters).getByText("pending")).toBeInTheDocument();
+    expect(within(counters).getByText("2 / 3")).toBeInTheDocument();
+  });
+
+  it("hides routes outside the checked filter buckets, and shows them again once unchecked", async () => {
+    const adapter = createMemoryAdapter();
+    const run = await adapter.runs.put(makeRunDraft());
+    const caughtRoute = await adapter.routes.put(
+      makeRouteDraft(run.id, { name: "New Bark Town", order: 100 }),
+    );
+    const caughtEncounter = await adapter.encounters.put(
+      makeEncounterDraft(run.id, caughtRoute.id, { status: "caught" }),
+    );
+    await adapter.mons.put(makeMonDraft(run.id, caughtEncounter.id));
+    const missedRoute = await adapter.routes.put(
+      makeRouteDraft(run.id, { name: "Route 46", order: 200 }),
+    );
+    await adapter.encounters.put(makeEncounterDraft(run.id, missedRoute.id, { status: "missed" }));
+
+    renderScreen(adapter, run.id);
+
+    await findRouteInList("New Bark Town");
+    await findRouteInList("Route 46");
+
+    await userEvent.click(screen.getByRole("button", { name: "Filter" }));
+    await userEvent.click(screen.getByRole("checkbox", { name: "caught" }));
+
+    const list = screen.getByRole("list");
+    expect(within(list).queryByText("Route 46")).not.toBeInTheDocument();
+    expect(within(list).getByText("New Bark Town")).toBeInTheDocument();
+
+    await userEvent.click(screen.getByRole("checkbox", { name: "caught" }));
+
+    expect(await findRouteInList("Route 46")).toBeInTheDocument();
   });
 });

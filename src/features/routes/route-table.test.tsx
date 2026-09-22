@@ -70,6 +70,8 @@ function makeMon(overrides: Partial<Mon> = {}): Mon {
   };
 }
 
+const HEARTGOLD_GENERATION = 4;
+
 function renderTable(input: {
   routes: Route[];
   encounters: Encounter[];
@@ -88,6 +90,7 @@ function renderTable(input: {
     <RouteTable
       rows={rows}
       encounters={input.encounters}
+      generation={HEARTGOLD_GENERATION}
       onDelete={input.onDelete ?? vi.fn()}
       deletePending={false}
       onLogEncounter={input.onLogEncounter ?? vi.fn()}
@@ -107,6 +110,7 @@ describe("RouteTable", () => {
 
     expect(screen.getByRole("columnheader", { name: "Route" })).toBeInTheDocument();
     expect(screen.getByRole("columnheader", { name: "Encounter" })).toBeInTheDocument();
+    expect(screen.getByRole("columnheader", { name: "Type" })).toBeInTheDocument();
     expect(screen.getByRole("columnheader", { name: "Lvl" })).toBeInTheDocument();
     expect(screen.getByRole("columnheader", { name: "Status" })).toBeInTheDocument();
 
@@ -116,11 +120,11 @@ describe("RouteTable", () => {
   });
 
   it.each([
-    ["not-encountered" as const, []],
-    ["open" as const, [makeEncounter({ status: "open" })]],
-    ["missed" as const, [makeEncounter({ status: "missed" })]],
-    ["skipped" as const, [makeEncounter({ status: "skipped" })]],
-  ])("renders the %s status pill", (expectedLabel, encounters) => {
+    ["not-encountered" as const, "log", []],
+    ["open" as const, "log", [makeEncounter({ status: "open" })]],
+    ["missed" as const, "missed", [makeEncounter({ status: "missed" })]],
+    ["skipped" as const, "skipped", [makeEncounter({ status: "skipped" })]],
+  ])("renders the %s row's chip as %s", (_status, expectedLabel, encounters) => {
     const routes = [makeRoute({ id: "route-1" })];
 
     renderTable({ routes, encounters, mons: [] });
@@ -129,11 +133,10 @@ describe("RouteTable", () => {
     const cells = within(row).getAllByRole("cell");
     const statusCell = cells[cells.length - 1]!;
 
-    const label = expectedLabel === "not-encountered" ? "not encountered" : expectedLabel;
-    expect(within(statusCell).getByText(label)).toBeInTheDocument();
+    expect(within(statusCell).getByText(expectedLabel)).toBeInTheDocument();
   });
 
-  it("renders the caught status pill for a caught encounter whose mon is alive", () => {
+  it("shows the party chip for a caught encounter whose mon is in the party", () => {
     const routes = [makeRoute({ id: "route-1" })];
     const encounters = [
       makeEncounter({ id: "encounter-1", routeId: "route-1", status: "caught", monId: "mon-1" }),
@@ -142,25 +145,39 @@ describe("RouteTable", () => {
 
     renderTable({ routes, encounters, mons });
 
-    expect(screen.getByText("caught")).toBeInTheDocument();
-    expect(screen.queryByText("dead")).not.toBeInTheDocument();
+    expect(screen.getByText("party")).toBeInTheDocument();
+    expect(screen.queryByText("fainted")).not.toBeInTheDocument();
   });
 
-  it("renders dead, not caught, for a caught encounter whose mon has died", () => {
+  it("shows the boxed chip for a caught encounter whose mon is in a box", () => {
+    const routes = [makeRoute({ id: "route-1" })];
+    const encounters = [
+      makeEncounter({ id: "encounter-1", routeId: "route-1", status: "caught", monId: "mon-1" }),
+    ];
+    const mons = [makeMon({ id: "mon-1", status: "box" })];
+
+    renderTable({ routes, encounters, mons });
+
+    expect(screen.getByText("boxed")).toBeInTheDocument();
+    expect(screen.queryByText("party")).not.toBeInTheDocument();
+  });
+
+  it("shows the fainted chip, not party or boxed, for a caught encounter whose mon has died", () => {
     const routes = [makeRoute({ id: "route-1" })];
     const encounters = [
       makeEncounter({ id: "encounter-1", routeId: "route-1", status: "caught", monId: "mon-1" }),
     ];
     const mons = [makeMon({ id: "mon-1", status: "dead" })];
 
-    // The fixture's own encounter status is "caught": only the mon's death flips the pill, so a
-    // naive render of `encounter.status` would show "caught" here and this assertion would fail.
+    // The fixture's own encounter status is "caught": only the mon's death flips the chip, so a
+    // naive render of `encounter.status` would show "party" here and this assertion would fail.
     expect(encounters[0]?.status).toBe("caught");
 
     renderTable({ routes, encounters, mons });
 
-    expect(screen.getByText("dead")).toBeInTheDocument();
-    expect(screen.queryByText("caught")).not.toBeInTheDocument();
+    expect(screen.getByText("fainted")).toBeInTheDocument();
+    expect(screen.queryByText("party")).not.toBeInTheDocument();
+    expect(screen.queryByText("boxed")).not.toBeInTheDocument();
   });
 
   it("shows the species display name and nickname for a caught mon", () => {
@@ -251,7 +268,7 @@ describe("RouteTable", () => {
 
     renderTable({ routes: [route], encounters: [], mons: [], onLogEncounter });
 
-    await userEvent.click(screen.getByRole("button", { name: "Log" }));
+    await userEvent.click(screen.getByRole("button", { name: "Log encounter" }));
 
     expect(onLogEncounter).toHaveBeenCalledWith(route);
   });
@@ -275,7 +292,7 @@ describe("RouteTable", () => {
 
     renderTable({ routes, encounters, mons });
 
-    expect(screen.queryByRole("button", { name: "Log" })).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Log encounter" })).not.toBeInTheDocument();
   });
 
   it("shows an edit control for a caught row, which calls onEditMon with the route and mon", async () => {
@@ -332,15 +349,12 @@ describe("RouteTable encounter cell", () => {
     expect(within(row).queryByText("not encountered")).not.toBeInTheDocument();
   });
 
-  // The status pill renders the words "not encountered" too, so these assertions read the
-  // encounter cell by position. Searching the whole row matches the pill and passes whatever
-  // the cell says.
   it("says not encountered in the encounter cell when the route has no encounter at all", () => {
     const routes = [makeRoute({ id: "route-1", name: "Route 29" })];
 
     renderTable({ routes, encounters: [], mons: [] });
 
     const row = screen.getByText("Route 29").closest("tr") as HTMLElement;
-    expect(within(row).getAllByRole("cell")[1]).toHaveTextContent("not encountered");
+    expect(within(row).getAllByRole("cell")[1]).toHaveTextContent("not encountered yet");
   });
 });
