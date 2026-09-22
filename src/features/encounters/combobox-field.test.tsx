@@ -56,13 +56,23 @@ describe("ComboboxField keyboard handling", () => {
     expect(input).toHaveValue("Machoke");
   });
 
-  it("wraps from the first option to the last on ArrowUp", async () => {
+  it("wraps from the first option to the last on ArrowUp, via the input in between", async () => {
     const user = userEvent.setup();
     const { onChange, input } = renderPicker();
 
     await user.type(input, "mac");
     await screen.findByRole("listbox");
-    await user.keyboard("{ArrowDown}{ArrowUp}{Enter}");
+    await user.keyboard("{ArrowDown}");
+    expect(input).toHaveAttribute("aria-activedescendant");
+
+    // Base UI's combobox keeps the input as a stop in the loop: one ArrowUp from the first
+    // option clears the highlight before a second ArrowUp reaches the last option, rather than
+    // jumping straight there.
+    await user.keyboard("{ArrowUp}");
+    expect(input).not.toHaveAttribute("aria-activedescendant");
+
+    await user.keyboard("{ArrowUp}");
+    await user.keyboard("{Enter}");
 
     expect(onChange).toHaveBeenLastCalledWith("machamp");
     expect(input).toHaveValue("Machamp");
