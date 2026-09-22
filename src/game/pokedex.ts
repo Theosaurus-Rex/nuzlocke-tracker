@@ -1,10 +1,7 @@
 /**
- * Lookup adapter over the pokedex data (src/game/data/pokedex/). The app imports this module,
- * never the data modules directly.
- *
- * Lookup and search are not scoped to a generation, per CLAUDE.md "Game data". `pokedexFor` is
- * the one part that is generation-aware, resolving a species' types and a move's stats against
- * a specific generation. See ./data/pokedex/types.ts for the resolution rule.
+ * Lookup adapter over the pokedex data. The app imports this, never the data modules
+ * directly. Only `pokedexFor` is generation-aware. Search and lookup above it are not,
+ * per CLAUDE.md "Game data".
  */
 
 import { abilities, type AbilityDef } from "@/game/data/pokedex/abilities";
@@ -30,11 +27,8 @@ export function getSpeciesByName(name: string): SpeciesDef | undefined {
   return speciesByName.get(name);
 }
 
-/**
- * A stored species id turned into something renderable: hyphens become spaces and each word is
- * capitalised. Works on a name absent from the pokedex, since a romhack or randomiser species is
- * a supported case, not an error.
- */
+/** Works on a name absent from the pokedex too: a romhack or randomiser species is a
+ * supported case, not an error. */
 export function speciesDisplayName(name: string): string {
   return name
     .split("-")
@@ -42,22 +36,17 @@ export function speciesDisplayName(name: string): string {
     .join(" ");
 }
 
-/**
- * Case-insensitive prefix match on species name, in national dex order, across every
- * generation.
- *
- * PokéAPI names the canonical entry of some multi-form species with a form suffix, so id 778
- * is `"mimikyu-disguised"` and id 386 is `"deoxys-normal"`, for around 24 species. Prefix
- * search and ids are unaffected, but rendering `name` raw will show those suffixes.
- */
-/**
- * Names are hyphenated, so "Bug Bite" is stored as "bug-bite". A typed space has to become a
- * hyphen or a search stops matching the moment a name runs to a second word.
- */
+/** Query names use spaces, but stored names are hyphenated ("bug-bite"), so this converts
+ * before matching. */
 function toNameForm(query: string): string {
   return query.trim().toLowerCase().replace(/\s+/g, "-");
 }
 
+/**
+ * Case-insensitive prefix match on species name, national dex order, across every generation.
+ * PokéAPI names canonical multi-form species with a form suffix (id 778 is
+ * "mimikyu-disguised"), so rendering `name` raw can show one even though ids and search are fine.
+ */
 export function searchSpecies(query: string): SpeciesDef[] {
   const q = toNameForm(query);
   return species.filter((s) => s.name.toLowerCase().startsWith(q));
@@ -71,11 +60,8 @@ export function getMoveByName(name: string): MoveDef | undefined {
   return moveByName.get(name);
 }
 
-/**
- * A stored move id turned into something renderable: hyphens become spaces and each word is
- * capitalised. Works on a name absent from the pokedex, since a romhack or randomiser move is a
- * supported case, not an error.
- */
+/** Works on a name absent from the pokedex too: a romhack or randomiser move is a supported
+ * case, not an error. */
 export function moveDisplayName(name: string): string {
   return name
     .split("-")
@@ -143,18 +129,15 @@ function firstNonNull<T>(values: readonly (T | null)[]): T | undefined {
 
 export interface GenerationPokedex {
   generation: number;
-  /**
-   * Resolves a species' types as they were in `generation`. A species introduced after
-   * `generation` has no earlier history, so this falls back to its current types instead of
-   * throwing. That is normal for a randomiser or romhack, not an error.
-   */
+  /** Resolves a species' types as they were in `generation`. Falls back to current types if
+   * introduced later, which is normal for a randomiser or romhack, not an error. */
   typesOf(id: number): Type[] | undefined;
   /** Resolves a move's stats as they were in `generation`. Same fallback rule as `typesOf`. */
   statsOf(id: number): ResolvedMoveStats | undefined;
 }
 
-/** Builds a generation-scoped resolver. Only the resolved values here depend on the
- * generation; search and lookup above stay unfiltered. */
+/** Builds a generation-scoped resolver. Only the values it resolves depend on the generation.
+ * Search and lookup above stay unfiltered. */
 export function pokedexFor(generation: number): GenerationPokedex {
   return {
     generation,

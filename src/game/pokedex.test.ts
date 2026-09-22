@@ -61,9 +61,8 @@ describe("per-generation type resolution: species whose type never changed (cont
 
 describe("Gen 4 guarantee, expressed as a property of resolution: no species that EXISTED at generation 4 or earlier resolves to Fairy", () => {
   // A species introduced in Gen 6+ (Sylveon, Flabebe) is legitimately Fairy at every
-  // generation, since it has no earlier typing to fall back to. What this test checks is that a
-  // species which existed earlier never resolves to Fairy, which is what would happen if a
-  // retcon's pastTypes entry were dropped (e.g. Clefairy losing its Gen 5 entry).
+  // generation, since it has no earlier typing to fall back to. This checks that a species
+  // existing earlier never resolves to Fairy, which a dropped retcon entry would cause.
   for (const gen of [1, 2, 3, 4]) {
     test(`generation ${String(gen)}`, () => {
       const fairyMons = species
@@ -95,11 +94,8 @@ describe("searchSpecies is unfiltered by generation", () => {
 });
 
 describe("per-generation move stat resolution: power/accuracy/pp/type are not present-day", () => {
-  // Sources (Bulbapedia, checked against the cached PokeAPI move/{id} response used to generate
-  // moves.ts):
-  //   https://bulbapedia.bulbagarden.net/wiki/Vine_Whip_(move)
-  //   https://bulbapedia.bulbagarden.net/wiki/Tackle_(move)
-  //   https://bulbapedia.bulbagarden.net/wiki/Bite_(move)
+  // Sources: Bulbapedia (Vine Whip, Tackle, Bite), cross-checked against the cached PokeAPI
+  // move responses used to build moves.ts.
 
   test("Vine Whip is power 35 / pp 15 at generation 4 — a mid-generation change, not just a generation boundary", () => {
     const vineWhip = moves.find((m) => m.name === "vine-whip");

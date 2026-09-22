@@ -1,10 +1,7 @@
 /**
  * Static game-data types: the shape of one game's route order and boss rosters.
- *
- * These are hand-authorable TypeScript modules, not JSON. A typo'd species or a missing level
- * fails `pnpm build`, and authoring a new game gets autocomplete.
- *
- * `GameId` and `FightKind` live in `@/domain/types` and are reused here, not redefined.
+ * Hand-authorable TypeScript, not JSON, so a typo'd species or missing level fails
+ * `pnpm build` and a new game gets autocomplete.
  */
 
 import type { FightKind, GameId } from "@/domain/types";

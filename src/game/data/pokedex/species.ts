@@ -1,9 +1,7 @@
 /**
  * Species: national dex 1-1025. Bootstrapped by scripts/extract-pokedex.ts from PokeAPI
  * (https://pokeapi.co/). Hand-owned now, per CLAUDE.md "Game data".
- *
- * Types are present-day values plus history (`pastTypes`). Resolve through `pokedexFor` in
- * src/game/pokedex.ts rather than reading these fields directly. See ./types.ts for the rule.
+ * Resolve types through `pokedexFor` in src/game/pokedex.ts, not `pastTypes` directly.
  */
 
 import type { BaseStats, PastTypes, Type } from "./types";
