@@ -230,8 +230,13 @@ fail when someone deliberately changes it and updates the test in the same breat
 
 ## Comments: fewer, and only where the code cannot speak
 
-The default is no comment. Code, types and test names already carry most of the meaning, and a
-comment that restates them is a second thing that has to stay true. PER-42 deleted most of the
+The default is no comment, in every file: source, tests, scripts and config. Code, types and
+test names already carry most of the meaning, and a comment that restates them is a second thing
+that has to stay true.
+
+**When one is truly needed, it is one to three lines at most**, written in the same plain English
+as the PR bodies above. If it needs more than three lines, the reasoning belongs in `docs/` and
+the comment is a one-line link to it. PER-42 deleted most of the
 comments written before it, not because they were wrong, but because they were history,
 restatement, or rationale that belonged in a spec.
 
@@ -255,7 +260,7 @@ Never for:
   nothing fails when it rots.
 - **Restating the signature.** `/** Throws when used outside a StorageProvider. */` above a
   function that throws when used outside a `StorageProvider`.
-- **Rationale longer than a few lines.** That is a design decision. It goes in `docs/` or in this
+- **Rationale longer than three lines.** That is a design decision. It goes in `docs/` or in this
   file, and the code links to it.
 
 ### How the survivors read
@@ -375,17 +380,53 @@ From 2026-09-18 onward, work lands through a reviewed PR, not directly on `main`
   satisfied. Opening the PR is where your work stops.
 - **The gate runs before the PR opens**, not after:
   `pnpm lint && pnpm typecheck && pnpm format:check && pnpm test && pnpm build`.
-- **The PR description must say how to verify it by hand.** That is the whole point of the
-  review, so it is the part worth writing properly: the exact steps, what to look for, and what
-  is deliberately not covered by a test (the CSS breakpoint, anything visual). A reviewer should
-  not have to work out how to exercise the change.
-- Link the Linear issue, and state what is out of scope so a missing thing does not read as an
-  oversight.
+- Link the Linear issue.
 - **No tool-attribution lines** in commit messages or PR bodies — no `Co-Authored-By`, no
   "Generated with Claude Code". This follows Theo's global config and applies here too.
 
-If a ticket turns out to be too large for one reviewable PR, say so and propose the split before
-building, rather than opening one PR that nobody can usefully review.
+### Size: small enough to review in one sitting
+
+- **Aim for under 500 changed lines. Over 1000 is a hard limit.** Count additions plus
+  deletions from `git diff --stat main...HEAD`.
+- Lockfiles, generated game data and binary assets such as wireframe PNGs do not count, but say
+  in the PR that they are there.
+- Going over 1000 needs a real reason, stated at the top of the PR: for example, a change that
+  cannot be split without leaving `main` broken in between. "It was quicker in one go" is not one.
+- **Split the ticket rather than the rule.** If a ticket looks like it will pass 500 lines, say
+  so and propose smaller tickets before building. Each piece should work and pass the gate on
+  its own.
+
+### Writing the PR body
+
+This repo is a portfolio piece. Hiring managers and other non-engineers may read the PRs, not
+just Theo. **Write for someone who knows what the app does but has not read the code.**
+
+- Plain English, short sentences. No filler ("this PR aims to", "robust", "seamless",
+  "leverage"), and no big words where a small one works.
+- Name things by what the user sees, not what the code calls them. "The species list in the
+  encounter dialog", not "`SpeciesCombobox` popover portal".
+- Technical detail is fine when a reviewer needs it, but put it in the notes, not the summary.
+- Keep each section short. A few lines or bullets, not paragraphs.
+
+Use these four sections, in this order. `.github/pull_request_template.md` fills them in on GitHub,
+and `gh pr create --body` does not use it, so paste the same shape:
+
+```markdown
+## Summary
+What changed and why, in two to four sentences. Link the Linear issue.
+
+## How to check it
+- [ ] Short, exact steps a reviewer can follow by hand, each with what they should see.
+- [ ] Call out anything a test cannot cover, like layout at phone width or anything visual.
+
+## Impact on the app
+What a user of the app will notice. Say plainly if nothing visible changes, and whether saved
+runs are affected in any way.
+
+## Notes
+What is deliberately out of scope, so a missing thing does not read as an oversight.
+Follow-up tickets, known gaps, and any size-limit justification go here too.
+```
 
 ---
 
