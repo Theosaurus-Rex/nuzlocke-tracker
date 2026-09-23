@@ -13,13 +13,11 @@ import {
   chipForRouteRow,
   filterRouteRows,
   routeBucket,
+  rowSpeciesId,
   summariseRouteRows,
-  typeForRow,
 } from "./route-presentation";
 
 const TIMESTAMP = "2026-09-17T00:00:00.000Z";
-const HEARTGOLD_GENERATION = 4;
-const GEN6_GENERATION = 6;
 
 function makeRoute(overrides: Partial<Route> = {}): Route {
   return {
@@ -125,32 +123,22 @@ describe("chipForRouteRow", () => {
   });
 });
 
-describe("typeForRow", () => {
-  it("resolves Clefairy as Normal in a HeartGold (gen 4) run, not its present-day Fairy type", () => {
+describe("rowSpeciesId", () => {
+  it("returns the mon's species when one is caught", () => {
     const row = makeRow({ status: "caught", mon: makeMon({ speciesId: "clefairy" }) });
-    expect(typeForRow(row, HEARTGOLD_GENERATION)).toBe("normal");
+    expect(rowSpeciesId(row)).toBe("clefairy");
   });
 
-  it("resolves Clefairy as Fairy from gen 6 on", () => {
-    const row = makeRow({ status: "caught", mon: makeMon({ speciesId: "clefairy" }) });
-    expect(typeForRow(row, GEN6_GENERATION)).toBe("fairy");
-  });
-
-  it("resolves through the encounter's species when there is no mon yet", () => {
+  it("falls back to the encounter's species when there is no mon yet", () => {
     const row = makeRow({
       status: "missed",
       encounter: makeEncounter({ status: "missed", speciesId: "geodude" }),
     });
-    expect(typeForRow(row, HEARTGOLD_GENERATION)).toBe("rock");
+    expect(rowSpeciesId(row)).toBe("geodude");
   });
 
-  it("shows no badge for a row with no species", () => {
-    expect(typeForRow(makeRow({ status: "not-encountered" }), HEARTGOLD_GENERATION)).toBeNull();
-  });
-
-  it("shows no badge for an unrecognised species", () => {
-    const row = makeRow({ status: "caught", mon: makeMon({ speciesId: "not-a-real-species" }) });
-    expect(typeForRow(row, HEARTGOLD_GENERATION)).toBeNull();
+  it("returns null when neither a mon nor an encounter names a species", () => {
+    expect(rowSpeciesId(makeRow({ status: "not-encountered" }))).toBeNull();
   });
 });
 

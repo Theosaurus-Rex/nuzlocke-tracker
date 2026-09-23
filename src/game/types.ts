@@ -41,8 +41,7 @@ export interface RouteDef {
 export interface GameData {
   id: GameId;
   name: string;
-  /** Which generation's pokedex data this game resolves against. See `pokedexFor` in
-   * @/game/pokedex. */
+  /** The generation whose types and move stats this game's runs resolve against. */
   generation: number;
   routes: RouteDef[];
   fights: FightDef[];

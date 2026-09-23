@@ -1,20 +1,18 @@
 import { XIcon } from "lucide-react";
-import type { ReactNode } from "react";
+import { useCallback, useRef, type ReactNode } from "react";
 
 import { Button } from "@/components/ui/button";
 import { MAX_MOVES } from "@/domain/transitions";
-import type { MoveDef } from "@/game/data/pokedex/moves";
-import { getMoveByName, moveDisplayName, searchMoves } from "@/game/pokedex";
+import type { IndexEntry } from "@/game/pokeapi/model";
+import { useMoveIndex } from "@/game/pokeapi/queries";
+import { findByName, moveDisplayName, searchIndex } from "@/game/pokeapi/resolve";
 
 import { ComboboxField } from "./combobox-field";
 import { FIELD_LABEL_CLASS } from "./mon-fields";
+import { PokeApiNotice } from "./pokeapi-notice";
 
-function toMoveId(text: string): string {
-  return text.trim().toLowerCase().replace(/\s+/g, "-");
-}
-
-function excludeChosen(defs: MoveDef[], chosen: readonly string[]): MoveDef[] {
-  return defs.filter((m) => !chosen.includes(m.name));
+function excludeChosen(entries: readonly IndexEntry[], chosen: readonly string[]): IndexEntry[] {
+  return entries.filter((entry) => !chosen.includes(entry.name));
 }
 
 export interface MovesetFieldProps {
@@ -24,12 +22,24 @@ export interface MovesetFieldProps {
 }
 
 export function MovesetField({ id, value, onChange }: MovesetFieldProps): ReactNode {
+  const moveIndex = useMoveIndex();
+  const noticeId = `${id}-pokeapi-notice`;
+
+  // Two slots can resolve in the same commit when the move index arrives. This ref, kept
+  // current by add/removeAt alone, stops both from building on the same stale `value`.
+  const latestValue = useRef(value);
+
   function removeAt(index: number): void {
-    onChange(value.filter((_, i) => i !== index));
+    const next = latestValue.current.filter((_, i) => i !== index);
+    latestValue.current = next;
+    onChange(next);
   }
 
   function add(moveId: string): void {
-    onChange([...value, moveId]);
+    if (latestValue.current.includes(moveId)) return;
+    const next = [...latestValue.current, moveId];
+    latestValue.current = next;
+    onChange(next);
   }
 
   const emptySlotCount = MAX_MOVES - value.length;
@@ -60,10 +70,15 @@ export function MovesetField({ id, value, onChange }: MovesetFieldProps): ReactN
             key={slotIndex}
             id={`${id}-${String(slotIndex)}`}
             existing={value}
+            entries={moveIndex.data}
             onAdd={add}
+            describedBy={noticeId}
           />
         ))}
       </div>
+      {emptySlotCount > 0 && (
+        <PokeApiNotice id={noticeId} query={moveIndex} loadingText="Loading moves…" />
+      )}
     </div>
   );
 }
@@ -71,30 +86,50 @@ export function MovesetField({ id, value, onChange }: MovesetFieldProps): ReactN
 interface MoveSlotPickerProps {
   id: string;
   existing: readonly string[];
+  entries: readonly IndexEntry[] | undefined;
   onAdd: (moveId: string) => void;
+  describedBy: string;
 }
 
-function MoveSlotPicker({ id, existing, onAdd }: MoveSlotPickerProps): ReactNode {
+function MoveSlotPicker({
+  id,
+  existing,
+  entries,
+  onAdd,
+  describedBy,
+}: MoveSlotPickerProps): ReactNode {
+  const resolve = useCallback(
+    (text: string) => {
+      if (entries === undefined) return "";
+      const match = findByName(entries, text);
+      return match === undefined || existing.includes(match.name) ? "" : match.name;
+    },
+    [entries, existing],
+  );
+  const search = useCallback(
+    (query: string) =>
+      entries === undefined
+        ? []
+        : excludeChosen(searchIndex(entries, query), existing).map((m) => ({
+            id: m.name,
+            label: moveDisplayName(m.name),
+          })),
+    [entries, existing],
+  );
+
   return (
     <ComboboxField
       id={id}
       value=""
       placeholder="+ move"
       inputClassName="border-dashed border-placeholder placeholder:text-muted-foreground"
+      aria-describedby={describedBy}
       onChange={(moveId) => {
         if (moveId !== "") onAdd(moveId);
       }}
-      resolve={(text) => {
-        const match = getMoveByName(toMoveId(text));
-        return match === undefined || existing.includes(match.name) ? "" : match.name;
-      }}
+      resolve={resolve}
       displayName={moveDisplayName}
-      search={(query) =>
-        excludeChosen(searchMoves(query), existing).map((m) => ({
-          id: m.name,
-          label: moveDisplayName(m.name),
-        }))
-      }
+      search={search}
     />
   );
 }

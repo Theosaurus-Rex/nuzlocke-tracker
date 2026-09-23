@@ -11,10 +11,12 @@ Clefairy is Normal through Gen 5 and Fairy from Gen 6, since Fairy did not exist
 
 `pastValues` resolves the same way but per field. PokeAPI's own `past_values` is
 version-group-tagged and runs the opposite direction to our generation-tagged data, so it is
-collapsed to whole-generation granularity at extraction time (`scripts/extract-pokedex.ts`). A
-null field on a qualifying entry means "not specified here": resolution keeps walking to later
-qualifying entries for that field before falling back to the move's current top-level value.
-Example: Vine Whip is 35 power and 15 pp in Gen 4-5, 45/25 from Gen 6 on.
+collapsed to whole-generation granularity at runtime, in `src/game/pokeapi/map.ts`, using the
+version-group-to-generation table in `src/game/pokeapi/generations.ts`. An unknown version
+group is skipped. A null field on a qualifying entry means "not specified here": resolution
+keeps walking to later qualifying entries for that field before falling back to the move's
+current top-level value. Example: Vine Whip is 35 power and 15 pp in Gen 4-5, 45/25 from
+Gen 6 on.
 
 A species or move introduced after the resolved generation has no earlier history, so
 resolution falls through to its current values. That is normal for a randomiser or romhack,

@@ -2,8 +2,8 @@ import type { ReactNode } from "react";
 
 import { PencilIcon } from "lucide-react";
 
+import { SpeciesTypeBadge } from "@/components/species-type-badge";
 import { StatusChip } from "@/components/status-chip";
-import { TypeBadge } from "@/components/type-badge";
 import { Button } from "@/components/ui/button";
 import { canDeleteRoute } from "@/domain/routes";
 import type { RouteRow } from "@/domain/route-rows";
@@ -13,9 +13,9 @@ import { cn } from "@/lib/utils";
 import {
   canLogEncounter,
   chipForRouteRow,
+  rowSpeciesId,
   RowSpecies,
   STATUS_LABEL,
-  typeForRow,
 } from "./route-presentation";
 
 function RouteCardSubtitle({ row }: { row: RouteRow }): ReactNode {
@@ -53,12 +53,11 @@ function RouteCardBadges({
   generation: number;
   onLog: () => void;
 }): ReactNode {
-  const type = typeForRow(row, generation);
   const chip = chipForRouteRow(row);
 
   return (
     <div className="flex shrink-0 items-center gap-1.5">
-      {type !== null && <TypeBadge type={type} />}
+      <SpeciesTypeBadge speciesId={rowSpeciesId(row)} generation={generation} />
       {canLogEncounter(row) ? (
         <button type="button" aria-label="Log encounter" onClick={onLog}>
           <StatusChip status={chip.status}>{chip.label}</StatusChip>

@@ -109,10 +109,10 @@ describe("EditMonDialog", () => {
     expect(screen.getByRole("dialog", { name: "New Bark Town" })).toBeInTheDocument();
   });
 
-  it("shows the mon's species type inline, resolved for the run's generation", () => {
+  it("shows the mon's species type inline, resolved for the run's generation", async () => {
     renderDialog({ mon: makeMon({ speciesId: "bellsprout" }) });
 
-    expect(screen.getByText("grass")).toBeInTheDocument();
+    expect(await screen.findByText("grass")).toBeInTheDocument();
   });
 
   it("pre-fills every field from the mon being edited", () => {

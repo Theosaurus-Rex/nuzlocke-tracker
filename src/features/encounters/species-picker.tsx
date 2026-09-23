@@ -1,23 +1,12 @@
-import type { ReactNode } from "react";
+import { useCallback, type ReactNode } from "react";
 
-import { TypeBadge } from "@/components/type-badge";
-import { getSpeciesByName, searchSpecies, speciesDisplayName } from "@/game/pokedex";
+import { SpeciesTypeBadge } from "@/components/species-type-badge";
+import { useSpeciesIndex } from "@/game/pokeapi/queries";
+import { findByName, searchIndex, speciesDisplayName } from "@/game/pokeapi/resolve";
+import { joinIds } from "@/lib/utils";
 
 import { ComboboxField } from "./combobox-field";
-import { resolveSpeciesType } from "./species-type";
-
-function toSpeciesId(text: string): string {
-  return text.trim().toLowerCase().replace(/\s+/g, "-");
-}
-
-/**
- * Text only becomes a value once it names a real species, so typing something the pokedex does
- * not know leaves the field unset rather than logging a species that does not exist. Typing a
- * full name counts as choosing it, so the keyboard path needs no click.
- */
-function resolveSpeciesId(text: string): string {
-  return getSpeciesByName(toSpeciesId(text))?.name ?? "";
-}
+import { PokeApiNotice } from "./pokeapi-notice";
 
 export interface SpeciesPickerProps {
   id: string;
@@ -39,8 +28,29 @@ export function SpeciesPicker({
   "aria-invalid": ariaInvalid,
   "aria-describedby": ariaDescribedBy,
 }: SpeciesPickerProps): ReactNode {
-  const type =
-    generation === undefined || value === "" ? null : resolveSpeciesType(value, generation);
+  const index = useSpeciesIndex();
+  const entries = index.data;
+  const noticeId = `${id}-pokeapi-notice`;
+
+  /**
+   * Text only becomes a value once it names a real species, so typing something the index does
+   * not know leaves the field unset rather than logging a species that does not exist. Typing a
+   * full name counts as choosing it, so the keyboard path needs no click.
+   */
+  const resolve = useCallback(
+    (text: string) => (entries === undefined ? "" : (findByName(entries, text)?.name ?? "")),
+    [entries],
+  );
+  const search = useCallback(
+    (query: string) =>
+      entries === undefined
+        ? []
+        : searchIndex(entries, query).map((s) => ({
+            id: s.name,
+            label: speciesDisplayName(s.name),
+          })),
+    [entries],
+  );
 
   return (
     <ComboboxField
@@ -49,13 +59,16 @@ export function SpeciesPicker({
       onChange={onChange}
       placeholder={placeholder}
       aria-invalid={ariaInvalid}
-      aria-describedby={ariaDescribedBy}
-      resolve={resolveSpeciesId}
+      aria-describedby={joinIds(ariaDescribedBy, noticeId)}
+      resolve={resolve}
       displayName={speciesDisplayName}
-      suffix={type ? <TypeBadge type={type} /> : undefined}
-      search={(query) =>
-        searchSpecies(query).map((s) => ({ id: s.name, label: speciesDisplayName(s.name) }))
+      suffix={
+        generation === undefined || value === "" ? undefined : (
+          <SpeciesTypeBadge speciesId={value} generation={generation} />
+        )
       }
+      search={search}
+      notice={<PokeApiNotice id={noticeId} query={index} loadingText="Loading Pokémon…" />}
     />
   );
 }

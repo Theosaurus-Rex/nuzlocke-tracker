@@ -5,11 +5,47 @@
 
 import { useState } from "react";
 
-import { render, screen } from "@testing-library/react";
+import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import { render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import { describe, expect, it, vi } from "vitest";
+import { beforeEach, describe, expect, it, vi } from "vitest";
+
+import { POKEAPI_BASE } from "@/game/pokeapi/client";
+import type { RawIndex } from "@/game/pokeapi/map";
+import { defaultPokeApiRoutes, STUB_PENDING, stubPokeApi, stubStatus } from "@/test/pokeapi-fetch";
+import { moveIndexFixture } from "@/test/pokeapi-fixtures";
 
 import { MovesetField } from "./moveset-field";
+
+const EXTRA_MOVES = [
+  { name: "growl", url: `${POKEAPI_BASE}/move/45/` },
+  { name: "growth", url: `${POKEAPI_BASE}/move/74/` },
+  { name: "razor-leaf", url: `${POKEAPI_BASE}/move/75/` },
+];
+
+const EXTENDED_MOVE_INDEX: RawIndex = {
+  results: [...moveIndexFixture.results, ...EXTRA_MOVES],
+};
+
+beforeEach(() => {
+  stubPokeApi({ ...defaultPokeApiRoutes, "/move?limit=100000": EXTENDED_MOVE_INDEX });
+});
+
+function deferredMoveIndex() {
+  let resolveFetch: ((response: Response) => void) | undefined;
+  const fetchMock = vi.fn((input: string | URL | Request): Promise<Response> => {
+    const url = input instanceof Request ? input.url : String(input);
+    const path = url.startsWith(POKEAPI_BASE) ? url.slice(POKEAPI_BASE.length) : url;
+    if (path !== "/move?limit=100000") {
+      return Promise.resolve(new Response(null, { status: 404 }));
+    }
+    return new Promise<Response>((resolve) => {
+      resolveFetch = resolve;
+    });
+  });
+  vi.stubGlobal("fetch", fetchMock);
+  return { release: () => resolveFetch?.(Response.json(EXTENDED_MOVE_INDEX)) };
+}
 
 function StatefulMovesetField({
   initial,
@@ -19,15 +55,20 @@ function StatefulMovesetField({
   onChange?: (moves: string[]) => void;
 }) {
   const [moves, setMoves] = useState(initial);
+  const [client] = useState(
+    () => new QueryClient({ defaultOptions: { queries: { retry: false } } }),
+  );
   return (
-    <MovesetField
-      id="moves"
-      value={moves}
-      onChange={(next) => {
-        setMoves(next);
-        onChange?.(next);
-      }}
-    />
+    <QueryClientProvider client={client}>
+      <MovesetField
+        id="moves"
+        value={moves}
+        onChange={(next) => {
+          setMoves(next);
+          onChange?.(next);
+        }}
+      />
+    </QueryClientProvider>
   );
 }
 
@@ -125,5 +166,65 @@ describe("MovesetField", () => {
 
     expect(onChange).not.toHaveBeenCalled();
     expect(pickers()).toHaveLength(4);
+  });
+
+  it("keeps both moves when two slots resolve together as the move index arrives", async () => {
+    const user = userEvent.setup();
+    const onChange = vi.fn();
+    const deferred = deferredMoveIndex();
+    render(<StatefulMovesetField initial={[]} onChange={onChange} />);
+
+    await user.type(pickers()[0]!, "Growl");
+    await user.type(pickers()[1]!, "Tackle");
+
+    deferred.release();
+
+    await waitFor(() => {
+      expect(screen.getByText("Growl")).toBeInTheDocument();
+      expect(screen.getByText("Tackle")).toBeInTheDocument();
+    });
+  });
+
+  it("never adds the same move twice when two slots resolve to it together", async () => {
+    const user = userEvent.setup();
+    const onChange = vi.fn();
+    const deferred = deferredMoveIndex();
+    render(<StatefulMovesetField initial={[]} onChange={onChange} />);
+
+    await user.type(pickers()[0]!, "Tackle");
+    await user.type(pickers()[1]!, "Tackle");
+
+    deferred.release();
+
+    await waitFor(() => {
+      expect(onChange).toHaveBeenLastCalledWith(["tackle"]);
+    });
+  });
+
+  it("does not show the notice once every slot is filled, even while the move index fails", async () => {
+    stubPokeApi({ ...defaultPokeApiRoutes, "/move?limit=100000": stubStatus(500) });
+    const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+    render(
+      <QueryClientProvider client={client}>
+        <MovesetField
+          id="moves"
+          value={["tackle", "growl", "vine-whip", "razor-leaf"]}
+          onChange={() => undefined}
+        />
+      </QueryClientProvider>,
+    );
+
+    await waitFor(() => {
+      expect(client.getQueryState(["pokeapi", "move-index"])?.status).toBe("error");
+    });
+
+    expect(screen.queryByRole("alert")).not.toBeInTheDocument();
+  });
+
+  it("describes an empty slot's input with the loading notice", () => {
+    stubPokeApi({ "/move?limit=100000": STUB_PENDING });
+    render(<StatefulMovesetField initial={[]} />);
+
+    expect(pickers()[0]).toHaveAccessibleDescription(/Loading moves/);
   });
 });

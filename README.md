@@ -69,7 +69,8 @@ Every commit in the history passes all five.
 src/
   domain/        entity types and pure state transitions — imports nothing
   storage/       adapter interface, Dexie + in-memory implementations, query layer
-  game/          static game data: species/moves/abilities, HeartGold routes and bosses
+  game/          HeartGold routes and bosses, natures, and the live PokéAPI client
+  game/pokeapi/  fetch, map and resolve species and move data from PokéAPI, cached by TanStack Query
   features/      screens, one directory each
   app/           routing and the responsive shell
   components/ui/ shadcn primitives
@@ -79,8 +80,8 @@ docs/            design specs, the visual direction, and the wireframes
 
 Dependencies point one way: `features → storage → domain`. `domain/` imports from none of
 the others, which is what makes the game rules testable without a database. `game/` is a leaf
-holding static game data; both `features/` and `storage/` read it, and it imports only types
-from `domain/`.
+holding HeartGold's routes and bosses plus the live PokéAPI client. Both `features/` and
+`storage/` read it, and it imports only types from `domain/`.
 
 ---
 
@@ -113,33 +114,33 @@ Two things worth knowing before you touch the storage layer:
 
 ## Game data
 
-The species, route and roster data in `src/game/data/` is **ours**, committed to the repo.
-A generator (`scripts/extract-*.ts`) is a one-shot bootstrapper: run it once to seed a new
-game, or to pull in a new kind of data as features need it. After that, the files it wrote
-belong to us — hand-editing them is the normal, expected workflow, not a special case. That
-covers fixing an upstream error, trimming what we don't need, or tuning values to suit the
-app. Hand-authored romhack datasets were always the end state here, so this is the same
-workflow applied to data that happened to be seeded from somewhere.
+Species and move data comes from PokéAPI, fetched at runtime through `src/game/pokeapi/` and
+cached by TanStack Query. It is never copied into the repo, so looking one up needs a network
+connection. Natures and the type list are hand-written constants in `src/game/natures.ts` and
+`src/game/types.ts`.
 
-The generators do not run during `pnpm build` or `pnpm test` — the emitted modules are what
-ships, so the app never needs the network.
+The route and roster data in `src/game/data/` is **ours**, committed to the repo. A generator
+(`scripts/extract-*.ts`) is a one-shot bootstrapper: run it once to seed a new game. After
+that, the files it wrote belong to us — hand-editing them is the normal, expected workflow,
+not a special case. That covers fixing an upstream error, trimming what we don't need, or
+tuning values to suit the app. Hand-authored romhack datasets were always the end state here,
+so this is the same workflow applied to data that happened to be seeded from somewhere.
 
-Seed a new game or a new kind of data with:
+The generator does not run during `pnpm build` or `pnpm test`.
+
+Seed a new game with:
 
 ```bash
 # Routes and boss rosters, from a local clone of domtronn/nuzlocke.data
 node scripts/extract-heartgold.ts /path/to/nuzlocke.data
-
-# Species, moves, abilities and items, from PokéAPI
-POKEDEX_CACHE_DIR=/tmp/pokeapi-cache node scripts/extract-pokedex.ts
 ```
 
-Both refuse to run if their output directory already has generated files in it — re-running
+It refuses to run if its output directory already has generated files in it — re-running
 against an already-seeded game would silently overwrite every hand correction with upstream's
 current values. Pass `--force` if you genuinely mean to re-seed from scratch, and diff the
 result before committing.
 
-Run `pnpm format` afterwards — the generators do not format their own output, and
+Run `pnpm format` afterwards — the generator does not format its own output, and
 `format:check` is part of the gate.
 
 **Correct the data file, not the generator.** If you find an upstream error or want to tune a

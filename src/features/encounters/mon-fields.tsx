@@ -11,7 +11,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import type { Gender } from "@/domain/types";
-import { getAllNatures } from "@/game/pokedex";
+import { natures } from "@/game/natures";
 
 const GENDERS: { value: Gender; label: string }[] = [
   { value: "male", label: "Male" },
@@ -106,7 +106,7 @@ export function NatureField({ id, value, onChange }: NatureFieldProps): ReactNod
           <SelectValue placeholder="Select a nature" />
         </SelectTrigger>
         <SelectContent>
-          {getAllNatures().map((option) => (
+          {natures.map((option) => (
             <SelectItem key={option.name} value={option.name}>
               {option.name}
             </SelectItem>

@@ -1,10 +1,9 @@
 import type { ReactNode } from "react";
 
 import type { StatusChipStatus } from "@/components/status-chip";
-import type { TypeBadgeType } from "@/components/type-badge";
 import type { RouteRow, RouteRowStatus } from "@/domain/route-rows";
 import type { Gender } from "@/domain/types";
-import { getSpeciesByName, pokedexFor, speciesDisplayName } from "@/game/pokedex";
+import { speciesDisplayName } from "@/game/pokeapi/resolve";
 
 export const STATUS_LABEL: Record<RouteRowStatus, string> = {
   "not-encountered": "not encountered",
@@ -22,7 +21,7 @@ export function genderSymbol(gender: Gender | null): string | null {
 }
 
 /** The species a row is about: the mon's current species if caught, else what was encountered. */
-function rowSpeciesId(row: RouteRow): string | null {
+export function rowSpeciesId(row: RouteRow): string | null {
   return row.mon?.speciesId ?? row.encounter?.speciesId ?? null;
 }
 
@@ -92,25 +91,6 @@ export function chipForRouteRow(row: RouteRow): RouteRowChip {
  */
 export function canLogEncounter(row: RouteRow): boolean {
   return row.status === "not-encountered";
-}
-
-/**
- * Resolves a row's primary type against the run's generation, never the species' present-day
- * types. Clefairy is Normal in a HeartGold (gen 4) run and Fairy from gen 6 on. Only the primary
- * type is shown. A dual-type mon's second type never renders.
- */
-export function typeForRow(row: RouteRow, generation: number): TypeBadgeType | null {
-  const speciesId = rowSpeciesId(row);
-  if (speciesId === null) return null;
-
-  const species = getSpeciesByName(speciesId);
-  if (species === undefined) return null;
-
-  const types = pokedexFor(generation).typesOf(species.id);
-  const primary = types?.[0];
-  if (primary === undefined || primary === "unknown") return null;
-
-  return primary;
 }
 
 export type RouteBucket = "caught" | "missed" | "fainted" | "pending" | "skipped";

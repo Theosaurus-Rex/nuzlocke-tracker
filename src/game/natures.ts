@@ -1,8 +1,4 @@
-/**
- * The 25 natures, hand-written since this stat chart is small and unchanged since Gen 3.
- * The 5 neutral natures (Hardy, Docile, Bashful, Quirky, Serious) raise and lower the same
- * stat, so they carry `raises: null, lowers: null` here.
- */
+// The 25 natures. Neutral ones raise and lower the same stat, so both are null.
 
 export type StatName = "attack" | "defense" | "specialAttack" | "specialDefense" | "speed";
 

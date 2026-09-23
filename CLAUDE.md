@@ -118,12 +118,12 @@ them in sync. Do not add `baseUrl` to either — it is deprecated in TS 6 and re
 
 ### Why no backend
 
-The dataset is kilobytes and single-user; the real requirement is **offline writes on a
-phone mid-run**. A server turns that into conflict resolution, which is the hardest thing
-in the project and invisible to the user. The Elixir-native local-first option has closed:
-ElectricSQL rewrote to read-path-only sync (its docs state it does not do write-path sync)
-and joined Databricks in Aug 2026 with Electric Cloud discontinued; `phoenix_sync` is small
-and has no first-party Ash integration.
+Runs are kilobytes and single-user, so they stay on the device. The app may need a connection
+to look up species and moves. A server turns runs into conflict resolution, which is the
+hardest thing in the project and invisible to the user. The Elixir-native local-first option
+has closed: ElectricSQL rewrote to read-path-only sync (its docs state it does not do
+write-path sync) and joined Databricks in Aug 2026 with Electric Cloud discontinued;
+`phoenix_sync` is small and has no first-party Ash integration.
 
 Theo works at an Elixir/Ash consultancy, so **do not** propose Phoenix/Ash/Postgres here on
 the assumption it is the familiar tool — familiarity was never the objection. If automatic
@@ -281,10 +281,10 @@ The check before keeping one: read it, then imagine it deleted. If nothing is lo
 
 No single source covers this. Two are combined:
 
-- **PokéAPI** — species, types, abilities and evolutions. Gen 8 is incomplete and Gen 9 absent;
-  Gen 2–5 is decent but has had real bugs. Spot-check anything level-cap-sensitive against a
-  walkthrough. Extracted at build time into typed modules; the app never calls it at runtime,
-  because offline-first is the whole reason there is no backend.
+- **PokéAPI**: species and move data, fetched at runtime through `src/game/pokeapi/` and cached
+  by TanStack Query. It is never copied into the repo. Gen 8 is incomplete and Gen 9 absent. Gen
+  2–5 is decent but has had real bugs. Spot-check anything level-cap-sensitive against a
+  walkthrough.
 - **`domtronn/nuzlocke.data`** — `routes/*.txt` for route order, `leagues/*.txt` for gym,
   Elite Four and rival rosters. Hand-curated; nothing else has trainer rosters at all.
   PokéAPI has never had trainer data (feature requests #432 and #580 are still open).
@@ -296,17 +296,18 @@ header comment. If a second game is ever wanted from upstream, bootstrap that su
 way. That bootstrap is one-shot, not a pipeline kept in sync with upstream — see the ownership
 decision below.
 
-**Game data is ours once seeded — decided 2026-09-18.** A generator (`scripts/extract-*.ts`) is
-a one-shot bootstrapper: run it to seed a new game, or a new kind of data, not something re-run
-to keep output in sync with upstream. After that, the committed files under `src/game/data/`
-are ours — hand-editing them is the normal workflow, not a special case: fix an upstream error,
-trim what we don't need, or tune values to suit the app, and say why in a comment beside the
-change. Hand-authored romhack datasets were always the end state, so this is the same workflow
-applied to data that happened to be seeded from somewhere. Reproducibility protects data you'd
-actually regenerate; nobody re-runs the HeartGold extraction — only a genuinely new game would
-call for that — so requiring it protected nothing and taxed the common case. A stray re-run is
-now destructive rather than idempotent, so both generators refuse to overwrite a populated
-output directory unless passed `--force`. See README.md "Game data" for the how.
+**Game data is ours once seeded — decided 2026-09-18.** This now covers `nuzlocke.data` only.
+A generator (`scripts/extract-*.ts`) is a one-shot bootstrapper: run it to seed a new game, or a
+new kind of data, not something re-run to keep output in sync with upstream. After that, the
+committed files under `src/game/data/` are ours — hand-editing them is the normal workflow, not
+a special case: fix an upstream error, trim what we don't need, or tune values to suit the app,
+and say why in a comment beside the change. Hand-authored romhack datasets were always the end
+state, so this is the same workflow applied to data that happened to be seeded from somewhere.
+Reproducibility protects data you'd actually regenerate. Nobody re-runs the HeartGold
+extraction, and only a genuinely new game would call for that, so requiring it protected
+nothing and taxed the common case. A stray re-run is
+now destructive rather than idempotent, so the generator refuses to overwrite a populated output
+directory unless passed `--force`. See README.md "Game data" for the how.
 
 **Level caps are derived**, not sourced — take the ace (highest-level) mon per boss. They
 are a community convention, not a game mechanic, so no API will ever return them.
@@ -321,29 +322,30 @@ constraint.
 **The species picker takes a selection, not free text — decided 2026-09-21.** Typing filters the
 list and a fully typed name counts as choosing it, but a name the pokedex does not know leaves
 the field unset and the form refuses to save. This narrows the rule above: *all generations*
-still holds, *anything typed* does not. A romhack's fakemon is hand-authored into
-`src/game/data/pokedex/species.ts` first, which is already how game data is meant to be added.
+still holds, *anything typed* does not. Romhack species are deferred, and when they come they
+get a local layer behind the same hooks.
 
-Ability and held item are still free text. There is no `searchAbilities` or `searchItems` to
-select from, only `searchSpecies`, so the same rule cannot apply to them yet.
+Ability and held item are still free text. There is no PokéAPI index to select ability or item
+names from, only species and moves, so the same rule cannot apply to them yet.
 
 **The moveset editor takes a selection too — decided 2026-09-21.** Same rule as the species
-picker: typing filters `searchMoves`, a fully typed move name counts as choosing it, and a name
+picker: typing filters the move index, a fully typed move name counts as choosing it, and a name
 the pokedex does not know leaves the slot empty. This amends the "free-text" half of the
-consequence below; the "over every move" half stands, since a move picked here is never filtered
+consequence below. The "over every move" half stands, since a move picked here is never filtered
 by a species' learnset.
 
 Consequences, all deliberate:
 
-- **Learnsets are not stored.** The moveset editor is a selection over every move, not filtered
+- **Learnsets are not fetched.** The moveset editor is a selection over every move, not filtered
   by species. Filtering by a species' legal set is exactly the constraint being removed.
-- **Wild encounter tables are not stored.** The app does not show expected encounters per route
+- **Wild encounter tables are not fetched.** The app does not show expected encounters per route
   (PER-8 closed). The randomiser toggle labelled "hides known encounter tables" is therefore
   misleading and needs rewording when PER-18 builds the rules screen.
 - **Types and move stats are resolved per generation**, not shipped as present-day values. A
-  `GameData` carries its `generation`, and the picker resolves through PokéAPI's `past_types` /
-  `past_values`. Clefairy is Normal in a HeartGold run and Fairy in a Gen 6+ one; Vine Whip is 35
-  power there and 45 now. Present-day values would be visibly wrong for the game being tracked.
+  `GameData` carries its `generation`, and `src/game/pokeapi/resolve.ts` resolves through
+  PokéAPI's `past_types` and `past_values`. Clefairy is Normal in a HeartGold run and Fairy in a
+  Gen 6+ one. Vine Whip is 35 power there and 45 now. Present-day values would be visibly wrong
+  for the game being tracked.
 
 **Scope: HeartGold only for V1.** Every additional game is a whole curated dataset, not a
 config flag. Build the ingest pipeline so a second game is additive.

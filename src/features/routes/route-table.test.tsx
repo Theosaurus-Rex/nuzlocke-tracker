@@ -4,6 +4,7 @@
  * encounter and mon it needs.
  */
 
+import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { render, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { describe, expect, it, vi } from "vitest";
@@ -86,16 +87,20 @@ function renderTable(input: {
     mons: input.mons,
   });
 
+  const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+
   return render(
-    <RouteTable
-      rows={rows}
-      encounters={input.encounters}
-      generation={HEARTGOLD_GENERATION}
-      onDelete={input.onDelete ?? vi.fn()}
-      deletePending={false}
-      onLogEncounter={input.onLogEncounter ?? vi.fn()}
-      onEditMon={input.onEditMon ?? vi.fn()}
-    />,
+    <QueryClientProvider client={client}>
+      <RouteTable
+        rows={rows}
+        encounters={input.encounters}
+        generation={HEARTGOLD_GENERATION}
+        onDelete={input.onDelete ?? vi.fn()}
+        deletePending={false}
+        onLogEncounter={input.onLogEncounter ?? vi.fn()}
+        onEditMon={input.onEditMon ?? vi.fn()}
+      />
+    </QueryClientProvider>,
   );
 }
 
