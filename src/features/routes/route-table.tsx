@@ -1,14 +1,14 @@
 import { createColumnHelper, tableFeatures, useTable } from "@tanstack/react-table";
 
+import { SpeciesTypeBadge } from "@/components/species-type-badge";
 import { StatusChip } from "@/components/status-chip";
-import { TypeBadge } from "@/components/type-badge";
 import { Button } from "@/components/ui/button";
 import { canDeleteRoute } from "@/domain/routes";
 import type { RouteRow } from "@/domain/route-rows";
 import type { Encounter, Mon, Route } from "@/domain/types";
 import { cn } from "@/lib/utils";
 
-import { canLogEncounter, chipForRouteRow, RowSpecies, typeForRow } from "./route-presentation";
+import { canLogEncounter, chipForRouteRow, rowSpeciesId, RowSpecies } from "./route-presentation";
 
 function StatusCell({ row, onLogEncounter }: { row: RouteRow; onLogEncounter: () => void }) {
   const chip = chipForRouteRow(row);
@@ -40,9 +40,7 @@ function EncounterCell({ row }: { row: RouteRow }) {
 }
 
 function TypeCell({ row, generation }: { row: RouteRow; generation: number }) {
-  const type = typeForRow(row, generation);
-  if (type === null) return null;
-  return <TypeBadge type={type} />;
+  return <SpeciesTypeBadge speciesId={rowSpeciesId(row)} generation={generation} />;
 }
 
 const FEATURES = tableFeatures({});

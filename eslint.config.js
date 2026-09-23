@@ -87,9 +87,9 @@ export default tseslint.config(
           allowExportNames: [
             "STATUS_LABEL",
             "genderSymbol",
+            "rowSpeciesId",
             "chipForRouteRow",
             "canLogEncounter",
-            "typeForRow",
             "routeBucket",
             "summariseRouteRows",
             "ROUTE_FILTER_BUCKETS",

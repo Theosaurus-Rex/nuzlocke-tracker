@@ -14,12 +14,9 @@ import {
   filterRouteRows,
   routeBucket,
   summariseRouteRows,
-  typeForRow,
 } from "./route-presentation";
 
 const TIMESTAMP = "2026-09-17T00:00:00.000Z";
-const HEARTGOLD_GENERATION = 4;
-const GEN6_GENERATION = 6;
 
 function makeRoute(overrides: Partial<Route> = {}): Route {
   return {
@@ -122,35 +119,6 @@ describe("chipForRouteRow", () => {
   it("falls back to the generic caught chip when a caught row's mon can't be found", () => {
     const chip = chipForRouteRow(makeRow({ status: "caught", mon: null }));
     expect(chip.status).toBe("caught");
-  });
-});
-
-describe("typeForRow", () => {
-  it("resolves Clefairy as Normal in a HeartGold (gen 4) run, not its present-day Fairy type", () => {
-    const row = makeRow({ status: "caught", mon: makeMon({ speciesId: "clefairy" }) });
-    expect(typeForRow(row, HEARTGOLD_GENERATION)).toBe("normal");
-  });
-
-  it("resolves Clefairy as Fairy from gen 6 on", () => {
-    const row = makeRow({ status: "caught", mon: makeMon({ speciesId: "clefairy" }) });
-    expect(typeForRow(row, GEN6_GENERATION)).toBe("fairy");
-  });
-
-  it("resolves through the encounter's species when there is no mon yet", () => {
-    const row = makeRow({
-      status: "missed",
-      encounter: makeEncounter({ status: "missed", speciesId: "geodude" }),
-    });
-    expect(typeForRow(row, HEARTGOLD_GENERATION)).toBe("rock");
-  });
-
-  it("shows no badge for a row with no species", () => {
-    expect(typeForRow(makeRow({ status: "not-encountered" }), HEARTGOLD_GENERATION)).toBeNull();
-  });
-
-  it("shows no badge for an unrecognised species", () => {
-    const row = makeRow({ status: "caught", mon: makeMon({ speciesId: "not-a-real-species" }) });
-    expect(typeForRow(row, HEARTGOLD_GENERATION)).toBeNull();
   });
 });
 

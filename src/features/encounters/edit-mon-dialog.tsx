@@ -1,6 +1,6 @@
 import { useState, type FormEvent, type ReactNode } from "react";
 
-import { TypeBadge } from "@/components/type-badge";
+import { SpeciesTypeBadge } from "@/components/species-type-badge";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
@@ -24,7 +24,6 @@ import {
   NicknameField,
 } from "./mon-fields";
 import { MovesetField } from "./moveset-field";
-import { resolveSpeciesType } from "./species-type";
 
 function levelFromText(text: string): number {
   return Number(text);
@@ -103,8 +102,6 @@ function EditMonForm({ mon, rules, generation, onDone }: EditMonFormProps): Reac
     ? validateAmendment({ amendments, levelCaught: mon.levelCaught, rules })
     : {};
 
-  const type = resolveSpeciesType(mon.speciesId, generation);
-
   function handleSubmit(event: FormEvent<HTMLFormElement>): void {
     event.preventDefault();
     setSubmitted(true);
@@ -131,13 +128,11 @@ function EditMonForm({ mon, rules, generation, onDone }: EditMonFormProps): Reac
                 id="edit-mon-species"
                 value={speciesDisplayName(mon.speciesId)}
                 readOnly
-                className={cn(type && "pr-16")}
+                className="pr-16"
               />
-              {type && (
-                <div className="pointer-events-none absolute inset-y-0 right-1.5 flex items-center">
-                  <TypeBadge type={type} />
-                </div>
-              )}
+              <div className="pointer-events-none absolute inset-y-0 right-1.5 flex items-center">
+                <SpeciesTypeBadge speciesId={mon.speciesId} generation={generation} />
+              </div>
             </div>
           </div>
 

@@ -52,6 +52,13 @@ export const pokemonFixtures: Record<string, RawPokemon> = {
     types: [slot(1, "water"), slot(2, "flying")],
     past_types: [],
   },
+  chikorita: { id: 152, name: "chikorita", types: [slot(1, "grass")], past_types: [] },
+  bellsprout: {
+    id: 69,
+    name: "bellsprout",
+    types: [slot(1, "grass"), slot(2, "poison")],
+    past_types: [],
+  },
 };
 
 export const moveFixtures: Record<string, RawMove> = {

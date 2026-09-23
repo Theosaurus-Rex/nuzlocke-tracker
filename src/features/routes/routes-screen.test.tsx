@@ -14,6 +14,7 @@ import type { Encounter, Mon, Route as RouteRow, Run, Rules } from "@/domain/typ
 import { createMemoryAdapter } from "@/storage/memory-adapter";
 import { StorageProvider } from "@/storage/storage-context";
 import type { StorageAdapter } from "@/storage/adapter";
+import { stubPokeApi } from "@/test/pokeapi-fetch";
 
 import { RoutesScreen } from "./routes-screen";
 
@@ -317,5 +318,25 @@ describe("RoutesScreen", () => {
     await userEvent.click(screen.getByRole("checkbox", { name: "caught" }));
 
     expect(await findRouteInList("Route 46")).toBeInTheDocument();
+  });
+
+  it("still shows route and species names when PokéAPI is down, with no type badge", async () => {
+    stubPokeApi({});
+    const adapter = createMemoryAdapter();
+    const run = await adapter.runs.put(makeRunDraft());
+    const route = await adapter.routes.put(
+      makeRouteDraft(run.id, { name: "New Bark Town", order: 100 }),
+    );
+    const encounter = await adapter.encounters.put(
+      makeEncounterDraft(run.id, route.id, { status: "caught" }),
+    );
+    const mon = await adapter.mons.put(makeMonDraft(run.id, encounter.id));
+    await adapter.encounters.put({ ...encounter, monId: mon.id });
+
+    renderScreen(adapter, run.id);
+
+    await findRouteInList("New Bark Town");
+    expect(await findRouteInList("Chikorita")).toBeInTheDocument();
+    expect(screen.queryByText("grass")).not.toBeInTheDocument();
   });
 });
