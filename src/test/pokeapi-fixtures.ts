@@ -23,7 +23,12 @@ export const speciesIndexFixture: RawIndex = {
 };
 
 export const moveIndexFixture: RawIndex = {
-  results: [ref("move", 33, "tackle"), ref("move", 22, "vine-whip"), ref("move", 450, "bug-bite")],
+  results: [
+    ref("move", 33, "tackle"),
+    ref("move", 22, "vine-whip"),
+    ref("move", 450, "bug-bite"),
+    ref("move", 204, "charm"),
+  ],
 };
 
 export const pokemonFixtures: Record<string, RawPokemon> = {
@@ -106,5 +111,22 @@ export const moveFixtures: Record<string, RawMove> = {
     accuracy: 100,
     pp: 20,
     past_values: [],
+  },
+  charm: {
+    id: 204,
+    name: "charm",
+    type: { name: "fairy", url: `${API}/type/18/` },
+    power: null,
+    accuracy: 100,
+    pp: 20,
+    past_values: [
+      {
+        power: null,
+        accuracy: null,
+        pp: null,
+        type: { name: "normal", url: `${API}/type/1/` },
+        version_group: ref("version-group", 15, "x-y"),
+      },
+    ],
   },
 };

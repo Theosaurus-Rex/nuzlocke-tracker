@@ -15,6 +15,7 @@ import {
 const clefairy = toSpecies(pokemonFixtures.clefairy!);
 const vineWhip = toMove(moveFixtures["vine-whip"]!);
 const tackle = toMove(moveFixtures.tackle!);
+const charm = toMove(moveFixtures.charm!);
 const index = toSpeciesIndex(speciesIndexFixture);
 
 describe("typesIn", () => {
@@ -40,6 +41,11 @@ describe("moveStatsIn", () => {
     expect(moveStatsIn(tackle, 4)).toMatchObject({ power: 35, accuracy: 95 });
     expect(moveStatsIn(tackle, 5)).toMatchObject({ power: 50, accuracy: 100 });
     expect(moveStatsIn(vineWhip, 3)).toEqual({ power: 35, accuracy: 100, pp: 10, type: "grass" });
+  });
+
+  it("resolves a move whose type changed between generations", () => {
+    expect(moveStatsIn(charm, 4).type).toBe("normal");
+    expect(moveStatsIn(charm, 6).type).toBe("fairy");
   });
 });
 

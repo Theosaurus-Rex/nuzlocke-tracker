@@ -10,6 +10,7 @@ import {
   configurePokeApiQueries,
   shouldRetry,
   useMove,
+  useMoveIndex,
   useSpecies,
   useSpeciesIndex,
 } from "./queries";
@@ -61,6 +62,14 @@ describe("hooks", () => {
     const { result } = renderHook(() => useSpeciesIndex(), { wrapper: wrapper(testClient()) });
     await waitFor(() => expect(result.current.isSuccess).toBe(true));
     expect(result.current.data?.some((e) => e.name === "venusaur-mega")).toBe(false);
+  });
+
+  it("loads the move index sorted by id", async () => {
+    stubPokeApi(defaultPokeApiRoutes);
+    const { result } = renderHook(() => useMoveIndex(), { wrapper: wrapper(testClient()) });
+    await waitFor(() => expect(result.current.isSuccess).toBe(true));
+    expect(result.current.data?.map((e) => e.id)).toEqual([22, 33, 204, 450]);
+    expect(result.current.data?.some((e) => e.name === "vine-whip")).toBe(true);
   });
 
   it("loads one species by name", async () => {

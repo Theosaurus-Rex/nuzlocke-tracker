@@ -24,7 +24,7 @@ describe("toSpeciesIndex", () => {
 
 describe("toMoveIndex", () => {
   it("reads ids from the url and sorts by id", () => {
-    expect(toMoveIndex(moveIndexFixture).map((m) => m.id)).toEqual([22, 33, 450]);
+    expect(toMoveIndex(moveIndexFixture).map((m) => m.id)).toEqual([22, 33, 204, 450]);
   });
 });
 
@@ -82,5 +82,11 @@ describe("toMove", () => {
       accuracy: 100,
       pp: 35,
     });
+  });
+
+  it("resolves a past value's type from the ref instead of dropping it", () => {
+    expect(toMove(moveFixtures.charm!).pastValues).toEqual([
+      { throughGeneration: 5, power: null, accuracy: null, pp: null, type: "normal" },
+    ]);
   });
 });
