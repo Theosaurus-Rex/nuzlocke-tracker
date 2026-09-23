@@ -3,6 +3,7 @@ import { useCallback, type ReactNode } from "react";
 import { SpeciesTypeBadge } from "@/components/species-type-badge";
 import { useSpeciesIndex } from "@/game/pokeapi/queries";
 import { findByName, searchIndex, speciesDisplayName } from "@/game/pokeapi/resolve";
+import { joinIds } from "@/lib/utils";
 
 import { ComboboxField } from "./combobox-field";
 import { PokeApiNotice } from "./pokeapi-notice";
@@ -29,6 +30,7 @@ export function SpeciesPicker({
 }: SpeciesPickerProps): ReactNode {
   const index = useSpeciesIndex();
   const entries = index.data;
+  const noticeId = `${id}-pokeapi-notice`;
 
   /**
    * Text only becomes a value once it names a real species, so typing something the index does
@@ -57,7 +59,7 @@ export function SpeciesPicker({
       onChange={onChange}
       placeholder={placeholder}
       aria-invalid={ariaInvalid}
-      aria-describedby={ariaDescribedBy}
+      aria-describedby={joinIds(ariaDescribedBy, noticeId)}
       resolve={resolve}
       displayName={speciesDisplayName}
       suffix={
@@ -66,7 +68,7 @@ export function SpeciesPicker({
         )
       }
       search={search}
-      notice={<PokeApiNotice query={index} loadingText="Loading Pokémon…" />}
+      notice={<PokeApiNotice id={noticeId} query={index} loadingText="Loading Pokémon…" />}
     />
   );
 }

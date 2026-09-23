@@ -86,7 +86,8 @@ export function ComboboxField({
       items={results}
       filter={null}
       value={query}
-      open={open && results.length > 0}
+      // A resolved value has nothing left to pick, so a late fill-in must not reopen this.
+      open={open && results.length > 0 && value === ""}
       onOpenChange={setOpen}
       onValueChange={(text, eventDetails) => {
         if (eventDetails.reason === "item-press") return;

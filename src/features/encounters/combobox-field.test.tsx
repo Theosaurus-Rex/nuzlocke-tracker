@@ -7,13 +7,13 @@
 import { useState } from "react";
 
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { render, screen } from "@testing-library/react";
+import { render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { describe, expect, it, vi } from "vitest";
 
 import { POKEAPI_BASE } from "@/game/pokeapi/client";
 import type { RawIndex } from "@/game/pokeapi/map";
-import { defaultPokeApiRoutes, stubPokeApi } from "@/test/pokeapi-fetch";
+import { defaultPokeApiRoutes, STUB_PENDING, stubPokeApi } from "@/test/pokeapi-fetch";
 import { speciesIndexFixture } from "@/test/pokeapi-fixtures";
 
 import { ComboboxField } from "./combobox-field";
@@ -217,6 +217,39 @@ describe("ComboboxField keyboard handling", () => {
     expect(onChange).toHaveBeenLastCalledWith("pidgey");
   });
 
+  it("closes the popup rather than opening it once a late fill-in resolves", async () => {
+    const user = userEvent.setup();
+    let resolveFetch: ((response: Response) => void) | undefined;
+    const fetchMock = vi.fn((input: string | URL | Request): Promise<Response> => {
+      const url = input instanceof Request ? input.url : String(input);
+      const path = url.startsWith(POKEAPI_BASE) ? url.slice(POKEAPI_BASE.length) : url;
+      if (path !== "/pokemon?limit=100000") {
+        return Promise.resolve(new Response(null, { status: 404 }));
+      }
+      return new Promise<Response>((resolve) => {
+        resolveFetch = resolve;
+      });
+    });
+    vi.stubGlobal("fetch", fetchMock);
+
+    const onChange = vi.fn();
+    const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+    render(
+      <QueryClientProvider client={client}>
+        <ControlledSpeciesPicker onChange={onChange} />
+      </QueryClientProvider>,
+    );
+
+    const input = screen.getByRole("combobox");
+    await user.type(input, "Pidgey");
+    expect(input).toHaveAttribute("aria-expanded", "false");
+
+    resolveFetch?.(Response.json(speciesIndexFixture));
+
+    await waitFor(() => expect(onChange).toHaveBeenLastCalledWith("pidgey"));
+    expect(input).toHaveAttribute("aria-expanded", "false");
+  });
+
   it("never clears an existing value when the resolver changes", () => {
     const onChange = vi.fn();
     const { rerender } = render(
@@ -293,5 +326,17 @@ describe("ComboboxField keyboard handling", () => {
       />,
     );
     expect(onChange).not.toHaveBeenCalled();
+  });
+
+  it("ties the loading notice to the input via aria-describedby", () => {
+    stubPokeApi({ "/pokemon?limit=100000": STUB_PENDING });
+    const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+    render(
+      <QueryClientProvider client={client}>
+        <ControlledSpeciesPicker onChange={vi.fn()} />
+      </QueryClientProvider>,
+    );
+
+    expect(screen.getByRole("combobox")).toHaveAccessibleDescription(/Loading Pokémon/);
   });
 });

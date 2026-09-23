@@ -1,5 +1,5 @@
 import { XIcon } from "lucide-react";
-import { useCallback, type ReactNode } from "react";
+import { useCallback, useRef, type ReactNode } from "react";
 
 import { Button } from "@/components/ui/button";
 import { MAX_MOVES } from "@/domain/transitions";
@@ -23,13 +23,22 @@ export interface MovesetFieldProps {
 
 export function MovesetField({ id, value, onChange }: MovesetFieldProps): ReactNode {
   const moveIndex = useMoveIndex();
+  const noticeId = `${id}-pokeapi-notice`;
+
+  // Two slots can resolve in the same commit when the move index arrives. This ref, kept
+  // current by add/removeAt alone, stops both from building on the same stale `value`.
+  const latestValue = useRef(value);
 
   function removeAt(index: number): void {
-    onChange(value.filter((_, i) => i !== index));
+    const next = latestValue.current.filter((_, i) => i !== index);
+    latestValue.current = next;
+    onChange(next);
   }
 
   function add(moveId: string): void {
-    onChange([...value, moveId]);
+    const next = [...latestValue.current, moveId];
+    latestValue.current = next;
+    onChange(next);
   }
 
   const emptySlotCount = MAX_MOVES - value.length;
@@ -62,10 +71,13 @@ export function MovesetField({ id, value, onChange }: MovesetFieldProps): ReactN
             existing={value}
             entries={moveIndex.data}
             onAdd={add}
+            describedBy={noticeId}
           />
         ))}
       </div>
-      <PokeApiNotice query={moveIndex} loadingText="Loading moves…" />
+      {emptySlotCount > 0 && (
+        <PokeApiNotice id={noticeId} query={moveIndex} loadingText="Loading moves…" />
+      )}
     </div>
   );
 }
@@ -75,9 +87,16 @@ interface MoveSlotPickerProps {
   existing: readonly string[];
   entries: readonly IndexEntry[] | undefined;
   onAdd: (moveId: string) => void;
+  describedBy: string;
 }
 
-function MoveSlotPicker({ id, existing, entries, onAdd }: MoveSlotPickerProps): ReactNode {
+function MoveSlotPicker({
+  id,
+  existing,
+  entries,
+  onAdd,
+  describedBy,
+}: MoveSlotPickerProps): ReactNode {
   const resolve = useCallback(
     (text: string) => {
       if (entries === undefined) return "";
@@ -103,6 +122,7 @@ function MoveSlotPicker({ id, existing, entries, onAdd }: MoveSlotPickerProps): 
       value=""
       placeholder="+ move"
       inputClassName="border-dashed border-placeholder placeholder:text-muted-foreground"
+      aria-describedby={describedBy}
       onChange={(moveId) => {
         if (moveId !== "") onAdd(moveId);
       }}
