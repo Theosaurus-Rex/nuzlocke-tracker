@@ -216,6 +216,13 @@ export function amendMon({ mon, amendments }: { mon: Mon; amendments: MonAmendme
   };
 }
 
+export function evolveMon({ mon, speciesId }: { mon: Mon; speciesId: string }): Mon {
+  if (speciesId.trim() === "") {
+    throw new Error("A mon cannot evolve into an empty species.");
+  }
+  return { ...mon, speciesId };
+}
+
 export function clearFight({ fight, clearedAt }: { fight: Fight; clearedAt: string }): Fight {
   if (fight.status !== "pending") {
     throw new Error(`Cannot clear fight ${fight.id}: status is '${fight.status}', not 'pending'.`);

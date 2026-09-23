@@ -9,6 +9,7 @@ import { canDeleteRoute, nextRouteOrder } from "@/domain/routes";
 import {
   amendMon,
   catchEncounter,
+  evolveMon,
   missEncounter,
   skipEncounter,
   type CatchDetails,
@@ -173,11 +174,16 @@ export function useLogEncounter(): UseMutationResult<LogEncounterResult, Error, 
 export interface AmendMonInput {
   mon: Mon;
   amendments: MonAmendments;
+  evolvedTo?: string;
 }
 
 async function persistAmendMon(adapter: StorageAdapter, input: AmendMonInput): Promise<Mon> {
   const amended = amendMon({ mon: input.mon, amendments: input.amendments });
-  return adapter.mons.put(amended);
+  const final =
+    input.evolvedTo === undefined
+      ? amended
+      : evolveMon({ mon: amended, speciesId: input.evolvedTo });
+  return adapter.mons.put(final);
 }
 
 export function useAmendMon(): UseMutationResult<Mon, Error, AmendMonInput> {
