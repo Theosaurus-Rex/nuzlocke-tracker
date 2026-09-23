@@ -39,6 +39,7 @@ describe("moveStatsIn", () => {
   it("walks each field separately to the first entry that sets it", () => {
     expect(moveStatsIn(tackle, 4)).toMatchObject({ power: 35, accuracy: 95 });
     expect(moveStatsIn(tackle, 5)).toMatchObject({ power: 50, accuracy: 100 });
+    expect(moveStatsIn(vineWhip, 3)).toEqual({ power: 35, accuracy: 100, pp: 10, type: "grass" });
   });
 });
 
