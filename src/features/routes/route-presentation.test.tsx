@@ -13,6 +13,7 @@ import {
   chipForRouteRow,
   filterRouteRows,
   routeBucket,
+  rowSpeciesId,
   summariseRouteRows,
 } from "./route-presentation";
 
@@ -119,6 +120,25 @@ describe("chipForRouteRow", () => {
   it("falls back to the generic caught chip when a caught row's mon can't be found", () => {
     const chip = chipForRouteRow(makeRow({ status: "caught", mon: null }));
     expect(chip.status).toBe("caught");
+  });
+});
+
+describe("rowSpeciesId", () => {
+  it("returns the mon's species when one is caught", () => {
+    const row = makeRow({ status: "caught", mon: makeMon({ speciesId: "clefairy" }) });
+    expect(rowSpeciesId(row)).toBe("clefairy");
+  });
+
+  it("falls back to the encounter's species when there is no mon yet", () => {
+    const row = makeRow({
+      status: "missed",
+      encounter: makeEncounter({ status: "missed", speciesId: "geodude" }),
+    });
+    expect(rowSpeciesId(row)).toBe("geodude");
+  });
+
+  it("returns null when neither a mon nor an encounter names a species", () => {
+    expect(rowSpeciesId(makeRow({ status: "not-encountered" }))).toBeNull();
   });
 });
 
