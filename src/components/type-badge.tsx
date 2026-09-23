@@ -1,4 +1,4 @@
-import type { Type } from "@/game/data/pokedex/types";
+import type { Type } from "@/game/types";
 import { CHIP_SHAPE } from "./chip";
 import { cn } from "@/lib/utils";
 

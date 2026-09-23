@@ -1,5 +1,7 @@
 # Nuzlocke Tracker — scaffold and foundations
 
+> Game data from PokéAPI is superseded by 2026-09-23-live-pokeapi-design.md.
+
 **Date:** 2026-09-17
 **Covers:** PER-5 (01 · data model), PER-9 (03a · storage adapter), PER-11 (04 · app shell),
 PER-12 (05 · shadcn and theme tokens) — the four M0 issues that are not blocked on game data.

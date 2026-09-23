@@ -9,7 +9,7 @@ import { validateAmendment, type EncounterField } from "@/domain/encounter-valid
 import type { MonAmendments } from "@/domain/transitions";
 import type { Gender, Mon, Route, Rules } from "@/domain/types";
 import { GAMES } from "@/game/registry";
-import { speciesDisplayName } from "@/game/pokedex";
+import { speciesDisplayName } from "@/game/pokeapi/resolve";
 import { useAmendMon } from "@/storage/mutations";
 import { useRun } from "@/storage/queries";
 import { cn } from "@/lib/utils";
