@@ -3,7 +3,7 @@ import { isType, type Type } from "@/game/types";
 import { GENERATION_NUMBER, VERSION_GROUP_GENERATION } from "./generations";
 import type { IndexEntry, Move, PastMoveValue, PastTypes, Species } from "./model";
 
-export interface NamedRef {
+interface NamedRef {
   name: string;
   url: string;
 }

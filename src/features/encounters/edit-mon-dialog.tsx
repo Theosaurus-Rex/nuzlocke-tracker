@@ -1,4 +1,4 @@
-import { useState, type FormEvent, type ReactNode } from "react";
+import { useEffect, useRef, useState, type FormEvent, type ReactNode } from "react";
 
 import { SpeciesTypeBadge } from "@/components/species-type-badge";
 import { Button } from "@/components/ui/button";
@@ -86,6 +86,14 @@ function EditMonForm({ mon, rules, generation, onDone }: EditMonFormProps): Reac
   const [pickingAny, setPickingAny] = useState(false);
   const randomisedEvolutions = rules.randomiser.enabled && rules.randomiser.evolutions;
   const evolved = pendingSpecies !== mon.speciesId;
+  const showUndo = pickingAny || evolved;
+
+  const speciesInputRef = useRef<HTMLInputElement>(null);
+  const [undoCount, setUndoCount] = useState(0);
+
+  useEffect(() => {
+    if (undoCount > 0) speciesInputRef.current?.focus();
+  }, [undoCount]);
 
   function handleSpeciesPick(id: string): void {
     setPickerValue(id);
@@ -96,6 +104,7 @@ function EditMonForm({ mon, rules, generation, onDone }: EditMonFormProps): Reac
     setPendingSpecies(mon.speciesId);
     setPickerValue(mon.speciesId);
     setPickingAny(false);
+    setUndoCount((count) => count + 1);
   }
 
   const [nickname, setNickname] = useState(mon.nickname ?? "");
@@ -112,7 +121,7 @@ function EditMonForm({ mon, rules, generation, onDone }: EditMonFormProps): Reac
     submitted && speciesUnresolved ? "Pick a species from the list, or undo." : undefined;
   const speciesDescribedBy = joinIds(
     speciesError ? "edit-mon-species-error" : undefined,
-    evolved ? "edit-mon-evolved-note" : undefined,
+    showUndo ? "edit-mon-evolved-note" : undefined,
   );
 
   const amendments: MonAmendments = {
@@ -162,7 +171,7 @@ function EditMonForm({ mon, rules, generation, onDone }: EditMonFormProps): Reac
                 {pickingAny ? (
                   <SpeciesPicker
                     id="edit-mon-species"
-                    value={pendingSpecies}
+                    value={pickerValue}
                     onChange={handleSpeciesPick}
                     generation={generation}
                     aria-invalid={speciesError !== undefined}
@@ -172,6 +181,7 @@ function EditMonForm({ mon, rules, generation, onDone }: EditMonFormProps): Reac
                   <div className="relative">
                     <Input
                       id="edit-mon-species"
+                      ref={speciesInputRef}
                       value={speciesDisplayName(pendingSpecies)}
                       readOnly
                       className="pr-16"
@@ -198,9 +208,9 @@ function EditMonForm({ mon, rules, generation, onDone }: EditMonFormProps): Reac
                 {speciesError}
               </p>
             )}
-            {evolved && (
+            {showUndo && (
               <p id="edit-mon-evolved-note" className="mt-1 text-xs text-muted-foreground">
-                Evolved from {speciesDisplayName(mon.speciesId)} ·{" "}
+                {evolved && `Evolved from ${speciesDisplayName(mon.speciesId)} · `}
                 <button type="button" className="underline" onClick={undoEvolve}>
                   Undo
                 </button>

@@ -21,6 +21,11 @@ import { EditMonDialog } from "./edit-mon-dialog";
 
 const TIMESTAMP = "2026-09-17T00:00:00.000Z";
 
+const RANDOMISED_RULES: Rules = {
+  ...DEFAULT_RULES,
+  randomiser: { ...DEFAULT_RULES.randomiser, enabled: true, evolutions: true },
+};
+
 function makeRoute(overrides: Partial<Route> = {}): Route {
   return {
     id: "route-1",
@@ -439,12 +444,7 @@ describe("EditMonDialog", () => {
 
   it("shows the full species picker in a randomised run", async () => {
     const user = userEvent.setup();
-    const { adapter, mon } = renderDialog({
-      rules: {
-        ...DEFAULT_RULES,
-        randomiser: { ...DEFAULT_RULES.randomiser, enabled: true, evolutions: true },
-      },
-    });
+    const { adapter, mon } = renderDialog({ rules: RANDOMISED_RULES });
 
     await user.click(screen.getByRole("button", { name: "Evolve" }));
 
@@ -460,23 +460,37 @@ describe("EditMonDialog", () => {
     });
   });
 
+  it("opens the suggestion list while typing and saves the picked option", async () => {
+    const user = userEvent.setup();
+    const { adapter, mon } = renderDialog({ rules: RANDOMISED_RULES });
+
+    await user.click(screen.getByRole("button", { name: "Evolve" }));
+
+    const species = screen.getByLabelText("Species");
+    await user.clear(species);
+    await user.type(species, "Pid");
+
+    await user.click(await screen.findByRole("option", { name: "Pidgey" }));
+    await user.click(screen.getByRole("button", { name: "Save changes" }));
+
+    await waitFor(async () => {
+      const saved = await adapter.mons.get(mon.id);
+      expect(saved?.speciesId).toBe("pidgey");
+    });
+  });
+
   it("refuses to save an unresolved species pick in a randomised run", async () => {
     const user = userEvent.setup();
     const adapter = createMemoryAdapter();
     const putSpy = vi.spyOn(adapter.mons, "put");
-    renderDialog({
-      adapter,
-      rules: {
-        ...DEFAULT_RULES,
-        randomiser: { ...DEFAULT_RULES.randomiser, enabled: true, evolutions: true },
-      },
-    });
+    renderDialog({ adapter, rules: RANDOMISED_RULES });
 
     await user.click(screen.getByRole("button", { name: "Evolve" }));
 
     const species = screen.getByLabelText("Species");
     await user.clear(species);
     await user.type(species, "Pidg");
+    await user.keyboard("{Escape}");
 
     await user.click(screen.getByRole("button", { name: "Save changes" }));
 
@@ -485,14 +499,30 @@ describe("EditMonDialog", () => {
     expect(putSpy).not.toHaveBeenCalled();
   });
 
+  it("offers Undo after a blocked save so the player is never stuck picking", async () => {
+    const user = userEvent.setup();
+    renderDialog({ rules: RANDOMISED_RULES });
+
+    await user.click(screen.getByRole("button", { name: "Evolve" }));
+
+    const species = screen.getByLabelText("Species");
+    await user.clear(species);
+    await user.type(species, "Pidg");
+    await user.keyboard("{Escape}");
+
+    await user.click(screen.getByRole("button", { name: "Save changes" }));
+
+    const undo = await screen.findByRole("button", { name: "Undo" });
+    await user.click(undo);
+
+    const restored = screen.getByLabelText("Species");
+    expect(restored).toHaveValue("Bellsprout");
+    expect(restored).toHaveAttribute("readOnly");
+  });
+
   it("undoes a randomised pick back to the read-only field", async () => {
     const user = userEvent.setup();
-    renderDialog({
-      rules: {
-        ...DEFAULT_RULES,
-        randomiser: { ...DEFAULT_RULES.randomiser, enabled: true, evolutions: true },
-      },
-    });
+    renderDialog({ rules: RANDOMISED_RULES });
 
     await user.click(screen.getByRole("button", { name: "Evolve" }));
 
@@ -508,6 +538,18 @@ describe("EditMonDialog", () => {
     expect(screen.queryByRole("combobox", { name: "Species" })).not.toBeInTheDocument();
   });
 
+  it("returns focus to the species field after Undo", async () => {
+    stubPokeApiWithEvolutions();
+    const user = userEvent.setup();
+    renderDialog({});
+
+    await user.click(await findMenuTrigger());
+    await user.click(await screen.findByRole("menuitem", { name: "Weepinbell" }));
+    await user.click(screen.getByRole("button", { name: "Undo" }));
+
+    expect(screen.getByLabelText("Species")).toHaveFocus();
+  });
+
   it("ties the evolved note to the species field for assistive tech", async () => {
     stubPokeApiWithEvolutions();
     const user = userEvent.setup();
@@ -521,12 +563,7 @@ describe("EditMonDialog", () => {
 
   it("ties the evolved note to the picker field in a randomised run", async () => {
     const user = userEvent.setup();
-    renderDialog({
-      rules: {
-        ...DEFAULT_RULES,
-        randomiser: { ...DEFAULT_RULES.randomiser, enabled: true, evolutions: true },
-      },
-    });
+    renderDialog({ rules: RANDOMISED_RULES });
 
     await user.click(screen.getByRole("button", { name: "Evolve" }));
 

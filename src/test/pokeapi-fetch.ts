@@ -60,7 +60,7 @@ export function stubPokeApi(routes: Record<string, unknown>) {
 }
 
 /** The evolution species (bellsprout, weepinbell, ...) aren't in the default species index. */
-export const speciesIndexWithEvolutions: RawIndex = {
+const speciesIndexWithEvolutions: RawIndex = {
   results: [...speciesIndexFixture.results, ...evolutionSpeciesIndexRefs],
 };
 
