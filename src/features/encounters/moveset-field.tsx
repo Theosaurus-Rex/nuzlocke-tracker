@@ -36,6 +36,7 @@ export function MovesetField({ id, value, onChange }: MovesetFieldProps): ReactN
   }
 
   function add(moveId: string): void {
+    if (latestValue.current.includes(moveId)) return;
     const next = [...latestValue.current, moveId];
     latestValue.current = next;
     onChange(next);

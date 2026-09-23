@@ -185,6 +185,22 @@ describe("MovesetField", () => {
     });
   });
 
+  it("never adds the same move twice when two slots resolve to it together", async () => {
+    const user = userEvent.setup();
+    const onChange = vi.fn();
+    const deferred = deferredMoveIndex();
+    render(<StatefulMovesetField initial={[]} onChange={onChange} />);
+
+    await user.type(pickers()[0]!, "Tackle");
+    await user.type(pickers()[1]!, "Tackle");
+
+    deferred.release();
+
+    await waitFor(() => {
+      expect(onChange).toHaveBeenLastCalledWith(["tackle"]);
+    });
+  });
+
   it("does not show the notice once every slot is filled, even while the move index fails", async () => {
     stubPokeApi({ ...defaultPokeApiRoutes, "/move?limit=100000": stubStatus(500) });
     const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });

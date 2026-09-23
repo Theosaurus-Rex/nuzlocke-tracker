@@ -7,8 +7,8 @@ export interface PokeApiNoticeProps {
 }
 
 export function PokeApiNotice({ id, query, loadingText }: PokeApiNoticeProps): ReactNode {
-  // A failed query stays isError during its retry, so isFetching must win the check or a
-  // retry in progress looks identical to one that already failed again.
+  // A query that once held data stays isError during its retry, so isFetching must win the
+  // check or a retry in progress looks identical to one that already failed again.
   if (query.isPending || query.isFetching) {
     return (
       <p id={id} role="status" className="mt-1 text-xs text-muted-foreground">
