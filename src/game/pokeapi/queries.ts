@@ -23,6 +23,8 @@ export function configurePokeApiQueries(client: QueryClient): void {
     staleTime: Infinity,
     gcTime: Infinity,
     retry: shouldRetry,
+    // Offline would otherwise leave these paused with isPending true forever.
+    networkMode: "always",
   });
 }
 

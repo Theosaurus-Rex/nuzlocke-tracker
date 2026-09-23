@@ -1,9 +1,9 @@
-import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import { onlineManager, QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { renderHook, waitFor } from "@testing-library/react";
 import type { ReactNode } from "react";
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 
-import { defaultPokeApiRoutes, stubPokeApi } from "@/test/pokeapi-fetch";
+import { defaultPokeApiRoutes, STUB_NETWORK_ERROR, stubPokeApi } from "@/test/pokeapi-fetch";
 
 import { PokeApiError } from "./client";
 import {
@@ -99,5 +99,24 @@ describe("hooks", () => {
     });
     await waitFor(() => expect(result.current.isError).toBe(true));
     expect((result.current.error as PokeApiError).status).toBe(404);
+  });
+
+  it("errors instead of hanging pending when the browser is offline", async () => {
+    vi.useFakeTimers({ shouldAdvanceTime: true });
+    onlineManager.setOnline(false);
+    try {
+      stubPokeApi({ "/pokemon?limit=100000": STUB_NETWORK_ERROR });
+      const client = new QueryClient();
+      configurePokeApiQueries(client);
+      const { result } = renderHook(() => useSpeciesIndex(), { wrapper: wrapper(client) });
+
+      await vi.advanceTimersByTimeAsync(4000);
+
+      expect(result.current.isError).toBe(true);
+      expect((result.current.error as PokeApiError).status).toBe("network");
+    } finally {
+      onlineManager.setOnline(true);
+      vi.useRealTimers();
+    }
   });
 });
