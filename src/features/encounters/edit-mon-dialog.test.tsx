@@ -460,6 +460,83 @@ describe("EditMonDialog", () => {
     });
   });
 
+  it("refuses to save an unresolved species pick in a randomised run", async () => {
+    const user = userEvent.setup();
+    const adapter = createMemoryAdapter();
+    const putSpy = vi.spyOn(adapter.mons, "put");
+    renderDialog({
+      adapter,
+      rules: {
+        ...DEFAULT_RULES,
+        randomiser: { ...DEFAULT_RULES.randomiser, enabled: true, evolutions: true },
+      },
+    });
+
+    await user.click(screen.getByRole("button", { name: "Evolve" }));
+
+    const species = screen.getByLabelText("Species");
+    await user.clear(species);
+    await user.type(species, "Pidg");
+
+    await user.click(screen.getByRole("button", { name: "Save changes" }));
+
+    expect(await screen.findByText("Pick a species from the list, or undo.")).toBeInTheDocument();
+    expect(screen.getByRole("dialog")).toBeInTheDocument();
+    expect(putSpy).not.toHaveBeenCalled();
+  });
+
+  it("undoes a randomised pick back to the read-only field", async () => {
+    const user = userEvent.setup();
+    renderDialog({
+      rules: {
+        ...DEFAULT_RULES,
+        randomiser: { ...DEFAULT_RULES.randomiser, enabled: true, evolutions: true },
+      },
+    });
+
+    await user.click(screen.getByRole("button", { name: "Evolve" }));
+
+    const species = screen.getByLabelText("Species");
+    await user.clear(species);
+    await user.type(species, "Pidgey");
+
+    await user.click(screen.getByRole("button", { name: "Undo" }));
+
+    const restored = screen.getByLabelText("Species");
+    expect(restored).toHaveValue("Bellsprout");
+    expect(restored).toHaveAttribute("readOnly");
+    expect(screen.queryByRole("combobox", { name: "Species" })).not.toBeInTheDocument();
+  });
+
+  it("ties the evolved note to the species field for assistive tech", async () => {
+    stubPokeApiWithEvolutions();
+    const user = userEvent.setup();
+    renderDialog({});
+
+    await user.click(await findMenuTrigger());
+    await user.click(await screen.findByRole("menuitem", { name: "Weepinbell" }));
+
+    expect(screen.getByLabelText("Species")).toHaveAccessibleDescription(/Evolved from Bellsprout/);
+  });
+
+  it("ties the evolved note to the picker field in a randomised run", async () => {
+    const user = userEvent.setup();
+    renderDialog({
+      rules: {
+        ...DEFAULT_RULES,
+        randomiser: { ...DEFAULT_RULES.randomiser, enabled: true, evolutions: true },
+      },
+    });
+
+    await user.click(screen.getByRole("button", { name: "Evolve" }));
+
+    const species = screen.getByLabelText("Species");
+    await user.clear(species);
+    await user.type(species, "Pidgey");
+
+    expect(species).toHaveAccessibleDescription(/Evolved from Bellsprout/);
+  });
+
   it("ignores the evolutions sub-toggle while the randomiser itself is off", async () => {
     stubPokeApiWithEvolutions();
     const user = userEvent.setup();

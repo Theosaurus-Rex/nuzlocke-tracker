@@ -12,7 +12,7 @@ import { GAMES } from "@/game/registry";
 import { speciesDisplayName } from "@/game/pokeapi/resolve";
 import { useAmendMon } from "@/storage/mutations";
 import { useRun } from "@/storage/queries";
-import { cn } from "@/lib/utils";
+import { cn, joinIds } from "@/lib/utils";
 
 import { EncounterDialogHeader } from "./encounter-dialog-header";
 import { EvolveControl } from "./evolve-control";
@@ -82,12 +82,19 @@ function EditMonForm({ mon, rules, generation, onDone }: EditMonFormProps): Reac
   const amendMon = useAmendMon();
 
   const [pendingSpecies, setPendingSpecies] = useState(mon.speciesId);
+  const [pickerValue, setPickerValue] = useState(mon.speciesId);
   const [pickingAny, setPickingAny] = useState(false);
   const randomisedEvolutions = rules.randomiser.enabled && rules.randomiser.evolutions;
   const evolved = pendingSpecies !== mon.speciesId;
 
+  function handleSpeciesPick(id: string): void {
+    setPickerValue(id);
+    if (id !== "") setPendingSpecies(id);
+  }
+
   function undoEvolve(): void {
     setPendingSpecies(mon.speciesId);
+    setPickerValue(mon.speciesId);
     setPickingAny(false);
   }
 
@@ -99,6 +106,14 @@ function EditMonForm({ mon, rules, generation, onDone }: EditMonFormProps): Reac
   const [heldItem, setHeldItem] = useState(mon.heldItem ?? "");
   const [moves, setMoves] = useState<string[]>(mon.moves);
   const [submitted, setSubmitted] = useState(false);
+
+  const speciesUnresolved = pickingAny && pickerValue === "";
+  const speciesError =
+    submitted && speciesUnresolved ? "Pick a species from the list, or undo." : undefined;
+  const speciesDescribedBy = joinIds(
+    speciesError ? "edit-mon-species-error" : undefined,
+    evolved ? "edit-mon-evolved-note" : undefined,
+  );
 
   const amendments: MonAmendments = {
     nickname: nickname.trim() === "" ? null : nickname,
@@ -117,6 +132,10 @@ function EditMonForm({ mon, rules, generation, onDone }: EditMonFormProps): Reac
   function handleSubmit(event: FormEvent<HTMLFormElement>): void {
     event.preventDefault();
     setSubmitted(true);
+
+    if (speciesUnresolved) {
+      return;
+    }
 
     if (
       Object.keys(validateAmendment({ amendments, levelCaught: mon.levelCaught, rules })).length > 0
@@ -144,10 +163,10 @@ function EditMonForm({ mon, rules, generation, onDone }: EditMonFormProps): Reac
                   <SpeciesPicker
                     id="edit-mon-species"
                     value={pendingSpecies}
-                    onChange={(id) => {
-                      if (id !== "") setPendingSpecies(id);
-                    }}
+                    onChange={handleSpeciesPick}
                     generation={generation}
+                    aria-invalid={speciesError !== undefined}
+                    aria-describedby={speciesDescribedBy}
                   />
                 ) : (
                   <div className="relative">
@@ -156,6 +175,7 @@ function EditMonForm({ mon, rules, generation, onDone }: EditMonFormProps): Reac
                       value={speciesDisplayName(pendingSpecies)}
                       readOnly
                       className="pr-16"
+                      aria-describedby={speciesDescribedBy}
                     />
                     <div className="pointer-events-none absolute inset-y-0 right-1.5 flex items-center">
                       <SpeciesTypeBadge speciesId={pendingSpecies} generation={generation} />
@@ -173,8 +193,13 @@ function EditMonForm({ mon, rules, generation, onDone }: EditMonFormProps): Reac
                 />
               )}
             </div>
+            {speciesError && (
+              <p id="edit-mon-species-error" className="mt-1 text-sm text-destructive">
+                {speciesError}
+              </p>
+            )}
             {evolved && (
-              <p className="mt-1 text-xs text-muted-foreground">
+              <p id="edit-mon-evolved-note" className="mt-1 text-xs text-muted-foreground">
                 Evolved from {speciesDisplayName(mon.speciesId)} ·{" "}
                 <button type="button" className="underline" onClick={undoEvolve}>
                   Undo
