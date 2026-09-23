@@ -15,20 +15,32 @@ function renderBadge(speciesId: string | null, generation: number) {
   );
 }
 
+/**
+ * The loading placeholder's stand-in text is "normal", the same as a real Normal-type badge, so
+ * a test must wait for it to clear before asserting the settled type. Otherwise a test for
+ * "normal" can pass against the placeholder alone, never checking the resolved value.
+ */
+async function badgeText(container: HTMLElement): Promise<void> {
+  await waitFor(() => expect(container.querySelector("[aria-hidden='true']")).toBeNull());
+}
+
 describe("SpeciesTypeBadge", () => {
   it("shows Clefairy as Normal in a gen 4 run", async () => {
-    renderBadge("clefairy", 4);
-    expect(await screen.findByText("normal")).toBeInTheDocument();
+    const { container } = renderBadge("clefairy", 4);
+    await badgeText(container);
+    expect(screen.getByText("normal")).toBeInTheDocument();
   });
 
   it("shows Clefairy as Fairy in a gen 6 run", async () => {
-    renderBadge("clefairy", 6);
-    expect(await screen.findByText("fairy")).toBeInTheDocument();
+    const { container } = renderBadge("clefairy", 6);
+    await badgeText(container);
+    expect(screen.getByText("fairy")).toBeInTheDocument();
   });
 
   it("shows only the primary type", async () => {
-    renderBadge("gyarados", 4);
-    expect(await screen.findByText("water")).toBeInTheDocument();
+    const { container } = renderBadge("gyarados", 4);
+    await badgeText(container);
+    expect(screen.getByText("water")).toBeInTheDocument();
     expect(screen.queryByText("flying")).not.toBeInTheDocument();
   });
 
