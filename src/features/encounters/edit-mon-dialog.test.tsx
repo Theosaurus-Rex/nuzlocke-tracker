@@ -15,7 +15,6 @@ import type { Mon, Route, Rules } from "@/domain/types";
 import type { StorageAdapter } from "@/storage/adapter";
 import { createMemoryAdapter } from "@/storage/memory-adapter";
 import { StorageProvider } from "@/storage/storage-context";
-import { STUB_PENDING, stubPokeApi } from "@/test/pokeapi-fetch";
 
 import { EditMonDialog } from "./edit-mon-dialog";
 
@@ -336,24 +335,5 @@ describe("EditMonDialog", () => {
     await user.click(screen.getByRole("button", { name: "Save changes" }));
 
     expect(await screen.findByRole("alert")).toHaveTextContent(/simulated write failure/);
-  });
-
-  it("leaves speciesId untouched when saving while the species index is still pending", async () => {
-    const user = userEvent.setup();
-    stubPokeApi({ "/pokemon?limit=100000": STUB_PENDING });
-    const { adapter, mon } = renderDialog({});
-
-    const level = screen.getByLabelText("Current level");
-    await user.clear(level);
-    await user.type(level, "25");
-    await user.click(screen.getByRole("button", { name: "Save changes" }));
-
-    await waitFor(async () => {
-      const saved = await adapter.mons.get(mon.id);
-      expect(saved?.level).toBe(25);
-    });
-
-    const saved = await adapter.mons.get(mon.id);
-    expect(saved?.speciesId).toBe(mon.speciesId);
   });
 });

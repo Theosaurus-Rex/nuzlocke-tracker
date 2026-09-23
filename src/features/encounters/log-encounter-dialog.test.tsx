@@ -387,7 +387,6 @@ describe("LogEncounterDialog", () => {
     expect(screen.getByRole("status")).toHaveTextContent("Loading Pokémon…");
 
     await user.type(screen.getByLabelText("Species"), "Pidgey");
-    await user.click(screen.getByRole("dialog", { name: "Sprout Tower" }));
     await user.click(screen.getByRole("button", { name: "Save encounter" }));
 
     expect(await screen.findByText("Choose a species from the list.")).toBeInTheDocument();

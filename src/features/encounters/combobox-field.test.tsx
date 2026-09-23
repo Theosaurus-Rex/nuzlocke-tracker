@@ -169,6 +169,25 @@ describe("ComboboxField keyboard handling", () => {
     expect(input).toHaveValue("par");
   });
 
+  it("opens no listbox and hides nothing else when typed text matches no result", async () => {
+    const onChange = vi.fn();
+    render(
+      <ComboboxField
+        id="f"
+        value=""
+        onChange={onChange}
+        search={() => []}
+        resolve={() => ""}
+        displayName={(id) => id}
+      />,
+    );
+
+    await userEvent.type(screen.getByRole("combobox"), "zzz");
+
+    expect(screen.queryByRole("listbox")).not.toBeInTheDocument();
+    expect(document.querySelector("[data-base-ui-inert]")).toBeNull();
+  });
+
   it("resolves text typed before the options loaded once they arrive", async () => {
     const onChange = vi.fn();
     const empty = () => "";

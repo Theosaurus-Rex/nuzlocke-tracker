@@ -86,7 +86,7 @@ export function ComboboxField({
       items={results}
       filter={null}
       value={query}
-      open={open}
+      open={open && results.length > 0}
       onOpenChange={setOpen}
       onValueChange={(text, eventDetails) => {
         if (eventDetails.reason === "item-press") return;
