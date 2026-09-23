@@ -3,9 +3,11 @@ import { vi } from "vitest";
 import { POKEAPI_BASE } from "@/game/pokeapi/client";
 
 import {
+  evolutionChainFixtures,
   moveFixtures,
   moveIndexFixture,
   pokemonFixtures,
+  pokemonSpeciesFixtures,
   speciesIndexFixture,
 } from "./pokeapi-fixtures";
 
@@ -30,6 +32,12 @@ export const defaultPokeApiRoutes: Record<string, unknown> = {
     Object.entries(pokemonFixtures).map(([n, body]) => [`/pokemon/${n}`, body]),
   ),
   ...Object.fromEntries(Object.entries(moveFixtures).map(([n, body]) => [`/move/${n}`, body])),
+  ...Object.fromEntries(
+    Object.entries(pokemonSpeciesFixtures).map(([id, body]) => [`/pokemon-species/${id}`, body]),
+  ),
+  ...Object.fromEntries(
+    Object.entries(evolutionChainFixtures).map(([id, body]) => [`/evolution-chain/${id}`, body]),
+  ),
 };
 
 export function stubPokeApi(routes: Record<string, unknown>) {

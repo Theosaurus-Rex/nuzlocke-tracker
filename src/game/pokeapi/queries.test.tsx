@@ -3,17 +3,37 @@ import { renderHook, waitFor } from "@testing-library/react";
 import type { ReactNode } from "react";
 import { describe, expect, it, vi } from "vitest";
 
-import { defaultPokeApiRoutes, STUB_NETWORK_ERROR, stubPokeApi } from "@/test/pokeapi-fetch";
+import {
+  defaultPokeApiRoutes,
+  STUB_NETWORK_ERROR,
+  stubPokeApi,
+  stubStatus,
+} from "@/test/pokeapi-fetch";
+import { evolutionSpeciesIndexRefs, speciesIndexFixture } from "@/test/pokeapi-fixtures";
 
 import { PokeApiError } from "./client";
+import type { RawIndex } from "./map";
 import {
   configurePokeApiQueries,
   shouldRetry,
   useMove,
   useMoveIndex,
+  useNextEvolutions,
   useSpecies,
   useSpeciesIndex,
 } from "./queries";
+
+const extendedSpeciesIndex: RawIndex = {
+  results: [...speciesIndexFixture.results, ...evolutionSpeciesIndexRefs],
+};
+
+function stubWithEvolutions(overrides: Record<string, unknown> = {}) {
+  return stubPokeApi({
+    ...defaultPokeApiRoutes,
+    "/pokemon?limit=100000": extendedSpeciesIndex,
+    ...overrides,
+  });
+}
 
 function wrapper(client: QueryClient) {
   return function Wrapper({ children }: { children: ReactNode }) {
@@ -118,5 +138,66 @@ describe("hooks", () => {
       onlineManager.setOnline(true);
       vi.useRealTimers();
     }
+  });
+
+  it("returns the next stages by name", async () => {
+    stubWithEvolutions();
+    const { result } = renderHook(() => useNextEvolutions("gloom"), {
+      wrapper: wrapper(testClient()),
+    });
+    await waitFor(() => expect(result.current.isPending).toBe(false));
+    expect(result.current.data).toEqual([
+      { id: 45, name: "vileplume" },
+      { id: 182, name: "bellossom" },
+    ]);
+  });
+
+  it("drops a next stage missing from the species index", async () => {
+    stubWithEvolutions();
+    const { result } = renderHook(() => useNextEvolutions("eevee"), {
+      wrapper: wrapper(testClient()),
+    });
+    await waitFor(() => expect(result.current.isPending).toBe(false));
+    expect(result.current.data).toEqual([
+      { id: 134, name: "vaporeon" },
+      { id: 135, name: "jolteon" },
+      { id: 136, name: "flareon" },
+    ]);
+  });
+
+  it("is empty for a final stage", async () => {
+    stubWithEvolutions();
+    const { result } = renderHook(() => useNextEvolutions("victreebel"), {
+      wrapper: wrapper(testClient()),
+    });
+    await waitFor(() => expect(result.current.isPending).toBe(false));
+    expect(result.current.data).toEqual([]);
+  });
+
+  it("is empty, not pending, for a name the index does not know", async () => {
+    stubWithEvolutions();
+    const { result } = renderHook(() => useNextEvolutions("missingno"), {
+      wrapper: wrapper(testClient()),
+    });
+    await waitFor(() => expect(result.current.data).toBeDefined());
+    expect(result.current.data).toEqual([]);
+    expect(result.current.isPending).toBe(false);
+  });
+
+  it("fetches nothing without a species", () => {
+    const fetchMock = stubWithEvolutions();
+    renderHook(() => useNextEvolutions(null), { wrapper: wrapper(testClient()) });
+    const urls = fetchMock.mock.calls.map(([input]) =>
+      input instanceof Request ? input.url : String(input),
+    );
+    expect(urls.some((url) => url.includes("/pokemon-species"))).toBe(false);
+  });
+
+  it("reports failure", async () => {
+    stubWithEvolutions({ "/pokemon-species/44": stubStatus(500) });
+    const { result } = renderHook(() => useNextEvolutions("gloom"), {
+      wrapper: wrapper(testClient()),
+    });
+    await waitFor(() => expect(result.current.isError).toBe(true));
   });
 });

@@ -3,7 +3,7 @@ import { isType, type Type } from "@/game/types";
 import { GENERATION_NUMBER, VERSION_GROUP_GENERATION } from "./generations";
 import type { IndexEntry, Move, PastMoveValue, PastTypes, Species } from "./model";
 
-interface NamedRef {
+export interface NamedRef {
   name: string;
   url: string;
 }
@@ -43,7 +43,7 @@ export interface RawMove {
 // PokéAPI numbers alternate forms (megas, regional forms) from 10001.
 const FIRST_ALTERNATE_FORM_ID = 10001;
 
-function idFromUrl(url: string): number {
+export function idFromUrl(url: string): number {
   const match = /\/(\d+)\/?$/.exec(url);
   if (match?.[1] === undefined) throw new Error(`no id in PokéAPI url ${url}`);
   return Number(match[1]);
@@ -82,6 +82,36 @@ export function toSpecies(raw: RawPokemon): Species {
     .sort((a, b) => a.throughGeneration - b.throughGeneration);
 
   return { id: raw.id, name: raw.name, types: slotTypes(raw.types), pastTypes };
+}
+
+export interface RawPokemonSpecies {
+  id: number;
+  name: string;
+  evolution_chain: { url: string } | null;
+}
+
+export interface RawChainLink {
+  species: NamedRef;
+  evolves_to: RawChainLink[];
+}
+
+export interface RawEvolutionChain {
+  id: number;
+  chain: RawChainLink;
+}
+
+function findLink(link: RawChainLink, speciesId: number): RawChainLink | undefined {
+  if (idFromUrl(link.species.url) === speciesId) return link;
+  for (const child of link.evolves_to) {
+    const found = findLink(child, speciesId);
+    if (found !== undefined) return found;
+  }
+  return undefined;
+}
+
+export function nextStages(chain: RawEvolutionChain, speciesId: number): number[] {
+  const link = findLink(chain.chain, speciesId);
+  return link === undefined ? [] : link.evolves_to.map((child) => idFromUrl(child.species.url));
 }
 
 export function toMove(raw: RawMove): Move {
