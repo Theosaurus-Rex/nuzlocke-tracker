@@ -47,3 +47,31 @@ export interface GameData {
   routes: RouteDef[];
   fights: FightDef[];
 }
+
+export const TYPES = [
+  "normal",
+  "fire",
+  "water",
+  "electric",
+  "grass",
+  "ice",
+  "fighting",
+  "poison",
+  "ground",
+  "flying",
+  "psychic",
+  "bug",
+  "rock",
+  "ghost",
+  "dragon",
+  "dark",
+  "steel",
+  "fairy",
+  "unknown",
+] as const;
+
+export type Type = (typeof TYPES)[number];
+
+export function isType(name: string): name is Type {
+  return (TYPES as readonly string[]).includes(name);
+}
