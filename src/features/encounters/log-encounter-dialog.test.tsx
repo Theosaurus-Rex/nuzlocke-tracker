@@ -8,19 +8,42 @@ import type { ReactNode } from "react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import { describe, expect, it, vi } from "vitest";
+import { beforeEach, describe, expect, it, vi } from "vitest";
 import { MemoryRouter, Route as RouterRoute, Routes } from "react-router";
 
 import { DEFAULT_RULES } from "@/domain/rules";
 import type { Encounter, Mon, Route, Rules } from "@/domain/types";
 import { RoutesScreen } from "@/features/routes/routes-screen";
+import { POKEAPI_BASE } from "@/game/pokeapi/client";
+import type { RawIndex } from "@/game/pokeapi/map";
 import type { StorageAdapter } from "@/storage/adapter";
 import { createMemoryAdapter } from "@/storage/memory-adapter";
 import { StorageProvider } from "@/storage/storage-context";
+import { defaultPokeApiRoutes, STUB_PENDING, stubPokeApi, stubStatus } from "@/test/pokeapi-fetch";
+import { moveIndexFixture, speciesIndexFixture } from "@/test/pokeapi-fixtures";
 
 import { LogEncounterDialog } from "./log-encounter-dialog";
 
 const TIMESTAMP = "2026-09-17T00:00:00.000Z";
+
+const EXTENDED_SPECIES_INDEX: RawIndex = {
+  results: [
+    ...speciesIndexFixture.results,
+    { name: "chikorita", url: `${POKEAPI_BASE}/pokemon/152/` },
+  ],
+};
+
+const EXTENDED_MOVE_INDEX: RawIndex = {
+  results: [...moveIndexFixture.results, { name: "growl", url: `${POKEAPI_BASE}/move/45/` }],
+};
+
+beforeEach(() => {
+  stubPokeApi({
+    ...defaultPokeApiRoutes,
+    "/pokemon?limit=100000": EXTENDED_SPECIES_INDEX,
+    "/move?limit=100000": EXTENDED_MOVE_INDEX,
+  });
+});
 
 function makeRoute(overrides: Partial<Route> = {}): Route {
   return {
@@ -353,6 +376,49 @@ describe("LogEncounterDialog", () => {
     await user.click(screen.getByRole("button", { name: "Save encounter" }));
 
     expect(await screen.findByRole("alert")).toHaveTextContent(/simulated write failure/);
+  });
+
+  it("shows a loading notice while the species index is pending, and blocks save without a resolved species", async () => {
+    const user = userEvent.setup();
+    stubPokeApi({ "/pokemon?limit=100000": STUB_PENDING });
+    const { adapter, onOpenChange } = renderDialog({});
+
+    await user.click(screen.getByRole("radio", { name: "Missed" }));
+    expect(screen.getByRole("status")).toHaveTextContent("Loading Pokémon…");
+
+    await user.type(screen.getByLabelText("Species"), "Pidgey");
+    await user.click(screen.getByRole("dialog", { name: "Sprout Tower" }));
+    await user.click(screen.getByRole("button", { name: "Save encounter" }));
+
+    expect(await screen.findByText("Choose a species from the list.")).toBeInTheDocument();
+    expect(onOpenChange).not.toHaveBeenCalled();
+    expect(await adapter.encounters.where("runId", "run-1")).toEqual([]);
+  });
+
+  it("shows a retry notice when the species index fails to load, and recovers on retry", async () => {
+    const user = userEvent.setup();
+    stubPokeApi({ ...defaultPokeApiRoutes, "/pokemon?limit=100000": stubStatus(500) });
+    const { adapter, onOpenChange } = renderDialog({});
+
+    expect(await screen.findByText("Couldn't reach PokéAPI.")).toBeInTheDocument();
+
+    stubPokeApi(defaultPokeApiRoutes);
+    await user.click(screen.getByRole("button", { name: "Retry" }));
+
+    await waitFor(() => {
+      expect(screen.queryByText("Couldn't reach PokéAPI.")).not.toBeInTheDocument();
+    });
+
+    await user.type(screen.getByLabelText("Species"), "Pidgey");
+    await user.type(screen.getByLabelText("Level caught"), "6");
+    await user.click(screen.getByRole("button", { name: "Save encounter" }));
+
+    await waitFor(() => {
+      expect(onOpenChange).toHaveBeenCalledWith(false);
+    });
+
+    const [encounter] = await adapter.encounters.where("runId", "run-1");
+    expect(encounter?.speciesId).toBe("pidgey");
   });
 });
 

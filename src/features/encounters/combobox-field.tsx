@@ -1,4 +1,4 @@
-import { useState, type ReactNode } from "react";
+import { useEffect, useState, type ReactNode } from "react";
 
 import { Autocomplete } from "@base-ui/react/autocomplete";
 
@@ -21,6 +21,8 @@ export interface ComboboxFieldProps {
   placeholder?: string;
   /** Rendered inside the field, right-aligned, once a value resolves. Purely decorative. */
   suffix?: ReactNode;
+  /** Rendered under the input, outside the popup, which is hidden while it has no items. */
+  notice?: ReactNode;
   inputClassName?: string;
   "aria-invalid"?: boolean;
   "aria-describedby"?: string;
@@ -49,12 +51,20 @@ export function ComboboxField({
   displayName,
   placeholder,
   suffix,
+  notice,
   inputClassName,
   "aria-invalid": ariaInvalid,
   "aria-describedby": ariaDescribedBy,
 }: ComboboxFieldProps): ReactNode {
   const [query, setQuery] = useState(value === "" ? "" : displayName(value));
   const [open, setOpen] = useState(false);
+
+  // Options can arrive after the user has typed a full name. Fill the value in then, never clear it.
+  useEffect(() => {
+    if (value !== "" || query.trim() === "") return;
+    const resolved = resolve(query);
+    if (resolved !== "") onChange(resolved);
+  }, [query, value, resolve, onChange]);
 
   const results = query.trim() === "" ? [] : search(query).slice(0, MAX_RESULTS);
 
@@ -100,6 +110,7 @@ export function ComboboxField({
           </div>
         )}
       </div>
+      {notice}
       <Autocomplete.Portal>
         <Autocomplete.Positioner className="z-50 outline-none" sideOffset={4} align="start">
           <Autocomplete.Popup className="w-(--anchor-width) max-w-(--available-width) border-[1.5px] border-border bg-popover py-1 text-sm shadow-block data-empty:hidden">

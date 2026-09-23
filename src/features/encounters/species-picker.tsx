@@ -1,22 +1,11 @@
-import type { ReactNode } from "react";
+import { useCallback, type ReactNode } from "react";
 
 import { SpeciesTypeBadge } from "@/components/species-type-badge";
-import { getSpeciesByName, searchSpecies, speciesDisplayName } from "@/game/pokedex";
+import { useSpeciesIndex } from "@/game/pokeapi/queries";
+import { findByName, searchIndex, speciesDisplayName } from "@/game/pokeapi/resolve";
 
 import { ComboboxField } from "./combobox-field";
-
-function toSpeciesId(text: string): string {
-  return text.trim().toLowerCase().replace(/\s+/g, "-");
-}
-
-/**
- * Text only becomes a value once it names a real species, so typing something the pokedex does
- * not know leaves the field unset rather than logging a species that does not exist. Typing a
- * full name counts as choosing it, so the keyboard path needs no click.
- */
-function resolveSpeciesId(text: string): string {
-  return getSpeciesByName(toSpeciesId(text))?.name ?? "";
-}
+import { PokeApiNotice } from "./pokeapi-notice";
 
 export interface SpeciesPickerProps {
   id: string;
@@ -38,6 +27,29 @@ export function SpeciesPicker({
   "aria-invalid": ariaInvalid,
   "aria-describedby": ariaDescribedBy,
 }: SpeciesPickerProps): ReactNode {
+  const index = useSpeciesIndex();
+  const entries = index.data;
+
+  /**
+   * Text only becomes a value once it names a real species, so typing something the index does
+   * not know leaves the field unset rather than logging a species that does not exist. Typing a
+   * full name counts as choosing it, so the keyboard path needs no click.
+   */
+  const resolve = useCallback(
+    (text: string) => (entries === undefined ? "" : (findByName(entries, text)?.name ?? "")),
+    [entries],
+  );
+  const search = useCallback(
+    (query: string) =>
+      entries === undefined
+        ? []
+        : searchIndex(entries, query).map((s) => ({
+            id: s.name,
+            label: speciesDisplayName(s.name),
+          })),
+    [entries],
+  );
+
   return (
     <ComboboxField
       id={id}
@@ -46,16 +58,15 @@ export function SpeciesPicker({
       placeholder={placeholder}
       aria-invalid={ariaInvalid}
       aria-describedby={ariaDescribedBy}
-      resolve={resolveSpeciesId}
+      resolve={resolve}
       displayName={speciesDisplayName}
       suffix={
         generation === undefined || value === "" ? undefined : (
           <SpeciesTypeBadge speciesId={value} generation={generation} />
         )
       }
-      search={(query) =>
-        searchSpecies(query).map((s) => ({ id: s.name, label: speciesDisplayName(s.name) }))
-      }
+      search={search}
+      notice={<PokeApiNotice query={index} loadingText="Loading Pokémon…" />}
     />
   );
 }

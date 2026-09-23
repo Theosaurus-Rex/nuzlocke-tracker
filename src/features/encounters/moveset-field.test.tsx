@@ -5,11 +5,31 @@
 
 import { useState } from "react";
 
+import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import { describe, expect, it, vi } from "vitest";
+import { beforeEach, describe, expect, it, vi } from "vitest";
+
+import { POKEAPI_BASE } from "@/game/pokeapi/client";
+import type { RawIndex } from "@/game/pokeapi/map";
+import { defaultPokeApiRoutes, stubPokeApi } from "@/test/pokeapi-fetch";
+import { moveIndexFixture } from "@/test/pokeapi-fixtures";
 
 import { MovesetField } from "./moveset-field";
+
+const EXTRA_MOVES = [
+  { name: "growl", url: `${POKEAPI_BASE}/move/45/` },
+  { name: "growth", url: `${POKEAPI_BASE}/move/74/` },
+  { name: "razor-leaf", url: `${POKEAPI_BASE}/move/75/` },
+];
+
+const EXTENDED_MOVE_INDEX: RawIndex = {
+  results: [...moveIndexFixture.results, ...EXTRA_MOVES],
+};
+
+beforeEach(() => {
+  stubPokeApi({ ...defaultPokeApiRoutes, "/move?limit=100000": EXTENDED_MOVE_INDEX });
+});
 
 function StatefulMovesetField({
   initial,
@@ -19,15 +39,20 @@ function StatefulMovesetField({
   onChange?: (moves: string[]) => void;
 }) {
   const [moves, setMoves] = useState(initial);
+  const [client] = useState(
+    () => new QueryClient({ defaultOptions: { queries: { retry: false } } }),
+  );
   return (
-    <MovesetField
-      id="moves"
-      value={moves}
-      onChange={(next) => {
-        setMoves(next);
-        onChange?.(next);
-      }}
-    />
+    <QueryClientProvider client={client}>
+      <MovesetField
+        id="moves"
+        value={moves}
+        onChange={(next) => {
+          setMoves(next);
+          onChange?.(next);
+        }}
+      />
+    </QueryClientProvider>
   );
 }
 

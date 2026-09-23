@@ -1,20 +1,18 @@
 import { XIcon } from "lucide-react";
-import type { ReactNode } from "react";
+import { useCallback, type ReactNode } from "react";
 
 import { Button } from "@/components/ui/button";
 import { MAX_MOVES } from "@/domain/transitions";
-import type { MoveDef } from "@/game/data/pokedex/moves";
-import { getMoveByName, moveDisplayName, searchMoves } from "@/game/pokedex";
+import type { IndexEntry } from "@/game/pokeapi/model";
+import { useMoveIndex } from "@/game/pokeapi/queries";
+import { findByName, moveDisplayName, searchIndex } from "@/game/pokeapi/resolve";
 
 import { ComboboxField } from "./combobox-field";
 import { FIELD_LABEL_CLASS } from "./mon-fields";
+import { PokeApiNotice } from "./pokeapi-notice";
 
-function toMoveId(text: string): string {
-  return text.trim().toLowerCase().replace(/\s+/g, "-");
-}
-
-function excludeChosen(defs: MoveDef[], chosen: readonly string[]): MoveDef[] {
-  return defs.filter((m) => !chosen.includes(m.name));
+function excludeChosen(entries: readonly IndexEntry[], chosen: readonly string[]): IndexEntry[] {
+  return entries.filter((entry) => !chosen.includes(entry.name));
 }
 
 export interface MovesetFieldProps {
@@ -24,6 +22,8 @@ export interface MovesetFieldProps {
 }
 
 export function MovesetField({ id, value, onChange }: MovesetFieldProps): ReactNode {
+  const moveIndex = useMoveIndex();
+
   function removeAt(index: number): void {
     onChange(value.filter((_, i) => i !== index));
   }
@@ -60,10 +60,12 @@ export function MovesetField({ id, value, onChange }: MovesetFieldProps): ReactN
             key={slotIndex}
             id={`${id}-${String(slotIndex)}`}
             existing={value}
+            entries={moveIndex.data}
             onAdd={add}
           />
         ))}
       </div>
+      <PokeApiNotice query={moveIndex} loadingText="Loading moves…" />
     </div>
   );
 }
@@ -71,10 +73,30 @@ export function MovesetField({ id, value, onChange }: MovesetFieldProps): ReactN
 interface MoveSlotPickerProps {
   id: string;
   existing: readonly string[];
+  entries: readonly IndexEntry[] | undefined;
   onAdd: (moveId: string) => void;
 }
 
-function MoveSlotPicker({ id, existing, onAdd }: MoveSlotPickerProps): ReactNode {
+function MoveSlotPicker({ id, existing, entries, onAdd }: MoveSlotPickerProps): ReactNode {
+  const resolve = useCallback(
+    (text: string) => {
+      if (entries === undefined) return "";
+      const match = findByName(entries, text);
+      return match === undefined || existing.includes(match.name) ? "" : match.name;
+    },
+    [entries, existing],
+  );
+  const search = useCallback(
+    (query: string) =>
+      entries === undefined
+        ? []
+        : excludeChosen(searchIndex(entries, query), existing).map((m) => ({
+            id: m.name,
+            label: moveDisplayName(m.name),
+          })),
+    [entries, existing],
+  );
+
   return (
     <ComboboxField
       id={id}
@@ -84,17 +106,9 @@ function MoveSlotPicker({ id, existing, onAdd }: MoveSlotPickerProps): ReactNode
       onChange={(moveId) => {
         if (moveId !== "") onAdd(moveId);
       }}
-      resolve={(text) => {
-        const match = getMoveByName(toMoveId(text));
-        return match === undefined || existing.includes(match.name) ? "" : match.name;
-      }}
+      resolve={resolve}
       displayName={moveDisplayName}
-      search={(query) =>
-        excludeChosen(searchMoves(query), existing).map((m) => ({
-          id: m.name,
-          label: moveDisplayName(m.name),
-        }))
-      }
+      search={search}
     />
   );
 }
