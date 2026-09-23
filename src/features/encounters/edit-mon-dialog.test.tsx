@@ -15,6 +15,7 @@ import type { Mon, Route, Rules } from "@/domain/types";
 import type { StorageAdapter } from "@/storage/adapter";
 import { createMemoryAdapter } from "@/storage/memory-adapter";
 import { StorageProvider } from "@/storage/storage-context";
+import { findMenuTrigger, stubPokeApiWithEvolutions } from "@/test/pokeapi-fetch";
 
 import { EditMonDialog } from "./edit-mon-dialog";
 
@@ -335,5 +336,156 @@ describe("EditMonDialog", () => {
     await user.click(screen.getByRole("button", { name: "Save changes" }));
 
     expect(await screen.findByRole("alert")).toHaveTextContent(/simulated write failure/);
+  });
+
+  it("evolves on save", async () => {
+    stubPokeApiWithEvolutions();
+    const user = userEvent.setup();
+    const { adapter, mon } = renderDialog({});
+
+    await user.click(await findMenuTrigger());
+    await user.click(await screen.findByRole("menuitem", { name: "Weepinbell" }));
+
+    expect(screen.getByLabelText("Species")).toHaveValue("Weepinbell");
+    expect(screen.getByText(/Evolved from Bellsprout/)).toBeInTheDocument();
+
+    await user.click(screen.getByRole("button", { name: "Save changes" }));
+
+    await waitFor(async () => {
+      const saved = await adapter.mons.get(mon.id);
+      expect(saved?.speciesId).toBe("weepinbell");
+      expect(saved?.speciesIdCaught).toBe("bellsprout");
+    });
+  });
+
+  it("saves an evolve with other edits in one write", async () => {
+    stubPokeApiWithEvolutions();
+    const user = userEvent.setup();
+    const adapter = createMemoryAdapter();
+    const putSpy = vi.spyOn(adapter.mons, "put");
+    const { mon } = renderDialog({ adapter });
+
+    await user.click(await findMenuTrigger());
+    await user.click(await screen.findByRole("menuitem", { name: "Weepinbell" }));
+
+    const level = screen.getByLabelText("Current level");
+    await user.clear(level);
+    await user.type(level, "25");
+    await user.click(screen.getByRole("button", { name: "Save changes" }));
+
+    await waitFor(async () => {
+      const saved = await adapter.mons.get(mon.id);
+      expect(saved?.speciesId).toBe("weepinbell");
+      expect(saved?.level).toBe(25);
+    });
+    expect(putSpy).toHaveBeenCalledTimes(1);
+  });
+
+  it("does not save an evolve on cancel", async () => {
+    stubPokeApiWithEvolutions();
+    const user = userEvent.setup();
+    const adapter = createMemoryAdapter();
+    const mon = makeMon();
+    await adapter.mons.put(mon);
+    renderDialog({ adapter, mon });
+
+    await user.click(await findMenuTrigger());
+    await user.click(await screen.findByRole("menuitem", { name: "Weepinbell" }));
+    await user.click(screen.getByRole("button", { name: "Cancel" }));
+
+    const saved = await adapter.mons.get(mon.id);
+    expect(saved?.speciesId).toBe("bellsprout");
+  });
+
+  it("blocks the evolve when validation fails", async () => {
+    stubPokeApiWithEvolutions();
+    const user = userEvent.setup();
+    const adapter = createMemoryAdapter();
+    const putSpy = vi.spyOn(adapter.mons, "put");
+    renderDialog({ adapter, mon: makeMon({ levelCaught: 6, level: 18 }) });
+
+    await user.click(await findMenuTrigger());
+    await user.click(await screen.findByRole("menuitem", { name: "Weepinbell" }));
+
+    const level = screen.getByLabelText("Current level");
+    await user.clear(level);
+    await user.type(level, "3");
+    await user.click(screen.getByRole("button", { name: "Save changes" }));
+
+    expect(
+      await screen.findByText("Current level cannot be below the level it was caught at."),
+    ).toBeInTheDocument();
+    expect(putSpy).not.toHaveBeenCalled();
+  });
+
+  it("steps twice and undoes to the original", async () => {
+    stubPokeApiWithEvolutions();
+    const user = userEvent.setup();
+    renderDialog({});
+
+    await user.click(await findMenuTrigger());
+    await user.click(await screen.findByRole("menuitem", { name: "Weepinbell" }));
+    expect(screen.getByLabelText("Species")).toHaveValue("Weepinbell");
+
+    await user.click(await findMenuTrigger());
+    await user.click(await screen.findByRole("menuitem", { name: "Victreebel" }));
+    expect(screen.getByLabelText("Species")).toHaveValue("Victreebel");
+
+    await user.click(screen.getByRole("button", { name: "Undo" }));
+
+    expect(screen.getByLabelText("Species")).toHaveValue("Bellsprout");
+    expect(screen.queryByText(/Evolved from/)).not.toBeInTheDocument();
+  });
+
+  it("shows the full species picker in a randomised run", async () => {
+    const user = userEvent.setup();
+    const { adapter, mon } = renderDialog({
+      rules: {
+        ...DEFAULT_RULES,
+        randomiser: { ...DEFAULT_RULES.randomiser, enabled: true, evolutions: true },
+      },
+    });
+
+    await user.click(screen.getByRole("button", { name: "Evolve" }));
+
+    const species = screen.getByLabelText("Species");
+    await user.clear(species);
+    await user.type(species, "Pidgey");
+
+    await user.click(screen.getByRole("button", { name: "Save changes" }));
+
+    await waitFor(async () => {
+      const saved = await adapter.mons.get(mon.id);
+      expect(saved?.speciesId).toBe("pidgey");
+    });
+  });
+
+  it("ignores the evolutions sub-toggle while the randomiser itself is off", async () => {
+    stubPokeApiWithEvolutions();
+    const user = userEvent.setup();
+    renderDialog({
+      rules: {
+        ...DEFAULT_RULES,
+        randomiser: { ...DEFAULT_RULES.randomiser, enabled: false, evolutions: true },
+      },
+    });
+
+    await user.click(await findMenuTrigger());
+    expect(await screen.findByRole("menuitem", { name: "Weepinbell" })).toBeInTheDocument();
+  });
+
+  it("keeps the read-only field when the randomiser is on but evolutions are not", async () => {
+    stubPokeApiWithEvolutions();
+    const user = userEvent.setup();
+    renderDialog({
+      rules: {
+        ...DEFAULT_RULES,
+        randomiser: { ...DEFAULT_RULES.randomiser, enabled: true, evolutions: false },
+      },
+    });
+
+    await user.click(await findMenuTrigger());
+    expect(await screen.findByRole("menuitem", { name: "Weepinbell" })).toBeInTheDocument();
+    expect(screen.getByLabelText("Species")).toHaveAttribute("readOnly");
   });
 });

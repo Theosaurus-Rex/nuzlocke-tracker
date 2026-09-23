@@ -15,6 +15,7 @@ import { useRun } from "@/storage/queries";
 import { cn } from "@/lib/utils";
 
 import { EncounterDialogHeader } from "./encounter-dialog-header";
+import { EvolveControl } from "./evolve-control";
 import {
   AbilityField,
   FIELD_LABEL_CLASS,
@@ -24,6 +25,7 @@ import {
   NicknameField,
 } from "./mon-fields";
 import { MovesetField } from "./moveset-field";
+import { SpeciesPicker } from "./species-picker";
 
 function levelFromText(text: string): number {
   return Number(text);
@@ -79,6 +81,16 @@ interface EditMonFormProps {
 function EditMonForm({ mon, rules, generation, onDone }: EditMonFormProps): ReactNode {
   const amendMon = useAmendMon();
 
+  const [pendingSpecies, setPendingSpecies] = useState(mon.speciesId);
+  const [pickingAny, setPickingAny] = useState(false);
+  const randomisedEvolutions = rules.randomiser.enabled && rules.randomiser.evolutions;
+  const evolved = pendingSpecies !== mon.speciesId;
+
+  function undoEvolve(): void {
+    setPendingSpecies(mon.speciesId);
+    setPickingAny(false);
+  }
+
   const [nickname, setNickname] = useState(mon.nickname ?? "");
   const [gender, setGender] = useState<Gender | null>(mon.gender);
   const [levelText, setLevelText] = useState(String(mon.level));
@@ -112,7 +124,10 @@ function EditMonForm({ mon, rules, generation, onDone }: EditMonFormProps): Reac
       return;
     }
 
-    amendMon.mutate({ mon, amendments }, { onSuccess: onDone });
+    amendMon.mutate(
+      { mon, amendments, evolvedTo: evolved ? pendingSpecies : undefined },
+      { onSuccess: onDone },
+    );
   }
 
   return (
@@ -123,17 +138,49 @@ function EditMonForm({ mon, rules, generation, onDone }: EditMonFormProps): Reac
             <Label htmlFor="edit-mon-species" className={FIELD_LABEL_CLASS}>
               Species
             </Label>
-            <div className="relative">
-              <Input
-                id="edit-mon-species"
-                value={speciesDisplayName(mon.speciesId)}
-                readOnly
-                className="pr-16"
-              />
-              <div className="pointer-events-none absolute inset-y-0 right-1.5 flex items-center">
-                <SpeciesTypeBadge speciesId={mon.speciesId} generation={generation} />
+            <div className="flex flex-wrap items-start gap-2">
+              <div className="min-w-0 flex-1">
+                {pickingAny ? (
+                  <SpeciesPicker
+                    id="edit-mon-species"
+                    value={pendingSpecies}
+                    onChange={(id) => {
+                      if (id !== "") setPendingSpecies(id);
+                    }}
+                    generation={generation}
+                  />
+                ) : (
+                  <div className="relative">
+                    <Input
+                      id="edit-mon-species"
+                      value={speciesDisplayName(pendingSpecies)}
+                      readOnly
+                      className="pr-16"
+                    />
+                    <div className="pointer-events-none absolute inset-y-0 right-1.5 flex items-center">
+                      <SpeciesTypeBadge speciesId={pendingSpecies} generation={generation} />
+                    </div>
+                  </div>
+                )}
               </div>
+              {!pickingAny && (
+                <EvolveControl
+                  id="edit-mon-evolve"
+                  speciesId={pendingSpecies}
+                  randomised={randomisedEvolutions}
+                  onEvolve={setPendingSpecies}
+                  onPickAny={() => setPickingAny(true)}
+                />
+              )}
             </div>
+            {evolved && (
+              <p className="mt-1 text-xs text-muted-foreground">
+                Evolved from {speciesDisplayName(mon.speciesId)} ·{" "}
+                <button type="button" className="underline" onClick={undoEvolve}>
+                  Undo
+                </button>
+              </p>
+            )}
           </div>
 
           <NicknameField

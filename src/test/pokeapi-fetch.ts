@@ -1,9 +1,12 @@
-import { vi } from "vitest";
+import { screen, waitFor } from "@testing-library/react";
+import { expect, vi } from "vitest";
 
 import { POKEAPI_BASE } from "@/game/pokeapi/client";
+import type { RawIndex } from "@/game/pokeapi/map";
 
 import {
   evolutionChainFixtures,
+  evolutionSpeciesIndexRefs,
   moveFixtures,
   moveIndexFixture,
   pokemonFixtures,
@@ -54,4 +57,26 @@ export function stubPokeApi(routes: Record<string, unknown>) {
   });
   vi.stubGlobal("fetch", fetchMock);
   return fetchMock;
+}
+
+/** The evolution species (bellsprout, weepinbell, ...) aren't in the default species index. */
+export const speciesIndexWithEvolutions: RawIndex = {
+  results: [...speciesIndexFixture.results, ...evolutionSpeciesIndexRefs],
+};
+
+export function stubPokeApiWithEvolutions(overrides: Record<string, unknown> = {}) {
+  return stubPokeApi({
+    ...defaultPokeApiRoutes,
+    "/pokemon?limit=100000": speciesIndexWithEvolutions,
+    ...overrides,
+  });
+}
+
+/** A disabled loading button shares the "Evolve" name, so wait for the real menu trigger. */
+export async function findMenuTrigger(name = "Evolve"): Promise<HTMLElement> {
+  return waitFor(() => {
+    const button = screen.getByRole("button", { name });
+    expect(button).toHaveAttribute("aria-haspopup", "menu");
+    return button;
+  });
 }

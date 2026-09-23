@@ -4,40 +4,18 @@ import userEvent from "@testing-library/user-event";
 import { describe, expect, it, vi } from "vitest";
 
 import { configurePokeApiQueries } from "@/game/pokeapi/queries";
-import type { RawIndex } from "@/game/pokeapi/map";
 import {
-  defaultPokeApiRoutes,
+  findMenuTrigger,
   STUB_NETWORK_ERROR,
   STUB_PENDING,
-  stubPokeApi,
+  stubPokeApiWithEvolutions,
   stubStatus,
 } from "@/test/pokeapi-fetch";
-import { evolutionSpeciesIndexRefs, speciesIndexFixture } from "@/test/pokeapi-fixtures";
 
 import { EvolveControl } from "./evolve-control";
 
-const extendedSpeciesIndex: RawIndex = {
-  results: [...speciesIndexFixture.results, ...evolutionSpeciesIndexRefs],
-};
-
-function stubWithEvolutions(overrides: Record<string, unknown> = {}) {
-  return stubPokeApi({
-    ...defaultPokeApiRoutes,
-    "/pokemon?limit=100000": extendedSpeciesIndex,
-    ...overrides,
-  });
-}
-
 function testClient(): QueryClient {
   return new QueryClient({ defaultOptions: { queries: { retry: false } } });
-}
-
-async function findMenuTrigger() {
-  return waitFor(() => {
-    const button = screen.getByRole("button", { name: "Evolve" });
-    expect(button).toHaveAttribute("aria-haspopup", "menu");
-    return button;
-  });
 }
 
 function renderControl(
@@ -63,7 +41,7 @@ function renderControl(
 
 describe("EvolveControl", () => {
   it("offers the single next stage for a linear chain", async () => {
-    stubWithEvolutions();
+    stubPokeApiWithEvolutions();
     const { onEvolve } = renderControl({ speciesId: "bellsprout" });
     const user = userEvent.setup();
 
@@ -75,7 +53,7 @@ describe("EvolveControl", () => {
   });
 
   it("offers every branch of a fork", async () => {
-    stubWithEvolutions();
+    stubPokeApiWithEvolutions();
     renderControl({ speciesId: "gloom" });
     const user = userEvent.setup();
 
@@ -85,7 +63,7 @@ describe("EvolveControl", () => {
   });
 
   it("renders no Evolve button for a final stage, once loading has settled", async () => {
-    stubWithEvolutions();
+    stubPokeApiWithEvolutions();
     renderControl({ speciesId: "victreebel" });
 
     expect(screen.getByRole("button", { name: "Evolve" })).toBeDisabled();
@@ -95,7 +73,7 @@ describe("EvolveControl", () => {
   });
 
   it("renders no Evolve button for a species with no evolution chain, once loading has settled", async () => {
-    stubWithEvolutions({
+    stubPokeApiWithEvolutions({
       "/pokemon-species/35": { id: 35, name: "clefairy", evolution_chain: null },
     });
     renderControl({ speciesId: "clefairy" });
@@ -107,7 +85,7 @@ describe("EvolveControl", () => {
   });
 
   it("calls onPickAny and fetches no species chain when randomised", async () => {
-    const fetchMock = stubWithEvolutions();
+    const fetchMock = stubPokeApiWithEvolutions();
     const { onPickAny } = renderControl({ speciesId: "bellsprout", randomised: true });
     const user = userEvent.setup();
 
@@ -121,7 +99,7 @@ describe("EvolveControl", () => {
   });
 
   it("shows the Evolve button disabled while loading", async () => {
-    stubWithEvolutions({ "/pokemon-species/69": STUB_PENDING });
+    stubPokeApiWithEvolutions({ "/pokemon-species/69": STUB_PENDING });
     renderControl({ speciesId: "bellsprout" });
 
     const button = await screen.findByRole("button", { name: "Evolve" });
@@ -129,7 +107,7 @@ describe("EvolveControl", () => {
   });
 
   it("shows the failure notice on a PokéAPI error", async () => {
-    stubWithEvolutions({ "/pokemon-species/69": stubStatus(500) });
+    stubPokeApiWithEvolutions({ "/pokemon-species/69": stubStatus(500) });
     renderControl({ speciesId: "bellsprout" });
 
     expect(await screen.findByRole("alert")).toHaveTextContent("Couldn't reach PokéAPI.");
@@ -140,7 +118,7 @@ describe("EvolveControl", () => {
     vi.useFakeTimers({ shouldAdvanceTime: true });
     onlineManager.setOnline(false);
     try {
-      stubWithEvolutions({ "/pokemon?limit=100000": STUB_NETWORK_ERROR });
+      stubPokeApiWithEvolutions({ "/pokemon?limit=100000": STUB_NETWORK_ERROR });
       const client = new QueryClient();
       configurePokeApiQueries(client);
       renderControl({ speciesId: "bellsprout" }, client);

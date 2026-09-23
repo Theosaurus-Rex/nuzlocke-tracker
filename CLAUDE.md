@@ -346,6 +346,9 @@ Consequences, all deliberate:
   PokéAPI's `past_types` and `past_values`. Clefairy is Normal in a HeartGold run and Fairy in a
   Gen 6+ one. Vine Whip is 35 power there and 45 now. Present-day values would be visibly wrong
   for the game being tracked.
+- **Evolutions are not filtered by generation.** Evolve offers every next stage in PokéAPI's
+  chain, so a HeartGold Meowth offers Perrserker. Romhacks can add later evolutions to earlier
+  games. A run with evolutions randomised gets the full species picker instead.
 
 **Scope: HeartGold only for V1.** Every additional game is a whole curated dataset, not a
 config flag. Build the ingest pipeline so a second game is additive.
