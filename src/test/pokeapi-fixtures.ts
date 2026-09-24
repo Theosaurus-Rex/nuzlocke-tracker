@@ -1,4 +1,10 @@
-import type { RawIndex, RawMove, RawPokemon } from "@/game/pokeapi/map";
+import type {
+  RawEvolutionChain,
+  RawIndex,
+  RawMove,
+  RawPokemon,
+  RawPokemonSpecies,
+} from "@/game/pokeapi/map";
 
 const API = "https://pokeapi.co/api/v2";
 
@@ -58,6 +64,74 @@ export const pokemonFixtures: Record<string, RawPokemon> = {
     name: "bellsprout",
     types: [slot(1, "grass"), slot(2, "poison")],
     past_types: [],
+  },
+};
+
+export const evolutionSpeciesIndexRefs = [
+  ref("pokemon", 69, "bellsprout"),
+  ref("pokemon", 70, "weepinbell"),
+  ref("pokemon", 71, "victreebel"),
+  ref("pokemon", 43, "oddish"),
+  ref("pokemon", 44, "gloom"),
+  ref("pokemon", 45, "vileplume"),
+  ref("pokemon", 182, "bellossom"),
+  ref("pokemon", 133, "eevee"),
+  ref("pokemon", 134, "vaporeon"),
+  ref("pokemon", 135, "jolteon"),
+  ref("pokemon", 136, "flareon"),
+];
+
+export const pokemonSpeciesFixtures: Record<string, RawPokemonSpecies> = {
+  "69": { id: 69, name: "bellsprout", evolution_chain: { url: `${API}/evolution-chain/29/` } },
+  "70": { id: 70, name: "weepinbell", evolution_chain: { url: `${API}/evolution-chain/29/` } },
+  "71": { id: 71, name: "victreebel", evolution_chain: { url: `${API}/evolution-chain/29/` } },
+  "43": { id: 43, name: "oddish", evolution_chain: { url: `${API}/evolution-chain/18/` } },
+  "44": { id: 44, name: "gloom", evolution_chain: { url: `${API}/evolution-chain/18/` } },
+  "133": { id: 133, name: "eevee", evolution_chain: { url: `${API}/evolution-chain/67/` } },
+};
+
+export const evolutionChainFixtures: Record<string, RawEvolutionChain> = {
+  "29": {
+    id: 29,
+    chain: {
+      species: ref("pokemon-species", 69, "bellsprout"),
+      evolves_to: [
+        {
+          species: ref("pokemon-species", 70, "weepinbell"),
+          evolves_to: [{ species: ref("pokemon-species", 71, "victreebel"), evolves_to: [] }],
+        },
+      ],
+    },
+  },
+  "18": {
+    id: 18,
+    chain: {
+      species: ref("pokemon-species", 43, "oddish"),
+      evolves_to: [
+        {
+          species: ref("pokemon-species", 44, "gloom"),
+          evolves_to: [
+            { species: ref("pokemon-species", 45, "vileplume"), evolves_to: [] },
+            { species: ref("pokemon-species", 182, "bellossom"), evolves_to: [] },
+          ],
+        },
+      ],
+    },
+  },
+  "67": {
+    id: 67,
+    chain: {
+      species: ref("pokemon-species", 133, "eevee"),
+      evolves_to: [
+        { species: ref("pokemon-species", 134, "vaporeon"), evolves_to: [] },
+        { species: ref("pokemon-species", 135, "jolteon"), evolves_to: [] },
+        { species: ref("pokemon-species", 136, "flareon"), evolves_to: [] },
+        {
+          species: { name: "notindexed", url: `${API}/pokemon-species/99999/` },
+          evolves_to: [],
+        },
+      ],
+    },
   },
 };
 

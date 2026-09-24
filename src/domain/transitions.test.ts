@@ -4,6 +4,7 @@ import {
   amendMon,
   catchEncounter,
   clearFight,
+  evolveMon,
   killMon,
   missEncounter,
   moveMonToBox,
@@ -487,6 +488,23 @@ describe("amendMon", () => {
     expect(error).toBeInstanceOf(Error);
     expect((error as Error).message).toContain("18");
     expect((error as Error).message).toContain("6");
+  });
+});
+
+describe("evolveMon", () => {
+  it("changes the current species and nothing else", () => {
+    const mon = makeMon({ speciesId: "bellsprout", speciesIdCaught: "bellsprout" });
+    const evolved = evolveMon({ mon, speciesId: "weepinbell" });
+    expect(evolved).toEqual({ ...mon, speciesId: "weepinbell" });
+  });
+
+  it("keeps the species it was caught as after a second evolve", () => {
+    const mon = makeMon({ speciesId: "weepinbell", speciesIdCaught: "bellsprout" });
+    expect(evolveMon({ mon, speciesId: "victreebel" }).speciesIdCaught).toBe("bellsprout");
+  });
+
+  it("rejects an empty species", () => {
+    expect(() => evolveMon({ mon: makeMon(), speciesId: " " })).toThrow();
   });
 });
 

@@ -15,10 +15,16 @@ import type { Mon, Route, Rules } from "@/domain/types";
 import type { StorageAdapter } from "@/storage/adapter";
 import { createMemoryAdapter } from "@/storage/memory-adapter";
 import { StorageProvider } from "@/storage/storage-context";
+import { findMenuTrigger, stubPokeApiWithEvolutions } from "@/test/pokeapi-fetch";
 
 import { EditMonDialog } from "./edit-mon-dialog";
 
 const TIMESTAMP = "2026-09-17T00:00:00.000Z";
+
+const RANDOMISED_RULES: Rules = {
+  ...DEFAULT_RULES,
+  randomiser: { ...DEFAULT_RULES.randomiser, enabled: true, evolutions: true },
+};
 
 function makeRoute(overrides: Partial<Route> = {}): Route {
   return {
@@ -335,5 +341,265 @@ describe("EditMonDialog", () => {
     await user.click(screen.getByRole("button", { name: "Save changes" }));
 
     expect(await screen.findByRole("alert")).toHaveTextContent(/simulated write failure/);
+  });
+
+  it("evolves on save", async () => {
+    stubPokeApiWithEvolutions();
+    const user = userEvent.setup();
+    const { adapter, mon } = renderDialog({});
+
+    await user.click(await findMenuTrigger());
+    await user.click(await screen.findByRole("menuitem", { name: "Weepinbell" }));
+
+    expect(screen.getByLabelText("Species")).toHaveValue("Weepinbell");
+    expect(screen.getByText(/Evolved from Bellsprout/)).toBeInTheDocument();
+
+    await user.click(screen.getByRole("button", { name: "Save changes" }));
+
+    await waitFor(async () => {
+      const saved = await adapter.mons.get(mon.id);
+      expect(saved?.speciesId).toBe("weepinbell");
+      expect(saved?.speciesIdCaught).toBe("bellsprout");
+    });
+  });
+
+  it("saves an evolve with other edits in one write", async () => {
+    stubPokeApiWithEvolutions();
+    const user = userEvent.setup();
+    const adapter = createMemoryAdapter();
+    const putSpy = vi.spyOn(adapter.mons, "put");
+    const { mon } = renderDialog({ adapter });
+
+    await user.click(await findMenuTrigger());
+    await user.click(await screen.findByRole("menuitem", { name: "Weepinbell" }));
+
+    const level = screen.getByLabelText("Current level");
+    await user.clear(level);
+    await user.type(level, "25");
+    await user.click(screen.getByRole("button", { name: "Save changes" }));
+
+    await waitFor(async () => {
+      const saved = await adapter.mons.get(mon.id);
+      expect(saved?.speciesId).toBe("weepinbell");
+      expect(saved?.level).toBe(25);
+    });
+    expect(putSpy).toHaveBeenCalledTimes(1);
+  });
+
+  it("does not save an evolve on cancel", async () => {
+    stubPokeApiWithEvolutions();
+    const user = userEvent.setup();
+    const adapter = createMemoryAdapter();
+    const mon = makeMon();
+    await adapter.mons.put(mon);
+    renderDialog({ adapter, mon });
+
+    await user.click(await findMenuTrigger());
+    await user.click(await screen.findByRole("menuitem", { name: "Weepinbell" }));
+    await user.click(screen.getByRole("button", { name: "Cancel" }));
+
+    const saved = await adapter.mons.get(mon.id);
+    expect(saved?.speciesId).toBe("bellsprout");
+  });
+
+  it("blocks the evolve when validation fails", async () => {
+    stubPokeApiWithEvolutions();
+    const user = userEvent.setup();
+    const adapter = createMemoryAdapter();
+    const putSpy = vi.spyOn(adapter.mons, "put");
+    renderDialog({ adapter, mon: makeMon({ levelCaught: 6, level: 18 }) });
+
+    await user.click(await findMenuTrigger());
+    await user.click(await screen.findByRole("menuitem", { name: "Weepinbell" }));
+
+    const level = screen.getByLabelText("Current level");
+    await user.clear(level);
+    await user.type(level, "3");
+    await user.click(screen.getByRole("button", { name: "Save changes" }));
+
+    expect(
+      await screen.findByText("Current level cannot be below the level it was caught at."),
+    ).toBeInTheDocument();
+    expect(putSpy).not.toHaveBeenCalled();
+  });
+
+  it("steps twice and undoes to the original", async () => {
+    stubPokeApiWithEvolutions();
+    const user = userEvent.setup();
+    renderDialog({});
+
+    await user.click(await findMenuTrigger());
+    await user.click(await screen.findByRole("menuitem", { name: "Weepinbell" }));
+    expect(screen.getByLabelText("Species")).toHaveValue("Weepinbell");
+
+    await user.click(await findMenuTrigger());
+    await user.click(await screen.findByRole("menuitem", { name: "Victreebel" }));
+    expect(screen.getByLabelText("Species")).toHaveValue("Victreebel");
+
+    await user.click(screen.getByRole("button", { name: "Undo" }));
+
+    expect(screen.getByLabelText("Species")).toHaveValue("Bellsprout");
+    expect(screen.queryByText(/Evolved from/)).not.toBeInTheDocument();
+  });
+
+  it("shows the full species picker in a randomised run", async () => {
+    const user = userEvent.setup();
+    const { adapter, mon } = renderDialog({ rules: RANDOMISED_RULES });
+
+    await user.click(screen.getByRole("button", { name: "Evolve" }));
+
+    const species = screen.getByLabelText("Species");
+    await user.clear(species);
+    await user.type(species, "Pidgey");
+
+    await user.click(screen.getByRole("button", { name: "Save changes" }));
+
+    await waitFor(async () => {
+      const saved = await adapter.mons.get(mon.id);
+      expect(saved?.speciesId).toBe("pidgey");
+    });
+  });
+
+  it("opens the suggestion list while typing and saves the picked option", async () => {
+    const user = userEvent.setup();
+    const { adapter, mon } = renderDialog({ rules: RANDOMISED_RULES });
+
+    await user.click(screen.getByRole("button", { name: "Evolve" }));
+
+    const species = screen.getByLabelText("Species");
+    await user.clear(species);
+    await user.type(species, "Pid");
+
+    await user.click(await screen.findByRole("option", { name: "Pidgey" }));
+    await user.click(screen.getByRole("button", { name: "Save changes" }));
+
+    await waitFor(async () => {
+      const saved = await adapter.mons.get(mon.id);
+      expect(saved?.speciesId).toBe("pidgey");
+    });
+  });
+
+  it("refuses to save an unresolved species pick in a randomised run", async () => {
+    const user = userEvent.setup();
+    const adapter = createMemoryAdapter();
+    const putSpy = vi.spyOn(adapter.mons, "put");
+    renderDialog({ adapter, rules: RANDOMISED_RULES });
+
+    await user.click(screen.getByRole("button", { name: "Evolve" }));
+
+    const species = screen.getByLabelText("Species");
+    await user.clear(species);
+    await user.type(species, "Pidg");
+    await user.keyboard("{Escape}");
+
+    await user.click(screen.getByRole("button", { name: "Save changes" }));
+
+    expect(await screen.findByText("Pick a species from the list, or undo.")).toBeInTheDocument();
+    expect(screen.getByRole("dialog")).toBeInTheDocument();
+    expect(putSpy).not.toHaveBeenCalled();
+  });
+
+  it("offers Undo after a blocked save so the player is never stuck picking", async () => {
+    const user = userEvent.setup();
+    renderDialog({ rules: RANDOMISED_RULES });
+
+    await user.click(screen.getByRole("button", { name: "Evolve" }));
+
+    const species = screen.getByLabelText("Species");
+    await user.clear(species);
+    await user.type(species, "Pidg");
+    await user.keyboard("{Escape}");
+
+    await user.click(screen.getByRole("button", { name: "Save changes" }));
+
+    const undo = await screen.findByRole("button", { name: "Undo" });
+    await user.click(undo);
+
+    const restored = screen.getByLabelText("Species");
+    expect(restored).toHaveValue("Bellsprout");
+    expect(restored).toHaveAttribute("readOnly");
+  });
+
+  it("undoes a randomised pick back to the read-only field", async () => {
+    const user = userEvent.setup();
+    renderDialog({ rules: RANDOMISED_RULES });
+
+    await user.click(screen.getByRole("button", { name: "Evolve" }));
+
+    const species = screen.getByLabelText("Species");
+    await user.clear(species);
+    await user.type(species, "Pidgey");
+
+    await user.click(screen.getByRole("button", { name: "Undo" }));
+
+    const restored = screen.getByLabelText("Species");
+    expect(restored).toHaveValue("Bellsprout");
+    expect(restored).toHaveAttribute("readOnly");
+    expect(screen.queryByRole("combobox", { name: "Species" })).not.toBeInTheDocument();
+  });
+
+  it("returns focus to the species field after Undo", async () => {
+    stubPokeApiWithEvolutions();
+    const user = userEvent.setup();
+    renderDialog({});
+
+    await user.click(await findMenuTrigger());
+    await user.click(await screen.findByRole("menuitem", { name: "Weepinbell" }));
+    await user.click(screen.getByRole("button", { name: "Undo" }));
+
+    expect(screen.getByLabelText("Species")).toHaveFocus();
+  });
+
+  it("ties the evolved note to the species field for assistive tech", async () => {
+    stubPokeApiWithEvolutions();
+    const user = userEvent.setup();
+    renderDialog({});
+
+    await user.click(await findMenuTrigger());
+    await user.click(await screen.findByRole("menuitem", { name: "Weepinbell" }));
+
+    expect(screen.getByLabelText("Species")).toHaveAccessibleDescription(/Evolved from Bellsprout/);
+  });
+
+  it("ties the evolved note to the picker field in a randomised run", async () => {
+    const user = userEvent.setup();
+    renderDialog({ rules: RANDOMISED_RULES });
+
+    await user.click(screen.getByRole("button", { name: "Evolve" }));
+
+    const species = screen.getByLabelText("Species");
+    await user.clear(species);
+    await user.type(species, "Pidgey");
+
+    expect(species).toHaveAccessibleDescription(/Evolved from Bellsprout/);
+  });
+
+  it("ignores the evolutions sub-toggle while the randomiser itself is off", async () => {
+    stubPokeApiWithEvolutions();
+    const user = userEvent.setup();
+    renderDialog({
+      rules: {
+        ...DEFAULT_RULES,
+        randomiser: { ...DEFAULT_RULES.randomiser, enabled: false, evolutions: true },
+      },
+    });
+
+    await user.click(await findMenuTrigger());
+    expect(await screen.findByRole("menuitem", { name: "Weepinbell" })).toBeInTheDocument();
+  });
+
+  it("keeps the read-only field when the randomiser is on but evolutions are not", async () => {
+    stubPokeApiWithEvolutions();
+    const user = userEvent.setup();
+    renderDialog({
+      rules: {
+        ...DEFAULT_RULES,
+        randomiser: { ...DEFAULT_RULES.randomiser, enabled: true, evolutions: false },
+      },
+    });
+
+    await user.click(await findMenuTrigger());
+    expect(await screen.findByRole("menuitem", { name: "Weepinbell" })).toBeInTheDocument();
+    expect(screen.getByLabelText("Species")).toHaveAttribute("readOnly");
   });
 });

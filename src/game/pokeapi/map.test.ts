@@ -1,13 +1,14 @@
 import { describe, expect, it } from "vitest";
 
 import {
+  evolutionChainFixtures,
   moveFixtures,
   moveIndexFixture,
   pokemonFixtures,
   speciesIndexFixture,
 } from "@/test/pokeapi-fixtures";
 
-import { toMove, toMoveIndex, toSpecies, toSpeciesIndex, type RawMove } from "./map";
+import { nextStages, toMove, toMoveIndex, toSpecies, toSpeciesIndex, type RawMove } from "./map";
 
 describe("toSpeciesIndex", () => {
   it("keeps default forms only, in dex order, with ids from the url", () => {
@@ -88,5 +89,31 @@ describe("toMove", () => {
     expect(toMove(moveFixtures.charm!).pastValues).toEqual([
       { throughGeneration: 5, power: null, accuracy: null, pp: null, type: "normal" },
     ]);
+  });
+});
+
+describe("nextStages", () => {
+  const linear = evolutionChainFixtures["29"]!;
+  const branch = evolutionChainFixtures["18"]!;
+
+  it("returns the next stage of a linear chain", () => {
+    expect(nextStages(linear, 69)).toEqual([70]);
+    expect(nextStages(linear, 70)).toEqual([71]);
+  });
+
+  it("returns every branch", () => {
+    expect(nextStages(branch, 44)).toEqual([45, 182]);
+  });
+
+  it("returns nothing for a final stage", () => {
+    expect(nextStages(linear, 71)).toEqual([]);
+  });
+
+  it("returns nothing for a species missing from the chain", () => {
+    expect(nextStages(linear, 1)).toEqual([]);
+  });
+
+  it("does not return stages beyond the next one", () => {
+    expect(nextStages(branch, 43)).toEqual([44]);
   });
 });

@@ -8,10 +8,10 @@ import type { ReactNode } from "react";
 
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { renderHook, waitFor } from "@testing-library/react";
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 
 import type { CatchDetails, MonAmendments } from "@/domain/transitions";
-import type { Encounter, Route, Run } from "@/domain/types";
+import type { Encounter, Mon, Route, Run } from "@/domain/types";
 import { heartgold } from "@/game/data/heartgold";
 
 import type { StorageAdapter } from "./adapter";
@@ -477,6 +477,33 @@ describe("useLogEncounter", () => {
   });
 });
 
+async function seedCaughtMon(
+  adapter: StorageAdapter,
+): Promise<{ wrapper: ({ children }: { children: ReactNode }) => ReactNode; mon: Mon }> {
+  await adapter.init();
+  const { run, routes } = await createSeededRun(adapter);
+  const route = routes[0];
+  if (route === undefined) {
+    throw new Error("expected at least one seeded route");
+  }
+
+  const wrapper = createWrapper(adapter);
+  const log = renderHook(() => useLogEncounter(), { wrapper });
+  const { mon } = await log.result.current.mutateAsync({
+    runId: run.id,
+    routeId: route.id,
+    outcome: "caught",
+    party: [],
+    details: CATCH_DETAILS,
+    existingEncounters: [],
+  });
+  if (mon === null) {
+    throw new Error("expected a mon from a caught encounter");
+  }
+
+  return { wrapper, mon };
+}
+
 describe("useAmendMon", () => {
   const amendments: MonAmendments = {
     nickname: "Sprout",
@@ -577,5 +604,36 @@ describe("useAmendMon", () => {
     await waitFor(() => {
       expect(mons.result.current.data?.[0]?.nickname).toBe("Sprout");
     });
+  });
+
+  it("applies an evolve and the amendments in one write", async () => {
+    const adapter = createMemoryAdapter();
+    const { wrapper, mon } = await seedCaughtMon(adapter);
+
+    const putSpy = vi.spyOn(adapter.mons, "put");
+    const amend = renderHook(() => useAmendMon(), { wrapper });
+    const result = await amend.result.current.mutateAsync({
+      mon,
+      amendments,
+      evolvedTo: "weepinbell",
+    });
+
+    expect(result.speciesId).toBe("weepinbell");
+    expect(result.speciesIdCaught).toBe(mon.speciesIdCaught);
+    expect(result.level).toBe(20);
+    expect(putSpy).toHaveBeenCalledTimes(1);
+
+    const persisted = await adapter.mons.get(mon.id);
+    expect(persisted?.speciesId).toBe("weepinbell");
+  });
+
+  it("leaves the species alone without evolvedTo", async () => {
+    const adapter = createMemoryAdapter();
+    const { wrapper, mon } = await seedCaughtMon(adapter);
+
+    const amend = renderHook(() => useAmendMon(), { wrapper });
+    const result = await amend.result.current.mutateAsync({ mon, amendments });
+
+    expect(result.speciesId).toBe(mon.speciesId);
   });
 });
