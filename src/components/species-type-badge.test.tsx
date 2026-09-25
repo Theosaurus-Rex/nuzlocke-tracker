@@ -33,11 +33,24 @@ describe("SpeciesTypeBadge", () => {
     expect(screen.getByText("fairy")).toBeInTheDocument();
   });
 
-  it("shows only the primary type", async () => {
-    const { container } = renderBadge("gyarados", 4);
+  it("shows both types of a dual-type species, in slot order", async () => {
+    const { container } = renderBadge("victreebel", 4);
     await waitForBadgeToSettle(container);
-    expect(screen.getByText("water")).toBeInTheDocument();
-    expect(screen.queryByText("flying")).not.toBeInTheDocument();
+    const badges = screen.getAllByText(/grass|poison/);
+    expect(badges.map((badge) => badge.textContent)).toEqual(["grass", "poison"]);
+  });
+
+  it("shows a single-type species as one badge", async () => {
+    const { container } = renderBadge("chikorita", 4);
+    await waitForBadgeToSettle(container);
+    expect(screen.getByText("grass")).toBeInTheDocument();
+  });
+
+  it("drops a type the species did not yet have in an earlier generation", async () => {
+    const { container } = renderBadge("jigglypuff", 4);
+    await waitForBadgeToSettle(container);
+    expect(screen.getByText("normal")).toBeInTheDocument();
+    expect(screen.queryByText("fairy")).not.toBeInTheDocument();
   });
 
   it("renders nothing without a species", () => {

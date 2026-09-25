@@ -65,6 +65,18 @@ export const pokemonFixtures: Record<string, RawPokemon> = {
     types: [slot(1, "grass"), slot(2, "poison")],
     past_types: [],
   },
+  victreebel: {
+    id: 71,
+    name: "victreebel",
+    types: [slot(1, "grass"), slot(2, "poison")],
+    past_types: [],
+  },
+  jigglypuff: {
+    id: 39,
+    name: "jigglypuff",
+    types: [slot(1, "normal"), slot(2, "fairy")],
+    past_types: [{ generation: ref("generation", 5, "generation-v"), types: [slot(1, "normal")] }],
+  },
 };
 
 export const evolutionSpeciesIndexRefs = [
