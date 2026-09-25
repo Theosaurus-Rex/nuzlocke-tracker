@@ -205,8 +205,11 @@ describe("RoutesScreen", () => {
     await findRouteInList("Player's Yard");
 
     const item = routeItem("Player's Yard");
-    const removeButton = await within(item).findByRole("button", { name: "Remove" });
-    await userEvent.click(removeButton);
+    const menuTrigger = await within(item).findByRole("button", {
+      name: "Actions for Player's Yard",
+    });
+    await userEvent.click(menuTrigger);
+    await userEvent.click(await screen.findByRole("menuitem", { name: "Delete route" }));
 
     await waitFor(() => {
       expect(screen.queryByText("Player's Yard")).not.toBeInTheDocument();
@@ -224,7 +227,9 @@ describe("RoutesScreen", () => {
 
     await findRouteInList("Route 29");
     const item = routeItem("Route 29");
-    expect(within(item).queryByRole("button", { name: "Remove" })).not.toBeInTheDocument();
+    expect(
+      within(item).queryByRole("button", { name: "Actions for Route 29" }),
+    ).not.toBeInTheDocument();
   });
 
   it("shows no remove control on a custom route with an encounter logged against it", async () => {
@@ -239,7 +244,12 @@ describe("RoutesScreen", () => {
 
     await findRouteInList("Whirl Islands");
     const item = routeItem("Whirl Islands");
-    expect(within(item).queryByRole("button", { name: "Remove" })).not.toBeInTheDocument();
+    const menuTrigger = await within(item).findByRole("button", {
+      name: "Actions for Whirl Islands",
+    });
+    await userEvent.click(menuTrigger);
+    await screen.findByRole("menu");
+    expect(screen.queryByRole("menuitem", { name: "Delete route" })).not.toBeInTheDocument();
   });
 
   it("does not add a route on a blank name and shows a validation message", async () => {

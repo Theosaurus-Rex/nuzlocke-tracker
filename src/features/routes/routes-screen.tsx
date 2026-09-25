@@ -252,6 +252,7 @@ export function RoutesScreen(): ReactNode {
               deletePending={deleteRoute.isPending}
               onLogEncounter={setLogRoute}
               onEditMon={handleEditMon}
+              onResetEncounter={() => undefined}
             />
           </div>
           <div className="md:hidden">
@@ -263,6 +264,7 @@ export function RoutesScreen(): ReactNode {
               deletePending={deleteRoute.isPending}
               onLogEncounter={setLogRoute}
               onEditMon={handleEditMon}
+              onResetEncounter={() => undefined}
             />
           </div>
         </>

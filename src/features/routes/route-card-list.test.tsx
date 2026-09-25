@@ -11,6 +11,7 @@ import { describe, expect, it, vi } from "vitest";
 
 import { buildRouteRows } from "@/domain/route-rows";
 import type { Encounter, Mon, Route } from "@/domain/types";
+import { findMenuTrigger } from "@/test/pokeapi-fetch";
 
 import { RouteCardList } from "./route-card-list";
 
@@ -99,9 +100,14 @@ function renderCards(input: {
         deletePending={false}
         onLogEncounter={input.onLogEncounter ?? vi.fn()}
         onEditMon={input.onEditMon ?? vi.fn()}
+        onResetEncounter={vi.fn()}
       />
     </QueryClientProvider>,
   );
+}
+
+async function openRowActionsMenu(name: string) {
+  await userEvent.click(await findMenuTrigger(`Actions for ${name}`));
 }
 
 describe("RouteCardList", () => {
@@ -208,7 +214,8 @@ describe("RouteCardList", () => {
 
     renderCards({ routes: [route], encounters: [], mons: [], onDelete });
 
-    await userEvent.click(screen.getByRole("button", { name: "Remove" }));
+    await openRowActionsMenu(route.name);
+    await userEvent.click(await screen.findByRole("menuitem", { name: "Delete route" }));
 
     expect(onDelete).toHaveBeenCalledWith(route);
   });
@@ -218,7 +225,9 @@ describe("RouteCardList", () => {
 
     renderCards({ routes: [route], encounters: [], mons: [] });
 
-    expect(screen.queryByRole("button", { name: "Remove" })).not.toBeInTheDocument();
+    expect(
+      screen.queryByRole("button", { name: `Actions for ${route.name}` }),
+    ).not.toBeInTheDocument();
   });
 
   it("shows a log control for a not-encountered route, which calls onLogEncounter with it", async () => {
@@ -264,12 +273,13 @@ describe("RouteCardList", () => {
 
     renderCards({ routes: [route], encounters, mons: [mon], onEditMon });
 
-    await userEvent.click(screen.getByRole("button", { name: "Edit mon" }));
+    await openRowActionsMenu(route.name);
+    await userEvent.click(await screen.findByRole("menuitem", { name: "Edit mon" }));
 
     expect(onEditMon).toHaveBeenCalledWith(route, mon);
   });
 
-  it("shows an edit control for a dead row", () => {
+  it("shows an edit control for a dead row", async () => {
     const routes = [makeRoute({ id: "route-1" })];
     const encounters = [
       makeEncounter({ id: "encounter-1", routeId: "route-1", status: "caught", monId: "mon-1" }),
@@ -278,18 +288,30 @@ describe("RouteCardList", () => {
 
     renderCards({ routes, encounters, mons });
 
-    expect(screen.getByRole("button", { name: "Edit mon" })).toBeInTheDocument();
+    await openRowActionsMenu(routes[0]!.name);
+    expect(await screen.findByRole("menuitem", { name: "Edit mon" })).toBeInTheDocument();
+  });
+
+  it("shows no edit control for a not-encountered route", () => {
+    const routes = [makeRoute({ id: "route-1" })];
+
+    renderCards({ routes, encounters: [], mons: [] });
+
+    expect(
+      screen.queryByRole("button", { name: `Actions for ${routes[0]!.name}` }),
+    ).not.toBeInTheDocument();
   });
 
   it.each([
-    ["not-encountered" as const, [], []],
     ["missed" as const, [makeEncounter({ status: "missed" })], []],
     ["skipped" as const, [makeEncounter({ status: "skipped" })], []],
-  ])("shows no edit control for a %s route", (_status, encounters, mons) => {
+  ])("shows no edit control for a %s route", async (_status, encounters, mons) => {
     const routes = [makeRoute({ id: "route-1" })];
 
     renderCards({ routes, encounters, mons });
 
-    expect(screen.queryByRole("button", { name: "Edit mon" })).not.toBeInTheDocument();
+    await openRowActionsMenu(routes[0]!.name);
+    await screen.findByRole("menu");
+    expect(screen.queryByRole("menuitem", { name: "Edit mon" })).not.toBeInTheDocument();
   });
 });

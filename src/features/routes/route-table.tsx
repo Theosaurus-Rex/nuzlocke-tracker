@@ -2,13 +2,13 @@ import { createColumnHelper, tableFeatures, useTable } from "@tanstack/react-tab
 
 import { SpeciesTypeBadge } from "@/components/species-type-badge";
 import { StatusChip } from "@/components/status-chip";
-import { Button } from "@/components/ui/button";
 import { canDeleteRoute } from "@/domain/routes";
 import type { RouteRow } from "@/domain/route-rows";
 import type { Encounter, Mon, Route } from "@/domain/types";
 import { cn } from "@/lib/utils";
 
 import { canLogEncounter, chipForRouteRow, rowSpeciesId, RowSpecies } from "./route-presentation";
+import { RowActionsMenu } from "./row-actions-menu";
 
 function StatusCell({ row, onLogEncounter }: { row: RouteRow; onLogEncounter: () => void }) {
   const chip = chipForRouteRow(row);
@@ -54,6 +54,7 @@ export interface RouteTableProps {
   deletePending: boolean;
   onLogEncounter: (route: Route) => void;
   onEditMon: (route: Route, mon: Mon) => void;
+  onResetEncounter: (row: RouteRow) => void;
 }
 
 export function RouteTable({
@@ -64,6 +65,7 @@ export function RouteTable({
   deletePending,
   onLogEncounter,
   onEditMon,
+  onResetEncounter,
 }: RouteTableProps) {
   const columns = [
     columnHelper.display({
@@ -72,9 +74,6 @@ export function RouteTable({
       cell: ({ row }) => {
         const routeRow = row.original;
         const removable = canDeleteRoute(routeRow.route, encounters);
-        const mon = routeRow.mon;
-        const editable =
-          (routeRow.status === "caught" || routeRow.status === "dead") && mon !== null;
 
         return (
           <div className="flex items-center justify-between gap-3">
@@ -94,21 +93,14 @@ export function RouteTable({
               )}
             </div>
             <div className="flex shrink-0 items-center gap-2">
-              {editable && mon !== null && (
-                <Button size="sm" variant="outline" onClick={() => onEditMon(routeRow.route, mon)}>
-                  Edit
-                </Button>
-              )}
-              {removable && (
-                <Button
-                  size="sm"
-                  variant="ghost"
-                  disabled={deletePending}
-                  onClick={() => onDelete(routeRow.route)}
-                >
-                  Remove
-                </Button>
-              )}
+              <RowActionsMenu
+                row={routeRow}
+                removable={removable}
+                deletePending={deletePending}
+                onEditMon={onEditMon}
+                onReset={onResetEncounter}
+                onDelete={onDelete}
+              />
             </div>
           </div>
         );
