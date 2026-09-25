@@ -230,3 +230,43 @@ export function clearFight({ fight, clearedAt }: { fight: Fight; clearedAt: stri
 
   return { ...fight, status: "cleared", clearedAt };
 }
+
+export interface EncounterResetPlan {
+  encounterId: string;
+  monId: string | null;
+  deathIds: string[];
+}
+
+/**
+ * Decides which rows an encounter reset removes. Throws instead of guessing when the encounter,
+ * mon and deaths passed in don't line up, since deleting on a mismatch would make bad data worse.
+ */
+export function planEncounterReset({
+  encounter,
+  mon,
+  deaths,
+}: {
+  encounter: Encounter;
+  mon: Mon | null;
+  deaths: readonly Death[];
+}): EncounterResetPlan {
+  if (encounter.status === "open") {
+    throw new Error(
+      `Encounter ${encounter.id} has not been logged yet, so there is nothing to reset.`,
+    );
+  }
+  if ((encounter.monId === null) !== (mon === null)) {
+    throw new Error(`Encounter ${encounter.id} and its mon do not match.`);
+  }
+  if (mon !== null && (mon.id !== encounter.monId || mon.encounterId !== encounter.id)) {
+    throw new Error(`Mon ${mon.id} does not belong to encounter ${encounter.id}.`);
+  }
+  if (deaths.some((death) => death.monId !== mon?.id)) {
+    throw new Error(`A death passed for encounter ${encounter.id} does not belong to its mon.`);
+  }
+  return {
+    encounterId: encounter.id,
+    monId: mon?.id ?? null,
+    deathIds: deaths.map((death) => death.id),
+  };
+}
