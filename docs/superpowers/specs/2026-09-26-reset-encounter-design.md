@@ -35,7 +35,8 @@ Every route row gets one icon button at its end, in both the desktop table and t
 |---|---|
 | Caught, dead, missed or skipped | Reset, "Reset {route name}" |
 | Not encountered, custom route with no encounter | Delete, "Delete {route name}" |
-| Not encountered, open seeded route | none |
+| Not encountered, seeded route | none |
+| Open | none |
 
 Reset and Delete never appear on the same row. Clicking the end icon or the Log chip does not
 also trigger the row's open or log handler.

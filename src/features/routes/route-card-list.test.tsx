@@ -243,6 +243,19 @@ describe("RouteCardList", () => {
     await userEvent.click(screen.getByRole("button", { name: "Log encounter" }));
 
     expect(onLogEncounter).toHaveBeenCalledWith(route);
+    expect(onLogEncounter).toHaveBeenCalledTimes(1);
+  });
+
+  it("logs a not-encountered route exactly once when the name button is clicked", async () => {
+    const route = makeRoute({ id: "route-1", name: "Route 1" });
+    const onLogEncounter = vi.fn();
+
+    renderCards({ routes: [route], encounters: [], mons: [], onLogEncounter });
+
+    await userEvent.click(screen.getByRole("button", { name: "Log Route 1" }));
+
+    expect(onLogEncounter).toHaveBeenCalledWith(route);
+    expect(onLogEncounter).toHaveBeenCalledTimes(1);
   });
 
   it.each([
@@ -267,27 +280,36 @@ describe("RouteCardList", () => {
     expect(screen.queryByRole("button", { name: "Log encounter" })).not.toBeInTheDocument();
   });
 
-  it("opens a caught row by clicking the route name button, calling onEditMon with the route and mon", async () => {
+  it.each([
+    ["caught" as const, "party" as const],
+    ["dead" as const, "dead" as const],
+  ])(
+    "opens a %s row by clicking the route name button, calling onEditMon with the route and mon",
+    async (_status, monStatus) => {
+      const route = makeRoute({ id: "route-1", name: "Route 1" });
+      const encounters = [
+        makeEncounter({ id: "encounter-1", routeId: "route-1", status: "caught", monId: "mon-1" }),
+      ];
+      const mon = makeMon({ id: "mon-1", status: monStatus });
+      const onEditMon = vi.fn();
+
+      renderCards({ routes: [route], encounters, mons: [mon], onEditMon });
+
+      await userEvent.click(screen.getByRole("button", { name: "Open Route 1" }));
+
+      expect(onEditMon).toHaveBeenCalledWith(route, mon);
+    },
+  );
+
+  it.each([
+    ["caught" as const, "party" as const],
+    ["dead" as const, "dead" as const],
+  ])("opens a %s row by clicking anywhere in the card", async (_status, monStatus) => {
     const route = makeRoute({ id: "route-1", name: "Route 1" });
     const encounters = [
       makeEncounter({ id: "encounter-1", routeId: "route-1", status: "caught", monId: "mon-1" }),
     ];
-    const mon = makeMon({ id: "mon-1", status: "party" });
-    const onEditMon = vi.fn();
-
-    renderCards({ routes: [route], encounters, mons: [mon], onEditMon });
-
-    await userEvent.click(screen.getByRole("button", { name: "Open Route 1" }));
-
-    expect(onEditMon).toHaveBeenCalledWith(route, mon);
-  });
-
-  it("opens a caught row by clicking anywhere in the card", async () => {
-    const route = makeRoute({ id: "route-1", name: "Route 1" });
-    const encounters = [
-      makeEncounter({ id: "encounter-1", routeId: "route-1", status: "caught", monId: "mon-1" }),
-    ];
-    const mon = makeMon({ id: "mon-1", status: "party" });
+    const mon = makeMon({ id: "mon-1", status: monStatus });
     const onEditMon = vi.fn();
 
     renderCards({ routes: [route], encounters, mons: [mon], onEditMon });
