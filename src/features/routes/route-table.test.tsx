@@ -11,7 +11,6 @@ import { describe, expect, it, vi } from "vitest";
 
 import { buildRouteRows } from "@/domain/route-rows";
 import type { Encounter, Mon, Route } from "@/domain/types";
-import { findMenuTrigger } from "@/test/pokeapi-fetch";
 
 import { RouteTable } from "./route-table";
 
@@ -81,6 +80,7 @@ function renderTable(input: {
   onDelete?: (route: Route) => void;
   onLogEncounter?: (route: Route) => void;
   onEditMon?: (route: Route, mon: Mon) => void;
+  onResetEncounter?: (row: ReturnType<typeof buildRouteRows>[number]) => void;
 }) {
   const rows = buildRouteRows({
     routes: input.routes,
@@ -100,14 +100,10 @@ function renderTable(input: {
         deletePending={false}
         onLogEncounter={input.onLogEncounter ?? vi.fn()}
         onEditMon={input.onEditMon ?? vi.fn()}
-        onResetEncounter={vi.fn()}
+        onResetEncounter={input.onResetEncounter ?? vi.fn()}
       />
     </QueryClientProvider>,
   );
-}
-
-async function openRowActionsMenu(name: string) {
-  await userEvent.click(await findMenuTrigger(`Actions for ${name}`));
 }
 
 describe("RouteTable", () => {
@@ -253,19 +249,18 @@ describe("RouteTable", () => {
     expect(within(row).getByText("—")).toBeInTheDocument();
   });
 
-  it("exposes a remove control for a deletable custom route", async () => {
+  it("exposes a delete control for a deletable custom route", async () => {
     const route = makeRoute({ id: "route-1", isCustom: true, name: "Route 1" });
     const onDelete = vi.fn();
 
     renderTable({ routes: [route], encounters: [], mons: [], onDelete });
 
-    await openRowActionsMenu("Route 1");
-    await userEvent.click(await screen.findByRole("menuitem", { name: "Delete route" }));
+    await userEvent.click(screen.getByRole("button", { name: "Delete Route 1" }));
 
     expect(onDelete).toHaveBeenCalledWith(route);
   });
 
-  it("puts the actions trigger in the row's last cell", () => {
+  it("puts the end icon in the row's last cell", () => {
     const route = makeRoute({ id: "route-1", isCustom: true, name: "Route 1" });
 
     renderTable({ routes: [route], encounters: [], mons: [] });
@@ -274,17 +269,15 @@ describe("RouteTable", () => {
     const cells = within(row).getAllByRole("cell");
     const lastCell = cells[cells.length - 1]!;
 
-    expect(
-      within(lastCell).getByRole("button", { name: "Actions for Route 1" }),
-    ).toBeInTheDocument();
+    expect(within(lastCell).getByRole("button", { name: "Delete Route 1" })).toBeInTheDocument();
   });
 
-  it("shows no remove control for a seeded, non-custom route", () => {
+  it("shows no delete control for a seeded, non-custom route", () => {
     const route = makeRoute({ id: "route-1", isCustom: false, name: "Route 1" });
 
     renderTable({ routes: [route], encounters: [], mons: [] });
 
-    expect(screen.queryByRole("button", { name: "Actions for Route 1" })).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Delete Route 1" })).not.toBeInTheDocument();
   });
 
   it("shows a log control for a not-encountered route, which calls onLogEncounter with it", async () => {
@@ -320,8 +313,8 @@ describe("RouteTable", () => {
     expect(screen.queryByRole("button", { name: "Log encounter" })).not.toBeInTheDocument();
   });
 
-  it("shows an edit control for a caught row, which calls onEditMon with the route and mon", async () => {
-    const route = makeRoute({ id: "route-1" });
+  it("opens a caught row by clicking the route name button, calling onEditMon with the route and mon", async () => {
+    const route = makeRoute({ id: "route-1", name: "Route 1" });
     const encounters = [
       makeEncounter({ id: "encounter-1", routeId: "route-1", status: "caught", monId: "mon-1" }),
     ];
@@ -330,14 +323,28 @@ describe("RouteTable", () => {
 
     renderTable({ routes: [route], encounters, mons: [mon], onEditMon });
 
-    await openRowActionsMenu(route.name);
-    await userEvent.click(await screen.findByRole("menuitem", { name: "Edit mon" }));
+    await userEvent.click(screen.getByRole("button", { name: "Open Route 1" }));
 
     expect(onEditMon).toHaveBeenCalledWith(route, mon);
   });
 
-  it("shows an edit control for a dead row", async () => {
-    const routes = [makeRoute({ id: "route-1" })];
+  it("opens a caught row by clicking anywhere in the row", async () => {
+    const route = makeRoute({ id: "route-1", name: "Route 1" });
+    const encounters = [
+      makeEncounter({ id: "encounter-1", routeId: "route-1", status: "caught", monId: "mon-1" }),
+    ];
+    const mon = makeMon({ id: "mon-1", status: "party" });
+    const onEditMon = vi.fn();
+
+    renderTable({ routes: [route], encounters, mons: [mon], onEditMon });
+
+    await userEvent.click(screen.getAllByRole("row")[1]!);
+
+    expect(onEditMon).toHaveBeenCalledWith(route, mon);
+  });
+
+  it("shows a name button for a dead row", () => {
+    const routes = [makeRoute({ id: "route-1", name: "Route 1" })];
     const encounters = [
       makeEncounter({ id: "encounter-1", routeId: "route-1", status: "caught", monId: "mon-1" }),
     ];
@@ -345,31 +352,52 @@ describe("RouteTable", () => {
 
     renderTable({ routes, encounters, mons });
 
-    await openRowActionsMenu(routes[0]!.name);
-    expect(await screen.findByRole("menuitem", { name: "Edit mon" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Open Route 1" })).toBeInTheDocument();
   });
 
-  it("shows no edit control for a not-encountered route", () => {
-    const routes = [makeRoute({ id: "route-1" })];
+  it("shows no open control for a not-encountered route, only a log control", () => {
+    const routes = [makeRoute({ id: "route-1", name: "Route 1" })];
 
     renderTable({ routes, encounters: [], mons: [] });
 
-    expect(
-      screen.queryByRole("button", { name: `Actions for ${routes[0]!.name}` }),
-    ).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Open Route 1" })).not.toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Log Route 1" })).toBeInTheDocument();
   });
 
   it.each([
     ["missed" as const, [makeEncounter({ status: "missed" })], []],
     ["skipped" as const, [makeEncounter({ status: "skipped" })], []],
-  ])("shows no edit control for a %s route", async (_status, encounters, mons) => {
-    const routes = [makeRoute({ id: "route-1" })];
+  ])("does nothing when a %s row is clicked", async (_status, encounters, mons) => {
+    const route = makeRoute({ id: "route-1", name: "Route 1" });
+    const onEditMon = vi.fn();
+    const onLogEncounter = vi.fn();
 
-    renderTable({ routes, encounters, mons });
+    renderTable({ routes: [route], encounters, mons, onEditMon, onLogEncounter });
 
-    await openRowActionsMenu(routes[0]!.name);
-    await screen.findByRole("menu");
-    expect(screen.queryByRole("menuitem", { name: "Edit mon" })).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Open Route 1" })).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Log Route 1" })).not.toBeInTheDocument();
+
+    await userEvent.click(screen.getAllByRole("row")[1]!);
+
+    expect(onEditMon).not.toHaveBeenCalled();
+    expect(onLogEncounter).not.toHaveBeenCalled();
+  });
+
+  it("clicking Reset calls onResetEncounter and not onEditMon", async () => {
+    const route = makeRoute({ id: "route-1", name: "Route 1" });
+    const encounters = [
+      makeEncounter({ id: "encounter-1", routeId: "route-1", status: "caught", monId: "mon-1" }),
+    ];
+    const mon = makeMon({ id: "mon-1", status: "party" });
+    const onEditMon = vi.fn();
+    const onResetEncounter = vi.fn();
+
+    renderTable({ routes: [route], encounters, mons: [mon], onEditMon, onResetEncounter });
+
+    await userEvent.click(screen.getByRole("button", { name: "Reset Route 1" }));
+
+    expect(onResetEncounter).toHaveBeenCalledTimes(1);
+    expect(onEditMon).not.toHaveBeenCalled();
   });
 });
 

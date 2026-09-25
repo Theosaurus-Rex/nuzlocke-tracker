@@ -19,23 +19,29 @@ species-only shortcut is a possible follow-up, not part of this.
 
 ## Behaviour
 
-### The row menu
+### The row
 
-Every route row with at least one action gets a "⋯" button at its end, in both the desktop table
-and the phone cards. Its accessible name is "Actions for {route name}".
+Tapping a caught or dead row opens the edit-mon dialog. Missed and skipped rows have no detail
+view yet, so tapping them does nothing until PER-60 adds one. Not-encountered rows keep their Log
+chip, and tapping the row logs it, the same as the chip.
 
-| Row | Menu items |
+The route name is a real button for keyboard and screen readers, named "Open {route name}" on a
+caught or dead row and "Log {route name}" on a not-encountered row. The rest of the row is a
+larger pointer target with the same handler, but is not itself focusable and carries no role.
+
+Every route row gets one icon button at its end, in both the desktop table and the phone cards.
+
+| Row | End icon |
 |---|---|
-| Caught (alive, boxed or dead) | Edit mon · Reset encounter |
-| Missed or skipped | Reset encounter |
-| Not encountered | none |
-| Custom route with no encounter | Delete route |
+| Caught, dead, missed or skipped | Reset, "Reset {route name}" |
+| Not encountered, custom route with no encounter | Delete, "Delete {route name}" |
+| Not encountered, open seeded route | none |
 
-- A row whose menu would be empty shows no "⋯".
-- The standalone Edit mon and Delete buttons are removed. Their actions live in the menu.
-- The Log chip on not-encountered rows stays a direct action.
-- Delete route keeps today's rule: only a custom route with no encounter logged. So Delete and
-  Reset never appear on the same row.
+Reset and Delete never appear on the same row. Clicking the end icon or the Log chip does not
+also trigger the row's open or log handler.
+
+A "⋯" menu was tried and dropped: a row never needs more than one action besides opening, so a
+menu just added a tap before the action that mattered.
 
 ### Confirming
 
@@ -106,13 +112,12 @@ format.
 
 ### UI
 
-- `src/features/routes/row-actions-menu.tsx`: the "⋯" trigger and its items, built on
-  `src/components/ui/dropdown-menu.tsx`. It takes the row and callbacks, and renders nothing when
-  it has no items.
+- `src/features/routes/row-end-action.tsx`: the end-of-row icon, Reset or Delete or nothing. It
+  takes the row and callbacks and renders at most one icon.
 - `src/features/routes/reset-encounter-dialog.tsx`: the confirmation. It builds its message from
   the encounter, mon, death and fight. Fight names come from `useFights(runId)`.
-- `route-table.tsx` and `route-card-list.tsx` replace their Edit mon and Delete buttons with the
-  menu.
+- `route-table.tsx` and `route-card-list.tsx` render the row's tap handler and name button, and
+  place `RowEndAction` in the last column and after the badges.
 - `routes-screen.tsx` holds the row being reset and shows the dialog, the same way it holds the
   mon being edited.
 
@@ -125,8 +130,9 @@ format.
   - Rollback: a delete that throws partway leaves the encounter and mon in place.
   - Party gap: resetting the mon in slot 2 of a full party, then catching into the party, gives
     the new mon slot 2.
-- Menu, in both layouts: the items per row type, no "⋯" on a row with no items, and Edit mon and
-  Delete route still working from the menu.
+- Row and end icon, in both layouts: tapping a caught or dead row opens edit, tapping a
+  not-encountered row logs it, tapping a missed or skipped row does nothing, and Reset or Delete
+  shows on the right row type and never both on the same row.
 - Dialog: each message variant, Cancel writing nothing, Reset removing the rows and bringing back
   the Log chip, focus starting on Cancel, and a storage failure removing nothing.
 
@@ -136,7 +142,7 @@ Mutation probes, each of which must turn the suite red:
 - the planner accepts a mon from a different encounter
 - the mutation deletes outside the transaction
 - Cancel runs the reset
-- the menu offers Reset on a not-encountered row
+- the end icon offers Reset on a not-encountered row
 
 ## Delivery
 

@@ -11,7 +11,6 @@ import { describe, expect, it, vi } from "vitest";
 
 import { buildRouteRows } from "@/domain/route-rows";
 import type { Encounter, Mon, Route } from "@/domain/types";
-import { findMenuTrigger } from "@/test/pokeapi-fetch";
 
 import { RouteCardList } from "./route-card-list";
 
@@ -81,6 +80,7 @@ function renderCards(input: {
   onDelete?: (route: Route) => void;
   onLogEncounter?: (route: Route) => void;
   onEditMon?: (route: Route, mon: Mon) => void;
+  onResetEncounter?: (row: ReturnType<typeof buildRouteRows>[number]) => void;
 }) {
   const rows = buildRouteRows({
     routes: input.routes,
@@ -100,14 +100,10 @@ function renderCards(input: {
         deletePending={false}
         onLogEncounter={input.onLogEncounter ?? vi.fn()}
         onEditMon={input.onEditMon ?? vi.fn()}
-        onResetEncounter={vi.fn()}
+        onResetEncounter={input.onResetEncounter ?? vi.fn()}
       />
     </QueryClientProvider>,
   );
-}
-
-async function openRowActionsMenu(name: string) {
-  await userEvent.click(await findMenuTrigger(`Actions for ${name}`));
 }
 
 describe("RouteCardList", () => {
@@ -208,37 +204,34 @@ describe("RouteCardList", () => {
     expect(item.textContent).toContain("“Scout”");
   });
 
-  it("exposes a remove control for a deletable custom route", async () => {
+  it("exposes a delete control for a deletable custom route", async () => {
     const route = makeRoute({ id: "route-1", isCustom: true });
     const onDelete = vi.fn();
 
     renderCards({ routes: [route], encounters: [], mons: [], onDelete });
 
-    await openRowActionsMenu(route.name);
-    await userEvent.click(await screen.findByRole("menuitem", { name: "Delete route" }));
+    await userEvent.click(screen.getByRole("button", { name: `Delete ${route.name}` }));
 
     expect(onDelete).toHaveBeenCalledWith(route);
   });
 
-  it("puts the actions trigger after the badges in DOM order", async () => {
+  it("puts the end icon after the badges in DOM order", () => {
     const route = makeRoute({ id: "route-1", isCustom: true, name: "Route 1" });
 
     renderCards({ routes: [route], encounters: [], mons: [] });
 
-    const trigger = await findMenuTrigger("Actions for Route 1");
+    const trigger = screen.getByRole("button", { name: "Delete Route 1" });
     const buttons = within(screen.getByRole("listitem")).getAllByRole("button");
 
     expect(buttons[buttons.length - 1]).toBe(trigger);
   });
 
-  it("shows no remove control for a seeded, non-custom route", () => {
+  it("shows no delete control for a seeded, non-custom route", () => {
     const route = makeRoute({ id: "route-1", isCustom: false });
 
     renderCards({ routes: [route], encounters: [], mons: [] });
 
-    expect(
-      screen.queryByRole("button", { name: `Actions for ${route.name}` }),
-    ).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: `Delete ${route.name}` })).not.toBeInTheDocument();
   });
 
   it("shows a log control for a not-encountered route, which calls onLogEncounter with it", async () => {
@@ -274,8 +267,8 @@ describe("RouteCardList", () => {
     expect(screen.queryByRole("button", { name: "Log encounter" })).not.toBeInTheDocument();
   });
 
-  it("shows an edit control for a caught row, which calls onEditMon with the route and mon", async () => {
-    const route = makeRoute({ id: "route-1" });
+  it("opens a caught row by clicking the route name button, calling onEditMon with the route and mon", async () => {
+    const route = makeRoute({ id: "route-1", name: "Route 1" });
     const encounters = [
       makeEncounter({ id: "encounter-1", routeId: "route-1", status: "caught", monId: "mon-1" }),
     ];
@@ -284,14 +277,28 @@ describe("RouteCardList", () => {
 
     renderCards({ routes: [route], encounters, mons: [mon], onEditMon });
 
-    await openRowActionsMenu(route.name);
-    await userEvent.click(await screen.findByRole("menuitem", { name: "Edit mon" }));
+    await userEvent.click(screen.getByRole("button", { name: "Open Route 1" }));
 
     expect(onEditMon).toHaveBeenCalledWith(route, mon);
   });
 
-  it("shows an edit control for a dead row", async () => {
-    const routes = [makeRoute({ id: "route-1" })];
+  it("opens a caught row by clicking anywhere in the card", async () => {
+    const route = makeRoute({ id: "route-1", name: "Route 1" });
+    const encounters = [
+      makeEncounter({ id: "encounter-1", routeId: "route-1", status: "caught", monId: "mon-1" }),
+    ];
+    const mon = makeMon({ id: "mon-1", status: "party" });
+    const onEditMon = vi.fn();
+
+    renderCards({ routes: [route], encounters, mons: [mon], onEditMon });
+
+    await userEvent.click(screen.getByRole("listitem"));
+
+    expect(onEditMon).toHaveBeenCalledWith(route, mon);
+  });
+
+  it("shows a name button for a dead row", () => {
+    const routes = [makeRoute({ id: "route-1", name: "Route 1" })];
     const encounters = [
       makeEncounter({ id: "encounter-1", routeId: "route-1", status: "caught", monId: "mon-1" }),
     ];
@@ -299,30 +306,51 @@ describe("RouteCardList", () => {
 
     renderCards({ routes, encounters, mons });
 
-    await openRowActionsMenu(routes[0]!.name);
-    expect(await screen.findByRole("menuitem", { name: "Edit mon" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Open Route 1" })).toBeInTheDocument();
   });
 
-  it("shows no edit control for a not-encountered route", () => {
-    const routes = [makeRoute({ id: "route-1" })];
+  it("shows no open control for a not-encountered route, only a log control", () => {
+    const routes = [makeRoute({ id: "route-1", name: "Route 1" })];
 
     renderCards({ routes, encounters: [], mons: [] });
 
-    expect(
-      screen.queryByRole("button", { name: `Actions for ${routes[0]!.name}` }),
-    ).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Open Route 1" })).not.toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Log Route 1" })).toBeInTheDocument();
   });
 
   it.each([
     ["missed" as const, [makeEncounter({ status: "missed" })], []],
     ["skipped" as const, [makeEncounter({ status: "skipped" })], []],
-  ])("shows no edit control for a %s route", async (_status, encounters, mons) => {
-    const routes = [makeRoute({ id: "route-1" })];
+  ])("does nothing when a %s card is clicked", async (_status, encounters, mons) => {
+    const route = makeRoute({ id: "route-1", name: "Route 1" });
+    const onEditMon = vi.fn();
+    const onLogEncounter = vi.fn();
 
-    renderCards({ routes, encounters, mons });
+    renderCards({ routes: [route], encounters, mons, onEditMon, onLogEncounter });
 
-    await openRowActionsMenu(routes[0]!.name);
-    await screen.findByRole("menu");
-    expect(screen.queryByRole("menuitem", { name: "Edit mon" })).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Open Route 1" })).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Log Route 1" })).not.toBeInTheDocument();
+
+    await userEvent.click(screen.getByRole("listitem"));
+
+    expect(onEditMon).not.toHaveBeenCalled();
+    expect(onLogEncounter).not.toHaveBeenCalled();
+  });
+
+  it("clicking Reset calls onResetEncounter and not onEditMon", async () => {
+    const route = makeRoute({ id: "route-1", name: "Route 1" });
+    const encounters = [
+      makeEncounter({ id: "encounter-1", routeId: "route-1", status: "caught", monId: "mon-1" }),
+    ];
+    const mon = makeMon({ id: "mon-1", status: "party" });
+    const onEditMon = vi.fn();
+    const onResetEncounter = vi.fn();
+
+    renderCards({ routes: [route], encounters, mons: [mon], onEditMon, onResetEncounter });
+
+    await userEvent.click(screen.getByRole("button", { name: "Reset Route 1" }));
+
+    expect(onResetEncounter).toHaveBeenCalledTimes(1);
+    expect(onEditMon).not.toHaveBeenCalled();
   });
 });

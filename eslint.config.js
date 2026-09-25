@@ -90,6 +90,7 @@ export default tseslint.config(
             "rowSpeciesId",
             "chipForRouteRow",
             "canLogEncounter",
+            "rowTapAction",
             "routeBucket",
             "summariseRouteRows",
             "ROUTE_FILTER_BUCKETS",

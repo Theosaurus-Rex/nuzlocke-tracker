@@ -2,7 +2,7 @@ import type { ReactNode } from "react";
 
 import type { StatusChipStatus } from "@/components/status-chip";
 import type { RouteRow, RouteRowStatus } from "@/domain/route-rows";
-import type { Gender } from "@/domain/types";
+import type { Gender, Mon } from "@/domain/types";
 import { speciesDisplayName } from "@/game/pokeapi/resolve";
 
 export const STATUS_LABEL: Record<RouteRowStatus, string> = {
@@ -91,6 +91,22 @@ export function chipForRouteRow(row: RouteRow): RouteRowChip {
  */
 export function canLogEncounter(row: RouteRow): boolean {
   return row.status === "not-encountered";
+}
+
+export type RowTapAction = { kind: "edit"; mon: Mon } | { kind: "log" } | { kind: "none" };
+
+/**
+ * What tapping a route row does. Missed and skipped rows have no detail view yet (PER-60), so
+ * they fall through to "none".
+ */
+export function rowTapAction(row: RouteRow): RowTapAction {
+  if ((row.status === "caught" || row.status === "dead") && row.mon !== null) {
+    return { kind: "edit", mon: row.mon };
+  }
+  if (canLogEncounter(row)) {
+    return { kind: "log" };
+  }
+  return { kind: "none" };
 }
 
 export type RouteBucket = "caught" | "missed" | "fainted" | "pending" | "skipped";

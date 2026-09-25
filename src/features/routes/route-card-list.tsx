@@ -11,10 +11,11 @@ import {
   canLogEncounter,
   chipForRouteRow,
   rowSpeciesId,
+  rowTapAction,
   RowSpecies,
   STATUS_LABEL,
 } from "./route-presentation";
-import { RowActionsMenu } from "./row-actions-menu";
+import { RowEndAction } from "./row-end-action";
 
 function RouteCardSubtitle({ row }: { row: RouteRow }): ReactNode {
   if (row.encounter === null) {
@@ -57,7 +58,14 @@ function RouteCardBadges({
     <div className="flex shrink-0 items-center gap-1.5">
       <SpeciesTypeBadge speciesId={rowSpeciesId(row)} generation={generation} />
       {canLogEncounter(row) ? (
-        <button type="button" aria-label="Log encounter" onClick={onLog}>
+        <button
+          type="button"
+          aria-label="Log encounter"
+          onClick={(event) => {
+            event.stopPropagation();
+            onLog();
+          }}
+        >
           <StatusChip status={chip.status}>{chip.label}</StatusChip>
         </button>
       ) : (
@@ -92,22 +100,44 @@ export function RouteCardList({
     <ul className="m-0 flex list-none flex-col border-[1.5px] border-border bg-card p-0">
       {rows.map((row) => {
         const removable = canDeleteRoute(row.route, encounters);
+        const action = rowTapAction(row);
+        const tappable = action.kind !== "none";
+        const nameClassName = cn("font-bold", row.status === "missed" && "text-muted-foreground");
+
+        function handleRowTap(): void {
+          if (action.kind === "edit") onEditMon(row.route, action.mon);
+          else if (action.kind === "log") onLogEncounter(row.route);
+        }
 
         return (
           <li
             key={row.route.id}
+            onClick={tappable ? handleRowTap : undefined}
             className={cn(
               "flex items-start justify-between gap-3 border-b border-muted p-3 last:border-b-0",
               canLogEncounter(row) && "bg-flag-tint",
+              tappable && "cursor-pointer",
             )}
           >
             <div className="min-w-0 flex-1">
               <div className="min-w-0 truncate">
-                <span
-                  className={cn("font-bold", row.status === "missed" && "text-muted-foreground")}
-                >
-                  {row.route.name}
-                </span>
+                {action.kind === "none" ? (
+                  <span className={nameClassName}>{row.route.name}</span>
+                ) : (
+                  <button
+                    type="button"
+                    aria-label={
+                      action.kind === "edit" ? `Open ${row.route.name}` : `Log ${row.route.name}`
+                    }
+                    onClick={(event) => {
+                      event.stopPropagation();
+                      handleRowTap();
+                    }}
+                    className={cn(nameClassName, "cursor-pointer bg-transparent p-0 text-left")}
+                  >
+                    {row.route.name}
+                  </button>
+                )}
                 {row.route.isCustom && (
                   <span className="text-muted-foreground ml-2 border-[1.5px] border-border px-1.5 py-0.5 text-[11px] font-medium tracking-[0.12em] uppercase">
                     Custom
@@ -121,11 +151,10 @@ export function RouteCardList({
               generation={generation}
               onLog={() => onLogEncounter(row.route)}
             />
-            <RowActionsMenu
+            <RowEndAction
               row={row}
               removable={removable}
               deletePending={deletePending}
-              onEditMon={onEditMon}
               onReset={onResetEncounter}
               onDelete={onDelete}
               className="shrink-0"
