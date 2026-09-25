@@ -2,6 +2,7 @@ import { useState, type FormEvent, type ReactNode } from "react";
 import { Navigate, useParams } from "react-router";
 
 import { CHIP_SHAPE } from "@/components/chip";
+import { statusChipFill, type StatusChipStatus } from "@/components/status-chip";
 import { Button } from "@/components/ui/button";
 import { DEFAULT_RULES } from "@/domain/rules";
 import { buildRouteRows, type RouteRow } from "@/domain/route-rows";
@@ -18,19 +19,16 @@ import { filterRouteRows, summariseRouteRows, type RouteFilterBucket } from "./r
 import { RouteTable } from "./route-table";
 import { ResetEncounterDialog } from "./reset-encounter-dialog";
 
-const COUNTER_CHIPS: readonly { bucket: RouteFilterBucket; label: string }[] = [
-  { bucket: "caught", label: "caught" },
-  { bucket: "missed", label: "missed" },
-  { bucket: "fainted", label: "fainted" },
-  { bucket: "pending", label: "pending" },
+const COUNTER_CHIPS: readonly {
+  bucket: RouteFilterBucket;
+  status: StatusChipStatus;
+  label: string;
+}[] = [
+  { bucket: "caught", status: "caught", label: "caught" },
+  { bucket: "missed", status: "missed", label: "missed" },
+  { bucket: "fainted", status: "fainted", label: "fainted" },
+  { bucket: "pending", status: "pending", label: "pending" },
 ];
-
-const COUNTER_CHIP_FILL: Record<RouteFilterBucket, string> = {
-  caught: "bg-primary text-primary-foreground",
-  missed: "bg-card text-foreground",
-  fainted: "bg-destructive text-white",
-  pending: "bg-flag text-foreground",
-};
 
 function RouteCounters({
   counters,
@@ -50,7 +48,7 @@ function RouteCounters({
       className="flex flex-wrap items-center justify-between gap-3 border-b-[1.5px] border-border bg-background px-4 py-3"
     >
       <div className="flex flex-wrap items-center gap-2">
-        {COUNTER_CHIPS.map(({ bucket, label }) => {
+        {COUNTER_CHIPS.map(({ bucket, status, label }) => {
           const selected = activeFilters.has(bucket);
           const muted = filterActive && !selected;
 
@@ -65,7 +63,7 @@ function RouteCounters({
                 "cursor-pointer transition-colors focus-visible:outline-none focus-visible:ring-3 focus-visible:ring-ring/50",
                 muted
                   ? "bg-background text-muted-foreground hover:bg-muted"
-                  : cn(COUNTER_CHIP_FILL[bucket], "hover:brightness-95"),
+                  : cn(statusChipFill(status), "hover:brightness-95"),
                 filterActive && selected && "shadow-block",
               )}
             >
