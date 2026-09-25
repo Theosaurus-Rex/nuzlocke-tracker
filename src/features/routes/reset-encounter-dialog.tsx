@@ -1,12 +1,13 @@
 import type { ReactNode } from "react";
 
 import { Button } from "@/components/ui/button";
-import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogDescription, DialogTitle } from "@/components/ui/dialog";
 import type { RouteRow } from "@/domain/route-rows";
 import type { Death, Fight, Mon } from "@/domain/types";
 import { speciesDisplayName } from "@/game/pokeapi/resolve";
 import { useResetEncounter } from "@/storage/mutations";
 import { useDeaths, useFights } from "@/storage/queries";
+import { cn } from "@/lib/utils";
 
 function monLabel(mon: Mon): string {
   return mon.nickname
@@ -68,9 +69,26 @@ export function ResetEncounterDialog({ row, onClose }: ResetEncounterDialogProps
     return null;
   }
 
-  const death = deathsQuery.data?.find((candidate) => candidate.monId === row.mon?.id) ?? null;
-  const killerName = killerNameFor(death, fightsQuery.data ?? []);
-  const message = describeReset({ routeName: row.route.name, mon: row.mon, death, killerName });
+  const deaths = deathsQuery.data;
+  const fights = fightsQuery.data;
+  const ready = deaths !== undefined && fights !== undefined;
+  const loadError = deathsQuery.error ?? fightsQuery.error ?? null;
+
+  let message: string;
+  let messageIsError = false;
+
+  if (ready) {
+    const death = deaths.find((candidate) => candidate.monId === row.mon?.id) ?? null;
+    const killerName = killerNameFor(death, fights);
+    message = describeReset({ routeName: row.route.name, mon: row.mon, death, killerName });
+  } else if (loadError !== null) {
+    messageIsError = true;
+    message = `Could not check what this removes: ${
+      loadError instanceof Error ? loadError.message : "Unknown error"
+    }.`;
+  } else {
+    message = "Checking what this removes…";
+  }
 
   const handleReset = (): void => {
     resetEncounter.mutate({ encounter }, { onSuccess: onClose });
@@ -85,7 +103,12 @@ export function ResetEncounterDialog({ row, onClose }: ResetEncounterDialogProps
     >
       <DialogContent showCloseButton={false}>
         <DialogTitle>Reset encounter</DialogTitle>
-        <p className="text-sm text-muted-foreground">{message}</p>
+        <DialogDescription
+          role={messageIsError ? "alert" : undefined}
+          className={cn(messageIsError && "text-destructive")}
+        >
+          {message}
+        </DialogDescription>
 
         {resetEncounter.isError && (
           <p role="alert" className="text-sm text-destructive">
@@ -102,7 +125,7 @@ export function ResetEncounterDialog({ row, onClose }: ResetEncounterDialogProps
           <Button
             type="button"
             variant="destructive"
-            disabled={resetEncounter.isPending}
+            disabled={!ready || resetEncounter.isPending}
             onClick={handleReset}
           >
             {resetEncounter.isPending ? "Resetting…" : "Reset encounter"}

@@ -228,9 +228,14 @@ function makeFightDraft(
   };
 }
 
-async function seedMissedRow(adapter: StorageAdapter): Promise<RouteRow> {
+async function seedRunAndRoute(adapter: StorageAdapter): Promise<{ run: Run; route: Route }> {
   const run = await adapter.runs.put(makeRunDraft());
   const route = await adapter.routes.put(makeRouteDraft(run.id, { name: "Route 30" }));
+  return { run, route };
+}
+
+async function seedMissedRow(adapter: StorageAdapter): Promise<RouteRow> {
+  const { run, route } = await seedRunAndRoute(adapter);
   const encounter = await adapter.encounters.put(
     makeEncounterDraft(run.id, route.id, { status: "missed" }),
   );
@@ -238,8 +243,7 @@ async function seedMissedRow(adapter: StorageAdapter): Promise<RouteRow> {
 }
 
 async function seedCaughtRow(adapter: StorageAdapter): Promise<RouteRow> {
-  const run = await adapter.runs.put(makeRunDraft());
-  const route = await adapter.routes.put(makeRouteDraft(run.id, { name: "Route 30" }));
+  const { run, route } = await seedRunAndRoute(adapter);
   const encounter = await adapter.encounters.put(makeEncounterDraft(run.id, route.id));
   const mon = await adapter.mons.put(makeMonDraft(run.id, encounter.id, { nickname: "Sprig" }));
   const caught = await adapter.encounters.put({ ...encounter, status: "caught", monId: mon.id });
@@ -249,8 +253,7 @@ async function seedCaughtRow(adapter: StorageAdapter): Promise<RouteRow> {
 async function seedDeadRowWithFight(
   adapter: StorageAdapter,
 ): Promise<{ row: RouteRow; death: Death; fight: Fight }> {
-  const run = await adapter.runs.put(makeRunDraft());
-  const route = await adapter.routes.put(makeRouteDraft(run.id, { name: "Route 30" }));
+  const { run, route } = await seedRunAndRoute(adapter);
   const encounter = await adapter.encounters.put(makeEncounterDraft(run.id, route.id));
   const mon = await adapter.mons.put(
     makeMonDraft(run.id, encounter.id, { nickname: "Sprig", status: "dead", partySlot: null }),
@@ -275,6 +278,14 @@ async function seedDeadRowWithFight(
   });
   const row = buildRouteRows({ routes: [route], encounters: [caught], mons: [mon] })[0]!;
   return { row, death, fight };
+}
+
+async function findReadyResetButton(): Promise<HTMLElement> {
+  return waitFor(() => {
+    const button = screen.getByRole("button", { name: "Reset encounter" });
+    expect(button).toBeEnabled();
+    return button;
+  });
 }
 
 function renderDialog(adapter: StorageAdapter, row: RouteRow, onClose = vi.fn()) {
@@ -316,6 +327,36 @@ describe("ResetEncounterDialog", () => {
     ).toBeInTheDocument();
   });
 
+  it("disables Reset and shows a loading line until death and fight data have loaded", async () => {
+    const adapter = createMemoryAdapter();
+    const { row } = await seedDeadRowWithFight(adapter);
+
+    const actualDeaths = await adapter.deaths.where("runId", row.route.runId);
+    let resolveDeaths: (deaths: Death[]) => void = () => undefined;
+    const pendingDeaths = new Promise<Death[]>((resolve) => {
+      resolveDeaths = resolve;
+    });
+    vi.spyOn(adapter.deaths, "where").mockReturnValueOnce(pendingDeaths);
+
+    renderDialog(adapter, row);
+
+    const resetButton = await screen.findByRole("button", { name: "Reset encounter" });
+    expect(resetButton).toBeDisabled();
+    expect(screen.getByText("Checking what this removes…")).toBeInTheDocument();
+    expect(screen.queryByText(/This also deletes/)).not.toBeInTheDocument();
+
+    resolveDeaths(actualDeaths);
+
+    await waitFor(() => {
+      expect(resetButton).toBeEnabled();
+    });
+    expect(
+      await screen.findByText(
+        "Reset Route 30? This also deletes Sprig the Bellsprout and the record of its death to Falkner. This can't be undone.",
+      ),
+    ).toBeInTheDocument();
+  });
+
   it("starts focus on Cancel", async () => {
     const adapter = createMemoryAdapter();
     const row = await seedCaughtRow(adapter);
@@ -349,7 +390,7 @@ describe("ResetEncounterDialog", () => {
 
     const { onClose } = renderDialog(adapter, row);
 
-    await userEvent.click(await screen.findByRole("button", { name: "Reset encounter" }));
+    await userEvent.click(await findReadyResetButton());
 
     await waitFor(() => {
       expect(onClose).toHaveBeenCalledTimes(1);
@@ -367,7 +408,7 @@ describe("ResetEncounterDialog", () => {
 
     const { onClose } = renderDialog(adapter, row);
 
-    await userEvent.click(await screen.findByRole("button", { name: "Reset encounter" }));
+    await userEvent.click(await findReadyResetButton());
 
     expect(await screen.findByRole("alert")).toHaveTextContent(
       "Could not reset the encounter: boom. Nothing was removed.",
