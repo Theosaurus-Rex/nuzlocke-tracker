@@ -58,13 +58,26 @@ export function ComboboxField({
 }: ComboboxFieldProps): ReactNode {
   const [query, setQuery] = useState(value === "" ? "" : displayName(value));
   const [open, setOpen] = useState(false);
+  const [prevValue, setPrevValue] = useState(value);
+  // Set when a render sees value go from empty to filled, so that render itself closes the
+  // popup rather than a late fill-in reopening it. Cleared on the next real open or close.
+  const [suppressOpen, setSuppressOpen] = useState(false);
 
-  // Options can arrive after the user has typed a full name. Fill the value in then, never clear it.
+  if (value !== prevValue) {
+    setPrevValue(value);
+    if (prevValue === "" && value !== "") setSuppressOpen(true);
+  }
+
   useEffect(() => {
     if (value !== "" || query.trim() === "") return;
     const resolved = resolve(query);
     if (resolved !== "") onChange(resolved);
   }, [query, value, resolve, onChange]);
+
+  function handleOpenChange(next: boolean): void {
+    setSuppressOpen(false);
+    setOpen(next);
+  }
 
   const results = query.trim() === "" ? [] : search(query).slice(0, MAX_RESULTS);
 
@@ -86,9 +99,8 @@ export function ComboboxField({
       items={results}
       filter={null}
       value={query}
-      // A resolved value has nothing left to pick, so a late fill-in must not reopen this.
-      open={open && results.length > 0 && value === ""}
-      onOpenChange={setOpen}
+      open={open && results.length > 0 && !suppressOpen}
+      onOpenChange={handleOpenChange}
       onValueChange={(text, eventDetails) => {
         if (eventDetails.reason === "item-press") return;
         commitText(text);
