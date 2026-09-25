@@ -9,12 +9,13 @@ import {
   missEncounter,
   moveMonToBox,
   moveMonToParty,
+  planEncounterReset,
   skipEncounter,
   type CatchDetails,
   type KillDetails,
   type MonAmendments,
 } from "@/domain/transitions";
-import type { Encounter, Fight, Mon } from "@/domain/types";
+import type { Death, Encounter, Fight, Mon } from "@/domain/types";
 
 function makeEncounter(overrides: Partial<Encounter> = {}): Encounter {
   return {
@@ -53,6 +54,22 @@ function makeMon(overrides: Partial<Mon> = {}): Mon {
     caughtRouteId: "route-1",
     createdAt: "2026-09-17T00:00:00.000Z",
     updatedAt: "2026-09-17T00:00:00.000Z",
+    ...overrides,
+  };
+}
+
+function makeDeath(overrides: Partial<Death> = {}): Death {
+  return {
+    id: "death-1",
+    runId: "run-1",
+    monId: "mon-1",
+    level: 12,
+    routeId: "route-3",
+    cause: { type: "wild", species: "geodude", level: 11, move: "rock-throw" },
+    diedAt: "2026-09-17T01:00:00.000Z",
+    notes: null,
+    createdAt: "2026-09-17T01:00:00.000Z",
+    updatedAt: "2026-09-17T01:00:00.000Z",
     ...overrides,
   };
 }
@@ -520,6 +537,78 @@ describe("clearFight", () => {
     const fight = makeFight({ status: "cleared", clearedAt: "2026-09-16T00:00:00.000Z" });
     expect(() => clearFight({ fight, clearedAt: "2026-09-17T02:00:00.000Z" })).toThrow(
       /not 'pending'/,
+    );
+  });
+});
+
+describe("planEncounterReset", () => {
+  test("missed: plan removes only the encounter", () => {
+    const encounter = makeEncounter({ status: "missed" });
+    const plan = planEncounterReset({ encounter, mon: null, deaths: [] });
+    expect(plan).toEqual({ encounterId: encounter.id, monId: null, deathIds: [] });
+  });
+
+  test("skipped: plan removes only the encounter", () => {
+    const encounter = makeEncounter({ status: "skipped" });
+    const plan = planEncounterReset({ encounter, mon: null, deaths: [] });
+    expect(plan).toEqual({ encounterId: encounter.id, monId: null, deathIds: [] });
+  });
+
+  test("caught and alive: plan removes the encounter and the mon, no deaths", () => {
+    const encounter = makeEncounter({ status: "caught", monId: "mon-1" });
+    const mon = makeMon({ id: "mon-1", encounterId: encounter.id, status: "party" });
+    const plan = planEncounterReset({ encounter, mon, deaths: [] });
+    expect(plan).toEqual({ encounterId: encounter.id, monId: "mon-1", deathIds: [] });
+  });
+
+  test("caught and dead with one death: plan removes the encounter, mon and death", () => {
+    const encounter = makeEncounter({ status: "caught", monId: "mon-1" });
+    const mon = makeMon({ id: "mon-1", encounterId: encounter.id, status: "dead" });
+    const death = makeDeath({ id: "death-1", monId: "mon-1" });
+    const plan = planEncounterReset({ encounter, mon, deaths: [death] });
+    expect(plan).toEqual({ encounterId: encounter.id, monId: "mon-1", deathIds: ["death-1"] });
+  });
+
+  test("throws for an open encounter", () => {
+    const encounter = makeEncounter({ status: "open" });
+    expect(() => planEncounterReset({ encounter, mon: null, deaths: [] })).toThrow(
+      /has not been logged/,
+    );
+  });
+
+  test("throws when the encounter has a monId but no mon was passed", () => {
+    const encounter = makeEncounter({ status: "caught", monId: "mon-1" });
+    expect(() => planEncounterReset({ encounter, mon: null, deaths: [] })).toThrow(/do not match/);
+  });
+
+  test("throws when a mon is passed for an encounter with no monId", () => {
+    const encounter = makeEncounter({ status: "missed", monId: null });
+    const mon = makeMon({ id: "mon-1", encounterId: encounter.id });
+    expect(() => planEncounterReset({ encounter, mon, deaths: [] })).toThrow(/do not match/);
+  });
+
+  test("throws when the mon's encounterId is not the encounter's id", () => {
+    const encounter = makeEncounter({ id: "encounter-1", status: "caught", monId: "mon-1" });
+    const mon = makeMon({ id: "mon-1", encounterId: "encounter-other" });
+    expect(() => planEncounterReset({ encounter, mon, deaths: [] })).toThrow(
+      /does not belong to encounter/,
+    );
+  });
+
+  test("throws when a death's monId is not the mon's id", () => {
+    const encounter = makeEncounter({ status: "caught", monId: "mon-1" });
+    const mon = makeMon({ id: "mon-1", encounterId: encounter.id, status: "dead" });
+    const death = makeDeath({ id: "death-1", monId: "mon-other" });
+    expect(() => planEncounterReset({ encounter, mon, deaths: [death] })).toThrow(
+      /does not belong to its mon/,
+    );
+  });
+
+  test("throws when deaths are given but mon is null", () => {
+    const encounter = makeEncounter({ status: "missed", monId: null });
+    const death = makeDeath({ id: "death-1", monId: "mon-1" });
+    expect(() => planEncounterReset({ encounter, mon: null, deaths: [death] })).toThrow(
+      /does not belong to its mon/,
     );
   });
 });

@@ -80,6 +80,7 @@ function renderTable(input: {
   onDelete?: (route: Route) => void;
   onLogEncounter?: (route: Route) => void;
   onEditMon?: (route: Route, mon: Mon) => void;
+  onResetEncounter?: (row: ReturnType<typeof buildRouteRows>[number]) => void;
 }) {
   const rows = buildRouteRows({
     routes: input.routes,
@@ -99,6 +100,7 @@ function renderTable(input: {
         deletePending={false}
         onLogEncounter={input.onLogEncounter ?? vi.fn()}
         onEditMon={input.onEditMon ?? vi.fn()}
+        onResetEncounter={input.onResetEncounter ?? vi.fn()}
       />
     </QueryClientProvider>,
   );
@@ -135,7 +137,7 @@ describe("RouteTable", () => {
 
     const row = screen.getAllByRole("row")[1]!;
     const cells = within(row).getAllByRole("cell");
-    const statusCell = cells[cells.length - 1]!;
+    const statusCell = cells[cells.length - 2]!;
 
     expect(within(statusCell).getByText(expectedLabel)).toBeInTheDocument();
   });
@@ -247,23 +249,35 @@ describe("RouteTable", () => {
     expect(within(row).getByText("—")).toBeInTheDocument();
   });
 
-  it("exposes a remove control for a deletable custom route", async () => {
-    const route = makeRoute({ id: "route-1", isCustom: true });
+  it("exposes a delete control for a deletable custom route", async () => {
+    const route = makeRoute({ id: "route-1", isCustom: true, name: "Route 1" });
     const onDelete = vi.fn();
 
     renderTable({ routes: [route], encounters: [], mons: [], onDelete });
 
-    await userEvent.click(screen.getByRole("button", { name: "Remove" }));
+    await userEvent.click(screen.getByRole("button", { name: "Delete Route 1" }));
 
     expect(onDelete).toHaveBeenCalledWith(route);
   });
 
-  it("shows no remove control for a seeded, non-custom route", () => {
-    const route = makeRoute({ id: "route-1", isCustom: false });
+  it("puts the end icon in the row's last cell", () => {
+    const route = makeRoute({ id: "route-1", isCustom: true, name: "Route 1" });
 
     renderTable({ routes: [route], encounters: [], mons: [] });
 
-    expect(screen.queryByRole("button", { name: "Remove" })).not.toBeInTheDocument();
+    const row = screen.getAllByRole("row")[1]!;
+    const cells = within(row).getAllByRole("cell");
+    const lastCell = cells[cells.length - 1]!;
+
+    expect(within(lastCell).getByRole("button", { name: "Delete Route 1" })).toBeInTheDocument();
+  });
+
+  it("shows no delete control for a seeded, non-custom route", () => {
+    const route = makeRoute({ id: "route-1", isCustom: false, name: "Route 1" });
+
+    renderTable({ routes: [route], encounters: [], mons: [] });
+
+    expect(screen.queryByRole("button", { name: "Delete Route 1" })).not.toBeInTheDocument();
   });
 
   it("shows a log control for a not-encountered route, which calls onLogEncounter with it", async () => {
@@ -275,6 +289,19 @@ describe("RouteTable", () => {
     await userEvent.click(screen.getByRole("button", { name: "Log encounter" }));
 
     expect(onLogEncounter).toHaveBeenCalledWith(route);
+    expect(onLogEncounter).toHaveBeenCalledTimes(1);
+  });
+
+  it("logs a not-encountered route exactly once when the name button is clicked", async () => {
+    const route = makeRoute({ id: "route-1", name: "Route 1" });
+    const onLogEncounter = vi.fn();
+
+    renderTable({ routes: [route], encounters: [], mons: [], onLogEncounter });
+
+    await userEvent.click(screen.getByRole("button", { name: "Log Route 1" }));
+
+    expect(onLogEncounter).toHaveBeenCalledWith(route);
+    expect(onLogEncounter).toHaveBeenCalledTimes(1);
   });
 
   it.each([
@@ -299,23 +326,47 @@ describe("RouteTable", () => {
     expect(screen.queryByRole("button", { name: "Log encounter" })).not.toBeInTheDocument();
   });
 
-  it("shows an edit control for a caught row, which calls onEditMon with the route and mon", async () => {
-    const route = makeRoute({ id: "route-1" });
+  it.each([
+    ["caught" as const, "party" as const],
+    ["dead" as const, "dead" as const],
+  ])(
+    "opens a %s row by clicking the route name button, calling onEditMon with the route and mon",
+    async (_status, monStatus) => {
+      const route = makeRoute({ id: "route-1", name: "Route 1" });
+      const encounters = [
+        makeEncounter({ id: "encounter-1", routeId: "route-1", status: "caught", monId: "mon-1" }),
+      ];
+      const mon = makeMon({ id: "mon-1", status: monStatus });
+      const onEditMon = vi.fn();
+
+      renderTable({ routes: [route], encounters, mons: [mon], onEditMon });
+
+      await userEvent.click(screen.getByRole("button", { name: "Open Route 1" }));
+
+      expect(onEditMon).toHaveBeenCalledWith(route, mon);
+    },
+  );
+
+  it.each([
+    ["caught" as const, "party" as const],
+    ["dead" as const, "dead" as const],
+  ])("opens a %s row by clicking anywhere in the row", async (_status, monStatus) => {
+    const route = makeRoute({ id: "route-1", name: "Route 1" });
     const encounters = [
       makeEncounter({ id: "encounter-1", routeId: "route-1", status: "caught", monId: "mon-1" }),
     ];
-    const mon = makeMon({ id: "mon-1", status: "party" });
+    const mon = makeMon({ id: "mon-1", status: monStatus });
     const onEditMon = vi.fn();
 
     renderTable({ routes: [route], encounters, mons: [mon], onEditMon });
 
-    await userEvent.click(screen.getByRole("button", { name: "Edit" }));
+    await userEvent.click(screen.getAllByRole("row")[1]!);
 
     expect(onEditMon).toHaveBeenCalledWith(route, mon);
   });
 
-  it("shows an edit control for a dead row", () => {
-    const routes = [makeRoute({ id: "route-1" })];
+  it("shows a name button for a dead row", () => {
+    const routes = [makeRoute({ id: "route-1", name: "Route 1" })];
     const encounters = [
       makeEncounter({ id: "encounter-1", routeId: "route-1", status: "caught", monId: "mon-1" }),
     ];
@@ -323,19 +374,52 @@ describe("RouteTable", () => {
 
     renderTable({ routes, encounters, mons });
 
-    expect(screen.getByRole("button", { name: "Edit" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Open Route 1" })).toBeInTheDocument();
+  });
+
+  it("shows no open control for a not-encountered route, only a log control", () => {
+    const routes = [makeRoute({ id: "route-1", name: "Route 1" })];
+
+    renderTable({ routes, encounters: [], mons: [] });
+
+    expect(screen.queryByRole("button", { name: "Open Route 1" })).not.toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Log Route 1" })).toBeInTheDocument();
   });
 
   it.each([
-    ["not-encountered" as const, [], []],
     ["missed" as const, [makeEncounter({ status: "missed" })], []],
     ["skipped" as const, [makeEncounter({ status: "skipped" })], []],
-  ])("shows no edit control for a %s route", (_status, encounters, mons) => {
-    const routes = [makeRoute({ id: "route-1" })];
+  ])("does nothing when a %s row is clicked", async (_status, encounters, mons) => {
+    const route = makeRoute({ id: "route-1", name: "Route 1" });
+    const onEditMon = vi.fn();
+    const onLogEncounter = vi.fn();
 
-    renderTable({ routes, encounters, mons });
+    renderTable({ routes: [route], encounters, mons, onEditMon, onLogEncounter });
 
-    expect(screen.queryByRole("button", { name: "Edit" })).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Open Route 1" })).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Log Route 1" })).not.toBeInTheDocument();
+
+    await userEvent.click(screen.getAllByRole("row")[1]!);
+
+    expect(onEditMon).not.toHaveBeenCalled();
+    expect(onLogEncounter).not.toHaveBeenCalled();
+  });
+
+  it("clicking Reset calls onResetEncounter and not onEditMon", async () => {
+    const route = makeRoute({ id: "route-1", name: "Route 1" });
+    const encounters = [
+      makeEncounter({ id: "encounter-1", routeId: "route-1", status: "caught", monId: "mon-1" }),
+    ];
+    const mon = makeMon({ id: "mon-1", status: "party" });
+    const onEditMon = vi.fn();
+    const onResetEncounter = vi.fn();
+
+    renderTable({ routes: [route], encounters, mons: [mon], onEditMon, onResetEncounter });
+
+    await userEvent.click(screen.getByRole("button", { name: "Reset Route 1" }));
+
+    expect(onResetEncounter).toHaveBeenCalledTimes(1);
+    expect(onEditMon).not.toHaveBeenCalled();
   });
 });
 

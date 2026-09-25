@@ -11,6 +11,7 @@ import {
   catchEncounter,
   evolveMon,
   missEncounter,
+  planEncounterReset,
   skipEncounter,
   type CatchDetails,
   type MonAmendments,
@@ -348,6 +349,46 @@ export function useDeleteCustomRoute(): UseMutationResult<void, Error, DeleteCus
     mutationFn: (input: DeleteCustomRouteInput) => persistDeleteCustomRoute(adapter, input),
     onSuccess: async (_result, input) => {
       await invalidateRun(queryClient, input.route.runId);
+    },
+  });
+}
+
+export interface ResetEncounterInput {
+  encounter: Encounter;
+}
+
+/** Re-reads inside the transaction so a stale encounter throws instead of deleting twice. */
+async function persistResetEncounter(
+  adapter: StorageAdapter,
+  input: ResetEncounterInput,
+): Promise<void> {
+  await adapter.transaction(async (tx) => {
+    const encounter = await tx.encounters.get(input.encounter.id);
+    if (encounter === undefined) {
+      throw new Error(`Encounter ${input.encounter.id} no longer exists.`);
+    }
+    const mon = encounter.monId === null ? null : ((await tx.mons.get(encounter.monId)) ?? null);
+    const deaths = mon === null ? [] : await tx.deaths.where("monId", mon.id);
+    const plan = planEncounterReset({ encounter, mon, deaths });
+
+    for (const deathId of plan.deathIds) {
+      await tx.deaths.delete(deathId);
+    }
+    if (plan.monId !== null) {
+      await tx.mons.delete(plan.monId);
+    }
+    await tx.encounters.delete(plan.encounterId);
+  });
+}
+
+export function useResetEncounter(): UseMutationResult<void, Error, ResetEncounterInput> {
+  const adapter = useStorage();
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: (input: ResetEncounterInput) => persistResetEncounter(adapter, input),
+    onSuccess: async (_result, input) => {
+      await invalidateRun(queryClient, input.encounter.runId);
     },
   });
 }

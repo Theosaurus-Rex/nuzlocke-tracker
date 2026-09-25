@@ -90,6 +90,7 @@ export default tseslint.config(
             "rowSpeciesId",
             "chipForRouteRow",
             "canLogEncounter",
+            "rowTapAction",
             "routeBucket",
             "summariseRouteRows",
             "ROUTE_FILTER_BUCKETS",
@@ -97,6 +98,14 @@ export default tseslint.config(
           ],
         },
       ],
+    },
+  },
+  {
+    // describeReset is a pure message builder, exported for its own tests, co-located with the
+    // dialog that calls it rather than split into a separate file.
+    files: ["src/features/routes/reset-encounter-dialog.tsx"],
+    rules: {
+      "react-refresh/only-export-components": ["error", { allowExportNames: ["describeReset"] }],
     },
   },
   eslintConfigPrettier,

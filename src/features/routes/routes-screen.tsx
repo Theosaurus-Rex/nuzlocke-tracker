@@ -4,7 +4,7 @@ import { Navigate, useParams } from "react-router";
 import { StatusChip } from "@/components/status-chip";
 import { Button } from "@/components/ui/button";
 import { DEFAULT_RULES } from "@/domain/rules";
-import { buildRouteRows } from "@/domain/route-rows";
+import { buildRouteRows, type RouteRow } from "@/domain/route-rows";
 import type { Mon, Route } from "@/domain/types";
 import { EditMonDialog } from "@/features/encounters/edit-mon-dialog";
 import { LogEncounterDialog } from "@/features/encounters/log-encounter-dialog";
@@ -21,6 +21,7 @@ import {
   type RouteFilterBucket,
 } from "./route-presentation";
 import { RouteTable } from "./route-table";
+import { ResetEncounterDialog } from "./reset-encounter-dialog";
 
 const COUNTER_CHIPS: readonly {
   bucket: RouteFilterBucket;
@@ -96,6 +97,7 @@ export function RoutesScreen(): ReactNode {
   const [submitted, setSubmitted] = useState(false);
   const [logRoute, setLogRoute] = useState<Route | null>(null);
   const [editTarget, setEditTarget] = useState<{ route: Route; mon: Mon } | null>(null);
+  const [resetTarget, setResetTarget] = useState<RouteRow | null>(null);
   const [addOpen, setAddOpen] = useState(false);
   const [filterOpen, setFilterOpen] = useState(false);
   const [activeFilters, setActiveFilters] = useState<Set<RouteFilterBucket>>(new Set());
@@ -252,6 +254,7 @@ export function RoutesScreen(): ReactNode {
               deletePending={deleteRoute.isPending}
               onLogEncounter={setLogRoute}
               onEditMon={handleEditMon}
+              onResetEncounter={setResetTarget}
             />
           </div>
           <div className="md:hidden">
@@ -263,6 +266,7 @@ export function RoutesScreen(): ReactNode {
               deletePending={deleteRoute.isPending}
               onLogEncounter={setLogRoute}
               onEditMon={handleEditMon}
+              onResetEncounter={setResetTarget}
             />
           </div>
         </>
@@ -296,6 +300,10 @@ export function RoutesScreen(): ReactNode {
           mon={editTarget.mon}
           rules={runQuery.data?.rules ?? DEFAULT_RULES}
         />
+      )}
+
+      {resetTarget && (
+        <ResetEncounterDialog row={resetTarget} onClose={() => setResetTarget(null)} />
       )}
     </div>
   );

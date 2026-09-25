@@ -205,8 +205,10 @@ describe("RoutesScreen", () => {
     await findRouteInList("Player's Yard");
 
     const item = routeItem("Player's Yard");
-    const removeButton = await within(item).findByRole("button", { name: "Remove" });
-    await userEvent.click(removeButton);
+    const deleteButton = await within(item).findByRole("button", {
+      name: "Delete Player's Yard",
+    });
+    await userEvent.click(deleteButton);
 
     await waitFor(() => {
       expect(screen.queryByText("Player's Yard")).not.toBeInTheDocument();
@@ -224,7 +226,7 @@ describe("RoutesScreen", () => {
 
     await findRouteInList("Route 29");
     const item = routeItem("Route 29");
-    expect(within(item).queryByRole("button", { name: "Remove" })).not.toBeInTheDocument();
+    expect(within(item).queryByRole("button", { name: "Delete Route 29" })).not.toBeInTheDocument();
   });
 
   it("shows no remove control on a custom route with an encounter logged against it", async () => {
@@ -239,7 +241,9 @@ describe("RoutesScreen", () => {
 
     await findRouteInList("Whirl Islands");
     const item = routeItem("Whirl Islands");
-    expect(within(item).queryByRole("button", { name: "Remove" })).not.toBeInTheDocument();
+    expect(
+      within(item).queryByRole("button", { name: "Delete Whirl Islands" }),
+    ).not.toBeInTheDocument();
   });
 
   it("does not add a route on a blank name and shows a validation message", async () => {
@@ -338,5 +342,41 @@ describe("RoutesScreen", () => {
     await findRouteInList("New Bark Town");
     expect(await findRouteInList("Chikorita")).toBeInTheDocument();
     expect(screen.queryByText("grass")).not.toBeInTheDocument();
+  });
+
+  it("resets a caught route back to not encountered and removes its mon", async () => {
+    const adapter = createMemoryAdapter();
+    const run = await adapter.runs.put(makeRunDraft());
+    const route = await adapter.routes.put(
+      makeRouteDraft(run.id, { name: "New Bark Town", order: 100 }),
+    );
+    const encounter = await adapter.encounters.put(
+      makeEncounterDraft(run.id, route.id, { status: "caught" }),
+    );
+    const mon = await adapter.mons.put(makeMonDraft(run.id, encounter.id));
+    await adapter.encounters.put({ ...encounter, monId: mon.id });
+
+    renderScreen(adapter, run.id);
+
+    await findRouteInList("New Bark Town");
+    const item = routeItem("New Bark Town");
+    const resetTrigger = await within(item).findByRole("button", {
+      name: "Reset New Bark Town",
+    });
+    await userEvent.click(resetTrigger);
+
+    const resetButton = await screen.findByRole("button", { name: "Reset encounter" });
+    await waitFor(() => {
+      expect(resetButton).toBeEnabled();
+    });
+    await userEvent.click(resetButton);
+
+    await waitFor(async () => {
+      expect(await adapter.mons.get(mon.id)).toBeUndefined();
+    });
+    expect(await adapter.encounters.get(encounter.id)).toBeUndefined();
+
+    const resetItem = routeItem("New Bark Town");
+    expect(within(resetItem).getByRole("button", { name: "Log encounter" })).toBeInTheDocument();
   });
 });

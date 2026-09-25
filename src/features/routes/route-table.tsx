@@ -2,13 +2,19 @@ import { createColumnHelper, tableFeatures, useTable } from "@tanstack/react-tab
 
 import { SpeciesTypeBadge } from "@/components/species-type-badge";
 import { StatusChip } from "@/components/status-chip";
-import { Button } from "@/components/ui/button";
 import { canDeleteRoute } from "@/domain/routes";
 import type { RouteRow } from "@/domain/route-rows";
 import type { Encounter, Mon, Route } from "@/domain/types";
 import { cn } from "@/lib/utils";
 
-import { canLogEncounter, chipForRouteRow, rowSpeciesId, RowSpecies } from "./route-presentation";
+import {
+  canLogEncounter,
+  chipForRouteRow,
+  rowSpeciesId,
+  rowTapAction,
+  RowSpecies,
+} from "./route-presentation";
+import { RowEndAction } from "./row-end-action";
 
 function StatusCell({ row, onLogEncounter }: { row: RouteRow; onLogEncounter: () => void }) {
   const chip = chipForRouteRow(row);
@@ -18,7 +24,10 @@ function StatusCell({ row, onLogEncounter }: { row: RouteRow; onLogEncounter: ()
       <button
         type="button"
         aria-label="Log encounter"
-        onClick={onLogEncounter}
+        onClick={(event) => {
+          event.stopPropagation();
+          onLogEncounter();
+        }}
         className="cursor-pointer"
       >
         <StatusChip status={chip.status}>{chip.label}</StatusChip>
@@ -54,6 +63,7 @@ export interface RouteTableProps {
   deletePending: boolean;
   onLogEncounter: (route: Route) => void;
   onEditMon: (route: Route, mon: Mon) => void;
+  onResetEncounter: (row: RouteRow) => void;
 }
 
 export function RouteTable({
@@ -64,52 +74,52 @@ export function RouteTable({
   deletePending,
   onLogEncounter,
   onEditMon,
+  onResetEncounter,
 }: RouteTableProps) {
+  function handleRowTap(routeRow: RouteRow): void {
+    const action = rowTapAction(routeRow);
+    if (action.kind === "edit") onEditMon(routeRow.route, action.mon);
+    else if (action.kind === "log") onLogEncounter(routeRow.route);
+  }
+
   const columns = [
     columnHelper.display({
       id: "route",
       header: "Route",
       cell: ({ row }) => {
         const routeRow = row.original;
-        const removable = canDeleteRoute(routeRow.route, encounters);
-        const mon = routeRow.mon;
-        const editable =
-          (routeRow.status === "caught" || routeRow.status === "dead") && mon !== null;
+        const action = rowTapAction(routeRow);
+        const nameClassName = cn(
+          "font-medium",
+          routeRow.status === "missed" && "text-muted-foreground",
+        );
 
         return (
-          <div className="flex items-center justify-between gap-3">
-            <div className="min-w-0 truncate">
-              <span
-                className={cn(
-                  "font-medium",
-                  routeRow.status === "missed" && "text-muted-foreground",
-                )}
+          <div className="min-w-0 truncate">
+            {action.kind === "none" ? (
+              <span className={nameClassName}>{routeRow.route.name}</span>
+            ) : (
+              <button
+                type="button"
+                aria-label={
+                  action.kind === "edit"
+                    ? `Open ${routeRow.route.name}`
+                    : `Log ${routeRow.route.name}`
+                }
+                onClick={(event) => {
+                  event.stopPropagation();
+                  handleRowTap(routeRow);
+                }}
+                className={cn(nameClassName, "cursor-pointer bg-transparent p-0 text-left")}
               >
                 {routeRow.route.name}
+              </button>
+            )}
+            {routeRow.route.isCustom && (
+              <span className="text-muted-foreground ml-2 border-[1.5px] border-border px-1.5 py-0.5 text-[11px] font-medium tracking-[0.12em] uppercase">
+                Custom
               </span>
-              {routeRow.route.isCustom && (
-                <span className="text-muted-foreground ml-2 border-[1.5px] border-border px-1.5 py-0.5 text-[11px] font-medium tracking-[0.12em] uppercase">
-                  Custom
-                </span>
-              )}
-            </div>
-            <div className="flex shrink-0 items-center gap-2">
-              {editable && mon !== null && (
-                <Button size="sm" variant="outline" onClick={() => onEditMon(routeRow.route, mon)}>
-                  Edit
-                </Button>
-              )}
-              {removable && (
-                <Button
-                  size="sm"
-                  variant="ghost"
-                  disabled={deletePending}
-                  onClick={() => onDelete(routeRow.route)}
-                >
-                  Remove
-                </Button>
-              )}
-            </div>
+            )}
           </div>
         );
       },
@@ -140,6 +150,24 @@ export function RouteTable({
         <StatusCell row={row.original} onLogEncounter={() => onLogEncounter(row.original.route)} />
       ),
     }),
+    columnHelper.display({
+      id: "actions",
+      header: () => <span className="sr-only">Actions</span>,
+      cell: ({ row }) => {
+        const routeRow = row.original;
+        const removable = canDeleteRoute(routeRow.route, encounters);
+
+        return (
+          <RowEndAction
+            row={routeRow}
+            removable={removable}
+            deletePending={deletePending}
+            onReset={onResetEncounter}
+            onDelete={onDelete}
+          />
+        );
+      },
+    }),
   ];
 
   const table = useTable({
@@ -157,7 +185,10 @@ export function RouteTable({
             {headerGroup.headers.map((header) => (
               <th
                 key={header.id}
-                className="px-3 py-2 text-[13px] font-medium tracking-[0.12em] text-foreground uppercase"
+                className={cn(
+                  "px-3 py-2 text-[13px] font-medium tracking-[0.12em] text-foreground uppercase",
+                  header.column.id === "actions" && "w-px text-right",
+                )}
               >
                 {header.isPlaceholder ? null : <table.FlexRender header={header} />}
               </th>
@@ -166,21 +197,30 @@ export function RouteTable({
         ))}
       </thead>
       <tbody>
-        {table.getRowModel().rows.map((row) => (
-          <tr
-            key={row.id}
-            className={cn(
-              "border-b border-muted last:border-b-0",
-              canLogEncounter(row.original) && "bg-flag-tint",
-            )}
-          >
-            {row.getAllCells().map((cell) => (
-              <td key={cell.id} className="px-3 py-2">
-                <table.FlexRender cell={cell} />
-              </td>
-            ))}
-          </tr>
-        ))}
+        {table.getRowModel().rows.map((row) => {
+          const tappable = rowTapAction(row.original).kind !== "none";
+
+          return (
+            <tr
+              key={row.id}
+              onClick={tappable ? () => handleRowTap(row.original) : undefined}
+              className={cn(
+                "border-b border-muted last:border-b-0",
+                canLogEncounter(row.original) && "bg-flag-tint",
+                tappable && "cursor-pointer",
+              )}
+            >
+              {row.getAllCells().map((cell) => (
+                <td
+                  key={cell.id}
+                  className={cn("px-3 py-2", cell.column.id === "actions" && "w-px text-right")}
+                >
+                  <table.FlexRender cell={cell} />
+                </td>
+              ))}
+            </tr>
+          );
+        })}
       </tbody>
     </table>
   );
