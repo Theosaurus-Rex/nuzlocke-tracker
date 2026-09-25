@@ -21,6 +21,7 @@ import { FIELD_LABEL_CLASS } from "@/features/encounters/mon-fields";
 import { GAMES } from "@/game/registry";
 import { cn } from "@/lib/utils";
 import { useCreateRun } from "@/storage/mutations";
+import { useRuns } from "@/storage/queries";
 
 const GAME_OPTIONS = Object.values(GAMES);
 
@@ -63,6 +64,8 @@ const RANDOMISER_SUB_CHIP_LABELS: Record<RandomiserSubField, string> = {
 export function NewRunScreen(): ReactNode {
   const navigate = useNavigate();
   const createRun = useCreateRun();
+  const runsQuery = useRuns();
+  const hasRuns = (runsQuery.data?.length ?? 0) > 0;
 
   const [name, setName] = useState("");
   const [game, setGame] = useState<GameId>(FIRST_GAME_ID);
@@ -134,9 +137,14 @@ export function NewRunScreen(): ReactNode {
       <div className="flex flex-wrap items-center justify-between gap-3 border-b-[1.5px] border-border p-4">
         <h1 className="text-xl font-bold sm:text-2xl">New run</h1>
         <div className="flex items-center gap-2">
-          <Link to="/" className={buttonVariants({ variant: "outline", className: "shadow-none" })}>
-            Cancel
-          </Link>
+          {hasRuns && (
+            <Link
+              to="/"
+              className={buttonVariants({ variant: "outline", className: "shadow-none" })}
+            >
+              Cancel
+            </Link>
+          )}
           <Button type="submit" disabled={createRun.isPending}>
             {createRun.isPending ? "Starting…" : "Start run"}
           </Button>

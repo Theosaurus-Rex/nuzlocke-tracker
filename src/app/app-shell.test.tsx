@@ -201,9 +201,11 @@ describe("AppShell navigation", () => {
   it.each([["Sidebar navigation" as const], ["Tab bar navigation" as const]])(
     "lets %s out of a run, so Settings and its JSON export stay reachable",
     async (navLabel) => {
-      const { router } = renderAt("/runs/run-123/party");
+      const adapter = createMemoryAdapter();
+      await adapter.runs.put(makeRunDraft({ name: "Johto Hardcore" }));
+      const { router } = renderAt("/runs/run-123/party", { adapter });
 
-      const nav = screen.getByRole("navigation", { name: navLabel });
+      const nav = await screen.findByRole("navigation", { name: navLabel });
       await userEvent.click(within(nav).getByRole("link", { name: "Runs" }));
 
       await waitFor(() => {
@@ -332,6 +334,37 @@ describe("AppShell navigation", () => {
     await waitFor(() => {
       expect(router.state.location.pathname).toBe("/runs/new");
     });
+  });
+
+  it.each([["Sidebar navigation" as const], ["Tab bar navigation" as const]])(
+    "keeps Settings reachable from new-run setup with no runs, in %s",
+    async (navLabel) => {
+      renderAt("/");
+
+      await waitFor(() => {
+        expect(screen.getByRole("heading", { name: "New run" })).toBeInTheDocument();
+      });
+
+      const nav = screen.getByRole("navigation", { name: navLabel });
+      expect(within(nav).getByRole("link", { name: "Settings" })).toHaveAttribute(
+        "href",
+        "/settings",
+      );
+    },
+  );
+
+  it("does not mark the Runs nav row active once redirected to new-run setup, and settling there does not stack an extra history entry", async () => {
+    const { router } = renderAt("/");
+
+    await screen.findByRole("heading", { name: "New run" });
+    expect(router.state.location.pathname).toBe("/runs/new");
+
+    const sidebar = screen.getByRole("navigation", { name: "Sidebar navigation" });
+    expect(within(sidebar).getByRole("link", { name: "Runs" })).not.toHaveAttribute("aria-current");
+
+    // Replaced in place, so there is nothing behind it for Back to land on.
+    await router.navigate(-1);
+    expect(router.state.location.pathname).toBe("/runs/new");
   });
 });
 

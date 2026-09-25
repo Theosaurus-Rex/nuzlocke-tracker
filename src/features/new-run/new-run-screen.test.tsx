@@ -276,16 +276,31 @@ describe("NewRunScreen", () => {
     },
   );
 
-  it("has a cancel link back to /", async () => {
+  it("has a cancel link back to /, shown once a run exists", async () => {
     const adapter = createMemoryAdapter();
+    await adapter.runs.put({
+      name: "Existing Run",
+      game: "heartgold",
+      status: "active",
+      rules: DEFAULT_RULES,
+      finishedAt: null,
+    });
     const { router } = renderScreen(adapter);
 
-    const cancelLink = screen.getByRole("link", { name: "Cancel" });
+    const cancelLink = await screen.findByRole("link", { name: "Cancel" });
     expect(cancelLink).toHaveAttribute("href", "/");
 
     await userEvent.click(cancelLink);
     await waitFor(() => {
       expect(router.state.location.pathname).toBe("/");
     });
+  });
+
+  it("hides Cancel when there are no runs, since / would only redirect straight back here", async () => {
+    const adapter = createMemoryAdapter();
+    renderScreen(adapter);
+
+    await screen.findByRole("heading", { name: "New run" });
+    expect(screen.queryByRole("link", { name: "Cancel" })).not.toBeInTheDocument();
   });
 });
