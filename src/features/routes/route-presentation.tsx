@@ -183,3 +183,14 @@ export function filterRouteRows(
     return bucket === "skipped" || active.has(bucket);
   });
 }
+
+/**
+ * Case-insensitive, matches anywhere in the route name. An empty or whitespace-only search
+ * matches every row, so it composes with `filterRouteRows` without a special "no search" case.
+ */
+export function searchRouteRows(rows: readonly RouteRow[], search: string): RouteRow[] {
+  const query = search.trim().toLowerCase();
+  if (query === "") return [...rows];
+
+  return rows.filter((row) => row.route.name.toLowerCase().includes(query));
+}

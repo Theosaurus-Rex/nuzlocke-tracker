@@ -397,6 +397,159 @@ describe("RoutesScreen", () => {
     expect(screen.queryByRole("checkbox")).not.toBeInTheDocument();
   });
 
+  it("narrows the list to routes whose name matches, case-insensitively and anywhere in the name", async () => {
+    const adapter = createMemoryAdapter();
+    const run = await adapter.runs.put(makeRunDraft());
+    await adapter.routes.put(makeRouteDraft(run.id, { name: "Route 29", order: 100 }));
+    await adapter.routes.put(makeRouteDraft(run.id, { name: "Union Cave", order: 200 }));
+    await adapter.routes.put(makeRouteDraft(run.id, { name: "Route 30", order: 300 }));
+
+    renderScreen(adapter, run.id);
+
+    await findRouteInList("Route 29");
+
+    await userEvent.type(screen.getByLabelText("Search routes"), "CAVE");
+
+    const list = screen.getByRole("list");
+    expect(within(list).getByText("Union Cave")).toBeInTheDocument();
+    expect(within(list).queryByText("Route 29")).not.toBeInTheDocument();
+    expect(within(list).queryByText("Route 30")).not.toBeInTheDocument();
+  });
+
+  it("finds a custom route by name too", async () => {
+    const adapter = createMemoryAdapter();
+    const run = await adapter.runs.put(makeRunDraft());
+    await adapter.routes.put(makeRouteDraft(run.id, { name: "Route 29", order: 100 }));
+    await adapter.routes.put(
+      makeRouteDraft(run.id, { name: "Secret Cave", order: 200, isCustom: true }),
+    );
+
+    renderScreen(adapter, run.id);
+
+    await findRouteInList("Route 29");
+
+    await userEvent.type(screen.getByLabelText("Search routes"), "secret");
+
+    const list = screen.getByRole("list");
+    expect(within(list).getByText("Secret Cave")).toBeInTheDocument();
+    expect(within(list).queryByText("Route 29")).not.toBeInTheDocument();
+  });
+
+  it("clears the search with the × button, restoring the full list", async () => {
+    const adapter = createMemoryAdapter();
+    const run = await adapter.runs.put(makeRunDraft());
+    await adapter.routes.put(makeRouteDraft(run.id, { name: "Route 29", order: 100 }));
+    await adapter.routes.put(makeRouteDraft(run.id, { name: "Union Cave", order: 200 }));
+
+    renderScreen(adapter, run.id);
+
+    await findRouteInList("Route 29");
+
+    const searchBox = screen.getByLabelText("Search routes");
+    await userEvent.type(searchBox, "cave");
+    expect(within(screen.getByRole("list")).queryByText("Route 29")).not.toBeInTheDocument();
+
+    await userEvent.click(screen.getByRole("button", { name: "Clear search" }));
+
+    expect(searchBox).toHaveValue("");
+    const list = screen.getByRole("list");
+    expect(within(list).getByText("Route 29")).toBeInTheDocument();
+    expect(within(list).getByText("Union Cave")).toBeInTheDocument();
+  });
+
+  it("clears the search with Escape while the box has focus", async () => {
+    const adapter = createMemoryAdapter();
+    const run = await adapter.runs.put(makeRunDraft());
+    await adapter.routes.put(makeRouteDraft(run.id, { name: "Route 29", order: 100 }));
+    await adapter.routes.put(makeRouteDraft(run.id, { name: "Union Cave", order: 200 }));
+
+    renderScreen(adapter, run.id);
+
+    await findRouteInList("Route 29");
+
+    const searchBox = screen.getByLabelText("Search routes");
+    await userEvent.type(searchBox, "cave");
+    expect(within(screen.getByRole("list")).queryByText("Route 29")).not.toBeInTheDocument();
+
+    await userEvent.keyboard("{Escape}");
+
+    expect(searchBox).toHaveValue("");
+    expect(within(screen.getByRole("list")).getByText("Route 29")).toBeInTheDocument();
+  });
+
+  it("combines the search with an active chip filter as an AND, without moving the counts", async () => {
+    const adapter = createMemoryAdapter();
+    const run = await adapter.runs.put(makeRunDraft());
+    const caughtCave = await adapter.routes.put(
+      makeRouteDraft(run.id, { name: "Union Cave", order: 100 }),
+    );
+    const caughtEncounter = await adapter.encounters.put(
+      makeEncounterDraft(run.id, caughtCave.id, { status: "caught" }),
+    );
+    await adapter.mons.put(makeMonDraft(run.id, caughtEncounter.id));
+    const missedCave = await adapter.routes.put(
+      makeRouteDraft(run.id, { name: "Dark Cave", order: 200 }),
+    );
+    await adapter.encounters.put(makeEncounterDraft(run.id, missedCave.id, { status: "missed" }));
+    await adapter.routes.put(makeRouteDraft(run.id, { name: "Route 29", order: 300 }));
+
+    renderScreen(adapter, run.id);
+
+    await findRouteInList("Union Cave");
+
+    const counters = screen.getByRole("group", { name: "Route counters" });
+    await userEvent.click(within(counters).getByRole("button", { name: /caught/i }));
+    await userEvent.type(screen.getByLabelText("Search routes"), "cave");
+
+    const list = screen.getByRole("list");
+    expect(within(list).getByText("Union Cave")).toBeInTheDocument();
+    expect(within(list).queryByText("Dark Cave")).not.toBeInTheDocument();
+    expect(within(list).queryByText("Route 29")).not.toBeInTheDocument();
+
+    function chipText(text: string): HTMLElement {
+      return within(counters).getByText((_, element) => element?.textContent === text);
+    }
+
+    expect(chipText("1 caught")).toBeInTheDocument();
+    expect(chipText("1 missed")).toBeInTheDocument();
+    expect(chipText("1 pending")).toBeInTheDocument();
+  });
+
+  it("shows a message naming the search when nothing matches", async () => {
+    const adapter = createMemoryAdapter();
+    const run = await adapter.runs.put(makeRunDraft());
+    await adapter.routes.put(makeRouteDraft(run.id, { name: "New Bark Town", order: 100 }));
+
+    renderScreen(adapter, run.id);
+
+    await findRouteInList("New Bark Town");
+
+    await userEvent.type(screen.getByLabelText("Search routes"), "xyz");
+
+    expect(await screen.findByText('No routes match "xyz".')).toBeInTheDocument();
+    expect(screen.queryByRole("list")).not.toBeInTheDocument();
+  });
+
+  it("does not remember the search after leaving and returning to the screen", async () => {
+    const adapter = createMemoryAdapter();
+    const run = await adapter.runs.put(makeRunDraft());
+    await adapter.routes.put(makeRouteDraft(run.id, { name: "Route 29", order: 100 }));
+    await adapter.routes.put(makeRouteDraft(run.id, { name: "Union Cave", order: 200 }));
+
+    const { unmount } = renderScreen(adapter, run.id);
+
+    await findRouteInList("Route 29");
+    await userEvent.type(screen.getByLabelText("Search routes"), "cave");
+    expect(within(screen.getByRole("list")).queryByText("Route 29")).not.toBeInTheDocument();
+
+    unmount();
+    renderScreen(adapter, run.id);
+
+    await findRouteInList("Route 29");
+    expect(within(screen.getByRole("list")).getByText("Union Cave")).toBeInTheDocument();
+    expect(await screen.findByLabelText("Search routes")).toHaveValue("");
+  });
+
   it("still shows route and species names when PokéAPI is down, with no type badge", async () => {
     stubPokeApi({});
     const adapter = createMemoryAdapter();

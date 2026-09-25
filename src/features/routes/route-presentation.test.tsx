@@ -14,6 +14,7 @@ import {
   filterRouteRows,
   routeBucket,
   rowSpeciesId,
+  searchRouteRows,
   summariseRouteRows,
 } from "./route-presentation";
 
@@ -192,6 +193,40 @@ describe("filterRouteRows", () => {
     const filtered = filterRouteRows(rows, new Set(["missed"]));
 
     expect(filtered.map((row) => row.route.id)).toEqual(["r2", "r5"]);
+  });
+});
+
+describe("searchRouteRows", () => {
+  const rows = [
+    makeRow({ route: makeRoute({ id: "r1", name: "Route 29" }) }),
+    makeRow({ route: makeRoute({ id: "r2", name: "Union Cave" }) }),
+    makeRow({ route: makeRoute({ id: "r3", name: "Dark Cave" }) }),
+    makeRow({ route: makeRoute({ id: "r4", name: "Route 30", isCustom: true }) }),
+  ];
+
+  it("returns every row when the search is empty", () => {
+    expect(searchRouteRows(rows, "")).toHaveLength(4);
+  });
+
+  it("returns every row when the search is only whitespace", () => {
+    expect(searchRouteRows(rows, "   ")).toHaveLength(4);
+  });
+
+  it("matches a number anywhere in the name", () => {
+    expect(searchRouteRows(rows, "29").map((row) => row.route.id)).toEqual(["r1"]);
+  });
+
+  it("matches every route with the text anywhere in the name, custom routes included", () => {
+    expect(searchRouteRows(rows, "cave").map((row) => row.route.id)).toEqual(["r2", "r3"]);
+    expect(searchRouteRows(rows, "30").map((row) => row.route.id)).toEqual(["r4"]);
+  });
+
+  it("is case-insensitive", () => {
+    expect(searchRouteRows(rows, "UNION").map((row) => row.route.id)).toEqual(["r2"]);
+  });
+
+  it("returns no rows when nothing matches", () => {
+    expect(searchRouteRows(rows, "xyz")).toEqual([]);
   });
 });
 
