@@ -349,4 +349,37 @@ describe("RoutesScreen", () => {
     expect(await findRouteInList("Chikorita")).toBeInTheDocument();
     expect(screen.queryByText("grass")).not.toBeInTheDocument();
   });
+
+  it("resets a caught route back to not encountered and removes its mon", async () => {
+    const adapter = createMemoryAdapter();
+    const run = await adapter.runs.put(makeRunDraft());
+    const route = await adapter.routes.put(
+      makeRouteDraft(run.id, { name: "New Bark Town", order: 100 }),
+    );
+    const encounter = await adapter.encounters.put(
+      makeEncounterDraft(run.id, route.id, { status: "caught" }),
+    );
+    const mon = await adapter.mons.put(makeMonDraft(run.id, encounter.id));
+    await adapter.encounters.put({ ...encounter, monId: mon.id });
+
+    renderScreen(adapter, run.id);
+
+    await findRouteInList("New Bark Town");
+    const item = routeItem("New Bark Town");
+    const menuTrigger = await within(item).findByRole("button", {
+      name: "Actions for New Bark Town",
+    });
+    await userEvent.click(menuTrigger);
+    await userEvent.click(await screen.findByRole("menuitem", { name: "Reset encounter" }));
+
+    await userEvent.click(await screen.findByRole("button", { name: "Reset encounter" }));
+
+    await waitFor(async () => {
+      expect(await adapter.mons.get(mon.id)).toBeUndefined();
+    });
+    expect(await adapter.encounters.get(encounter.id)).toBeUndefined();
+
+    const resetItem = routeItem("New Bark Town");
+    expect(within(resetItem).getByRole("button", { name: "Log encounter" })).toBeInTheDocument();
+  });
 });
