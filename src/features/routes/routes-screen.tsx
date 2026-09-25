@@ -1,7 +1,7 @@
 import { useState, type FormEvent, type ReactNode } from "react";
 import { Navigate, useParams } from "react-router";
 
-import { StatusChip } from "@/components/status-chip";
+import { CHIP_SHAPE } from "@/components/chip";
 import { Button } from "@/components/ui/button";
 import { DEFAULT_RULES } from "@/domain/rules";
 import { buildRouteRows, type RouteRow } from "@/domain/route-rows";
@@ -14,31 +14,35 @@ import { useEncounters, useMons, useRoutes, useRun } from "@/storage/queries";
 import { cn } from "@/lib/utils";
 
 import { RouteCardList } from "./route-card-list";
-import {
-  filterRouteRows,
-  ROUTE_FILTER_BUCKETS,
-  summariseRouteRows,
-  type RouteFilterBucket,
-} from "./route-presentation";
+import { filterRouteRows, summariseRouteRows, type RouteFilterBucket } from "./route-presentation";
 import { RouteTable } from "./route-table";
 import { ResetEncounterDialog } from "./reset-encounter-dialog";
 
-const COUNTER_CHIPS: readonly {
-  bucket: RouteFilterBucket;
-  status: "caught" | "missed" | "fainted" | "pending";
-  label: string;
-}[] = [
-  { bucket: "caught", status: "caught", label: "caught" },
-  { bucket: "missed", status: "missed", label: "missed" },
-  { bucket: "fainted", status: "fainted", label: "fainted" },
-  { bucket: "pending", status: "pending", label: "pending" },
+const COUNTER_CHIPS: readonly { bucket: RouteFilterBucket; label: string }[] = [
+  { bucket: "caught", label: "caught" },
+  { bucket: "missed", label: "missed" },
+  { bucket: "fainted", label: "fainted" },
+  { bucket: "pending", label: "pending" },
 ];
+
+const COUNTER_CHIP_FILL: Record<RouteFilterBucket, string> = {
+  caught: "bg-primary text-primary-foreground",
+  missed: "bg-card text-foreground",
+  fainted: "bg-destructive text-white",
+  pending: "bg-flag text-foreground",
+};
 
 function RouteCounters({
   counters,
+  activeFilters,
+  onToggle,
 }: {
   counters: ReturnType<typeof summariseRouteRows>;
+  activeFilters: ReadonlySet<RouteFilterBucket>;
+  onToggle: (bucket: RouteFilterBucket) => void;
 }): ReactNode {
+  const filterActive = activeFilters.size > 0;
+
   return (
     <div
       role="group"
@@ -46,40 +50,33 @@ function RouteCounters({
       className="flex flex-wrap items-center justify-between gap-3 border-b-[1.5px] border-border bg-background px-4 py-3"
     >
       <div className="flex flex-wrap items-center gap-2">
-        {COUNTER_CHIPS.map(({ bucket, status, label }) => (
-          <span key={bucket} className="inline-flex items-center gap-1">
-            <StatusChip status={status}>
+        {COUNTER_CHIPS.map(({ bucket, label }) => {
+          const selected = activeFilters.has(bucket);
+          const muted = filterActive && !selected;
+
+          return (
+            <button
+              key={bucket}
+              type="button"
+              aria-pressed={selected}
+              onClick={() => onToggle(bucket)}
+              className={cn(
+                CHIP_SHAPE,
+                "cursor-pointer transition-colors focus-visible:outline-none focus-visible:ring-3 focus-visible:ring-ring/50",
+                muted
+                  ? "bg-background text-muted-foreground hover:bg-muted"
+                  : cn(COUNTER_CHIP_FILL[bucket], "hover:brightness-95"),
+                filterActive && selected && "shadow-block",
+              )}
+            >
               <span className="font-mono">{counters[bucket]}</span> {label}
-            </StatusChip>
-          </span>
-        ))}
+            </button>
+          );
+        })}
       </div>
       <span className="font-mono text-sm text-muted-foreground">
         {counters.covered} / {counters.total}
       </span>
-    </div>
-  );
-}
-
-function FilterPanel({
-  active,
-  onToggle,
-}: {
-  active: ReadonlySet<RouteFilterBucket>;
-  onToggle: (bucket: RouteFilterBucket) => void;
-}): ReactNode {
-  return (
-    <div
-      role="group"
-      aria-label="Filter routes"
-      className="mt-2 flex flex-wrap gap-3 border-[1.5px] border-border bg-card p-3 shadow-block"
-    >
-      {ROUTE_FILTER_BUCKETS.map((bucket) => (
-        <label key={bucket} className="flex items-center gap-1.5 text-sm capitalize">
-          <input type="checkbox" checked={active.has(bucket)} onChange={() => onToggle(bucket)} />
-          {bucket}
-        </label>
-      ))}
     </div>
   );
 }
@@ -99,7 +96,6 @@ export function RoutesScreen(): ReactNode {
   const [editTarget, setEditTarget] = useState<{ route: Route; mon: Mon } | null>(null);
   const [resetTarget, setResetTarget] = useState<RouteRow | null>(null);
   const [addOpen, setAddOpen] = useState(false);
-  const [filterOpen, setFilterOpen] = useState(false);
   const [activeFilters, setActiveFilters] = useState<Set<RouteFilterBucket>>(new Set());
 
   if (!runId) {
@@ -174,20 +170,12 @@ export function RoutesScreen(): ReactNode {
           >
             + Add route
           </Button>
-          <Button
-            type="button"
-            variant="outline"
-            aria-expanded={filterOpen}
-            onClick={() => setFilterOpen((open) => !open)}
-          >
-            Filter
-          </Button>
         </div>
       </div>
 
-      {filterOpen && <FilterPanel active={activeFilters} onToggle={toggleFilter} />}
-
-      {!loading && routes.length > 0 && <RouteCounters counters={counters} />}
+      {!loading && routes.length > 0 && (
+        <RouteCounters counters={counters} activeFilters={activeFilters} onToggle={toggleFilter} />
+      )}
 
       {addOpen && (
         <form
@@ -243,6 +231,8 @@ export function RoutesScreen(): ReactNode {
         <p className="text-muted-foreground p-4 text-sm">
           No routes yet. Add one above to get started.
         </p>
+      ) : visibleRows.length === 0 ? (
+        <p className="text-muted-foreground p-4 text-sm">No routes match the selected filters.</p>
       ) : (
         <>
           <div className="hidden overflow-x-auto border-[1.5px] border-t-0 border-border md:block">
