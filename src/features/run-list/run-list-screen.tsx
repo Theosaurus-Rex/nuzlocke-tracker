@@ -4,8 +4,8 @@
  * would silently go stale after a write.
  */
 
-import { useEffect, useState, type ChangeEvent, type ReactNode } from "react";
-import { Link, useNavigate } from "react-router";
+import { useState, type ChangeEvent, type ReactNode } from "react";
+import { Link, Navigate } from "react-router";
 
 import { StatusChip } from "@/components/status-chip";
 import { Button, buttonVariants } from "@/components/ui/button";
@@ -188,17 +188,8 @@ function RunCard({ run }: { run: Run }): ReactNode {
 
 export function RunListScreen(): ReactNode {
   const runsQuery = useRuns();
-  const navigate = useNavigate();
   const [activeTab, setActiveTab] = useState<RunStatus>("active");
   const [search, setSearch] = useState("");
-
-  const shouldRedirectToNewRun = runsQuery.isSuccess && runsQuery.data.length === 0;
-
-  useEffect(() => {
-    if (shouldRedirectToNewRun) {
-      void navigate("/runs/new", { replace: true });
-    }
-  }, [shouldRedirectToNewRun, navigate]);
 
   if (runsQuery.isPending) {
     return <p className="text-muted-foreground p-4 text-sm">Loading runs…</p>;
@@ -213,10 +204,8 @@ export function RunListScreen(): ReactNode {
     );
   }
 
-  // Empty means the effect above is about to redirect to /runs/new. Render nothing rather than
-  // an empty run list for the one tick before that navigation lands.
-  if (shouldRedirectToNewRun) {
-    return null;
+  if (runsQuery.data.length === 0) {
+    return <Navigate to="/runs/new" replace />;
   }
 
   const runs = runsQuery.data;
