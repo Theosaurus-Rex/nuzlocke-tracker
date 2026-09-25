@@ -357,11 +357,7 @@ export interface ResetEncounterInput {
   encounter: Encounter;
 }
 
-/**
- * Re-reads the encounter and its mon and deaths from inside the transaction, rather than
- * trusting the caller's copy, so a stale encounter (already reset elsewhere) is caught here
- * instead of deleting rows a second time.
- */
+/** Re-reads inside the transaction so a stale encounter throws instead of deleting twice. */
 async function persistResetEncounter(
   adapter: StorageAdapter,
   input: ResetEncounterInput,

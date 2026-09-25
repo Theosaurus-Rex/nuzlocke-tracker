@@ -1,13 +1,9 @@
-/**
- * Covers the pure `describeReset` message builder and `ResetEncounterDialog`'s wiring against
- * the memory adapter: what it shows, focus, Cancel, a successful reset and a failed one.
- */
-
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { describe, expect, it, vi } from "vitest";
 
+import { DEFAULT_RULES } from "@/domain/rules";
 import { buildRouteRows, type RouteRow } from "@/domain/route-rows";
 import type { Death, Encounter, Fight, Mon, Route, Run } from "@/domain/types";
 import { createMemoryAdapter } from "@/storage/memory-adapter";
@@ -20,23 +16,18 @@ const TIMESTAMP = "2026-09-17T00:00:00.000Z";
 
 function makeMon(overrides: Partial<Mon> = {}): Mon {
   return {
+    ...makeMonDraft("run-1", "encounter-1"),
     id: "mon-1",
-    runId: "run-1",
-    encounterId: "encounter-1",
-    speciesId: "bellsprout",
-    speciesIdCaught: "bellsprout",
-    nickname: null,
-    gender: null,
-    level: 12,
-    levelCaught: 8,
-    nature: null,
-    ability: null,
-    heldItem: null,
-    moves: [],
-    status: "party",
-    partySlot: 0,
-    boxOrder: null,
-    caughtRouteId: null,
+    createdAt: TIMESTAMP,
+    updatedAt: TIMESTAMP,
+    ...overrides,
+  };
+}
+
+function makeFight(overrides: Partial<Fight> = {}): Fight {
+  return {
+    ...makeFightDraft("run-1"),
+    id: "fight-1",
     createdAt: TIMESTAMP,
     updatedAt: TIMESTAMP,
     ...overrides,
@@ -61,38 +52,39 @@ function makeDeath(overrides: Partial<Death> = {}): Death {
 
 describe("describeReset", () => {
   it("says the route goes back to not encountered when there is no mon", () => {
-    expect(describeReset({ routeName: "Route 30", mon: null, death: null, killerName: null })).toBe(
+    expect(describeReset({ routeName: "Route 30", mon: null, death: null, fights: [] })).toBe(
       "Reset Route 30? It goes back to not encountered.",
     );
   });
 
   it("names the mon by nickname and species when it has a nickname", () => {
     const mon = makeMon({ nickname: "Sprig" });
-    expect(describeReset({ routeName: "Route 30", mon, death: null, killerName: null })).toBe(
+    expect(describeReset({ routeName: "Route 30", mon, death: null, fights: [] })).toBe(
       "Reset Route 30? This also deletes Sprig the Bellsprout. This can't be undone.",
     );
   });
 
   it("names the mon by species alone when it has no nickname", () => {
     const mon = makeMon({ nickname: null });
-    expect(describeReset({ routeName: "Route 30", mon, death: null, killerName: null })).toBe(
+    expect(describeReset({ routeName: "Route 30", mon, death: null, fights: [] })).toBe(
       "Reset Route 30? This also deletes Bellsprout. This can't be undone.",
     );
   });
 
   it("names the fight a trainer death happened in", () => {
     const mon = makeMon({ nickname: "Sprig" });
+    const fight = makeFight({ id: "fight-1", name: "Falkner" });
     const death = makeDeath({
       cause: {
         type: "trainer",
-        fightId: "fight-1",
+        fightId: fight.id,
         trainerName: null,
         species: "pidgey",
         level: 9,
         move: "Gust",
       },
     });
-    expect(describeReset({ routeName: "Route 30", mon, death, killerName: "Falkner" })).toBe(
+    expect(describeReset({ routeName: "Route 30", mon, death, fights: [fight] })).toBe(
       "Reset Route 30? This also deletes Sprig the Bellsprout and the record of its death to Falkner. This can't be undone.",
     );
   });
@@ -109,15 +101,32 @@ describe("describeReset", () => {
         move: "Tackle",
       },
     });
-    expect(describeReset({ routeName: "Route 30", mon, death, killerName: "Youngster Joey" })).toBe(
+    expect(describeReset({ routeName: "Route 30", mon, death, fights: [] })).toBe(
       "Reset Route 30? This also deletes Sprig the Bellsprout and the record of its death to Youngster Joey. This can't be undone.",
+    );
+  });
+
+  it("says only the record of its death when the fight it points to isn't in the list", () => {
+    const mon = makeMon({ nickname: "Sprig" });
+    const death = makeDeath({
+      cause: {
+        type: "trainer",
+        fightId: "missing-fight",
+        trainerName: null,
+        species: "pidgey",
+        level: 9,
+        move: "Gust",
+      },
+    });
+    expect(describeReset({ routeName: "Route 30", mon, death, fights: [] })).toBe(
+      "Reset Route 30? This also deletes Sprig the Bellsprout and the record of its death. This can't be undone.",
     );
   });
 
   it("says only the record of its death for a wild death", () => {
     const mon = makeMon({ nickname: "Sprig" });
     const death = makeDeath();
-    expect(describeReset({ routeName: "Route 30", mon, death, killerName: null })).toBe(
+    expect(describeReset({ routeName: "Route 30", mon, death, fights: [] })).toBe(
       "Reset Route 30? This also deletes Sprig the Bellsprout and the record of its death. This can't be undone.",
     );
   });
@@ -128,26 +137,7 @@ function makeRunDraft(overrides: Partial<Run> = {}): Omit<Run, "id" | "createdAt
     name: "Test Run",
     game: "heartgold",
     status: "active",
-    rules: {
-      dupesClause: false,
-      speciesClause: false,
-      shinyClause: false,
-      nicknamesRequired: false,
-      levelCaps: false,
-      setMode: false,
-      hardcore: false,
-      randomiser: {
-        enabled: false,
-        wildEncounters: false,
-        trainers: false,
-        starters: false,
-        abilities: false,
-        items: false,
-        moves: false,
-        evolutions: false,
-      },
-      customClause: null,
-    },
+    rules: DEFAULT_RULES,
     finishedAt: null,
     ...overrides,
   };
@@ -355,6 +345,19 @@ describe("ResetEncounterDialog", () => {
         "Reset Route 30? This also deletes Sprig the Bellsprout and the record of its death to Falkner. This can't be undone.",
       ),
     ).toBeInTheDocument();
+  });
+
+  it("shows the load error and keeps Reset disabled when the deaths query fails", async () => {
+    const adapter = createMemoryAdapter();
+    const row = await seedCaughtRow(adapter);
+    vi.spyOn(adapter.deaths, "where").mockRejectedValueOnce(new Error("offline"));
+
+    renderDialog(adapter, row);
+
+    expect(await screen.findByRole("alert")).toHaveTextContent(
+      "Could not check what this removes: offline.",
+    );
+    expect(screen.getByRole("button", { name: "Reset encounter" })).toBeDisabled();
   });
 
   it("starts focus on Cancel", async () => {

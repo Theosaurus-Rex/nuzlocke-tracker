@@ -237,10 +237,6 @@ export interface EncounterResetPlan {
   deathIds: string[];
 }
 
-/**
- * Decides which rows an encounter reset removes. Throws instead of guessing when the encounter,
- * mon and deaths passed in don't line up, since deleting on a mismatch would make bad data worse.
- */
 export function planEncounterReset({
   encounter,
   mon,

@@ -1,8 +1,3 @@
-/**
- * Covers `row-actions-menu.tsx` in isolation, built directly from `RouteRow` fixtures the same
- * way `route-table.test.tsx` does.
- */
-
 import { render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { describe, expect, it, vi } from "vitest";
@@ -93,50 +88,35 @@ function renderMenu(
 }
 
 describe("RowActionsMenu", () => {
-  it("opens Edit mon and Reset encounter for a caught row, each calling its own callback", async () => {
-    const route = makeRoute({ id: "route-1", name: "Route 30" });
-    const mon = makeMon({ id: "mon-1", status: "party" });
-    const row: RouteRow = {
-      route,
-      encounter: makeEncounter({ status: "caught", monId: "mon-1" }),
-      mon,
-      status: "caught",
-    };
-    const onEditMon = vi.fn();
-    const onReset = vi.fn();
+  it.each([
+    ["caught" as const, "party" as const],
+    ["dead" as const, "dead" as const],
+  ])(
+    "opens Edit mon and Reset encounter for a %s row, each calling its own callback",
+    async (rowStatus, monStatus) => {
+      const route = makeRoute({ id: "route-1", name: "Route 30" });
+      const mon = makeMon({ id: "mon-1", status: monStatus });
+      const row: RouteRow = {
+        route,
+        encounter: makeEncounter({ status: "caught", monId: "mon-1" }),
+        mon,
+        status: rowStatus,
+      };
+      const onEditMon = vi.fn();
+      const onReset = vi.fn();
 
-    renderMenu(row, { onEditMon, onReset });
+      renderMenu(row, { onEditMon, onReset });
 
-    await userEvent.click(await findMenuTrigger("Actions for Route 30"));
+      await userEvent.click(await findMenuTrigger("Actions for Route 30"));
 
-    await userEvent.click(await screen.findByRole("menuitem", { name: "Edit mon" }));
-    expect(onEditMon).toHaveBeenCalledWith(route, mon);
+      await userEvent.click(await screen.findByRole("menuitem", { name: "Edit mon" }));
+      expect(onEditMon).toHaveBeenCalledWith(route, mon);
 
-    await userEvent.click(await findMenuTrigger("Actions for Route 30"));
-    await userEvent.click(await screen.findByRole("menuitem", { name: "Reset encounter" }));
-    expect(onReset).toHaveBeenCalledWith(row);
-  });
-
-  it("opens Edit mon and Reset encounter for a dead row", async () => {
-    const route = makeRoute({ id: "route-1", name: "Route 30" });
-    const mon = makeMon({ id: "mon-1", status: "dead" });
-    const row: RouteRow = {
-      route,
-      encounter: makeEncounter({ status: "caught", monId: "mon-1" }),
-      mon,
-      status: "dead",
-    };
-    const onEditMon = vi.fn();
-    const onReset = vi.fn();
-
-    renderMenu(row, { onEditMon, onReset });
-
-    await userEvent.click(await findMenuTrigger("Actions for Route 30"));
-
-    expect(await screen.findByRole("menuitem", { name: "Edit mon" })).toBeInTheDocument();
-    await userEvent.click(screen.getByRole("menuitem", { name: "Reset encounter" }));
-    expect(onReset).toHaveBeenCalledWith(row);
-  });
+      await userEvent.click(await findMenuTrigger("Actions for Route 30"));
+      await userEvent.click(await screen.findByRole("menuitem", { name: "Reset encounter" }));
+      expect(onReset).toHaveBeenCalledWith(row);
+    },
+  );
 
   it.each([["missed" as const], ["skipped" as const]])(
     "offers only Reset encounter for a %s row",

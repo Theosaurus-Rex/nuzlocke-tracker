@@ -686,45 +686,57 @@ async function snapshotRun(
   return { encounters, mons, deaths, fights };
 }
 
+async function seedTwoEncounters(
+  adapter: StorageAdapter,
+  firstOutcome: "missed" | "caught",
+): Promise<{
+  wrapper: ReturnType<typeof createWrapper>;
+  target: Encounter;
+  targetMon: Mon | null;
+}> {
+  await adapter.init();
+  const { run, routes } = await createSeededRun(adapter);
+  const [routeA, routeB] = routes;
+  if (routeA === undefined || routeB === undefined) {
+    throw new Error("expected at least two seeded routes");
+  }
+
+  const wrapper = createWrapper(adapter);
+  const log = renderHook(() => useLogEncounter(), { wrapper });
+
+  const { encounter: target, mon: targetMon } = await log.result.current.mutateAsync({
+    runId: run.id,
+    routeId: routeA.id,
+    outcome: firstOutcome,
+    party: [],
+    details: firstOutcome === "caught" ? CATCH_DETAILS : undefined,
+    existingEncounters: [],
+  });
+
+  await log.result.current.mutateAsync({
+    runId: run.id,
+    routeId: routeB.id,
+    outcome: "caught",
+    party: [],
+    details: CATCH_DETAILS,
+    existingEncounters: [target],
+  });
+
+  return { wrapper, target, targetMon };
+}
+
 describe("useResetEncounter", () => {
   it("removes a missed encounter and leaves every other row untouched", async () => {
     const adapter = createMemoryAdapter();
-    await adapter.init();
-    const { run, routes } = await createSeededRun(adapter);
-    const [routeA, routeB] = routes;
-    if (routeA === undefined || routeB === undefined) {
-      throw new Error("expected at least two seeded routes");
-    }
-
-    const wrapper = createWrapper(adapter);
-    const log = renderHook(() => useLogEncounter(), { wrapper });
-
-    const { encounter: missed } = await log.result.current.mutateAsync({
-      runId: run.id,
-      routeId: routeA.id,
-      outcome: "missed",
-      party: [],
-      existingEncounters: [],
-    });
-
-    await log.result.current.mutateAsync({
-      runId: run.id,
-      routeId: routeB.id,
-      outcome: "caught",
-      party: [],
-      details: CATCH_DETAILS,
-      existingEncounters: [missed],
-    });
+    const { wrapper, target } = await seedTwoEncounters(adapter, "missed");
 
     const before = await snapshotRun(adapter);
 
     const reset = renderHook(() => useResetEncounter(), { wrapper });
-    await reset.result.current.mutateAsync({ encounter: missed });
-
-    expect(await adapter.encounters.get(missed.id)).toBeUndefined();
+    await reset.result.current.mutateAsync({ encounter: target });
 
     const after = await snapshotRun(adapter);
-    expect(after.encounters).toEqual(before.encounters.filter((row) => row.id !== missed.id));
+    expect(after.encounters).toEqual(before.encounters.filter((row) => row.id !== target.id));
     expect(after.mons).toEqual(before.mons);
     expect(after.deaths).toEqual(before.deaths);
     expect(after.fights).toEqual(before.fights);
@@ -732,44 +744,15 @@ describe("useResetEncounter", () => {
 
   it("removes a caught, alive encounter and its mon, leaving every other row untouched", async () => {
     const adapter = createMemoryAdapter();
-    await adapter.init();
-    const { run, routes } = await createSeededRun(adapter);
-    const [routeA, routeB] = routes;
-    if (routeA === undefined || routeB === undefined) {
-      throw new Error("expected at least two seeded routes");
-    }
-
-    const wrapper = createWrapper(adapter);
-    const log = renderHook(() => useLogEncounter(), { wrapper });
-
-    const { encounter: target, mon: targetMon } = await log.result.current.mutateAsync({
-      runId: run.id,
-      routeId: routeA.id,
-      outcome: "caught",
-      party: [],
-      details: CATCH_DETAILS,
-      existingEncounters: [],
-    });
+    const { wrapper, target, targetMon } = await seedTwoEncounters(adapter, "caught");
     if (targetMon === null) {
       throw new Error("expected a mon from a caught encounter");
     }
-
-    await log.result.current.mutateAsync({
-      runId: run.id,
-      routeId: routeB.id,
-      outcome: "caught",
-      party: [],
-      details: CATCH_DETAILS,
-      existingEncounters: [target],
-    });
 
     const before = await snapshotRun(adapter);
 
     const reset = renderHook(() => useResetEncounter(), { wrapper });
     await reset.result.current.mutateAsync({ encounter: target });
-
-    expect(await adapter.encounters.get(target.id)).toBeUndefined();
-    expect(await adapter.mons.get(targetMon.id)).toBeUndefined();
 
     const after = await snapshotRun(adapter);
     expect(after.encounters).toEqual(before.encounters.filter((row) => row.id !== target.id));
@@ -780,41 +763,15 @@ describe("useResetEncounter", () => {
 
   it("removes a caught, dead encounter, its mon and its death, leaving the fight untouched", async () => {
     const adapter = createMemoryAdapter();
-    await adapter.init();
-    const { run, routes } = await createSeededRun(adapter);
-    const [routeA, routeB] = routes;
-    if (routeA === undefined || routeB === undefined) {
-      throw new Error("expected at least two seeded routes");
-    }
-
-    const wrapper = createWrapper(adapter);
-    const log = renderHook(() => useLogEncounter(), { wrapper });
-
-    const { encounter: target, mon: targetMon } = await log.result.current.mutateAsync({
-      runId: run.id,
-      routeId: routeA.id,
-      outcome: "caught",
-      party: [],
-      details: CATCH_DETAILS,
-      existingEncounters: [],
-    });
+    const { wrapper, target, targetMon } = await seedTwoEncounters(adapter, "caught");
     if (targetMon === null) {
       throw new Error("expected a mon from a caught encounter");
     }
 
-    await log.result.current.mutateAsync({
-      runId: run.id,
-      routeId: routeB.id,
-      outcome: "caught",
-      party: [],
-      details: CATCH_DETAILS,
-      existingEncounters: [target],
-    });
-
-    const fight = await adapter.fights.put(makeFightDraft(run.id));
+    const fight = await adapter.fights.put(makeFightDraft(target.runId));
     await adapter.mons.put({ ...targetMon, status: "dead", partySlot: null });
     const death = await adapter.deaths.put(
-      makeDeathDraft(run.id, targetMon.id, {
+      makeDeathDraft(target.runId, targetMon.id, {
         cause: {
           type: "trainer",
           fightId: fight.id,
@@ -830,11 +787,6 @@ describe("useResetEncounter", () => {
 
     const reset = renderHook(() => useResetEncounter(), { wrapper });
     await reset.result.current.mutateAsync({ encounter: target });
-
-    expect(await adapter.encounters.get(target.id)).toBeUndefined();
-    expect(await adapter.mons.get(targetMon.id)).toBeUndefined();
-    expect(await adapter.deaths.get(death.id)).toBeUndefined();
-    expect(await adapter.fights.get(fight.id)).toEqual(fight);
 
     const after = await snapshotRun(adapter);
     expect(after.encounters).toEqual(before.encounters.filter((row) => row.id !== target.id));

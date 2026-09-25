@@ -15,33 +15,30 @@ function monLabel(mon: Mon): string {
     : speciesDisplayName(mon.speciesId);
 }
 
-function killerNameFor(death: Death | null, fights: readonly Fight[]): string | null {
-  if (death === null) {
-    return null;
-  }
-  const cause = death.cause;
-  if (cause.type !== "trainer") {
-    return null;
-  }
-  if (cause.fightId !== null) {
-    return fights.find((fight) => fight.id === cause.fightId)?.name ?? null;
-  }
-  return cause.trainerName;
-}
-
 export function describeReset({
   routeName,
   mon,
   death,
-  killerName,
+  fights,
 }: {
   routeName: string;
   mon: Mon | null;
   death: Death | null;
-  killerName: string | null;
+  fights: readonly Fight[];
 }): string {
   if (mon === null) {
     return `Reset ${routeName}? It goes back to not encountered.`;
+  }
+
+  let killerName: string | null = null;
+  if (death !== null) {
+    const cause = death.cause;
+    if (cause.type === "trainer") {
+      killerName =
+        cause.fightId !== null
+          ? (fights.find((fight) => fight.id === cause.fightId)?.name ?? null)
+          : cause.trainerName;
+    }
   }
 
   const deathClause =
@@ -79,8 +76,7 @@ export function ResetEncounterDialog({ row, onClose }: ResetEncounterDialogProps
 
   if (ready) {
     const death = deaths.find((candidate) => candidate.monId === row.mon?.id) ?? null;
-    const killerName = killerNameFor(death, fights);
-    message = describeReset({ routeName: row.route.name, mon: row.mon, death, killerName });
+    message = describeReset({ routeName: row.route.name, mon: row.mon, death, fights });
   } else if (loadError !== null) {
     messageIsError = true;
     message = `Could not check what this removes: ${

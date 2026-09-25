@@ -92,16 +92,14 @@ export function RouteTable({
                 </span>
               )}
             </div>
-            <div className="flex shrink-0 items-center gap-2">
-              <RowActionsMenu
-                row={routeRow}
-                removable={removable}
-                deletePending={deletePending}
-                onEditMon={onEditMon}
-                onReset={onResetEncounter}
-                onDelete={onDelete}
-              />
-            </div>
+            <RowActionsMenu
+              row={routeRow}
+              removable={removable}
+              deletePending={deletePending}
+              onEditMon={onEditMon}
+              onReset={onResetEncounter}
+              onDelete={onDelete}
+            />
           </div>
         );
       },

@@ -372,7 +372,11 @@ describe("RoutesScreen", () => {
     await userEvent.click(menuTrigger);
     await userEvent.click(await screen.findByRole("menuitem", { name: "Reset encounter" }));
 
-    await userEvent.click(await screen.findByRole("button", { name: "Reset encounter" }));
+    const resetButton = await screen.findByRole("button", { name: "Reset encounter" });
+    await waitFor(() => {
+      expect(resetButton).toBeEnabled();
+    });
+    await userEvent.click(resetButton);
 
     await waitFor(async () => {
       expect(await adapter.mons.get(mon.id)).toBeUndefined();
