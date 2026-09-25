@@ -102,27 +102,17 @@ export function RouteCardList({
             )}
           >
             <div className="min-w-0 flex-1">
-              <div className="flex items-start justify-between gap-2">
-                <div className="min-w-0 truncate">
-                  <span
-                    className={cn("font-bold", row.status === "missed" && "text-muted-foreground")}
-                  >
-                    {row.route.name}
+              <div className="min-w-0 truncate">
+                <span
+                  className={cn("font-bold", row.status === "missed" && "text-muted-foreground")}
+                >
+                  {row.route.name}
+                </span>
+                {row.route.isCustom && (
+                  <span className="text-muted-foreground ml-2 border-[1.5px] border-border px-1.5 py-0.5 text-[11px] font-medium tracking-[0.12em] uppercase">
+                    Custom
                   </span>
-                  {row.route.isCustom && (
-                    <span className="text-muted-foreground ml-2 border-[1.5px] border-border px-1.5 py-0.5 text-[11px] font-medium tracking-[0.12em] uppercase">
-                      Custom
-                    </span>
-                  )}
-                </div>
-                <RowActionsMenu
-                  row={row}
-                  removable={removable}
-                  deletePending={deletePending}
-                  onEditMon={onEditMon}
-                  onReset={onResetEncounter}
-                  onDelete={onDelete}
-                />
+                )}
               </div>
               <RouteCardSubtitle row={row} />
             </div>
@@ -130,6 +120,15 @@ export function RouteCardList({
               row={row}
               generation={generation}
               onLog={() => onLogEncounter(row.route)}
+            />
+            <RowActionsMenu
+              row={row}
+              removable={removable}
+              deletePending={deletePending}
+              onEditMon={onEditMon}
+              onReset={onResetEncounter}
+              onDelete={onDelete}
+              className="shrink-0"
             />
           </li>
         );

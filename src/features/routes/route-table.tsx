@@ -73,33 +73,19 @@ export function RouteTable({
       header: "Route",
       cell: ({ row }) => {
         const routeRow = row.original;
-        const removable = canDeleteRoute(routeRow.route, encounters);
 
         return (
-          <div className="flex items-center justify-between gap-3">
-            <div className="min-w-0 truncate">
-              <span
-                className={cn(
-                  "font-medium",
-                  routeRow.status === "missed" && "text-muted-foreground",
-                )}
-              >
-                {routeRow.route.name}
+          <div className="min-w-0 truncate">
+            <span
+              className={cn("font-medium", routeRow.status === "missed" && "text-muted-foreground")}
+            >
+              {routeRow.route.name}
+            </span>
+            {routeRow.route.isCustom && (
+              <span className="text-muted-foreground ml-2 border-[1.5px] border-border px-1.5 py-0.5 text-[11px] font-medium tracking-[0.12em] uppercase">
+                Custom
               </span>
-              {routeRow.route.isCustom && (
-                <span className="text-muted-foreground ml-2 border-[1.5px] border-border px-1.5 py-0.5 text-[11px] font-medium tracking-[0.12em] uppercase">
-                  Custom
-                </span>
-              )}
-            </div>
-            <RowActionsMenu
-              row={routeRow}
-              removable={removable}
-              deletePending={deletePending}
-              onEditMon={onEditMon}
-              onReset={onResetEncounter}
-              onDelete={onDelete}
-            />
+            )}
           </div>
         );
       },
@@ -130,6 +116,25 @@ export function RouteTable({
         <StatusCell row={row.original} onLogEncounter={() => onLogEncounter(row.original.route)} />
       ),
     }),
+    columnHelper.display({
+      id: "actions",
+      header: () => <span className="sr-only">Actions</span>,
+      cell: ({ row }) => {
+        const routeRow = row.original;
+        const removable = canDeleteRoute(routeRow.route, encounters);
+
+        return (
+          <RowActionsMenu
+            row={routeRow}
+            removable={removable}
+            deletePending={deletePending}
+            onEditMon={onEditMon}
+            onReset={onResetEncounter}
+            onDelete={onDelete}
+          />
+        );
+      },
+    }),
   ];
 
   const table = useTable({
@@ -147,7 +152,10 @@ export function RouteTable({
             {headerGroup.headers.map((header) => (
               <th
                 key={header.id}
-                className="px-3 py-2 text-[13px] font-medium tracking-[0.12em] text-foreground uppercase"
+                className={cn(
+                  "px-3 py-2 text-[13px] font-medium tracking-[0.12em] text-foreground uppercase",
+                  header.column.id === "actions" && "w-px text-right",
+                )}
               >
                 {header.isPlaceholder ? null : <table.FlexRender header={header} />}
               </th>
@@ -165,7 +173,10 @@ export function RouteTable({
             )}
           >
             {row.getAllCells().map((cell) => (
-              <td key={cell.id} className="px-3 py-2">
+              <td
+                key={cell.id}
+                className={cn("px-3 py-2", cell.column.id === "actions" && "w-px text-right")}
+              >
                 <table.FlexRender cell={cell} />
               </td>
             ))}

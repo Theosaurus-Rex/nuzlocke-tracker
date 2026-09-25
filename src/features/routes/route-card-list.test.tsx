@@ -220,6 +220,17 @@ describe("RouteCardList", () => {
     expect(onDelete).toHaveBeenCalledWith(route);
   });
 
+  it("puts the actions trigger after the badges in DOM order", async () => {
+    const route = makeRoute({ id: "route-1", isCustom: true, name: "Route 1" });
+
+    renderCards({ routes: [route], encounters: [], mons: [] });
+
+    const trigger = await findMenuTrigger("Actions for Route 1");
+    const buttons = within(screen.getByRole("listitem")).getAllByRole("button");
+
+    expect(buttons[buttons.length - 1]).toBe(trigger);
+  });
+
   it("shows no remove control for a seeded, non-custom route", () => {
     const route = makeRoute({ id: "route-1", isCustom: false });
 

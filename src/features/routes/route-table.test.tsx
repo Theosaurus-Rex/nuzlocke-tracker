@@ -141,7 +141,7 @@ describe("RouteTable", () => {
 
     const row = screen.getAllByRole("row")[1]!;
     const cells = within(row).getAllByRole("cell");
-    const statusCell = cells[cells.length - 1]!;
+    const statusCell = cells[cells.length - 2]!;
 
     expect(within(statusCell).getByText(expectedLabel)).toBeInTheDocument();
   });
@@ -263,6 +263,20 @@ describe("RouteTable", () => {
     await userEvent.click(await screen.findByRole("menuitem", { name: "Delete route" }));
 
     expect(onDelete).toHaveBeenCalledWith(route);
+  });
+
+  it("puts the actions trigger in the row's last cell", () => {
+    const route = makeRoute({ id: "route-1", isCustom: true, name: "Route 1" });
+
+    renderTable({ routes: [route], encounters: [], mons: [] });
+
+    const row = screen.getAllByRole("row")[1]!;
+    const cells = within(row).getAllByRole("cell");
+    const lastCell = cells[cells.length - 1]!;
+
+    expect(
+      within(lastCell).getByRole("button", { name: "Actions for Route 1" }),
+    ).toBeInTheDocument();
   });
 
   it("shows no remove control for a seeded, non-custom route", () => {

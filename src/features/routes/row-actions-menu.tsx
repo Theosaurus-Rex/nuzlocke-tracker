@@ -1,6 +1,6 @@
 import type { ReactNode } from "react";
 
-import { EllipsisIcon } from "lucide-react";
+import { EllipsisVerticalIcon } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import {
@@ -11,6 +11,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import type { RouteRow } from "@/domain/route-rows";
 import type { Mon, Route } from "@/domain/types";
+import { cn } from "@/lib/utils";
 
 export interface RowActionsMenuProps {
   row: RouteRow;
@@ -19,6 +20,7 @@ export interface RowActionsMenuProps {
   onEditMon: (route: Route, mon: Mon) => void;
   onReset: (row: RouteRow) => void;
   onDelete: (route: Route) => void;
+  className?: string;
 }
 
 export function RowActionsMenu({
@@ -28,6 +30,7 @@ export function RowActionsMenu({
   onEditMon,
   onReset,
   onDelete,
+  className,
 }: RowActionsMenuProps): ReactNode {
   const mon = row.mon;
   const canEdit = (row.status === "caught" || row.status === "dead") && mon !== null;
@@ -48,10 +51,14 @@ export function RowActionsMenu({
             size="icon-sm"
             variant="ghost"
             aria-label={`Actions for ${row.route.name}`}
+            className={cn(
+              "bg-foreground text-background hover:bg-foreground/85 hover:text-background",
+              className,
+            )}
           />
         }
       >
-        <EllipsisIcon />
+        <EllipsisVerticalIcon />
       </DropdownMenuTrigger>
       <DropdownMenuContent align="end">
         {canEdit && mon !== null && (
