@@ -6,14 +6,15 @@
 
 import type { ReactNode } from "react";
 
-import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import { onlineManager, QueryClientProvider } from "@tanstack/react-query";
 import { renderHook, waitFor } from "@testing-library/react";
-import { describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it } from "vitest";
 
 import type { CatchDetails } from "@/domain/transitions";
 import type { Death, Encounter, Fight, Mon, Route, Run, Rules } from "@/domain/types";
 
 import { DEFAULT_RULES } from "@/domain/rules";
+import { createQueryClient } from "@/lib/query-client";
 
 import type { StorageAdapter } from "./adapter";
 import { createMemoryAdapter } from "./memory-adapter";
@@ -200,11 +201,9 @@ async function seedFullRun(
 function createWrapper(
   adapter: StorageAdapter,
 ): ({ children }: { children: ReactNode }) => ReactNode {
-  const queryClient = new QueryClient({
-    defaultOptions: {
-      queries: { retry: false },
-      mutations: { retry: false },
-    },
+  const queryClient = createQueryClient({
+    queries: { retry: false },
+    mutations: { retry: false },
   });
 
   return function Wrapper({ children }: { children: ReactNode }): ReactNode {
@@ -316,6 +315,25 @@ describe("useRoutes", () => {
       "Route 30",
       "Route 46",
     ]);
+  });
+});
+
+describe("offline", () => {
+  afterEach(() => {
+    onlineManager.setOnline(true);
+  });
+
+  it("still settles a storage read while the device reports no connection", async () => {
+    const adapter = createMemoryAdapter();
+    await adapter.init();
+    const run = await adapter.runs.put(makeRunDraft({ name: "Soul Silver Solo" }));
+
+    onlineManager.setOnline(false);
+    const { result } = renderHook(() => useRuns(), { wrapper: createWrapper(adapter) });
+
+    await waitFor(() => {
+      expect(result.current.data).toEqual([run]);
+    });
   });
 });
 

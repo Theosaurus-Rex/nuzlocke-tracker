@@ -1,10 +1,10 @@
 import { StrictMode } from "react";
 import { createRoot } from "react-dom/client";
-import { QueryClient } from "@tanstack/react-query";
 
 import "./index.css";
 
 import { configurePokeApiQueries } from "@/game/pokeapi/queries";
+import { createQueryClient } from "@/lib/query-client";
 import { createDexieAdapter } from "@/storage/dexie-adapter";
 import { requestPersistentStorage } from "@/storage/persistence";
 
@@ -12,7 +12,7 @@ import { Root } from "./app/root";
 
 // Created once, at module scope: a QueryClient created inline in a component's render would be
 // torn down and rebuilt, losing all cached data, on every re-render of whatever owned it.
-const queryClient = new QueryClient();
+const queryClient = createQueryClient();
 configurePokeApiQueries(queryClient);
 
 // The one place the Dexie implementation is named.
