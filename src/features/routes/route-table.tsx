@@ -1,5 +1,6 @@
 import { createColumnHelper, tableFeatures, useTable } from "@tanstack/react-table";
 
+import { CHIP_SHAPE } from "@/components/chip";
 import { SpeciesTypeBadge } from "@/components/species-type-badge";
 import { StatusChip } from "@/components/status-chip";
 import { Typography } from "@/components/typography";
@@ -131,12 +132,7 @@ export function RouteTable({
               </button>
             )}
             {routeRow.route.isCustom && (
-              <span
-                className="text-muted-foreground ml-2 border-[1.5px] border-border px-1.5 py-0.5 font-medium tracking-[0.12em] uppercase"
-                style={{ fontSize: "11px" }}
-              >
-                Custom
-              </span>
+              <span className={cn(CHIP_SHAPE, "text-muted-foreground ml-2")}>Custom</span>
             )}
           </div>
         );
