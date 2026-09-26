@@ -143,5 +143,13 @@ export default tseslint.config(
       "react-refresh/only-export-components": ["error", { allowExportNames: ["TYPE_FILL"] }],
     },
   },
+  {
+    // partyMembers is PartyScreen's own filter and sort, exported for its own tests rather than
+    // split into a separate file.
+    files: ["src/features/party/party-screen.tsx"],
+    rules: {
+      "react-refresh/only-export-components": ["error", { allowExportNames: ["partyMembers"] }],
+    },
+  },
   eslintConfigPrettier,
 );
