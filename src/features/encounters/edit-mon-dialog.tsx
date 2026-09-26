@@ -23,6 +23,7 @@ import {
   HeldItemField,
   NatureField,
   NicknameField,
+  ShinyField,
 } from "./mon-fields";
 import { MovesetField } from "./moveset-field";
 import { SpeciesPicker } from "./species-picker";
@@ -114,6 +115,7 @@ function EditMonForm({ mon, rules, generation, onDone }: EditMonFormProps): Reac
   const [ability, setAbility] = useState(mon.ability ?? "");
   const [heldItem, setHeldItem] = useState(mon.heldItem ?? "");
   const [moves, setMoves] = useState<string[]>(mon.moves);
+  const [shiny, setShiny] = useState(mon.shiny);
   const [submitted, setSubmitted] = useState(false);
 
   const speciesUnresolved = pickingAny && pickerValue === "";
@@ -132,6 +134,7 @@ function EditMonForm({ mon, rules, generation, onDone }: EditMonFormProps): Reac
     ability: ability.trim() === "" ? null : ability,
     heldItem: heldItem.trim() === "" ? null : heldItem,
     moves,
+    shiny,
   };
 
   const errors: Partial<Record<EncounterField, string>> = submitted
@@ -161,6 +164,10 @@ function EditMonForm({ mon, rules, generation, onDone }: EditMonFormProps): Reac
   return (
     <form className="flex min-h-0 flex-1 flex-col" onSubmit={handleSubmit} noValidate>
       <div className="flex-1 space-y-4 overflow-y-auto p-4">
+        <div className="flex justify-end">
+          <ShinyField id="edit-mon-shiny" value={shiny} onChange={setShiny} />
+        </div>
+
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
           <div className="sm:col-span-2">
             <Label htmlFor="edit-mon-species" className={FIELD_LABEL_CLASS}>

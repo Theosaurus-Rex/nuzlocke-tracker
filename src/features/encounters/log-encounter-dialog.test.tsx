@@ -78,6 +78,7 @@ function makeMon(overrides: Partial<Mon> = {}): Mon {
     partySlot: 0,
     boxOrder: null,
     caughtRouteId: null,
+    shiny: false,
     createdAt: TIMESTAMP,
     updatedAt: TIMESTAMP,
     ...overrides,
@@ -163,6 +164,37 @@ describe("LogEncounterDialog", () => {
 
     const [encounter] = await adapter.encounters.where("runId", "run-1");
     expect(encounter?.speciesId).toBe("chikorita");
+  });
+
+  it("shows the shiny toggle only while the outcome is Caught", async () => {
+    const user = userEvent.setup();
+    renderDialog({});
+
+    expect(screen.getByLabelText("Shiny")).toBeInTheDocument();
+
+    await user.click(screen.getByRole("radio", { name: "Missed" }));
+    expect(screen.queryByLabelText("Shiny")).not.toBeInTheDocument();
+
+    await user.click(screen.getByRole("radio", { name: "Caught" }));
+    expect(screen.getByLabelText("Shiny")).toBeInTheDocument();
+  });
+
+  it("logs a shiny catch when the toggle is on, and defaults to not shiny", async () => {
+    const user = userEvent.setup();
+    const { adapter, onOpenChange } = renderDialog({});
+
+    await user.click(screen.getByLabelText("Shiny"));
+    expect(screen.getByLabelText("Shiny")).toHaveAttribute("aria-pressed", "true");
+
+    await fillMinimalCatch(user);
+    await user.click(screen.getByRole("button", { name: "Save encounter" }));
+
+    await waitFor(() => {
+      expect(onOpenChange).toHaveBeenCalledWith(false);
+    });
+
+    const [mon] = await adapter.mons.where("runId", "run-1");
+    expect(mon?.shiny).toBe(true);
   });
 
   it("shows the species' resolved type inline once it matches", async () => {

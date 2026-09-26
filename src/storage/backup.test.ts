@@ -103,6 +103,7 @@ function makeMonDraft(
     partySlot: 0,
     boxOrder: null,
     caughtRouteId: null,
+    shiny: false,
     ...overrides,
   };
 }
@@ -219,6 +220,69 @@ describe("round trip", () => {
     const imported = mustExist(await target.runs.get(run.id), "imported run");
     expect(imported.updatedAt).toBe(oldUpdatedAt);
     expect(imported).toEqual(backdated);
+  });
+
+  it("round-trips a shiny mon through export and import", async () => {
+    const source = createMemoryAdapter();
+    await source.init();
+    const run = await source.runs.put(makeRunDraft());
+    const mon = await source.mons.put(makeMonDraft(run.id, { shiny: true }));
+
+    const bundle = await exportBundle(source);
+    expect(bundle.mons[0]?.shiny).toBe(true);
+
+    const target = createMemoryAdapter();
+    await target.init();
+    await importBundle(target, bundle, "replace");
+
+    expect((await target.mons.get(mon.id))?.shiny).toBe(true);
+  });
+
+  it("imports a pre-shiny (schemaVersion 1) export, and its mons read as not shiny", async () => {
+    const timestamp = "2020-01-01T00:00:00.000Z";
+    // A real v1 export has no `shiny` key on its mons at all: the field did not exist yet.
+    const legacyMon = {
+      id: "mon-1",
+      createdAt: timestamp,
+      updatedAt: timestamp,
+      runId: "run-1",
+      encounterId: null,
+      speciesId: "chikorita",
+      speciesIdCaught: "chikorita",
+      nickname: null,
+      gender: "female",
+      level: 5,
+      levelCaught: 5,
+      nature: null,
+      ability: null,
+      heldItem: null,
+      moves: ["tackle"],
+      status: "party",
+      partySlot: 0,
+      boxOrder: null,
+      caughtRouteId: null,
+    };
+    const oldExport = {
+      schemaVersion: 1,
+      exportedAt: timestamp,
+      runs: [{ id: "run-1", createdAt: timestamp, updatedAt: timestamp, ...makeRunDraft() }],
+      routes: [],
+      encounters: [],
+      mons: [legacyMon],
+      deaths: [],
+      fights: [],
+    };
+
+    const result = parseBundle(JSON.stringify(oldExport));
+    expect(result.ok).toBe(true);
+    if (!result.ok) return;
+
+    const target = createMemoryAdapter();
+    await target.init();
+    const summary = await importBundle(target, result.bundle, "replace");
+
+    expect(summary.imported).toEqual([{ id: "run-1", name: "Test Run" }]);
+    expect((await target.mons.get("mon-1"))?.shiny).toBe(false);
   });
 });
 
@@ -537,6 +601,7 @@ describe("parseBundle — field rules", () => {
     // boolean fields: a string
     ["routes", "isCustom", "yes"],
     ["fights", "grantsBadge", "true"],
+    ["mons", "shiny", "yes"],
 
     // enum fields: an unrecognised value
     ["runs", "status", "in-progress"],

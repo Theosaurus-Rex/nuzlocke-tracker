@@ -105,6 +105,7 @@ function makeMonDraft(
     partySlot: 0,
     boxOrder: null,
     caughtRouteId: null,
+    shiny: false,
     ...overrides,
   };
 }
@@ -155,6 +156,7 @@ const CATCH_DETAILS: CatchDetails = {
   ability: null,
   heldItem: null,
   moves: ["tackle"],
+  shiny: false,
 };
 
 /** Seeds a run, route and open encounter, returning all three plus the adapter. */

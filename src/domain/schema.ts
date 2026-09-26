@@ -3,7 +3,7 @@
 import type { Run, Route, Encounter, Mon, Death, Fight } from "./types";
 
 /** Bumped whenever a table's shape changes in a way that breaks import of an older export. */
-export const SCHEMA_VERSION = 1;
+export const SCHEMA_VERSION = 2;
 
 export interface ExportBundle {
   schemaVersion: number;
@@ -50,7 +50,14 @@ export function isExportBundle(value: unknown): value is ExportBundle {
 export type Migration = (bundle: ExportBundle) => ExportBundle;
 
 /** Keyed by the FROM version. */
-export const migrations: Record<number, Migration> = {};
+export const migrations: Record<number, Migration> = {
+  // v1 predates Mon.shiny, so every mon in a v1 bundle is missing the field, not merely false.
+  1: (bundle) => ({
+    ...bundle,
+    schemaVersion: 2,
+    mons: bundle.mons.map((mon) => ({ ...mon, shiny: false })),
+  }),
+};
 
 /**
  * Walks `migrations` one step at a time. Returns a result instead of throwing, so callers can

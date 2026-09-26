@@ -65,6 +65,7 @@ function makeMon(overrides: Partial<Mon> = {}): Mon {
     partySlot: 0,
     boxOrder: null,
     caughtRouteId: null,
+    shiny: false,
     createdAt: TIMESTAMP,
     updatedAt: TIMESTAMP,
     ...overrides,

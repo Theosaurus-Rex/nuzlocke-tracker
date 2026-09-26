@@ -89,6 +89,7 @@ function makeMonDraft(runId: string, overrides: Partial<Draft<Mon>> = {}): Draft
     partySlot: 0,
     boxOrder: null,
     caughtRouteId: null,
+    shiny: false,
     ...overrides,
   };
 }

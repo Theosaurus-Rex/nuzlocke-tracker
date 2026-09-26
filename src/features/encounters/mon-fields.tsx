@@ -1,3 +1,4 @@
+import { StarIcon } from "lucide-react";
 import type { ReactNode } from "react";
 
 import { Button } from "@/components/ui/button";
@@ -12,6 +13,7 @@ import {
 } from "@/components/ui/select";
 import type { Gender } from "@/domain/types";
 import { natures } from "@/game/natures";
+import { cn } from "@/lib/utils";
 
 const GENDERS: { value: Gender; label: string }[] = [
   { value: "male", label: "Male" },
@@ -85,6 +87,35 @@ export function GenderField({ value, onChange }: GenderFieldProps): ReactNode {
           </Button>
         ))}
       </div>
+    </div>
+  );
+}
+
+export interface ShinyFieldProps {
+  id: string;
+  value: boolean;
+  onChange: (value: boolean) => void;
+}
+
+/** A square toggle button rather than a checkbox, matching the star drawn in the frames. */
+export function ShinyField({ id, value, onChange }: ShinyFieldProps): ReactNode {
+  return (
+    <div className="flex items-center gap-2">
+      <Label htmlFor={id} className="text-[13px] font-medium tracking-[0.12em] uppercase">
+        Shiny
+      </Label>
+      <button
+        id={id}
+        type="button"
+        aria-pressed={value}
+        onClick={() => onChange(!value)}
+        className={cn(
+          "flex size-8 items-center justify-center border-[1.5px] border-border bg-background",
+          value && "bg-flag",
+        )}
+      >
+        <StarIcon aria-hidden="true" className={cn("size-4", value && "fill-current")} />
+      </button>
     </div>
   );
 }

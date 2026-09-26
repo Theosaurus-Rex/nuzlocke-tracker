@@ -147,6 +147,7 @@ function makeMonDraft(
     partySlot: 0,
     boxOrder: null,
     caughtRouteId: null,
+    shiny: false,
     ...overrides,
   };
 }

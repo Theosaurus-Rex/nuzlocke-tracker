@@ -57,6 +57,7 @@ export interface CatchDetails {
   ability: string | null;
   heldItem: string | null;
   moves: string[];
+  shiny: boolean;
 }
 
 export function catchEncounter({
@@ -112,6 +113,7 @@ export function catchEncounter({
     partySlot: slot,
     boxOrder: null,
     caughtRouteId: encounter.routeId,
+    shiny: details.shiny,
   };
 
   return { encounter: updatedEncounter, mon };
@@ -189,6 +191,7 @@ export interface MonAmendments {
   ability: string | null;
   heldItem: string | null;
   moves: string[];
+  shiny: boolean;
 }
 
 export function amendMon({ mon, amendments }: { mon: Mon; amendments: MonAmendments }): Mon {
@@ -213,6 +216,7 @@ export function amendMon({ mon, amendments }: { mon: Mon; amendments: MonAmendme
     ability: amendments.ability,
     heldItem: amendments.heldItem,
     moves: amendments.moves,
+    shiny: amendments.shiny,
   };
 }
 
