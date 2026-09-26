@@ -70,6 +70,7 @@ export default tseslint.config(
       "src/features/new-run/**/*.tsx",
       "src/features/not-found/**/*.tsx",
       "src/features/encounters/**/*.tsx",
+      "src/features/routes/**/*.tsx",
     ],
     ignores: ["**/*.test.tsx"],
     rules: {

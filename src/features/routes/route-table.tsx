@@ -1,7 +1,9 @@
 import { createColumnHelper, tableFeatures, useTable } from "@tanstack/react-table";
 
+import { CHIP_SHAPE } from "@/components/chip";
 import { SpeciesTypeBadge } from "@/components/species-type-badge";
 import { StatusChip } from "@/components/status-chip";
+import { Typography } from "@/components/typography";
 import { canDeleteRoute } from "@/domain/routes";
 import type { RouteRow } from "@/domain/route-rows";
 import type { Encounter, Mon, Route } from "@/domain/types";
@@ -40,11 +42,22 @@ function StatusCell({ row, onLogEncounter }: { row: RouteRow; onLogEncounter: ()
 
 function EncounterCell({ row }: { row: RouteRow }) {
   if (row.encounter === null) {
-    return <span className="text-muted-foreground">not encountered yet</span>;
+    return (
+      <Typography as="span" variant="body" tone="muted">
+        not encountered yet
+      </Typography>
+    );
   }
 
   return (
-    <RowSpecies row={row} emptyFallback={<span className="text-muted-foreground">&mdash;</span>} />
+    <RowSpecies
+      row={row}
+      emptyFallback={
+        <Typography as="span" variant="body" tone="muted">
+          &mdash;
+        </Typography>
+      }
+    />
   );
 }
 
@@ -89,6 +102,7 @@ export function RouteTable({
       cell: ({ row }) => {
         const routeRow = row.original;
         const action = rowTapAction(routeRow);
+        const nameTone = routeRow.status === "missed" ? "muted" : undefined;
         const nameClassName = cn(
           "font-medium",
           routeRow.status === "missed" && "text-muted-foreground",
@@ -97,7 +111,9 @@ export function RouteTable({
         return (
           <div className="min-w-0 truncate">
             {action.kind === "none" ? (
-              <span className={nameClassName}>{routeRow.route.name}</span>
+              <Typography as="span" variant="strong" tone={nameTone}>
+                {routeRow.route.name}
+              </Typography>
             ) : (
               <button
                 type="button"
@@ -116,9 +132,7 @@ export function RouteTable({
               </button>
             )}
             {routeRow.route.isCustom && (
-              <span className="text-muted-foreground ml-2 border-[1.5px] border-border px-1.5 py-0.5 text-[11px] font-medium tracking-[0.12em] uppercase">
-                Custom
-              </span>
+              <span className={cn(CHIP_SHAPE, "text-muted-foreground ml-2")}>Custom</span>
             )}
           </div>
         );
@@ -140,7 +154,11 @@ export function RouteTable({
       cell: ({ row }) => {
         const routeRow = row.original;
         const level = routeRow.mon?.level ?? routeRow.encounter?.level ?? null;
-        return <span className="font-mono text-lg">{level ?? "—"}</span>;
+        return (
+          <Typography as="span" variant="number" className="text-base">
+            {level ?? "—"}
+          </Typography>
+        );
       },
     }),
     columnHelper.display({
@@ -185,12 +203,13 @@ export function RouteTable({
             {headerGroup.headers.map((header) => (
               <th
                 key={header.id}
-                className={cn(
-                  "px-3 py-2 text-[13px] font-medium tracking-[0.12em] text-foreground uppercase",
-                  header.column.id === "actions" && "w-px text-right",
-                )}
+                className={cn("px-3 py-2", header.column.id === "actions" && "w-px text-right")}
               >
-                {header.isPlaceholder ? null : <table.FlexRender header={header} />}
+                {header.isPlaceholder ? null : (
+                  <Typography as="span" variant="eyebrow" tone="ink">
+                    <table.FlexRender header={header} />
+                  </Typography>
+                )}
               </th>
             ))}
           </tr>

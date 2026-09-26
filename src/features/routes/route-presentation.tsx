@@ -1,6 +1,7 @@
 import type { ReactNode } from "react";
 
 import type { StatusChipStatus } from "@/components/status-chip";
+import { Typography } from "@/components/typography";
 import type { RouteRow, RouteRowStatus } from "@/domain/route-rows";
 import type { Gender, Mon } from "@/domain/types";
 import { speciesDisplayName } from "@/game/pokeapi/resolve";
@@ -37,7 +38,9 @@ export function RowSpecies({
     return (
       <span>
         {row.mon.nickname !== null && (
-          <span className="text-muted-foreground">&ldquo;{row.mon.nickname}&rdquo; </span>
+          <Typography as="span" variant="body" tone="muted">
+            &ldquo;{row.mon.nickname}&rdquo;{" "}
+          </Typography>
         )}
         <span>{speciesDisplayName(row.mon.speciesId)}</span>
         {gender !== null && <span> {gender}</span>}
@@ -49,7 +52,12 @@ export function RowSpecies({
     return (
       <span>
         <span>{speciesDisplayName(row.encounter.speciesId)}</span>
-        {row.status === "missed" && <span className="text-muted-foreground"> &mdash; fled</span>}
+        {row.status === "missed" && (
+          <Typography as="span" variant="body" tone="muted">
+            {" "}
+            &mdash; fled
+          </Typography>
+        )}
       </span>
     );
   }
