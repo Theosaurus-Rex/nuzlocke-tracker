@@ -1,5 +1,7 @@
 import type { ReactNode } from "react";
 
+import { Typography } from "@/components/typography";
+
 export interface PokeApiNoticeProps {
   id: string;
   query: { isPending: boolean; isFetching: boolean; isError: boolean; refetch: () => unknown };
@@ -11,19 +13,19 @@ export function PokeApiNotice({ id, query, loadingText }: PokeApiNoticeProps): R
   // check or a retry in progress looks identical to one that already failed again.
   if (query.isPending || query.isFetching) {
     return (
-      <p id={id} role="status" className="mt-1 text-xs text-muted-foreground">
+      <Typography as="p" id={id} role="status" variant="caption" tone="muted" className="mt-1">
         {loadingText}
-      </p>
+      </Typography>
     );
   }
   if (query.isError) {
     return (
-      <p id={id} role="alert" className="mt-1 text-xs text-destructive">
+      <Typography as="p" id={id} role="alert" variant="caption" tone="alert" className="mt-1">
         Couldn't reach PokéAPI.{" "}
         <button type="button" className="underline" onClick={() => void query.refetch()}>
           Retry
         </button>
-      </p>
+      </Typography>
     );
   }
   return null;

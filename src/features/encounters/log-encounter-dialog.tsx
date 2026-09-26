@@ -1,9 +1,9 @@
 import { useState, type FormEvent, type ReactNode } from "react";
 
+import { Typography } from "@/components/typography";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
 import {
   Select,
   SelectContent,
@@ -23,7 +23,6 @@ import { cn } from "@/lib/utils";
 import { EncounterDialogHeader } from "./encounter-dialog-header";
 import {
   AbilityField,
-  FIELD_LABEL_CLASS,
   GenderField,
   HeldItemField,
   NatureField,
@@ -221,9 +220,14 @@ function LogEncounterForm({
 
         {outcome !== "caught" ? (
           <div>
-            <Label htmlFor="log-encounter-species" className={FIELD_LABEL_CLASS}>
+            <Typography
+              as="label"
+              variant="eyebrow"
+              htmlFor="log-encounter-species"
+              className="mb-1 block"
+            >
               {outcome === "missed" ? "Species" : "Species (optional)"}
-            </Label>
+            </Typography>
             <SpeciesPicker
               id="log-encounter-species"
               value={speciesId}
@@ -233,17 +237,28 @@ function LogEncounterForm({
               aria-describedby={errors.speciesId ? "log-encounter-species-error" : undefined}
             />
             {errors.speciesId && (
-              <p id="log-encounter-species-error" className="mt-1 text-sm text-destructive">
+              <Typography
+                as="p"
+                id="log-encounter-species-error"
+                variant="body"
+                tone="alert"
+                className="mt-1"
+              >
                 {errors.speciesId}
-              </p>
+              </Typography>
             )}
           </div>
         ) : (
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
             <div className="sm:col-span-2">
-              <Label htmlFor="log-encounter-species" className={FIELD_LABEL_CLASS}>
+              <Typography
+                as="label"
+                variant="eyebrow"
+                htmlFor="log-encounter-species"
+                className="mb-1 block"
+              >
                 Species
-              </Label>
+              </Typography>
               <SpeciesPicker
                 id="log-encounter-species"
                 value={speciesId}
@@ -253,9 +268,15 @@ function LogEncounterForm({
                 aria-describedby={errors.speciesId ? "log-encounter-species-error" : undefined}
               />
               {errors.speciesId && (
-                <p id="log-encounter-species-error" className="mt-1 text-sm text-destructive">
+                <Typography
+                  as="p"
+                  id="log-encounter-species-error"
+                  variant="body"
+                  tone="alert"
+                  className="mt-1"
+                >
                   {errors.speciesId}
-                </p>
+                </Typography>
               )}
             </div>
 
@@ -270,9 +291,14 @@ function LogEncounterForm({
             <GenderField value={gender} onChange={setGender} />
 
             <div>
-              <Label htmlFor="log-encounter-level-caught" className={FIELD_LABEL_CLASS}>
+              <Typography
+                as="label"
+                variant="eyebrow"
+                htmlFor="log-encounter-level-caught"
+                className="mb-1 block"
+              >
                 Level caught
-              </Label>
+              </Typography>
               <Input
                 id="log-encounter-level-caught"
                 inputMode="numeric"
@@ -285,16 +311,27 @@ function LogEncounterForm({
                 }
               />
               {errors.levelCaught && (
-                <p id="log-encounter-level-caught-error" className="mt-1 text-sm text-destructive">
+                <Typography
+                  as="p"
+                  id="log-encounter-level-caught-error"
+                  variant="body"
+                  tone="alert"
+                  className="mt-1"
+                >
                   {errors.levelCaught}
-                </p>
+                </Typography>
               )}
             </div>
 
             <div>
-              <Label htmlFor="log-encounter-level" className={FIELD_LABEL_CLASS}>
+              <Typography
+                as="label"
+                variant="eyebrow"
+                htmlFor="log-encounter-level"
+                className="mb-1 block"
+              >
                 Current level
-              </Label>
+              </Typography>
               <Input
                 id="log-encounter-level"
                 inputMode="numeric"
@@ -305,9 +342,15 @@ function LogEncounterForm({
                 aria-describedby={errors.level ? "log-encounter-level-error" : undefined}
               />
               {errors.level && (
-                <p id="log-encounter-level-error" className="mt-1 text-sm text-destructive">
+                <Typography
+                  as="p"
+                  id="log-encounter-level-error"
+                  variant="body"
+                  tone="alert"
+                  className="mt-1"
+                >
                   {errors.level}
-                </p>
+                </Typography>
               )}
             </div>
 
@@ -324,20 +367,25 @@ function LogEncounterForm({
         )}
 
         {logEncounter.isError && (
-          <p role="alert" className="text-sm text-destructive">
+          <Typography as="p" role="alert" variant="body" tone="alert">
             Could not log the encounter:{" "}
             {logEncounter.error instanceof Error ? logEncounter.error.message : "Unknown error"}.
             Nothing was saved.
-          </p>
+          </Typography>
         )}
       </div>
 
       <div className="flex shrink-0 flex-wrap items-center justify-between gap-2 border-t-[1.5px] border-border p-4">
         {outcome === "caught" ? (
           <div>
-            <Label htmlFor="log-encounter-placement" className={FIELD_LABEL_CLASS}>
+            <Typography
+              as="label"
+              variant="eyebrow"
+              htmlFor="log-encounter-placement"
+              className="mb-1 block"
+            >
               Placement
-            </Label>
+            </Typography>
             <Select value={placement} onValueChange={(value) => setPlacement(value!)}>
               <SelectTrigger id="log-encounter-placement" className="w-full">
                 <SelectValue />
