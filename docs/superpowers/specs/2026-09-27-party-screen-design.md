@@ -36,7 +36,8 @@ beside held item and ability, so the card keeps the hi-fi shape.
 A `Surface` card, top to bottom:
 
 1. Type badges, from the existing `SpeciesTypeBadge`, so dual types show both.
-2. The nickname in quotes and caps. With no nickname, the species name in the same style.
+2. The nickname in quotes and caps. With no nickname, the species name in caps without quotes,
+   since the quotes mark a nickname.
 3. A muted line: species · gender symbol · `L{level}` · nature. A missing gender or nature is left
    out, with its separator, rather than shown blank.
 4. A rule, then the moves in a two-by-two grid. A mon with fewer than four moves shows only the
