@@ -41,9 +41,11 @@ export function PartyScreen(): ReactNode {
   return (
     <div>
       <ScreenHeader title="Party">
-        <Typography variant="body" tone="muted">
-          {party.length} of {PARTY_SIZE}
-        </Typography>
+        {!monsQuery.isPending && (
+          <Typography variant="body" tone="muted">
+            {party.length} of {MAX_PARTY_SIZE}
+          </Typography>
+        )}
       </ScreenHeader>
       {!monsQuery.isPending && party.length === 0 && (
         <Typography variant="body" tone="muted" className="p-4">
