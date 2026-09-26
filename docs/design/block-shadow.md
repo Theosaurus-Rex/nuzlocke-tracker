@@ -165,6 +165,86 @@ These eight sit in the same family as the ten drawn colours, `L` 0.68–0.88 and
 at the conventional hue for each type. Every pair separates better than GRASS/BUG, the closest
 pair among the drawn ten, and ink text clears WCAG AA on all eighteen, worst case DARK at 6.35:1.
 
+## Components
+
+The type scale and surfaces above are applied by components in `src/components/`, not by class
+strings a screen has to remember. A screen should read as a tree of these.
+
+### Typography
+
+`<Typography variant="…" as="…">`. The `variant` sets the look and `as` sets the element, so an
+`h2` can look like an eyebrow. Leave `as` out and each variant picks the element in the table.
+
+| Variant | Element | Font | Weight | Size (phone · desktop) | Use for |
+|---|---|---|---|---|---|
+| `heading` | `h1` | Space Grotesk | 700 | 20px, 24px from 640px · 30px | the one title at the top of a screen |
+| `title` | `h2` | Space Grotesk | 700 | 16px · 20px | the name on a card or panel |
+| `body` | `p` | Space Grotesk | 400 | 14px · 17.5px | running text, form labels, list items |
+| `strong` | `p` | Space Grotesk | 500 | 14px · 17.5px | the first line of a panel, such as "Import complete." |
+| `caption` | `p` | Space Grotesk | 400 | 12px · 15px | hints and notes under a field |
+| `eyebrow` | `span` | Space Grotesk | 500, uppercase, `.12em` | 13px at every width | section and field labels |
+| `number` | `span` | Share Tech Mono | inherited | inherited | every number, inside whatever text holds it |
+
+These are the sizes the app already rendered, so moving a screen onto them should change nothing
+visible. A one-off size that does not match a row snaps to the nearest one, and the PR that moves
+it says so.
+
+`eyebrow` sets its own line height, the same ratio as `body`. The old hand-written label class
+did not, so a label sat about 1px taller outside a dialog than inside one. Moving a label that
+sits outside small text trims that pixel.
+
+`tone` picks the colour from `ink`, `muted` and `alert`. Leave it out and the text inherits its
+colour, except `eyebrow`, which is `muted` unless told otherwise.
+
+`className` is for layout only: margins, flex, truncation. There is no size prop. A size passed in
+`className` is dropped, because the variant's classes are merged last. A new size means a new
+variant in `src/components/typography.tsx` and a new row here.
+
+`number` sets only the face, so it takes the size and weight of the text around it. It is still
+its own element, so the two costs listed under Type still apply. In a flex row, wrap the words and
+the number together in one element so the row's `gap` sees a single item. In tests, match the
+sentence with a function over `textContent`.
+
+### Surface
+
+`<Surface tone="card" | "alert">` draws the hairline border, the fill and the hard shadow. `card`
+is white with the ink shadow. `alert` is a pale alert tint with the alert shadow. It renders a
+`div` unless `as` says `section` or `li`. Padding and spacing go in `className`.
+
+### ScreenHeader
+
+`<ScreenHeader title="…" actions={…}>` is the strip across the top of every screen: a bottom
+hairline, the `heading`, and anything in `actions` pushed to the right. Children go on a line
+below the title, such as the persistence status on Settings.
+
+### Why these three and no more
+
+Counted on 2026-09-26 over the 32 screen and component files outside `components/ui/`:
+
+- **Surface.** 7 panels spelled out the same border, fill and shadow by hand: 4 white cards and
+  3 alert panels, plus 13 `shadow-block` classes in all.
+- **ScreenHeader.** 9 screens start with an `h1`. 4 of them wrap it in the same hairline strip
+  with the same classes, and the 5 placeholder screens will need it once they are built.
+- **Eyebrow as a variant, not a SectionHeader.** The eyebrow label is used 31 times (28 through
+  `FIELD_LABEL_CLASS`, 3 written out), but an eyebrow with a rule under it appears only once, on
+  Settings. One use does not earn a component.
+- **No Stack or Cluster.** 41 class strings pair `flex` with a `gap`, but they spread over 7
+  gap sizes and mix direction, wrap, alignment and justify in many ways. `space-y-*` is used 14
+  times across 5 sizes. Each is already one or two utilities, so a wrapper would rename Tailwind
+  without taking a decision away from the screen.
+
+### Lint
+
+Enforced on migrated screens only. `no-restricted-syntax` in `eslint.config.js` bans raw `h1`–`h6`
+and `p` elements, and arbitrary `text-[…]` sizes in a `className`, in the files it lists. Today
+that is `src/features/settings/`. Each migration adds its screen to the list, and the last one
+widens it to `src/features/**`.
+
+Enforcing across the app now would fail lint on every screen not yet moved over, and turning it
+on only at the end would let a screen that has already moved slide back in between. Listing
+migrated screens keeps each one honest from the moment it moves. `label` and `span` are not
+banned, because a plain `span` is still the right way to group words for a flex row.
+
 ## The mobile shadow contradiction
 
 The direction sheet `3c` states: "On mobile the shadow drops to 2px and cards go edge-to-edge."
