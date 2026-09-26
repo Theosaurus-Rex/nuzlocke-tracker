@@ -6,8 +6,14 @@
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import { describe, expect, it } from "vitest";
-import { MemoryRouter, Route as RouterRoute, Routes } from "react-router";
+import { describe, expect, it, vi } from "vitest";
+import {
+  createMemoryRouter,
+  MemoryRouter,
+  RouterProvider,
+  Route as RouterRoute,
+  Routes,
+} from "react-router";
 
 import { summariseRun } from "@/domain/derive";
 import type { Death, Encounter, Mon, Route, Run, Rules } from "@/domain/types";
@@ -153,14 +159,81 @@ function renderScreen(adapter: StorageAdapter) {
   );
 }
 
-describe("RunListScreen", () => {
-  it("shows a functional empty state with a link to /runs/new when there are no runs", async () => {
-    const adapter = createMemoryAdapter();
-    renderScreen(adapter);
+function renderRouted(adapter: StorageAdapter, initialEntries: string[] = ["/"]) {
+  const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+  const router = createMemoryRouter(
+    [
+      { path: "/", element: <RunListScreen /> },
+      { path: "/runs/new", element: <p>New run screen</p> },
+    ],
+    { initialEntries },
+  );
+  render(
+    <QueryClientProvider client={queryClient}>
+      <StorageProvider adapter={adapter}>
+        <RouterProvider router={router} />
+      </StorageProvider>
+    </QueryClientProvider>,
+  );
+  return { router };
+}
 
-    expect(await screen.findByText(/no runs yet/i)).toBeInTheDocument();
-    const link = screen.getByRole("link", { name: /start a new run/i });
-    expect(link).toHaveAttribute("href", "/runs/new");
+describe("RunListScreen", () => {
+  it("replaces / with /runs/new when the runs query comes back empty", async () => {
+    const adapter = createMemoryAdapter();
+    const { router } = renderRouted(adapter);
+
+    await screen.findByText("New run screen");
+    expect(router.state.location.pathname).toBe("/runs/new");
+
+    // Replaced, not pushed: there is nothing before it to go back to, so Back cannot bounce
+    // to the empty home page.
+    await router.navigate(-1);
+    expect(router.state.location.pathname).toBe("/runs/new");
+  });
+
+  it("does not redirect while the runs query is still loading", async () => {
+    const adapter = createMemoryAdapter();
+    const pending: { resolve: (runs: Run[]) => void } = { resolve: () => undefined };
+    vi.spyOn(adapter.runs, "getAll").mockReturnValueOnce(
+      new Promise<Run[]>((resolve) => {
+        pending.resolve = resolve;
+      }),
+    );
+
+    const { router } = renderRouted(adapter);
+
+    expect(await screen.findByText(/loading runs/i)).toBeInTheDocument();
+    expect(router.state.location.pathname).toBe("/");
+
+    pending.resolve([]);
+
+    await screen.findByText("New run screen");
+    expect(router.state.location.pathname).toBe("/runs/new");
+  });
+
+  it("stays on the home page and shows the error when the runs query fails, without redirecting", async () => {
+    const adapter = createMemoryAdapter();
+    vi.spyOn(adapter.runs, "getAll").mockRejectedValueOnce(new Error("indexeddb unavailable"));
+
+    const { router } = renderRouted(adapter);
+
+    expect(await screen.findByRole("alert")).toHaveTextContent(
+      "Could not load runs: indexeddb unavailable.",
+    );
+    expect(router.state.location.pathname).toBe("/");
+    expect(screen.queryByText("New run screen")).not.toBeInTheDocument();
+  });
+
+  it("shows the run list with no flash of new-run setup when runs already exist", async () => {
+    const adapter = createMemoryAdapter();
+    await adapter.runs.put(makeRunDraft({ name: "Blaze Nuzlocke", status: "active" }));
+
+    const { router } = renderRouted(adapter);
+
+    await screen.findByRole("heading", { name: "Runs" });
+    expect(screen.queryByText("New run screen")).not.toBeInTheDocument();
+    expect(router.state.location.pathname).toBe("/");
   });
 
   it("shows a New run control in the header, pointing at /runs/new, even when runs already exist", async () => {

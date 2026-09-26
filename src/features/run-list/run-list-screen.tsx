@@ -5,7 +5,7 @@
  */
 
 import { useState, type ChangeEvent, type ReactNode } from "react";
-import { Link } from "react-router";
+import { Link, Navigate } from "react-router";
 
 import { StatusChip } from "@/components/status-chip";
 import { Button, buttonVariants } from "@/components/ui/button";
@@ -195,20 +195,20 @@ export function RunListScreen(): ReactNode {
     return <p className="text-muted-foreground p-4 text-sm">Loading runs…</p>;
   }
 
-  const runs = runsQuery.data ?? [];
-
-  if (runs.length === 0) {
+  if (runsQuery.isError) {
     return (
-      <div className="p-4 text-sm">
-        No runs yet.{" "}
-        <Link to="/runs/new" className="underline">
-          Start a new run
-        </Link>
-        .
-      </div>
+      <p role="alert" className="p-4 text-sm text-destructive">
+        Could not load runs:{" "}
+        {runsQuery.error instanceof Error ? runsQuery.error.message : "Unknown error"}.
+      </p>
     );
   }
 
+  if (runsQuery.data.length === 0) {
+    return <Navigate to="/runs/new" replace />;
+  }
+
+  const runs = runsQuery.data;
   const query = search.trim().toLowerCase();
   const runsInTab = runs.filter((run) => run.status === activeTab);
   const visibleRuns = query
