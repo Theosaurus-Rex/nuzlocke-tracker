@@ -6,4 +6,5 @@ import { defaultPokeApiRoutes, stubPokeApi } from "./pokeapi-fetch";
 
 beforeEach(() => {
   stubPokeApi(defaultPokeApiRoutes);
+  localStorage.clear();
 });
