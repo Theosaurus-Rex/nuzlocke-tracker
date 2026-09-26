@@ -1,9 +1,11 @@
+import { XIcon } from "lucide-react";
 import { useState, type FormEvent, type ReactNode } from "react";
 import { Navigate, useParams } from "react-router";
 
 import { CHIP_SHAPE } from "@/components/chip";
 import { statusChipFill, type StatusChipStatus } from "@/components/status-chip";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 import { DEFAULT_RULES } from "@/domain/rules";
 import { buildRouteRows, type RouteRow } from "@/domain/route-rows";
 import type { Mon, Route } from "@/domain/types";
@@ -15,7 +17,12 @@ import { useEncounters, useMons, useRoutes, useRun } from "@/storage/queries";
 import { cn } from "@/lib/utils";
 
 import { RouteCardList } from "./route-card-list";
-import { filterRouteRows, summariseRouteRows, type RouteFilterBucket } from "./route-presentation";
+import {
+  filterRouteRows,
+  searchRouteRows,
+  summariseRouteRows,
+  type RouteFilterBucket,
+} from "./route-presentation";
 import { RouteTable } from "./route-table";
 import { ResetEncounterDialog } from "./reset-encounter-dialog";
 
@@ -79,6 +86,49 @@ function RouteCounters({
   );
 }
 
+function RouteSearchInput({
+  value,
+  onChange,
+  className,
+}: {
+  value: string;
+  onChange: (value: string) => void;
+  className?: string;
+}): ReactNode {
+  return (
+    <div className={cn("relative", className)}>
+      <label htmlFor="route-search" className="sr-only">
+        Search routes
+      </label>
+      <Input
+        id="route-search"
+        type="text"
+        value={value}
+        onChange={(event) => onChange(event.target.value)}
+        onKeyDown={(event) => {
+          if (event.key === "Escape") {
+            onChange("");
+          }
+        }}
+        placeholder="Search routes"
+        className="pr-8"
+      />
+      {value !== "" && (
+        <Button
+          type="button"
+          variant="ghost"
+          size="icon-xs"
+          aria-label="Clear search"
+          className="absolute top-1/2 right-1 -translate-y-1/2"
+          onClick={() => onChange("")}
+        >
+          <XIcon />
+        </Button>
+      )}
+    </div>
+  );
+}
+
 export function RoutesScreen(): ReactNode {
   const { runId } = useParams<{ runId: string }>();
   const runQuery = useRun(runId ?? "");
@@ -95,6 +145,7 @@ export function RoutesScreen(): ReactNode {
   const [resetTarget, setResetTarget] = useState<RouteRow | null>(null);
   const [addOpen, setAddOpen] = useState(false);
   const [activeFilters, setActiveFilters] = useState<Set<RouteFilterBucket>>(new Set());
+  const [search, setSearch] = useState("");
 
   if (!runId) {
     return <Navigate to="/" replace />;
@@ -149,8 +200,9 @@ export function RoutesScreen(): ReactNode {
   const mons = monsQuery.data ?? [];
 
   const rows = buildRouteRows({ routes, encounters, mons });
-  const visibleRows = filterRouteRows(rows, activeFilters);
+  const visibleRows = searchRouteRows(filterRouteRows(rows, activeFilters), search);
   const counters = summariseRouteRows(rows);
+  const trimmedSearch = search.trim();
   // Falls back to HeartGold's generation, the only game seeded today, while the run itself is
   // still loading rather than the table's rows.
   const generation = GAMES[runQuery.data?.game ?? "heartgold"].generation;
@@ -170,6 +222,14 @@ export function RoutesScreen(): ReactNode {
           </Button>
         </div>
       </div>
+
+      {!loading && routes.length > 0 && (
+        <div className="border-b-[1.5px] border-border bg-background p-4">
+          <div className="flex justify-end">
+            <RouteSearchInput value={search} onChange={setSearch} className="w-full sm:w-64" />
+          </div>
+        </div>
+      )}
 
       {!loading && routes.length > 0 && (
         <RouteCounters counters={counters} activeFilters={activeFilters} onToggle={toggleFilter} />
@@ -230,7 +290,11 @@ export function RoutesScreen(): ReactNode {
           No routes yet. Add one above to get started.
         </p>
       ) : visibleRows.length === 0 ? (
-        <p className="text-muted-foreground p-4 text-sm">No routes match the selected filters.</p>
+        <p className="text-muted-foreground p-4 text-sm">
+          {trimmedSearch !== ""
+            ? `No routes match "${trimmedSearch}".`
+            : "No routes match the selected filters."}
+        </p>
       ) : (
         <>
           <div className="hidden overflow-x-auto border-[1.5px] border-t-0 border-border md:block">

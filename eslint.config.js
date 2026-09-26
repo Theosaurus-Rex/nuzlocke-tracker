@@ -95,6 +95,7 @@ export default tseslint.config(
             "summariseRouteRows",
             "ROUTE_FILTER_BUCKETS",
             "filterRouteRows",
+            "searchRouteRows",
           ],
         },
       ],
