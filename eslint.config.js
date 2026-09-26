@@ -69,26 +69,9 @@ export default tseslint.config(
       "src/features/run-list/**/*.tsx",
       "src/features/new-run/**/*.tsx",
       "src/features/not-found/**/*.tsx",
+      "src/features/encounters/**/*.tsx",
     ],
     ignores: ["**/*.test.tsx"],
-    rules: {
-      "no-restricted-syntax": [
-        "error",
-        {
-          selector: "JSXOpeningElement[name.name=/^(h[1-6]|p)$/]",
-          message: "Use <Typography> from @/components/typography for headings and paragraphs.",
-        },
-        {
-          selector: "JSXAttribute[name.name='className'] Literal[value=/text-\\[/]",
-          message: "Arbitrary text sizes are not allowed here. Use a <Typography> variant.",
-        },
-      ],
-    },
-  },
-  {
-    // Screens moved onto Typography. Add each screen here as it migrates.
-    // See docs/design/block-shadow.md "Components".
-    files: ["src/features/encounters/**/*.tsx"],
     rules: {
       "no-restricted-syntax": [
         "error",
