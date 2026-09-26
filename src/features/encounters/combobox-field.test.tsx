@@ -16,7 +16,7 @@ import type { RawIndex } from "@/game/pokeapi/map";
 import { defaultPokeApiRoutes, STUB_PENDING, stubPokeApi } from "@/test/pokeapi-fetch";
 import { speciesIndexFixture } from "@/test/pokeapi-fixtures";
 
-import { ComboboxField } from "./combobox-field";
+import { ComboboxField, type ComboboxItem } from "./combobox-field";
 import { SpeciesPicker } from "./species-picker";
 
 const EXTRA_SPECIES = [
@@ -247,6 +247,91 @@ describe("ComboboxField keyboard handling", () => {
     resolveFetch?.(Response.json(speciesIndexFixture));
 
     await waitFor(() => expect(onChange).toHaveBeenLastCalledWith("pidgey"));
+    expect(input).toHaveAttribute("aria-expanded", "false");
+  });
+
+  it("opens the list on click when the field already holds a value", async () => {
+    const user = userEvent.setup();
+    const items = [{ id: "pidgey", label: "Pidgey" }];
+    render(
+      <ComboboxField
+        id="f"
+        value="pidgey"
+        onChange={vi.fn()}
+        search={() => items}
+        resolve={() => "pidgey"}
+        displayName={() => "Pidgey"}
+      />,
+    );
+
+    await user.click(screen.getByRole("combobox"));
+
+    const option = await screen.findByRole("option", { name: "Pidgey" });
+    expect(option).toHaveClass("font-medium");
+  });
+
+  it("opens the list on ArrowDown when the field already holds a value", async () => {
+    const user = userEvent.setup();
+    const items = [{ id: "pidgey", label: "Pidgey" }];
+    render(
+      <ComboboxField
+        id="f"
+        value="pidgey"
+        onChange={vi.fn()}
+        search={() => items}
+        resolve={() => "pidgey"}
+        displayName={() => "Pidgey"}
+      />,
+    );
+
+    await user.tab();
+    expect(screen.getByRole("combobox")).toHaveFocus();
+    await user.keyboard("{ArrowDown}");
+
+    expect(await screen.findByRole("listbox")).toBeInTheDocument();
+  });
+
+  it("keeps the list closed once a late fill-in resolves, even though the list was open while typing", async () => {
+    function Field(props: {
+      search: (query: string) => ComboboxItem[];
+      resolve: (text: string) => string;
+      onValueChange: (id: string) => void;
+    }) {
+      const [value, setValue] = useState("");
+      return (
+        <ComboboxField
+          id="f"
+          value={value}
+          onChange={(id) => {
+            setValue(id);
+            props.onValueChange(id);
+          }}
+          search={props.search}
+          resolve={props.resolve}
+          displayName={(id) => id}
+        />
+      );
+    }
+
+    const onValueChange = vi.fn();
+    const { rerender } = render(
+      <Field search={() => []} resolve={() => ""} onValueChange={onValueChange} />,
+    );
+    const input = screen.getByRole("combobox");
+    await userEvent.type(input, "Pidgey");
+    expect(input).toHaveAttribute("aria-expanded", "false");
+
+    rerender(
+      <Field
+        search={(query) =>
+          query.toLowerCase() === "pidgey" ? [{ id: "pidgey", label: "Pidgey" }] : []
+        }
+        resolve={(text) => (text.toLowerCase() === "pidgey" ? "pidgey" : "")}
+        onValueChange={onValueChange}
+      />,
+    );
+
+    await waitFor(() => expect(onValueChange).toHaveBeenLastCalledWith("pidgey"));
     expect(input).toHaveAttribute("aria-expanded", "false");
   });
 
