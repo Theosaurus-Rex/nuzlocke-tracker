@@ -7,6 +7,7 @@ import { useEffect, useState, type ReactNode } from "react";
 import { QueryClientProvider, type QueryClient } from "@tanstack/react-query";
 import { RouterProvider } from "react-router";
 
+import { Typography } from "@/components/typography";
 import type { StorageAdapter } from "@/storage/adapter";
 import { StorageProvider } from "@/storage/storage-context";
 
@@ -34,7 +35,11 @@ export function Root({
   }, [adapter]);
 
   if (!ready) {
-    return <p className="p-4">Loading…</p>;
+    return (
+      <Typography variant="body" className="p-4">
+        Loading…
+      </Typography>
+    );
   }
 
   return (
