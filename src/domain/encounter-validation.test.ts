@@ -22,6 +22,7 @@ function makeDetails(overrides: Partial<CatchDetails> = {}): CatchDetails {
     ability: null,
     heldItem: null,
     moves: [],
+    shiny: false,
     ...overrides,
   };
 }
@@ -147,6 +148,7 @@ function makeAmendments(overrides: Partial<MonAmendments> = {}): MonAmendments {
     ability: null,
     heldItem: null,
     moves: [],
+    shiny: false,
     ...overrides,
   };
 }

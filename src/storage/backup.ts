@@ -379,6 +379,7 @@ const MON_FIELDS: RowFields<Mon> = {
   partySlot: nullableNum,
   boxOrder: nullableNum,
   caughtRouteId: nullableStr,
+  shiny: bool,
 };
 
 function validateMons(rows: unknown[]): TableValidationResult {

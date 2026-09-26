@@ -28,6 +28,7 @@ import {
   HeldItemField,
   NatureField,
   NicknameField,
+  ShinyField,
 } from "./mon-fields";
 import { MovesetField } from "./moveset-field";
 import { SpeciesPicker } from "./species-picker";
@@ -123,6 +124,7 @@ function LogEncounterForm({
   const [ability, setAbility] = useState("");
   const [heldItem, setHeldItem] = useState("");
   const [moves, setMoves] = useState<string[]>([]);
+  const [shiny, setShiny] = useState(false);
   const [placement, setPlacement] = useState<"party" | "box">(
     countByMonStatus(mons).party < 6 ? "party" : "box",
   );
@@ -139,6 +141,7 @@ function LogEncounterForm({
     ability: ability.trim() === "" ? null : ability,
     heldItem: heldItem.trim() === "" ? null : heldItem,
     moves,
+    shiny,
   };
 
   const errors: Partial<Record<EncounterField, string>> = submitted
@@ -182,32 +185,38 @@ function LogEncounterForm({
   return (
     <form className="flex min-h-0 flex-1 flex-col" onSubmit={handleSubmit} noValidate>
       <div className="flex-1 space-y-4 overflow-y-auto p-4">
-        <div
-          role="radiogroup"
-          aria-label="Outcome"
-          className="inline-flex border-[1.5px] border-border"
-        >
-          {OUTCOMES.map((option, index) => {
-            const active = outcome === option.value;
-            return (
-              <button
-                key={option.value}
-                type="button"
-                role="radio"
-                aria-checked={active}
-                onClick={() => setOutcome(option.value)}
-                className={cn(
-                  "px-4 py-2 text-sm font-medium",
-                  index > 0 && "border-l-[1.5px] border-border",
-                  active
-                    ? "bg-primary text-primary-foreground shadow-block"
-                    : "bg-background text-foreground hover:bg-muted",
-                )}
-              >
-                {option.label}
-              </button>
-            );
-          })}
+        <div className="flex items-center justify-between gap-2">
+          <div
+            role="radiogroup"
+            aria-label="Outcome"
+            className="inline-flex border-[1.5px] border-border"
+          >
+            {OUTCOMES.map((option, index) => {
+              const active = outcome === option.value;
+              return (
+                <button
+                  key={option.value}
+                  type="button"
+                  role="radio"
+                  aria-checked={active}
+                  onClick={() => setOutcome(option.value)}
+                  className={cn(
+                    "px-4 py-2 text-sm font-medium",
+                    index > 0 && "border-l-[1.5px] border-border",
+                    active
+                      ? "bg-primary text-primary-foreground shadow-block"
+                      : "bg-background text-foreground hover:bg-muted",
+                  )}
+                >
+                  {option.label}
+                </button>
+              );
+            })}
+          </div>
+
+          {outcome === "caught" && (
+            <ShinyField id="log-encounter-shiny" value={shiny} onChange={setShiny} />
+          )}
         </div>
 
         {outcome !== "caught" ? (

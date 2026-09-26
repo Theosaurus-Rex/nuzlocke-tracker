@@ -113,6 +113,7 @@ export type Mon = Timestamped & {
   partySlot: number | null;
   boxOrder: number | null;
   caughtRouteId: string | null;
+  shiny: boolean;
 };
 
 /** Status/residual-effect death causes. Deliberately incomplete. */

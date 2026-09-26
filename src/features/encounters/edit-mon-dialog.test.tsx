@@ -59,6 +59,7 @@ function makeMon(overrides: Partial<Mon> = {}): Mon {
     partySlot: 0,
     boxOrder: null,
     caughtRouteId: "route-1",
+    shiny: false,
     createdAt: TIMESTAMP,
     updatedAt: TIMESTAMP,
     ...overrides,
@@ -341,6 +342,30 @@ describe("EditMonDialog", () => {
     await user.click(screen.getByRole("button", { name: "Save changes" }));
 
     expect(await screen.findByRole("alert")).toHaveTextContent(/simulated write failure/);
+  });
+
+  it("pre-fills the shiny toggle from the mon being edited", () => {
+    renderDialog({ mon: makeMon({ shiny: true }) });
+
+    expect(screen.getByLabelText("Shiny")).toHaveAttribute("aria-pressed", "true");
+  });
+
+  it("toggles shiny and saves the new value", async () => {
+    const user = userEvent.setup();
+    const { adapter, mon } = renderDialog({ mon: makeMon({ shiny: false }) });
+
+    const toggle = screen.getByLabelText("Shiny");
+    expect(toggle).toHaveAttribute("aria-pressed", "false");
+
+    await user.click(toggle);
+    expect(toggle).toHaveAttribute("aria-pressed", "true");
+
+    await user.click(screen.getByRole("button", { name: "Save changes" }));
+
+    await waitFor(async () => {
+      const saved = await adapter.mons.get(mon.id);
+      expect(saved?.shiny).toBe(true);
+    });
   });
 
   it("evolves on save", async () => {

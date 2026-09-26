@@ -122,6 +122,7 @@ const CATCH_DETAILS: CatchDetails = {
   ability: null,
   heldItem: null,
   moves: [],
+  shiny: false,
 };
 
 async function createSeededRun(adapter: StorageAdapter): Promise<{ run: Run; routes: Route[] }> {
@@ -278,6 +279,32 @@ describe("useLogEncounter", () => {
 
     const persistedMon = mon === null ? undefined : await adapter.mons.get(mon.id);
     expect(persistedMon).toBeDefined();
+  });
+
+  it("logs a shiny catch and persists it onto the mon", async () => {
+    const adapter = createMemoryAdapter();
+    await adapter.init();
+    const { run, routes } = await createSeededRun(adapter);
+    const route = routes[0];
+    if (route === undefined) {
+      throw new Error("expected at least one seeded route");
+    }
+
+    const { result } = renderHook(() => useLogEncounter(), { wrapper: createWrapper(adapter) });
+    const { mon } = await result.current.mutateAsync({
+      runId: run.id,
+      routeId: route.id,
+      outcome: "caught",
+      party: [],
+      details: { ...CATCH_DETAILS, shiny: true },
+      existingEncounters: [],
+    });
+    if (mon === null) {
+      throw new Error("expected a mon from a caught encounter");
+    }
+
+    expect(mon.shiny).toBe(true);
+    expect((await adapter.mons.get(mon.id))?.shiny).toBe(true);
   });
 
   it("logs a missed encounter, writing the encounter with no mon", async () => {
@@ -514,6 +541,7 @@ describe("useAmendMon", () => {
     ability: "overgrow",
     heldItem: "oran-berry",
     moves: ["vine-whip", "growth"],
+    shiny: false,
   };
 
   it("persists the amended fields and leaves other rows alone", async () => {
@@ -569,6 +597,39 @@ describe("useAmendMon", () => {
 
     const untouched = await adapter.mons.get(otherMon.id);
     expect(untouched).toEqual(otherMon);
+  });
+
+  it("persists a shiny toggle onto the stored mon", async () => {
+    const adapter = createMemoryAdapter();
+    await adapter.init();
+    const { run, routes } = await createSeededRun(adapter);
+    const route = routes[0];
+    if (route === undefined) {
+      throw new Error("expected at least one seeded route");
+    }
+
+    const wrapper = createWrapper(adapter);
+    const log = renderHook(() => useLogEncounter(), { wrapper });
+    const { mon } = await log.result.current.mutateAsync({
+      runId: run.id,
+      routeId: route.id,
+      outcome: "caught",
+      party: [],
+      details: CATCH_DETAILS,
+      existingEncounters: [],
+    });
+    if (mon === null) {
+      throw new Error("expected a mon from a caught encounter");
+    }
+
+    const amend = renderHook(() => useAmendMon(), { wrapper });
+    const result = await amend.result.current.mutateAsync({
+      mon,
+      amendments: { ...amendments, shiny: true },
+    });
+
+    expect(result.shiny).toBe(true);
+    expect((await adapter.mons.get(mon.id))?.shiny).toBe(true);
   });
 
   it("invalidates the run's mons query on success", async () => {

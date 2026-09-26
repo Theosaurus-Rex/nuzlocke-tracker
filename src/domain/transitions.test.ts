@@ -52,6 +52,7 @@ function makeMon(overrides: Partial<Mon> = {}): Mon {
     partySlot: 0,
     boxOrder: null,
     caughtRouteId: "route-1",
+    shiny: false,
     createdAt: "2026-09-17T00:00:00.000Z",
     updatedAt: "2026-09-17T00:00:00.000Z",
     ...overrides,
@@ -103,6 +104,7 @@ const catchDetails: CatchDetails = {
   ability: null,
   heldItem: null,
   moves: ["tackle"],
+  shiny: false,
 };
 
 const killDetails: KillDetails = {
@@ -284,6 +286,17 @@ describe("catchEncounter", () => {
     expect(mon.partySlot).toBeNull();
   });
 
+  test("carries shiny from the catch details onto the new mon", () => {
+    const { mon } = catchEncounter({
+      encounter: makeEncounter(),
+      party: [],
+      monId: "mon-1",
+      details: { ...catchDetails, shiny: true },
+    });
+
+    expect(mon.shiny).toBe(true);
+  });
+
   test("throws when the current level is below the level caught", () => {
     const encounter = makeEncounter();
     const details: CatchDetails = { ...catchDetails, levelCaught: 20, level: 19 };
@@ -397,6 +410,7 @@ describe("amendMon", () => {
     ability: "overgrow",
     heldItem: "oran-berry",
     moves: ["vine-whip", "growth"],
+    shiny: false,
   };
 
   test("changes nickname, gender, level, nature, ability, heldItem and moves", () => {
@@ -491,6 +505,16 @@ describe("amendMon", () => {
     const result = amendMon({ mon, amendments: { ...amendments, level: 15 } });
     expect(result.status).toBe("party");
     expect(result.partySlot).toBe(4);
+  });
+
+  test("can mark a mon shiny, or clear it, independent of every other amendment", () => {
+    const mon = makeMon({ shiny: false });
+    expect(amendMon({ mon, amendments: { ...amendments, shiny: true } }).shiny).toBe(true);
+
+    const shinyMon = makeMon({ shiny: true });
+    expect(amendMon({ mon: shinyMon, amendments: { ...amendments, shiny: false } }).shiny).toBe(
+      false,
+    );
   });
 
   test("throws when the amended level is below levelCaught", () => {
@@ -717,6 +741,7 @@ describe("input immutability", () => {
             ability: "overgrow",
             heldItem: "oran-berry",
             moves: ["tackle"],
+            shiny: false,
           },
         });
       },
