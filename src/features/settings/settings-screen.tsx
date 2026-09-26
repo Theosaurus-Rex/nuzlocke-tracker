@@ -6,8 +6,10 @@ import { useQueryClient } from "@tanstack/react-query";
 
 import { Button } from "@/components/ui/button";
 import type { ExportBundle } from "@/domain/schema";
+import { ScreenHeader } from "@/components/screen-header";
 import { SquareCheckbox } from "@/components/square-checkbox";
-import { FIELD_LABEL_CLASS } from "@/features/encounters/mon-fields";
+import { Surface } from "@/components/surface";
+import { Typography } from "@/components/typography";
 import {
   downloadBundle,
   exportBundle,
@@ -117,33 +119,36 @@ export function SettingsScreen(): ReactNode {
 
   return (
     <div>
-      <div className="border-b-[1.5px] border-border p-4">
-        <h1 className="text-xl font-bold sm:text-2xl">Settings</h1>
-        <p className="mt-1 text-sm text-muted-foreground">
+      <ScreenHeader title="Settings">
+        <Typography variant="body" tone="muted">
           Storage persistence: {status ?? "checking…"}
-        </p>
-      </div>
+        </Typography>
+      </ScreenHeader>
 
       <div className="max-w-2xl space-y-8 p-4">
         <section className="space-y-2">
-          <h2 className={FIELD_LABEL_CLASS}>Export</h2>
-          <p className="text-sm text-muted-foreground">
+          <Typography as="h2" variant="eyebrow" className="mb-1">
+            Export
+          </Typography>
+          <Typography variant="body" tone="muted">
             Downloads every run as a single JSON file. This is the app&rsquo;s only backup — do this
             before switching devices, and periodically otherwise.
-          </p>
+          </Typography>
           <Button onClick={() => void handleExport()}>Export data</Button>
           {exportError && (
-            <p role="alert" className="text-sm text-destructive">
+            <Typography role="alert" variant="body" tone="alert">
               Export failed: {exportError}. Nothing was saved.
-            </p>
+            </Typography>
           )}
         </section>
 
         <section className="space-y-3 border-t-[1.5px] border-border pt-6">
-          <h2 className={FIELD_LABEL_CLASS}>Import</h2>
-          <p className="text-sm text-muted-foreground">
+          <Typography as="h2" variant="eyebrow" className="mb-1">
+            Import
+          </Typography>
+          <Typography variant="body" tone="muted">
             Restores from a JSON file previously produced by Export.
-          </p>
+          </Typography>
 
           {/* `file:` styles the control's own button, so the picker keeps its native behaviour
               and its accessible name. */}
@@ -155,65 +160,67 @@ export function SettingsScreen(): ReactNode {
           />
 
           {parseErrors && (
-            <div
-              role="alert"
-              className="space-y-1 border-[1.5px] border-destructive bg-destructive/10 p-3 text-sm shadow-block-alert"
-            >
-              <p className="font-medium text-destructive">
+            <Surface role="alert" tone="alert" className="space-y-1 p-3">
+              <Typography variant="strong" tone="alert">
                 This file could not be imported.{" "}
-                <span className="font-mono">{parseErrors.length}</span>{" "}
+                <Typography variant="number">{parseErrors.length}</Typography>{" "}
                 {parseErrors.length === 1 ? "problem" : "problems"} found:
-              </p>
+              </Typography>
               <ul className="list-inside list-disc">
                 {parseErrors.map((error, index) => (
-                  <li key={index}>{error}</li>
+                  <Typography as="li" key={index} variant="body">
+                    {error}
+                  </Typography>
                 ))}
               </ul>
-            </div>
+            </Surface>
           )}
 
           {importError && (
-            <p role="alert" className="text-sm text-destructive">
+            <Typography role="alert" variant="body" tone="alert">
               Import failed: {importError}. Nothing was written — imports are all-or-nothing.
-            </p>
+            </Typography>
           )}
 
           {importSummary && (
-            <div className="space-y-1 border-[1.5px] border-border bg-card p-3 text-sm shadow-block">
-              <p className="font-medium">Import complete ({importSummary.mode}).</p>
-              <p>
-                Imported <span className="font-mono">{importSummary.imported.length}</span>{" "}
+            <Surface className="space-y-1 p-3">
+              <Typography variant="strong">Import complete ({importSummary.mode}).</Typography>
+              <Typography variant="body">
+                Imported <Typography variant="number">{importSummary.imported.length}</Typography>{" "}
                 {importSummary.imported.length === 1 ? "run" : "runs"}
                 {importSummary.imported.length > 0
                   ? `: ${importSummary.imported.map((run) => run.name).join(", ")}`
                   : "."}
-              </p>
+              </Typography>
               {importSummary.skipped.length > 0 && (
-                <p>
-                  Skipped <span className="font-mono">{importSummary.skipped.length}</span> existing{" "}
-                  {importSummary.skipped.length === 1 ? "run" : "runs"} (left untouched):{" "}
+                <Typography variant="body">
+                  Skipped <Typography variant="number">{importSummary.skipped.length}</Typography>{" "}
+                  existing {importSummary.skipped.length === 1 ? "run" : "runs"} (left untouched):{" "}
                   {importSummary.skipped.map((run) => run.name).join(", ")}
-                </p>
+                </Typography>
               )}
-              <p className="text-muted-foreground">
+              <Typography variant="body" tone="muted">
                 Rows written — routes:{" "}
-                <span className="font-mono">{importSummary.rowCounts.routes}</span>, encounters:{" "}
-                <span className="font-mono">{importSummary.rowCounts.encounters}</span>, mons:{" "}
-                <span className="font-mono">{importSummary.rowCounts.mons}</span>, deaths:{" "}
-                <span className="font-mono">{importSummary.rowCounts.deaths}</span>, fights:{" "}
-                <span className="font-mono">{importSummary.rowCounts.fights}</span>
-              </p>
-            </div>
+                <Typography variant="number">{importSummary.rowCounts.routes}</Typography>,
+                encounters:{" "}
+                <Typography variant="number">{importSummary.rowCounts.encounters}</Typography>,
+                mons: <Typography variant="number">{importSummary.rowCounts.mons}</Typography>,
+                deaths: <Typography variant="number">{importSummary.rowCounts.deaths}</Typography>,
+                fights: <Typography variant="number">{importSummary.rowCounts.fights}</Typography>
+              </Typography>
+            </Surface>
           )}
 
           {preview && (
-            <div className="space-y-3 border-[1.5px] border-border bg-card p-3 text-sm shadow-block">
-              <p className="font-medium">Preview: {pending?.fileName}</p>
+            <Surface className="space-y-3 p-3">
+              <Typography variant="strong">Preview: {pending?.fileName}</Typography>
 
               <fieldset className="space-y-2">
-                <legend className={FIELD_LABEL_CLASS}>Mode</legend>
+                <Typography as="legend" variant="eyebrow" className="mb-1">
+                  Mode
+                </Typography>
                 <div className="flex flex-wrap gap-4">
-                  <label className="flex items-center gap-1.5">
+                  <Typography as="label" variant="body" className="flex items-center gap-1.5">
                     <input
                       type="radio"
                       name="import-mode"
@@ -221,8 +228,8 @@ export function SettingsScreen(): ReactNode {
                       onChange={() => handleModeChange("merge")}
                     />
                     Merge — add new runs only
-                  </label>
-                  <label className="flex items-center gap-1.5">
+                  </Typography>
+                  <Typography as="label" variant="body" className="flex items-center gap-1.5">
                     <input
                       type="radio"
                       name="import-mode"
@@ -230,48 +237,48 @@ export function SettingsScreen(): ReactNode {
                       onChange={() => handleModeChange("replace")}
                     />
                     Replace — erase everything first
-                  </label>
+                  </Typography>
                 </div>
               </fieldset>
 
-              <p>
-                <span className="font-mono">{preview.toImport.length}</span>{" "}
+              <Typography variant="body">
+                <Typography variant="number">{preview.toImport.length}</Typography>{" "}
                 {preview.toImport.length === 1 ? "run" : "runs"} would be imported
                 {preview.toImport.length > 0
                   ? `: ${preview.toImport.map((run) => run.name).join(", ")}`
                   : "."}
-              </p>
+              </Typography>
               {mode === "merge" && preview.toSkip.length > 0 && (
-                <p>
-                  <span className="font-mono">{preview.toSkip.length}</span> existing{" "}
+                <Typography variant="body">
+                  <Typography variant="number">{preview.toSkip.length}</Typography> existing{" "}
                   {preview.toSkip.length === 1 ? "run" : "runs"} would be skipped (already present,
                   left untouched): {preview.toSkip.map((run) => run.name).join(", ")}
-                </p>
+                </Typography>
               )}
-              <p className="text-muted-foreground">
+              <Typography variant="body" tone="muted">
                 Rows to write — routes:{" "}
-                <span className="font-mono">{preview.rowCounts.routes}</span>, encounters:{" "}
-                <span className="font-mono">{preview.rowCounts.encounters}</span>, mons:{" "}
-                <span className="font-mono">{preview.rowCounts.mons}</span>, deaths:{" "}
-                <span className="font-mono">{preview.rowCounts.deaths}</span>, fights:{" "}
-                <span className="font-mono">{preview.rowCounts.fights}</span>
-              </p>
+                <Typography variant="number">{preview.rowCounts.routes}</Typography>, encounters:{" "}
+                <Typography variant="number">{preview.rowCounts.encounters}</Typography>, mons:{" "}
+                <Typography variant="number">{preview.rowCounts.mons}</Typography>, deaths:{" "}
+                <Typography variant="number">{preview.rowCounts.deaths}</Typography>, fights:{" "}
+                <Typography variant="number">{preview.rowCounts.fights}</Typography>
+              </Typography>
 
               {mode === "replace" && (
-                <div className="space-y-2 border-[1.5px] border-destructive bg-destructive/10 p-3 shadow-block-alert">
-                  <p className="font-medium text-destructive">
+                <Surface tone="alert" className="space-y-2 p-3">
+                  <Typography variant="strong" tone="alert">
                     Replace erases ALL current runs and their data before writing this file. This
                     cannot be undone.
-                  </p>
+                  </Typography>
                   <Button variant="outline" size="sm" onClick={() => void handleExport()}>
                     Export current data first
                   </Button>
                   {exportError && (
-                    <p role="alert" className="text-sm text-destructive">
+                    <Typography role="alert" variant="body" tone="alert">
                       Export failed: {exportError}. Nothing was saved.
-                    </p>
+                    </Typography>
                   )}
-                  <label className="flex items-start gap-2">
+                  <Typography as="label" variant="body" className="flex items-start gap-2">
                     <SquareCheckbox
                       id="replace-acknowledged"
                       checked={replaceAcknowledged}
@@ -280,8 +287,8 @@ export function SettingsScreen(): ReactNode {
                       }}
                     />
                     I understand this will permanently erase all current data.
-                  </label>
-                </div>
+                  </Typography>
+                </Surface>
               )}
 
               <div className="flex gap-2">
@@ -296,7 +303,7 @@ export function SettingsScreen(): ReactNode {
                   Cancel
                 </Button>
               </div>
-            </div>
+            </Surface>
           )}
         </section>
       </div>
