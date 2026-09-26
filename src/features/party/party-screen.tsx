@@ -3,18 +3,25 @@ import { Navigate, useParams } from "react-router";
 
 import { ScreenHeader } from "@/components/screen-header";
 import { Typography } from "@/components/typography";
+import { MAX_PARTY_SIZE } from "@/domain/transitions";
 import type { Mon } from "@/domain/types";
 import { GAMES } from "@/game/registry";
 import { useMons, useRoutes, useRun } from "@/storage/queries";
 
 import { PartyCard } from "./party-card";
 
-const PARTY_SIZE = 6;
+function partySlotOrder(mon: Mon): number {
+  return mon.partySlot ?? Number.POSITIVE_INFINITY;
+}
 
 export function partyMembers(mons: readonly Mon[]): Mon[] {
   return mons
     .filter((mon) => mon.status === "party")
-    .sort((a, b) => (a.partySlot ?? 0) - (b.partySlot ?? 0));
+    .sort((a, b) => {
+      const orderA = partySlotOrder(a);
+      const orderB = partySlotOrder(b);
+      return orderA === orderB ? 0 : orderA - orderB;
+    });
 }
 
 export function PartyScreen(): ReactNode {

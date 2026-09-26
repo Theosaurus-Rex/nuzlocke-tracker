@@ -6,7 +6,7 @@
 
 import type { Cause, Draft, Encounter, Fight, Gender, Mon, Death } from "./types";
 
-const MAX_PARTY_SIZE = 6;
+export const MAX_PARTY_SIZE = 6;
 export const MAX_MOVES = 4;
 
 function assertEncounterOpen(encounter: Encounter): void {

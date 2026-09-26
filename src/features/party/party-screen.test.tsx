@@ -88,6 +88,21 @@ describe("partyMembers", () => {
     ]);
     expect(result.map((m) => m.id)).toEqual(["a", "c", "e"]);
   });
+
+  it("sorts a party mon with no slot last, not first", () => {
+    const mon = (id: string, overrides: Partial<Mon>): Mon => ({
+      ...makeMonDraft("run-1", overrides),
+      id,
+      createdAt: "2026-09-27T00:00:00.000Z",
+      updatedAt: "2026-09-27T00:00:00.000Z",
+    });
+    const result = partyMembers([
+      mon("no-slot", { partySlot: null }),
+      mon("a", { partySlot: 0 }),
+      mon("c", { partySlot: 3 }),
+    ]);
+    expect(result.map((m) => m.id)).toEqual(["a", "c", "no-slot"]);
+  });
 });
 
 describe("PartyScreen", () => {
