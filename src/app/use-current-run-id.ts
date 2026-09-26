@@ -1,7 +1,4 @@
-/**
- * The current run outlives the URL: it's a device-local convenience, not run data, so it's kept
- * in localStorage rather than behind the storage adapter and never touches the export bundle.
- */
+/** Device-local convenience, not run data, so it bypasses the storage adapter and the export. */
 
 import { useEffect } from "react";
 import { useParams } from "react-router";
@@ -22,7 +19,7 @@ function writeStoredRunId(runId: string): void {
   try {
     localStorage.setItem(CURRENT_RUN_STORAGE_KEY, runId);
   } catch {
-    // Storage unavailable. The run stays current for this render, just not remembered.
+    return;
   }
 }
 
@@ -30,15 +27,12 @@ function clearStoredRunId(): void {
   try {
     localStorage.removeItem(CURRENT_RUN_STORAGE_KEY);
   } catch {
-    // Nothing to clean up if storage already threw.
+    return;
   }
 }
 
-/** `undefined` runs means the run list hasn't loaded yet, in which case a remembered id is
- * trusted rather than dropped, to avoid a flash of "no current run" on every reload. Storage
- * itself holds the remembered id, not component state: the URL is the only input that should
- * cause a render here, so writing and clearing storage are both plain effects, with nothing to
- * set afterwards. */
+/** While `runs` is still loading, a remembered id is trusted rather than dropped, so a reload
+ * doesn't flash "no current run" before settling back to the right one. */
 export function useCurrentRunId(runs: readonly Run[] | undefined): string | undefined {
   const { runId: urlRunId } = useParams<{ runId: string }>();
   const rememberedId = urlRunId ?? readStoredRunId();

@@ -701,12 +701,11 @@ describe("Current run outlives the URL", () => {
       const adapter = createMemoryAdapter();
       const run = await adapter.runs.put(makeRunDraft({ name: "Johto Hardcore" }));
 
-      // A run visited while storage is broken doesn't crash the shell...
       const first = renderAt(`/runs/${run.id}/party`, { adapter });
       await screen.findByRole("heading", { name: "Party" });
       first.unmount();
 
-      // ...but a fresh mount, simulating a reload, has nothing to remember it by.
+      // Simulates a reload: a fresh mount has nothing to remember the run by.
       renderAt("/", { adapter });
       await screen.findByRole("heading", { name: "Johto Hardcore" });
 
