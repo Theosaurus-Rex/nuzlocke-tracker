@@ -2,6 +2,7 @@ import type { ReactNode } from "react";
 
 import { SpeciesTypeBadge } from "@/components/species-type-badge";
 import { StatusChip } from "@/components/status-chip";
+import { Typography } from "@/components/typography";
 import { canDeleteRoute } from "@/domain/routes";
 import type { RouteRow } from "@/domain/route-rows";
 import type { Encounter, Mon, Route } from "@/domain/types";
@@ -19,14 +20,18 @@ import { RowEndAction } from "./row-end-action";
 
 function RouteCardSubtitle({ row }: { row: RouteRow }): ReactNode {
   if (row.encounter === null) {
-    return <p className="text-muted-foreground text-sm">tap to log encounter</p>;
+    return (
+      <Typography as="p" variant="body" tone="muted">
+        tap to log encounter
+      </Typography>
+    );
   }
 
   if (row.status === "missed") {
     return (
-      <p className="text-muted-foreground text-sm">
+      <Typography as="p" variant="body" tone="muted">
         <RowSpecies row={row} emptyFallback={<span>&mdash;</span>} />
-      </p>
+      </Typography>
     );
   }
 
@@ -34,13 +39,20 @@ function RouteCardSubtitle({ row }: { row: RouteRow }): ReactNode {
   // as a living catch. The graveyard chip, not this line, is what says it died.
   if ((row.status === "caught" || row.status === "dead") && row.mon !== null) {
     return (
-      <p className="text-muted-foreground text-sm">
-        <RowSpecies row={row} /> &middot; <span className="font-mono">L{row.mon.level}</span>
-      </p>
+      <Typography as="p" variant="body" tone="muted">
+        <RowSpecies row={row} /> &middot;{" "}
+        <Typography as="span" variant="number">
+          L{row.mon.level}
+        </Typography>
+      </Typography>
     );
   }
 
-  return <p className="text-muted-foreground text-sm">{STATUS_LABEL[row.status]}</p>;
+  return (
+    <Typography as="p" variant="body" tone="muted">
+      {STATUS_LABEL[row.status]}
+    </Typography>
+  );
 }
 
 function RouteCardBadges({
@@ -102,6 +114,7 @@ export function RouteCardList({
         const removable = canDeleteRoute(row.route, encounters);
         const action = rowTapAction(row);
         const tappable = action.kind !== "none";
+        const nameTone = row.status === "missed" ? "muted" : undefined;
         const nameClassName = cn("font-bold", row.status === "missed" && "text-muted-foreground");
 
         function handleRowTap(): void {
@@ -122,7 +135,9 @@ export function RouteCardList({
             <div className="min-w-0 flex-1">
               <div className="min-w-0 truncate">
                 {action.kind === "none" ? (
-                  <span className={nameClassName}>{row.route.name}</span>
+                  <Typography as="span" variant="title" tone={nameTone}>
+                    {row.route.name}
+                  </Typography>
                 ) : (
                   <button
                     type="button"
@@ -139,7 +154,10 @@ export function RouteCardList({
                   </button>
                 )}
                 {row.route.isCustom && (
-                  <span className="text-muted-foreground ml-2 border-[1.5px] border-border px-1.5 py-0.5 text-[11px] font-medium tracking-[0.12em] uppercase">
+                  <span
+                    className="text-muted-foreground ml-2 border-[1.5px] border-border px-1.5 py-0.5 font-medium tracking-[0.12em] uppercase"
+                    style={{ fontSize: "11px" }}
+                  >
                     Custom
                   </span>
                 )}

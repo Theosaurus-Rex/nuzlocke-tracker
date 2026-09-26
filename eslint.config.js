@@ -87,6 +87,24 @@ export default tseslint.config(
     },
   },
   {
+    // Kept as its own array entry, separate from the settings block above, so a parallel
+    // branch moving another screen onto Typography merges cleanly against this one.
+    files: ["src/features/routes/**/*.tsx"],
+    rules: {
+      "no-restricted-syntax": [
+        "error",
+        {
+          selector: "JSXOpeningElement[name.name=/^(h[1-6]|p)$/]",
+          message: "Use <Typography> from @/components/typography for headings and paragraphs.",
+        },
+        {
+          selector: "JSXAttribute[name.name='className'] Literal[value=/text-\\[/]",
+          message: "Arbitrary text sizes are not allowed here. Use a <Typography> variant.",
+        },
+      ],
+    },
+  },
+  {
     // StorageProvider and useStorage are deliberately co-located here, not split across two
     // files to satisfy fast-refresh's one-component-per-file heuristic.
     files: ["src/storage/storage-context.tsx"],

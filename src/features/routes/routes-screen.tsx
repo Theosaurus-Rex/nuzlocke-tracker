@@ -3,7 +3,9 @@ import { useState, type FormEvent, type ReactNode } from "react";
 import { Navigate, useParams } from "react-router";
 
 import { CHIP_SHAPE } from "@/components/chip";
+import { ScreenHeader } from "@/components/screen-header";
 import { statusChipFill, type StatusChipStatus } from "@/components/status-chip";
+import { Typography } from "@/components/typography";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { DEFAULT_RULES } from "@/domain/rules";
@@ -74,14 +76,19 @@ function RouteCounters({
                 filterActive && selected && "shadow-block",
               )}
             >
-              <span className="font-mono">{counters[bucket]}</span> {label}
+              <span>
+                <Typography as="span" variant="number">
+                  {counters[bucket]}
+                </Typography>{" "}
+                {label}
+              </span>
             </button>
           );
         })}
       </div>
-      <span className="font-mono text-sm text-muted-foreground">
+      <Typography as="span" variant="number" tone="muted" className="text-sm">
         {counters.covered} / {counters.total}
-      </span>
+      </Typography>
     </div>
   );
 }
@@ -209,9 +216,9 @@ export function RoutesScreen(): ReactNode {
 
   return (
     <div>
-      <div className="flex flex-wrap items-center justify-between gap-3 border-b-[1.5px] border-border p-4">
-        <h1 className="text-xl font-bold sm:text-2xl">Encounter routes</h1>
-        <div className="flex items-center gap-2">
+      <ScreenHeader
+        title="Encounter routes"
+        actions={
           <Button
             type="button"
             aria-expanded={addOpen}
@@ -220,8 +227,8 @@ export function RoutesScreen(): ReactNode {
           >
             + Add route
           </Button>
-        </div>
-      </div>
+        }
+      />
 
       {!loading && routes.length > 0 && (
         <div className="border-b-[1.5px] border-border bg-background p-4">
@@ -256,9 +263,15 @@ export function RoutesScreen(): ReactNode {
               className={cn("h-8 w-full border-[1.5px] border-border bg-background px-2.5 text-sm")}
             />
             {nameIsInvalid && (
-              <p id="new-route-name-error" className="mt-1 text-sm text-destructive">
+              <Typography
+                as="p"
+                id="new-route-name-error"
+                variant="body"
+                tone="alert"
+                className="mt-1"
+              >
                 Route name is required.
-              </p>
+              </Typography>
             )}
           </div>
           <Button type="submit" disabled={addRoute.isPending}>
@@ -268,33 +281,35 @@ export function RoutesScreen(): ReactNode {
       )}
 
       {addRoute.isError && (
-        <p role="alert" className="mt-2 px-4 text-sm text-destructive">
+        <Typography as="p" role="alert" variant="body" tone="alert" className="mt-2 px-4">
           Could not add the route:{" "}
           {addRoute.error instanceof Error ? addRoute.error.message : "Unknown error"}. Nothing was
           saved.
-        </p>
+        </Typography>
       )}
 
       {deleteRoute.isError && (
-        <p role="alert" className="mt-2 px-4 text-sm text-destructive">
+        <Typography as="p" role="alert" variant="body" tone="alert" className="mt-2 px-4">
           Could not remove the route:{" "}
           {deleteRoute.error instanceof Error ? deleteRoute.error.message : "Unknown error"}.
           Nothing was removed.
-        </p>
+        </Typography>
       )}
 
       {loading ? (
-        <p className="text-muted-foreground p-4 text-sm">Loading routes…</p>
+        <Typography as="p" variant="body" tone="muted" className="p-4">
+          Loading routes…
+        </Typography>
       ) : routes.length === 0 ? (
-        <p className="text-muted-foreground p-4 text-sm">
+        <Typography as="p" variant="body" tone="muted" className="p-4">
           No routes yet. Add one above to get started.
-        </p>
+        </Typography>
       ) : visibleRows.length === 0 ? (
-        <p className="text-muted-foreground p-4 text-sm">
+        <Typography as="p" variant="body" tone="muted" className="p-4">
           {trimmedSearch !== ""
             ? `No routes match "${trimmedSearch}".`
             : "No routes match the selected filters."}
-        </p>
+        </Typography>
       ) : (
         <>
           <div className="hidden overflow-x-auto border-[1.5px] border-t-0 border-border md:block">

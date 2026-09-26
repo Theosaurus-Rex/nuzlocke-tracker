@@ -360,7 +360,9 @@ describe("RoutesScreen", () => {
     expect(within(list).queryByText("Route 29")).not.toBeInTheDocument();
 
     function chipText(text: string): HTMLElement {
-      return within(counters).getByText((_, element) => element?.textContent === text);
+      return within(counters).getByText(
+        (_, element) => element?.tagName === "SPAN" && element.textContent === text,
+      );
     }
 
     expect(chipText("1 caught")).toBeInTheDocument();
@@ -508,7 +510,9 @@ describe("RoutesScreen", () => {
     expect(within(list).queryByText("Route 29")).not.toBeInTheDocument();
 
     function chipText(text: string): HTMLElement {
-      return within(counters).getByText((_, element) => element?.textContent === text);
+      return within(counters).getByText(
+        (_, element) => element?.tagName === "SPAN" && element.textContent === text,
+      );
     }
 
     expect(chipText("1 caught")).toBeInTheDocument();
