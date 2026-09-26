@@ -105,7 +105,6 @@ export default tseslint.config(
         {
           allowExportNames: [
             "STATUS_LABEL",
-            "genderSymbol",
             "rowSpeciesId",
             "chipForRouteRow",
             "canLogEncounter",
@@ -134,6 +133,14 @@ export default tseslint.config(
     files: ["src/components/status-chip.tsx"],
     rules: {
       "react-refresh/only-export-components": ["error", { allowExportNames: ["statusChipFill"] }],
+    },
+  },
+  {
+    // TYPE_FILL is TypeBadge's own colour lookup, exported so other type-coloured controls
+    // reuse the one mapping instead of copying it.
+    files: ["src/components/type-badge.tsx"],
+    rules: {
+      "react-refresh/only-export-components": ["error", { allowExportNames: ["TYPE_FILL"] }],
     },
   },
   eslintConfigPrettier,
