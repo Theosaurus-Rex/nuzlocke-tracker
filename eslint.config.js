@@ -79,6 +79,80 @@ export default tseslint.config(
     },
   },
   {
+    // Migrated in PER-77. See docs/design/block-shadow.md "Components".
+    // Test files keep their own placeholder route elements, which are allowed to stay plain.
+    files: ["src/app/**/*.tsx"],
+    ignores: ["src/app/**/*.test.tsx"],
+    rules: {
+      "no-restricted-syntax": [
+        "error",
+        {
+          selector: "JSXOpeningElement[name.name=/^(h[1-6]|p)$/]",
+          message: "Use <Typography> from @/components/typography for headings and paragraphs.",
+        },
+        {
+          selector: "JSXAttribute[name.name='className'] Literal[value=/text-\\[/]",
+          message: "Arbitrary text sizes are not allowed here. Use a <Typography> variant.",
+        },
+      ],
+    },
+  },
+  {
+    // Migrated in PER-77. See docs/design/block-shadow.md "Components".
+    // Test files keep their own placeholder route elements, which are allowed to stay plain.
+    files: ["src/features/run-list/**/*.tsx"],
+    ignores: ["src/features/run-list/**/*.test.tsx"],
+    rules: {
+      "no-restricted-syntax": [
+        "error",
+        {
+          selector: "JSXOpeningElement[name.name=/^(h[1-6]|p)$/]",
+          message: "Use <Typography> from @/components/typography for headings and paragraphs.",
+        },
+        {
+          selector: "JSXAttribute[name.name='className'] Literal[value=/text-\\[/]",
+          message: "Arbitrary text sizes are not allowed here. Use a <Typography> variant.",
+        },
+      ],
+    },
+  },
+  {
+    // Migrated in PER-77. See docs/design/block-shadow.md "Components".
+    // Test files keep their own placeholder route elements, which are allowed to stay plain.
+    files: ["src/features/new-run/**/*.tsx"],
+    ignores: ["src/features/new-run/**/*.test.tsx"],
+    rules: {
+      "no-restricted-syntax": [
+        "error",
+        {
+          selector: "JSXOpeningElement[name.name=/^(h[1-6]|p)$/]",
+          message: "Use <Typography> from @/components/typography for headings and paragraphs.",
+        },
+        {
+          selector: "JSXAttribute[name.name='className'] Literal[value=/text-\\[/]",
+          message: "Arbitrary text sizes are not allowed here. Use a <Typography> variant.",
+        },
+      ],
+    },
+  },
+  {
+    // Migrated in PER-77. See docs/design/block-shadow.md "Components".
+    files: ["src/features/not-found/**/*.tsx"],
+    rules: {
+      "no-restricted-syntax": [
+        "error",
+        {
+          selector: "JSXOpeningElement[name.name=/^(h[1-6]|p)$/]",
+          message: "Use <Typography> from @/components/typography for headings and paragraphs.",
+        },
+        {
+          selector: "JSXAttribute[name.name='className'] Literal[value=/text-\\[/]",
+          message: "Arbitrary text sizes are not allowed here. Use a <Typography> variant.",
+        },
+      ],
+    },
+  },
+  {
     // StorageProvider and useStorage are deliberately co-located here, not split across two
     // files to satisfy fast-refresh's one-component-per-file heuristic.
     files: ["src/storage/storage-context.tsx"],

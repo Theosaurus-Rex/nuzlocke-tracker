@@ -7,7 +7,10 @@
 import { useState, type ChangeEvent, type ReactNode } from "react";
 import { Link, Navigate } from "react-router";
 
+import { ScreenHeader } from "@/components/screen-header";
 import { StatusChip } from "@/components/status-chip";
+import { Surface } from "@/components/surface";
+import { Typography } from "@/components/typography";
 import { Button, buttonVariants } from "@/components/ui/button";
 import { summariseRun } from "@/domain/derive";
 import type { Encounter, Mon, Run, RunStatus } from "@/domain/types";
@@ -44,25 +47,25 @@ function DeleteConfirm({
   const deleteRun = useDeleteRun();
 
   return (
-    <div className="space-y-2 border-[1.5px] border-destructive bg-destructive/10 p-3 text-sm shadow-block-alert">
-      <p className="font-medium text-destructive">
+    <Surface tone="alert" className="space-y-2 p-3">
+      <Typography variant="strong" tone="alert">
         Permanently delete {run.name}? This removes {encounters.length}{" "}
         {encounters.length === 1 ? "encounter" : "encounters"}, {mons.length} Pokémon and{" "}
         {deathCount} {deathCount === 1 ? "death" : "deaths"}. This cannot be undone.
-      </p>
-      <p>
+      </Typography>
+      <Typography variant="body">
         <Link to="/settings" className="underline">
           Export a backup
         </Link>{" "}
         first if you haven&rsquo;t recently.
-      </p>
+      </Typography>
 
       {deleteRun.isError && (
-        <p role="alert" className="text-destructive">
+        <Typography role="alert" variant="body" tone="alert">
           Delete failed:{" "}
           {deleteRun.error instanceof Error ? deleteRun.error.message : "Unknown error"}. Nothing
           was removed.
-        </p>
+        </Typography>
       )}
 
       <div className="flex gap-2">
@@ -78,7 +81,7 @@ function DeleteConfirm({
           Cancel
         </Button>
       </div>
-    </div>
+    </Surface>
   );
 }
 
@@ -105,11 +108,13 @@ function RunCard({ run }: { run: Run }): ReactNode {
     <li className="flex flex-col gap-3 border-[1.5px] border-border bg-card p-4 shadow-block">
       <div className="flex items-start justify-between gap-3">
         <div className="min-w-0">
-          <h2 className="truncate font-bold">{run.name}</h2>
-          <p className="text-sm text-muted-foreground">
+          <Typography as="h2" variant="title" className="truncate">
+            {run.name}
+          </Typography>
+          <Typography variant="body" tone="muted">
             {GAMES[run.game].name}
             {run.rules.randomiser.enabled ? " · randomised" : ""}
-          </p>
+          </Typography>
         </div>
         <StatusChip status={chipStatus} className="shrink-0" />
       </div>
@@ -132,10 +137,12 @@ function RunCard({ run }: { run: Run }): ReactNode {
 
       <dl className="flex flex-wrap gap-x-4 gap-y-1">
         <div className="flex items-baseline gap-1 text-muted-foreground">
-          <dd className="font-mono text-sm">
+          <Typography as="dd" variant="number" className="text-sm">
             {summary ? `${String(covered)}/${String(routeTotal)}` : "…"}
-          </dd>
-          <dt className="text-xs">routes</dt>
+          </Typography>
+          <Typography as="dt" variant="caption">
+            routes
+          </Typography>
         </div>
         {STAT_LABELS.map(({ key, label }) => (
           <div
@@ -145,8 +152,12 @@ function RunCard({ run }: { run: Run }): ReactNode {
               key === "dead" ? "text-destructive" : "text-muted-foreground",
             )}
           >
-            <dd className="font-mono text-sm">{summary ? summary[key] : "…"}</dd>
-            <dt className="text-xs">{label}</dt>
+            <Typography as="dd" variant="number" className="text-sm">
+              {summary ? summary[key] : "…"}
+            </Typography>
+            <Typography as="dt" variant="caption">
+              {label}
+            </Typography>
           </div>
         ))}
       </dl>
@@ -192,15 +203,19 @@ export function RunListScreen(): ReactNode {
   const [search, setSearch] = useState("");
 
   if (runsQuery.isPending) {
-    return <p className="text-muted-foreground p-4 text-sm">Loading runs…</p>;
+    return (
+      <Typography variant="body" tone="muted" className="p-4">
+        Loading runs…
+      </Typography>
+    );
   }
 
   if (runsQuery.isError) {
     return (
-      <p role="alert" className="p-4 text-sm text-destructive">
+      <Typography role="alert" variant="body" tone="alert" className="p-4">
         Could not load runs:{" "}
         {runsQuery.error instanceof Error ? runsQuery.error.message : "Unknown error"}.
-      </p>
+      </Typography>
     );
   }
 
@@ -221,28 +236,30 @@ export function RunListScreen(): ReactNode {
 
   return (
     <div>
-      <div className="flex flex-wrap items-center justify-between gap-3 border-b-[1.5px] border-border p-4">
-        <h1 className="text-xl font-bold sm:text-2xl">Runs</h1>
-        <div className="flex flex-wrap items-center gap-2">
-          <input
-            type="search"
-            value={search}
-            onChange={handleSearchChange}
-            aria-label="Search runs"
-            placeholder="search runs…"
-            className="h-8 w-full border-[1.5px] border-border bg-background px-2.5 text-sm sm:w-56"
-          />
-          <Link
-            to="/runs/new"
-            className={cn(
-              buttonVariants({ size: "sm" }),
-              "bg-flag text-foreground shadow-block hover:bg-flag/90",
-            )}
-          >
-            <span aria-hidden="true">+ </span>New run
-          </Link>
-        </div>
-      </div>
+      <ScreenHeader
+        title="Runs"
+        actions={
+          <div className="flex flex-wrap items-center gap-2">
+            <input
+              type="search"
+              value={search}
+              onChange={handleSearchChange}
+              aria-label="Search runs"
+              placeholder="search runs…"
+              className="h-8 w-full border-[1.5px] border-border bg-background px-2.5 text-sm sm:w-56"
+            />
+            <Link
+              to="/runs/new"
+              className={cn(
+                buttonVariants({ size: "sm" }),
+                "bg-flag text-foreground shadow-block hover:bg-flag/90",
+              )}
+            >
+              <span aria-hidden="true">+ </span>New run
+            </Link>
+          </div>
+        }
+      />
 
       <div className="flex flex-wrap items-center justify-between gap-3 p-4">
         <div role="tablist" aria-label="Run status" className="flex gap-1">
@@ -265,7 +282,11 @@ export function RunListScreen(): ReactNode {
               >
                 {/* One flex item, so the button's gap does not open up inside the brackets. */}
                 <span>
-                  {label} (<span className="font-mono">{count}</span>)
+                  {label} (
+                  <Typography as="span" variant="number">
+                    {count}
+                  </Typography>
+                  )
                 </span>
               </button>
             );
@@ -275,9 +296,9 @@ export function RunListScreen(): ReactNode {
 
       <div className="px-4 pb-4">
         {visibleRuns.length === 0 ? (
-          <p className="text-muted-foreground text-sm">
+          <Typography variant="body" tone="muted">
             {query ? `No ${activeTab} runs match "${search.trim()}".` : `No ${activeTab} runs yet.`}
-          </p>
+          </Typography>
         ) : (
           <ul className="grid list-none grid-cols-1 gap-4 p-0 sm:grid-cols-2">
             {visibleRuns.map((run) => (

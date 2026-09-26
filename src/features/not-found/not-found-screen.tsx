@@ -1,5 +1,11 @@
 import type { ReactNode } from "react";
 
+import { Typography } from "@/components/typography";
+
 export function NotFoundScreen(): ReactNode {
-  return <h1 className="p-4 text-xl">Not Found</h1>;
+  return (
+    <Typography as="h1" variant="heading" className="p-4">
+      Not Found
+    </Typography>
+  );
 }
