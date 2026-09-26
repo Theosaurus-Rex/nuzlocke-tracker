@@ -1,10 +1,10 @@
 import { useEffect, useRef, useState, type FormEvent, type ReactNode } from "react";
 
 import { SpeciesTypeBadge } from "@/components/species-type-badge";
+import { Typography } from "@/components/typography";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
 import { validateAmendment, type EncounterField } from "@/domain/encounter-validation";
 import type { MonAmendments } from "@/domain/transitions";
 import type { Gender, Mon, Route, Rules } from "@/domain/types";
@@ -18,7 +18,6 @@ import { EncounterDialogHeader } from "./encounter-dialog-header";
 import { EvolveControl } from "./evolve-control";
 import {
   AbilityField,
-  FIELD_LABEL_CLASS,
   GenderField,
   HeldItemField,
   NatureField,
@@ -170,9 +169,14 @@ function EditMonForm({ mon, rules, generation, onDone }: EditMonFormProps): Reac
 
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
           <div className="sm:col-span-2">
-            <Label htmlFor="edit-mon-species" className={FIELD_LABEL_CLASS}>
+            <Typography
+              as="label"
+              variant="eyebrow"
+              htmlFor="edit-mon-species"
+              className="mb-1 block"
+            >
               Species
-            </Label>
+            </Typography>
             <div className="flex flex-wrap items-start gap-2">
               <div className="min-w-0 flex-1">
                 {pickingAny ? (
@@ -211,17 +215,29 @@ function EditMonForm({ mon, rules, generation, onDone }: EditMonFormProps): Reac
               )}
             </div>
             {speciesError && (
-              <p id="edit-mon-species-error" className="mt-1 text-sm text-destructive">
+              <Typography
+                as="p"
+                id="edit-mon-species-error"
+                variant="body"
+                tone="alert"
+                className="mt-1"
+              >
                 {speciesError}
-              </p>
+              </Typography>
             )}
             {showUndo && (
-              <p id="edit-mon-evolved-note" className="mt-1 text-xs text-muted-foreground">
+              <Typography
+                as="p"
+                id="edit-mon-evolved-note"
+                variant="caption"
+                tone="muted"
+                className="mt-1"
+              >
                 {evolved && `Evolved from ${speciesDisplayName(mon.speciesId)} · `}
                 <button type="button" className="underline" onClick={undoEvolve}>
                   Undo
                 </button>
-              </p>
+              </Typography>
             )}
           </div>
 
@@ -236,9 +252,14 @@ function EditMonForm({ mon, rules, generation, onDone }: EditMonFormProps): Reac
           <GenderField value={gender} onChange={setGender} />
 
           <div>
-            <Label htmlFor="edit-mon-level-caught" className={FIELD_LABEL_CLASS}>
+            <Typography
+              as="label"
+              variant="eyebrow"
+              htmlFor="edit-mon-level-caught"
+              className="mb-1 block"
+            >
               Level caught
-            </Label>
+            </Typography>
             <Input
               id="edit-mon-level-caught"
               className="font-mono"
@@ -248,9 +269,14 @@ function EditMonForm({ mon, rules, generation, onDone }: EditMonFormProps): Reac
           </div>
 
           <div>
-            <Label htmlFor="edit-mon-level" className={FIELD_LABEL_CLASS}>
+            <Typography
+              as="label"
+              variant="eyebrow"
+              htmlFor="edit-mon-level"
+              className="mb-1 block"
+            >
               Current level
-            </Label>
+            </Typography>
             <Input
               id="edit-mon-level"
               inputMode="numeric"
@@ -261,9 +287,15 @@ function EditMonForm({ mon, rules, generation, onDone }: EditMonFormProps): Reac
               aria-describedby={errors.level ? "edit-mon-level-error" : undefined}
             />
             {errors.level && (
-              <p id="edit-mon-level-error" className="mt-1 text-sm text-destructive">
+              <Typography
+                as="p"
+                id="edit-mon-level-error"
+                variant="body"
+                tone="alert"
+                className="mt-1"
+              >
                 {errors.level}
-              </p>
+              </Typography>
             )}
           </div>
 
@@ -279,11 +311,11 @@ function EditMonForm({ mon, rules, generation, onDone }: EditMonFormProps): Reac
         </div>
 
         {amendMon.isError && (
-          <p role="alert" className="text-sm text-destructive">
+          <Typography as="p" role="alert" variant="body" tone="alert">
             Could not save changes:{" "}
             {amendMon.error instanceof Error ? amendMon.error.message : "Unknown error"}. Nothing
             was saved.
-          </p>
+          </Typography>
         )}
       </div>
 

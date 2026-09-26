@@ -3,7 +3,6 @@ import type { ReactNode } from "react";
 
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
 import {
   Select,
   SelectContent,
@@ -11,6 +10,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { Typography } from "@/components/typography";
 import type { Gender } from "@/domain/types";
 import { natures } from "@/game/natures";
 import { cn } from "@/lib/utils";
@@ -44,9 +44,9 @@ export function NicknameField({
 
   return (
     <div>
-      <Label htmlFor={id} className={FIELD_LABEL_CLASS}>
+      <Typography as="label" variant="eyebrow" htmlFor={id} className="mb-1 block">
         Nickname{required && <span aria-hidden="true"> *</span>}
-      </Label>
+      </Typography>
       <Input
         id={id}
         value={value}
@@ -55,9 +55,9 @@ export function NicknameField({
         aria-describedby={error ? errorId : undefined}
       />
       {error && (
-        <p id={errorId} className="mt-1 text-sm text-destructive">
+        <Typography as="p" id={errorId} variant="body" tone="alert" className="mt-1">
           {error}
-        </p>
+        </Typography>
       )}
     </div>
   );
@@ -71,7 +71,9 @@ export interface GenderFieldProps {
 export function GenderField({ value, onChange }: GenderFieldProps): ReactNode {
   return (
     <div>
-      <span className={FIELD_LABEL_CLASS}>Gender</span>
+      <Typography as="span" variant="eyebrow" className="mb-1 block">
+        Gender
+      </Typography>
       <div role="radiogroup" aria-label="Gender" className="flex gap-2">
         {GENDERS.map((option) => (
           <Button
@@ -101,9 +103,9 @@ export interface ShinyFieldProps {
 export function ShinyField({ id, value, onChange }: ShinyFieldProps): ReactNode {
   return (
     <div className="flex items-center gap-2">
-      <Label htmlFor={id} className="text-[13px] font-medium tracking-[0.12em] uppercase">
+      <Typography as="label" variant="eyebrow" tone="ink" htmlFor={id}>
         Shiny
-      </Label>
+      </Typography>
       <button
         id={id}
         type="button"
@@ -129,9 +131,9 @@ export interface NatureFieldProps {
 export function NatureField({ id, value, onChange }: NatureFieldProps): ReactNode {
   return (
     <div>
-      <Label htmlFor={id} className={FIELD_LABEL_CLASS}>
+      <Typography as="label" variant="eyebrow" htmlFor={id} className="mb-1 block">
         Nature
-      </Label>
+      </Typography>
       <Select value={value} onValueChange={(nextValue) => onChange(nextValue)}>
         <SelectTrigger id={id} className="w-full">
           <SelectValue placeholder="Select a nature" />
@@ -162,9 +164,9 @@ export function AbilityField({ id, value, onChange, error }: AbilityFieldProps):
 
   return (
     <div>
-      <Label htmlFor={id} className={FIELD_LABEL_CLASS}>
+      <Typography as="label" variant="eyebrow" htmlFor={id} className="mb-1 block">
         Ability
-      </Label>
+      </Typography>
       <Input
         id={id}
         value={value}
@@ -172,9 +174,9 @@ export function AbilityField({ id, value, onChange, error }: AbilityFieldProps):
         {...errorProps}
       />
       {error && (
-        <p id={errorId} className="mt-1 text-sm text-destructive">
+        <Typography as="p" id={errorId} variant="body" tone="alert" className="mt-1">
           {error}
-        </p>
+        </Typography>
       )}
     </div>
   );
@@ -194,9 +196,9 @@ export function HeldItemField({ id, value, onChange, error }: HeldItemFieldProps
 
   return (
     <div>
-      <Label htmlFor={id} className={FIELD_LABEL_CLASS}>
+      <Typography as="label" variant="eyebrow" htmlFor={id} className="mb-1 block">
         Held item
-      </Label>
+      </Typography>
       <Input
         id={id}
         value={value}
@@ -204,9 +206,9 @@ export function HeldItemField({ id, value, onChange, error }: HeldItemFieldProps
         {...errorProps}
       />
       {error && (
-        <p id={errorId} className="mt-1 text-sm text-destructive">
+        <Typography as="p" id={errorId} variant="body" tone="alert" className="mt-1">
           {error}
-        </p>
+        </Typography>
       )}
     </div>
   );

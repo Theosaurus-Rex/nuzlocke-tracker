@@ -1,6 +1,7 @@
 import { XIcon } from "lucide-react";
 import { useCallback, useRef, type ReactNode } from "react";
 
+import { Typography } from "@/components/typography";
 import { Button } from "@/components/ui/button";
 import { MAX_MOVES } from "@/domain/transitions";
 import type { IndexEntry } from "@/game/pokeapi/model";
@@ -8,7 +9,6 @@ import { useMoveIndex } from "@/game/pokeapi/queries";
 import { findByName, moveDisplayName, searchIndex } from "@/game/pokeapi/resolve";
 
 import { ComboboxField } from "./combobox-field";
-import { FIELD_LABEL_CLASS } from "./mon-fields";
 import { PokeApiNotice } from "./pokeapi-notice";
 
 function excludeChosen(entries: readonly IndexEntry[], chosen: readonly string[]): IndexEntry[] {
@@ -46,7 +46,9 @@ export function MovesetField({ id, value, onChange }: MovesetFieldProps): ReactN
 
   return (
     <div>
-      <span className={FIELD_LABEL_CLASS}>Moveset</span>
+      <Typography as="span" variant="eyebrow" className="mb-1 block">
+        Moveset
+      </Typography>
       <div className="grid grid-cols-2 gap-2">
         {value.map((moveId, index) => (
           <div
