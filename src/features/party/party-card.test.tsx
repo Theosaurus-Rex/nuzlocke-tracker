@@ -63,7 +63,9 @@ describe("PartyCard", () => {
     expect(screen.getByText("Chikorita · ♀ · L22 · Adamant")).toBeInTheDocument();
     expect(screen.getByText("Vine Whip")).toBeInTheDocument();
     expect(screen.getByText("Tackle")).toBeInTheDocument();
-    expect(screen.getByText("Miracle Seed · Overgrow · Route 29")).toBeInTheDocument();
+    expect(screen.getByText("Miracle Seed").closest("p")?.textContent).toBe(
+      "Miracle Seed · Overgrow · Route 29",
+    );
   });
 
   it("falls back to the species name, unquoted, with no nickname", () => {
@@ -80,6 +82,6 @@ describe("PartyCard", () => {
 
   it("shows the caught route even when item and ability are missing", () => {
     renderCard(makeMon(), "Route 46");
-    expect(screen.getByText("no item · Route 46")).toBeInTheDocument();
+    expect(screen.getByText("no item").closest("p")?.textContent).toBe("no item · Route 46");
   });
 });

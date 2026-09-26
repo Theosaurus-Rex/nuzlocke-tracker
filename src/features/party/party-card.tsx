@@ -23,10 +23,13 @@ export function PartyCard({ mon, routeName, generation }: PartyCardProps): React
   const species = speciesDisplayName(mon.speciesId);
   const title = mon.nickname !== null ? `“${mon.nickname}”` : species;
 
+  const itemText = mon.heldItem ?? "no item";
+  const footerRest = joinPresent([mon.ability, routeName]);
+
   return (
-    <Surface as="li" className="flex flex-col p-5">
+    <Surface as="li" className="flex min-w-0 flex-col p-5">
       <SpeciesTypeBadge speciesId={mon.speciesId} generation={generation} />
-      <Typography as="h2" variant="title" className="mt-3 uppercase">
+      <Typography as="h2" variant="heading" className="mt-3 break-words uppercase">
         {title}
       </Typography>
       <Typography variant="body" tone="muted" className="mt-1">
@@ -39,8 +42,15 @@ export function PartyCard({ mon, routeName, generation }: PartyCardProps): React
           </li>
         ))}
       </ul>
-      <Typography variant="body" className="mt-4 border-t border-border/30 pt-3">
-        {joinPresent([mon.heldItem ?? "no item", mon.ability, routeName])}
+      <Typography variant="body" className="mt-4 break-words border-t border-muted pt-3">
+        <Typography as="span" variant="body" tone="ink">
+          {itemText}
+        </Typography>
+        {footerRest !== "" && (
+          <Typography as="span" variant="body" tone="muted">
+            {` · ${footerRest}`}
+          </Typography>
+        )}
       </Typography>
     </Surface>
   );

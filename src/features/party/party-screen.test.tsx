@@ -139,7 +139,8 @@ describe("PartyScreen", () => {
 
     renderScreen(adapter, run.id);
 
-    expect(await screen.findByText("no item · Route 29")).toBeInTheDocument();
+    const item = await screen.findByText("no item");
+    expect(item.closest("p")?.textContent).toBe("no item · Route 29");
   });
 
   it("says so when the party is empty", async () => {
