@@ -108,5 +108,13 @@ export default tseslint.config(
       "react-refresh/only-export-components": ["error", { allowExportNames: ["describeReset"] }],
     },
   },
+  {
+    // statusChipFill is StatusChip's own colour lookup, exported so other chip-style controls
+    // reuse the one mapping instead of copying it.
+    files: ["src/components/status-chip.tsx"],
+    rules: {
+      "react-refresh/only-export-components": ["error", { allowExportNames: ["statusChipFill"] }],
+    },
+  },
   eslintConfigPrettier,
 );

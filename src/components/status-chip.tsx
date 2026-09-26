@@ -52,6 +52,10 @@ const GROUP_CLASSES: Record<StatusChipGroup, string> = {
   white: "bg-card text-foreground",
 };
 
+export function statusChipFill(status: StatusChipStatus): string {
+  return GROUP_CLASSES[STATUS_GROUP[status]];
+}
+
 export interface StatusChipProps {
   status: StatusChipStatus;
   children?: ReactNode;
@@ -60,7 +64,7 @@ export interface StatusChipProps {
 
 export function StatusChip({ status, children, className }: StatusChipProps) {
   return (
-    <span className={cn(CHIP_SHAPE, GROUP_CLASSES[STATUS_GROUP[status]], className)}>
+    <span className={cn(CHIP_SHAPE, statusChipFill(status), className)}>
       {children ?? status.replace("-", " ")}
     </span>
   );

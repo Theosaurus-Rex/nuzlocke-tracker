@@ -292,7 +292,7 @@ describe("RoutesScreen", () => {
     expect(within(counters).getByText("2 / 3")).toBeInTheDocument();
   });
 
-  it("hides routes outside the checked filter buckets, and shows them again once unchecked", async () => {
+  it("filters routes to a clicked counter chip, and shows them again on a second click", async () => {
     const adapter = createMemoryAdapter();
     const run = await adapter.runs.put(makeRunDraft());
     const caughtRoute = await adapter.routes.put(
@@ -312,16 +312,89 @@ describe("RoutesScreen", () => {
     await findRouteInList("New Bark Town");
     await findRouteInList("Route 46");
 
-    await userEvent.click(screen.getByRole("button", { name: "Filter" }));
-    await userEvent.click(screen.getByRole("checkbox", { name: "caught" }));
+    const counters = screen.getByRole("group", { name: "Route counters" });
+    const caughtChip = within(counters).getByRole("button", { name: /caught/i });
+
+    expect(caughtChip).toHaveAttribute("aria-pressed", "false");
+    await userEvent.click(caughtChip);
+    expect(caughtChip).toHaveAttribute("aria-pressed", "true");
 
     const list = screen.getByRole("list");
     expect(within(list).queryByText("Route 46")).not.toBeInTheDocument();
     expect(within(list).getByText("New Bark Town")).toBeInTheDocument();
 
-    await userEvent.click(screen.getByRole("checkbox", { name: "caught" }));
+    await userEvent.click(caughtChip);
+    expect(caughtChip).toHaveAttribute("aria-pressed", "false");
 
     expect(await findRouteInList("Route 46")).toBeInTheDocument();
+  });
+
+  it("combines two active chips as an OR, and keeps the counts fixed while filtering", async () => {
+    const adapter = createMemoryAdapter();
+    const run = await adapter.runs.put(makeRunDraft());
+    const caughtRoute = await adapter.routes.put(
+      makeRouteDraft(run.id, { name: "New Bark Town", order: 100 }),
+    );
+    const caughtEncounter = await adapter.encounters.put(
+      makeEncounterDraft(run.id, caughtRoute.id, { status: "caught" }),
+    );
+    await adapter.mons.put(makeMonDraft(run.id, caughtEncounter.id));
+    const missedRoute = await adapter.routes.put(
+      makeRouteDraft(run.id, { name: "Route 46", order: 200 }),
+    );
+    await adapter.encounters.put(makeEncounterDraft(run.id, missedRoute.id, { status: "missed" }));
+    await adapter.routes.put(makeRouteDraft(run.id, { name: "Route 29", order: 300 }));
+
+    renderScreen(adapter, run.id);
+
+    await findRouteInList("New Bark Town");
+
+    const counters = screen.getByRole("group", { name: "Route counters" });
+    await userEvent.click(within(counters).getByRole("button", { name: /caught/i }));
+    await userEvent.click(within(counters).getByRole("button", { name: /missed/i }));
+
+    const list = screen.getByRole("list");
+    expect(within(list).getByText("New Bark Town")).toBeInTheDocument();
+    expect(within(list).getByText("Route 46")).toBeInTheDocument();
+    expect(within(list).queryByText("Route 29")).not.toBeInTheDocument();
+
+    function chipText(text: string): HTMLElement {
+      return within(counters).getByText((_, element) => element?.textContent === text);
+    }
+
+    expect(chipText("1 caught")).toBeInTheDocument();
+    expect(chipText("1 missed")).toBeInTheDocument();
+    expect(chipText("0 fainted")).toBeInTheDocument();
+    expect(chipText("1 pending")).toBeInTheDocument();
+  });
+
+  it("shows a message instead of a blank table when a filter matches nothing", async () => {
+    const adapter = createMemoryAdapter();
+    const run = await adapter.runs.put(makeRunDraft());
+    await adapter.routes.put(makeRouteDraft(run.id, { name: "New Bark Town", order: 100 }));
+
+    renderScreen(adapter, run.id);
+
+    await findRouteInList("New Bark Town");
+
+    const counters = screen.getByRole("group", { name: "Route counters" });
+    await userEvent.click(within(counters).getByRole("button", { name: /caught/i }));
+
+    expect(await screen.findByText("No routes match the selected filters.")).toBeInTheDocument();
+    expect(screen.queryByRole("list")).not.toBeInTheDocument();
+  });
+
+  it("has no Filter button or checkbox panel", async () => {
+    const adapter = createMemoryAdapter();
+    const run = await adapter.runs.put(makeRunDraft());
+    await adapter.routes.put(makeRouteDraft(run.id, { name: "New Bark Town", order: 100 }));
+
+    renderScreen(adapter, run.id);
+
+    await findRouteInList("New Bark Town");
+
+    expect(screen.queryByRole("button", { name: "Filter" })).not.toBeInTheDocument();
+    expect(screen.queryByRole("checkbox")).not.toBeInTheDocument();
   });
 
   it("still shows route and species names when PokéAPI is down, with no type badge", async () => {
