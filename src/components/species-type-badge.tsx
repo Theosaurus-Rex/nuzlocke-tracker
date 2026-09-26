@@ -5,7 +5,7 @@ import { typesIn } from "@/game/pokeapi/resolve";
 import { cn } from "@/lib/utils";
 
 import { CHIP_SHAPE } from "./chip";
-import { TypeBadge } from "./type-badge";
+import { TypeBadge, type TypeBadgeType } from "./type-badge";
 
 export interface SpeciesTypeBadgeProps {
   speciesId: string | null;
@@ -25,7 +25,15 @@ export function SpeciesTypeBadge({ speciesId, generation }: SpeciesTypeBadgeProp
   }
   if (species.isError) return null;
 
-  const primary = typesIn(species.data, generation)[0];
-  if (primary === undefined || primary === "unknown") return null;
-  return <TypeBadge type={primary} />;
+  const types = typesIn(species.data, generation).filter(
+    (type): type is TypeBadgeType => type !== "unknown",
+  );
+  if (types.length === 0) return null;
+  return (
+    <span className="inline-flex flex-wrap items-center gap-1">
+      {types.map((type) => (
+        <TypeBadge key={type} type={type} />
+      ))}
+    </span>
+  );
 }
