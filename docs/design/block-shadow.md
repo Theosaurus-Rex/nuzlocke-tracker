@@ -235,17 +235,15 @@ Counted on 2026-09-26 over the 32 screen and component files outside `components
 
 ### Lint
 
-Enforced on migrated screens only. `no-restricted-syntax` in `eslint.config.js` bans raw `h1`–`h6`
-and `p` elements, and arbitrary `text-[…]` sizes in a `className`, in the files it lists. Today
-that is `src/features/settings/`, `src/app/`, `src/features/run-list/`, `src/features/new-run/`
-and `src/features/not-found/`, each as its own array entry so parallel migrations don't collide
-on the same list. Each migration adds its own entry, and the last one widens it to
-`src/features/**`.
+Enforced project-wide. `no-restricted-syntax` in `eslint.config.js` bans raw `h1`–`h6` and `p`
+elements, and arbitrary `text-[…]` sizes in a `className`, across `src/features/**/*.tsx` and
+`src/app/**/*.tsx`. `label` and `span` are not banned, because a plain `span` is still the right
+way to group words for a flex row.
 
-Enforcing across the app now would fail lint on every screen not yet moved over, and turning it
-on only at the end would let a screen that has already moved slide back in between. Listing
-migrated screens keeps each one honest from the moment it moves. `label` and `span` are not
-banned, because a plain `span` is still the right way to group words for a flex row.
+`src/components/**` is exempt. `typography.tsx` and `chip.ts` are where the documented px sizes
+themselves live, so the components that define the type scale are allowed to write it in
+arbitrary values; a screen or feature is not. `src/components/ui/**` is also exempt, since it is
+CLI-generated and not hand-maintained here.
 
 ## The mobile shadow contradiction
 

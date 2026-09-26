@@ -61,17 +61,9 @@ export default tseslint.config(
     },
   },
   {
-    // Screens moved onto Typography. Add each screen here as it migrates.
-    // See docs/design/block-shadow.md "Components".
-    files: [
-      "src/features/settings/**/*.tsx",
-      "src/app/**/*.tsx",
-      "src/features/run-list/**/*.tsx",
-      "src/features/new-run/**/*.tsx",
-      "src/features/not-found/**/*.tsx",
-      "src/features/encounters/**/*.tsx",
-      "src/features/routes/**/*.tsx",
-    ],
+    // Project-wide: screens and app shell are on Typography. See docs/design/block-shadow.md
+    // "Components". src/components/** is exempt: it defines the px sizes these variants use.
+    files: ["src/features/**/*.tsx", "src/app/**/*.tsx"],
     ignores: ["**/*.test.tsx"],
     rules: {
       "no-restricted-syntax": [
