@@ -1,5 +1,6 @@
 import type { ReactNode } from "react";
 
+import { Typography } from "@/components/typography";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogDescription, DialogTitle } from "@/components/ui/dialog";
 import type { RouteRow } from "@/domain/route-rows";
@@ -107,11 +108,11 @@ export function ResetEncounterDialog({ row, onClose }: ResetEncounterDialogProps
         </DialogDescription>
 
         {resetEncounter.isError && (
-          <p role="alert" className="text-sm text-destructive">
+          <Typography as="p" role="alert" variant="body" tone="alert">
             Could not reset the encounter:{" "}
             {resetEncounter.error instanceof Error ? resetEncounter.error.message : "Unknown error"}
             . Nothing was removed.
-          </p>
+          </Typography>
         )}
 
         <div className="flex justify-end gap-2">
