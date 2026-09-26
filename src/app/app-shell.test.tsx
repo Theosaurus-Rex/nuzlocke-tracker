@@ -7,7 +7,7 @@ import { createMemoryRouter, RouterProvider } from "react-router";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 
 import { summariseRun } from "@/domain/derive";
 import type { Encounter, Mon, Route, Run, Rules } from "@/domain/types";
@@ -18,6 +18,7 @@ import { StorageProvider } from "@/storage/storage-context";
 
 import { navItemsFor } from "./nav-items";
 import { appRoutes } from "./router";
+import { CURRENT_RUN_STORAGE_KEY } from "./use-current-run-id";
 
 /**
  * Both providers are required: the settings route reads storage through TanStack Query and
@@ -544,5 +545,176 @@ describe("Run switcher and live counters", () => {
     await waitFor(() => {
       expect(countersIn(sidebar)).toEqual({ Routes: "0", Party: "2", Boxes: "0", Graveyard: "0" });
     });
+  });
+});
+
+describe("Current run outlives the URL", () => {
+  it.each([["Sidebar navigation" as const], ["Tab bar navigation" as const]])(
+    "keeps the current run's switcher and nav rows when visiting the run list, in %s",
+    async (navLabel) => {
+      const adapter = createMemoryAdapter();
+      const run = await adapter.runs.put(makeRunDraft({ name: "Johto Hardcore" }));
+      renderAt(`/runs/${run.id}/party`, { adapter });
+
+      const nav = await screen.findByRole("navigation", { name: navLabel });
+      await userEvent.click(within(nav).getByRole("link", { name: "Runs" }));
+
+      await screen.findByRole("heading", { name: "Johto Hardcore" });
+
+      const navAfter = screen.getByRole("navigation", { name: navLabel });
+      expect(within(navAfter).getByRole("link", { name: "Runs" })).toHaveAttribute(
+        "aria-current",
+        "page",
+      );
+      expect(within(navAfter).getByRole("link", { name: "Party" })).toHaveAttribute(
+        "href",
+        `/runs/${run.id}/party`,
+      );
+
+      const selects = screen.getAllByRole("combobox", { name: "Switch run" });
+      for (const select of selects) {
+        expect(select).toHaveValue(run.id);
+      }
+    },
+  );
+
+  it("returns to a run when its row is clicked from the run list", async () => {
+    const adapter = createMemoryAdapter();
+    const run = await adapter.runs.put(makeRunDraft({ name: "Johto Hardcore" }));
+
+    const { router } = renderAt("/", { adapter });
+    await screen.findByRole("heading", { name: "Johto Hardcore" });
+
+    await userEvent.click(screen.getByRole("link", { name: "Resume" }));
+
+    await waitFor(() => {
+      expect(router.state.location.pathname).toBe(`/runs/${run.id}/routes`);
+    });
+
+    const sidebar = screen.getByRole("navigation", { name: "Sidebar navigation" });
+    expect(within(sidebar).getByRole("combobox", { name: "Switch run" })).toHaveValue(run.id);
+    expect(within(sidebar).getByRole("link", { name: "Routes" })).toHaveAttribute(
+      "aria-current",
+      "page",
+    );
+  });
+
+  it.each([["/settings", "Settings"] as const, ["/runs/new", "New run"] as const])(
+    "keeps the current run's switcher and nav rows on %s",
+    async (path, heading) => {
+      const adapter = createMemoryAdapter();
+      const run = await adapter.runs.put(makeRunDraft({ name: "Johto Hardcore" }));
+      localStorage.setItem(CURRENT_RUN_STORAGE_KEY, run.id);
+
+      renderAt(path, { adapter });
+
+      await screen.findByRole("heading", { name: heading });
+
+      const sidebar = screen.getByRole("navigation", { name: "Sidebar navigation" });
+      expect(await within(sidebar).findByRole("combobox", { name: "Switch run" })).toHaveValue(
+        run.id,
+      );
+      expect(within(sidebar).getByRole("link", { name: "Party" })).toHaveAttribute(
+        "href",
+        `/runs/${run.id}/party`,
+      );
+    },
+  );
+
+  it("keeps the current run across a reload landing on /", async () => {
+    const adapter = createMemoryAdapter();
+    const run = await adapter.runs.put(makeRunDraft({ name: "Johto Hardcore" }));
+
+    const first = renderAt(`/runs/${run.id}/party`, { adapter });
+    await screen.findByRole("navigation", { name: "Sidebar navigation" });
+    first.unmount();
+
+    renderAt("/", { adapter });
+
+    await screen.findByRole("heading", { name: "Johto Hardcore" });
+    const sidebar = screen.getByRole("navigation", { name: "Sidebar navigation" });
+    expect(await within(sidebar).findByRole("combobox", { name: "Switch run" })).toHaveValue(
+      run.id,
+    );
+    expect(within(sidebar).getByRole("link", { name: "Runs" })).toHaveAttribute(
+      "aria-current",
+      "page",
+    );
+    expect(within(sidebar).getByRole("link", { name: "Party" })).toHaveAttribute(
+      "href",
+      `/runs/${run.id}/party`,
+    );
+  });
+
+  it("clears the current run immediately when it's deleted, without adopting another run automatically", async () => {
+    const adapter = createMemoryAdapter();
+    const doomed = await adapter.runs.put(makeRunDraft({ name: "Johto Hardcore" }));
+    await adapter.runs.put(makeRunDraft({ name: "Emerald Nuzlocke" }));
+
+    const { router } = renderAt(`/runs/${doomed.id}/party`, { adapter });
+    await screen.findByRole("navigation", { name: "Sidebar navigation" });
+
+    await router.navigate("/");
+    await screen.findByRole("heading", { name: "Johto Hardcore" });
+
+    const card = screen.getByRole("heading", { name: "Johto Hardcore" }).closest("li");
+    if (!card) {
+      throw new Error("Expected the Johto Hardcore run card to render as a list item.");
+    }
+    await userEvent.click(within(card).getByRole("button", { name: "Delete" }));
+    await userEvent.click(within(card).getByRole("button", { name: "Delete permanently" }));
+
+    await waitFor(() => {
+      expect(screen.queryByRole("heading", { name: "Johto Hardcore" })).not.toBeInTheDocument();
+    });
+
+    const sidebar = screen.getByRole("navigation", { name: "Sidebar navigation" });
+    expect(within(sidebar).queryByRole("link", { name: "Party" })).not.toBeInTheDocument();
+    expect(within(sidebar).getByRole("combobox", { name: "Switch run" })).toHaveValue("");
+  });
+
+  it("ignores a remembered run id that no longer exists", async () => {
+    const adapter = createMemoryAdapter();
+    await adapter.runs.put(makeRunDraft({ name: "Emerald Nuzlocke" }));
+    localStorage.setItem(CURRENT_RUN_STORAGE_KEY, "run-does-not-exist");
+
+    renderAt("/", { adapter });
+
+    await screen.findByRole("heading", { name: "Emerald Nuzlocke" });
+    const sidebar = screen.getByRole("navigation", { name: "Sidebar navigation" });
+    expect(within(sidebar).queryByRole("link", { name: "Party" })).not.toBeInTheDocument();
+    expect(within(sidebar).getByRole("combobox", { name: "Switch run" })).toHaveValue("");
+  });
+
+  it("still works when localStorage throws on every call", async () => {
+    const getItemSpy = vi.spyOn(Storage.prototype, "getItem").mockImplementation(() => {
+      throw new Error("blocked");
+    });
+    const setItemSpy = vi.spyOn(Storage.prototype, "setItem").mockImplementation(() => {
+      throw new Error("blocked");
+    });
+    const removeItemSpy = vi.spyOn(Storage.prototype, "removeItem").mockImplementation(() => {
+      throw new Error("blocked");
+    });
+
+    try {
+      const adapter = createMemoryAdapter();
+      const run = await adapter.runs.put(makeRunDraft({ name: "Johto Hardcore" }));
+
+      const first = renderAt(`/runs/${run.id}/party`, { adapter });
+      await screen.findByRole("heading", { name: "Party" });
+      first.unmount();
+
+      // Simulates a reload: a fresh mount has nothing to remember the run by.
+      renderAt("/", { adapter });
+      await screen.findByRole("heading", { name: "Johto Hardcore" });
+
+      const sidebar = screen.getByRole("navigation", { name: "Sidebar navigation" });
+      expect(within(sidebar).queryByRole("link", { name: "Party" })).not.toBeInTheDocument();
+    } finally {
+      getItemSpy.mockRestore();
+      setItemSpy.mockRestore();
+      removeItemSpy.mockRestore();
+    }
   });
 });

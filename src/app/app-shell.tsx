@@ -4,7 +4,7 @@
  */
 
 import type { ReactNode } from "react";
-import { Link, NavLink, Outlet, useLocation, useNavigate, useParams } from "react-router";
+import { Link, NavLink, Outlet, useLocation, useNavigate } from "react-router";
 import { cn } from "cn";
 
 import { buttonVariants } from "@/components/ui/button";
@@ -13,6 +13,7 @@ import { useEncounters, useMons, useRoutes, useRuns } from "@/storage/queries";
 
 import { navItemsFor, subScreenFromPath, type NavItem } from "./nav-items";
 import { RunSwitcher } from "./run-switcher";
+import { useCurrentRunId } from "./use-current-run-id";
 
 /** Not every nav row has a live count: `Fights` has none in `RunSummary`, and the two global
  * rows (Runs, Settings) never do. */
@@ -42,13 +43,13 @@ function counterFor(
 }
 
 export function AppShell(): ReactNode {
-  const { runId } = useParams<{ runId: string }>();
   const location = useLocation();
   const navigate = useNavigate();
-  const navItems = navItemsFor(runId);
 
   const runsQuery = useRuns();
   const runs = runsQuery.data ?? [];
+  const runId = useCurrentRunId(runsQuery.data);
+  const navItems = navItemsFor(runId);
 
   const encountersQuery = useEncounters(runId);
   const monsQuery = useMons(runId);
