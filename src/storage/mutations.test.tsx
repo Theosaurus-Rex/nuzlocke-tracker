@@ -6,13 +6,14 @@
 
 import type { ReactNode } from "react";
 
-import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import { onlineManager, QueryClientProvider } from "@tanstack/react-query";
 import { renderHook, waitFor } from "@testing-library/react";
-import { describe, expect, it, vi } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 
 import type { CatchDetails, MonAmendments } from "@/domain/transitions";
 import type { Death, Encounter, Fight, Mon, Route, Run } from "@/domain/types";
 import { heartgold } from "@/game/data/heartgold";
+import { createQueryClient } from "@/lib/query-client";
 
 import type { StorageAdapter } from "./adapter";
 import { createMemoryAdapter } from "./memory-adapter";
@@ -47,11 +48,9 @@ function makeEncounterDraft(
 function createWrapper(
   adapter: StorageAdapter,
 ): ({ children }: { children: ReactNode }) => ReactNode {
-  const queryClient = new QueryClient({
-    defaultOptions: {
-      queries: { retry: false },
-      mutations: { retry: false },
-    },
+  const queryClient = createQueryClient({
+    queries: { retry: false },
+    mutations: { retry: false },
   });
 
   return function Wrapper({ children }: { children: ReactNode }): ReactNode {
@@ -952,5 +951,21 @@ describe("useResetEncounter", () => {
     });
 
     expect(newMon?.partySlot).toBe(2);
+  });
+});
+
+describe("offline", () => {
+  afterEach(() => {
+    onlineManager.setOnline(true);
+  });
+
+  it("still settles a storage write while the device reports no connection", async () => {
+    const adapter = createMemoryAdapter();
+
+    onlineManager.setOnline(false);
+    const { result } = renderHook(() => useCreateRun(), { wrapper: createWrapper(adapter) });
+    const run = await result.current.mutateAsync({ name: "Test Run", game: "heartgold" });
+
+    expect(await adapter.runs.get(run.id)).toEqual(run);
   });
 });

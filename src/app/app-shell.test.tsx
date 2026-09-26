@@ -4,13 +4,14 @@
  */
 
 import { createMemoryRouter, RouterProvider } from "react-router";
-import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import { onlineManager, QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import { describe, expect, it, vi } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 
 import { summariseRun } from "@/domain/derive";
 import type { Encounter, Mon, Route, Run, Rules } from "@/domain/types";
+import { createQueryClient } from "@/lib/query-client";
 import { createMemoryAdapter } from "@/storage/memory-adapter";
 import { invalidateRun } from "@/storage/queries";
 import type { StorageAdapter } from "@/storage/adapter";
@@ -30,8 +31,7 @@ function renderAt(
   options: { adapter?: StorageAdapter; queryClient?: QueryClient } = {},
 ) {
   const router = createMemoryRouter(appRoutes, { initialEntries: [initialPath] });
-  const queryClient =
-    options.queryClient ?? new QueryClient({ defaultOptions: { queries: { retry: false } } });
+  const queryClient = options.queryClient ?? createQueryClient({ queries: { retry: false } });
   const adapter = options.adapter ?? createMemoryAdapter();
   const rendered = render(
     <QueryClientProvider client={queryClient}>
@@ -717,5 +717,25 @@ describe("Current run outlives the URL", () => {
       setItemSpy.mockRestore();
       removeItemSpy.mockRestore();
     }
+  });
+});
+
+describe("Offline", () => {
+  afterEach(() => {
+    onlineManager.setOnline(true);
+  });
+
+  it("loads a run's screens from storage while the device reports no connection", async () => {
+    const adapter = createMemoryAdapter();
+    const run = await adapter.runs.put(makeRunDraft({ name: "Johto Hardcore" }));
+    await adapter.mons.put(makeMonDraft(run.id));
+
+    onlineManager.setOnline(false);
+    renderAt(`/runs/${run.id}/party`, { adapter });
+
+    const sidebar = await screen.findByRole("navigation", { name: "Sidebar navigation" });
+    await waitFor(() => {
+      expect(countersIn(sidebar)).toEqual({ Routes: "0", Party: "1", Boxes: "0", Graveyard: "0" });
+    });
   });
 });
