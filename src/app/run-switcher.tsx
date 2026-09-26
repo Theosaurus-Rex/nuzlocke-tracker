@@ -3,6 +3,7 @@
 
 import type { ChangeEvent, ReactNode } from "react";
 
+import { Typography } from "@/components/typography";
 import type { Run } from "@/domain/types";
 import { GAMES } from "@/game/registry";
 
@@ -50,7 +51,11 @@ export function RunSwitcher({ runs, activeRunId, onSwitch }: RunSwitcherProps): 
         ))}
       </select>
 
-      {subtitle && <p className="text-xs text-muted-foreground">{subtitle}</p>}
+      {subtitle && (
+        <Typography variant="caption" tone="muted">
+          {subtitle}
+        </Typography>
+      )}
     </div>
   );
 }

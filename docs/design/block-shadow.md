@@ -237,8 +237,10 @@ Counted on 2026-09-26 over the 32 screen and component files outside `components
 
 Enforced on migrated screens only. `no-restricted-syntax` in `eslint.config.js` bans raw `h1`–`h6`
 and `p` elements, and arbitrary `text-[…]` sizes in a `className`, in the files it lists. Today
-that is `src/features/settings/`. Each migration adds its screen to the list, and the last one
-widens it to `src/features/**`.
+that is `src/features/settings/`, `src/app/`, `src/features/run-list/`, `src/features/new-run/`
+and `src/features/not-found/`, each as its own array entry so parallel migrations don't collide
+on the same list. Each migration adds its own entry, and the last one widens it to
+`src/features/**`.
 
 Enforcing across the app now would fail lint on every screen not yet moved over, and turning it
 on only at the end would let a screen that has already moved slide back in between. Listing

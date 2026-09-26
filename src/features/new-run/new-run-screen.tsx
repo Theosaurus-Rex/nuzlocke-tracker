@@ -8,7 +8,9 @@ import { useState, type ChangeEvent, type FormEvent, type ReactNode } from "reac
 import { Link, useNavigate } from "react-router";
 
 import { CHIP_SHAPE } from "@/components/chip";
+import { ScreenHeader } from "@/components/screen-header";
 import { SquareCheckbox } from "@/components/square-checkbox";
+import { Typography } from "@/components/typography";
 import { Button, buttonVariants } from "@/components/ui/button";
 import {
   CLAUSE_FIELDS,
@@ -17,7 +19,6 @@ import {
   RANDOMISER_SUB_FIELDS,
 } from "@/domain/rules";
 import type { ClauseField, GameId, RandomiserSubField, Rules } from "@/domain/types";
-import { FIELD_LABEL_CLASS } from "@/features/encounters/mon-fields";
 import { GAMES } from "@/game/registry";
 import { cn } from "@/lib/utils";
 import { useCreateRun } from "@/storage/mutations";
@@ -134,37 +135,39 @@ export function NewRunScreen(): ReactNode {
 
   return (
     <form onSubmit={handleSubmit} noValidate className="flex min-h-screen flex-col">
-      <div className="flex flex-wrap items-center justify-between gap-3 border-b-[1.5px] border-border p-4">
-        <h1 className="text-xl font-bold sm:text-2xl">New run</h1>
-        <div className="flex items-center gap-2">
-          {hasRuns && (
-            <Link
-              to="/"
-              className={buttonVariants({ variant: "outline", className: "shadow-none" })}
-            >
-              Cancel
-            </Link>
-          )}
-          <Button type="submit" disabled={createRun.isPending}>
-            {createRun.isPending ? "Starting…" : "Start run"}
-          </Button>
-        </div>
-      </div>
+      <ScreenHeader
+        title="New run"
+        actions={
+          <div className="flex items-center gap-2">
+            {hasRuns && (
+              <Link
+                to="/"
+                className={buttonVariants({ variant: "outline", className: "shadow-none" })}
+              >
+                Cancel
+              </Link>
+            )}
+            <Button type="submit" disabled={createRun.isPending}>
+              {createRun.isPending ? "Starting…" : "Start run"}
+            </Button>
+          </div>
+        }
+      />
 
       {createRun.isError && (
-        <p role="alert" className="px-4 pt-3 text-sm text-destructive">
+        <Typography role="alert" variant="body" tone="alert" className="px-4 pt-3">
           Could not create the run:{" "}
           {createRun.error instanceof Error ? createRun.error.message : "Unknown error"}. Nothing
           was saved.
-        </p>
+        </Typography>
       )}
 
       <div className="grid flex-1 grid-cols-1 md:grid-cols-2 md:divide-x-[1.5px] md:divide-border">
         <div className="space-y-4 p-4">
           <div>
-            <label htmlFor="run-name" className={FIELD_LABEL_CLASS}>
+            <Typography as="label" htmlFor="run-name" variant="eyebrow" className="mb-1 block">
               Run name
-            </label>
+            </Typography>
             <input
               id="run-name"
               type="text"
@@ -175,16 +178,16 @@ export function NewRunScreen(): ReactNode {
               className="h-9 w-full border-[1.5px] border-border bg-background px-2.5 text-sm"
             />
             {nameIsInvalid && (
-              <p id="run-name-error" className="mt-1 text-sm text-destructive">
+              <Typography id="run-name-error" variant="body" tone="alert" className="mt-1">
                 Name is required.
-              </p>
+              </Typography>
             )}
           </div>
 
           <div>
-            <label htmlFor="run-game" className={FIELD_LABEL_CLASS}>
+            <Typography as="label" htmlFor="run-game" variant="eyebrow" className="mb-1 block">
               Game
-            </label>
+            </Typography>
             <select
               id="run-game"
               value={game}
@@ -200,7 +203,9 @@ export function NewRunScreen(): ReactNode {
           </div>
 
           <fieldset className="space-y-2">
-            <legend className={FIELD_LABEL_CLASS}>Randomiser</legend>
+            <Typography as="legend" variant="eyebrow" className="mb-1 block">
+              Randomiser
+            </Typography>
 
             <div className="flex items-center gap-2">
               <SquareCheckbox
@@ -208,9 +213,9 @@ export function NewRunScreen(): ReactNode {
                 checked={rules.randomiser.enabled}
                 onChange={handleRandomiserMasterToggle}
               />
-              <label htmlFor="rule-randomiser-enabled" className="text-sm font-medium">
+              <Typography as="label" htmlFor="rule-randomiser-enabled" variant="strong">
                 This is a randomiser run
-              </label>
+              </Typography>
             </div>
 
             <div className="flex flex-wrap gap-2">
@@ -246,16 +251,21 @@ export function NewRunScreen(): ReactNode {
               })}
             </div>
 
-            <p className="text-muted-foreground text-xs">
+            <Typography variant="caption" tone="muted">
               These record what kind of run this is, for your own reference — none of them change
               what the app shows you.
-            </p>
+            </Typography>
           </fieldset>
 
           <div>
-            <label htmlFor="rule-custom-clause" className={FIELD_LABEL_CLASS}>
+            <Typography
+              as="label"
+              htmlFor="rule-custom-clause"
+              variant="eyebrow"
+              className="mb-1 block"
+            >
               Custom clause (optional)
-            </label>
+            </Typography>
             <textarea
               id="rule-custom-clause"
               value={customClauseText}
@@ -268,7 +278,9 @@ export function NewRunScreen(): ReactNode {
         </div>
 
         <fieldset className="space-y-2 p-4">
-          <legend className={FIELD_LABEL_CLASS}>Rules</legend>
+          <Typography as="legend" variant="eyebrow" className="mb-1 block">
+            Rules
+          </Typography>
           {CLAUSE_FIELDS.map((key) => {
             const id = `rule-${key}`;
             return (
@@ -280,9 +292,9 @@ export function NewRunScreen(): ReactNode {
                     handleClauseToggle(key);
                   }}
                 />
-                <label htmlFor={id} className="text-sm">
+                <Typography as="label" htmlFor={id} variant="body">
                   {CLAUSE_LABELS[key]}
-                </label>
+                </Typography>
               </div>
             );
           })}

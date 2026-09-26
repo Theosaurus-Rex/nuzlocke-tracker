@@ -8,6 +8,7 @@ import { Link, NavLink, Outlet, useLocation, useNavigate } from "react-router";
 import { cn } from "cn";
 
 import { buttonVariants } from "@/components/ui/button";
+import { Typography } from "@/components/typography";
 import { summariseRun, type RunSummary } from "@/domain/derive";
 import { useEncounters, useMons, useRoutes, useRuns } from "@/storage/queries";
 
@@ -71,9 +72,9 @@ export function AppShell(): ReactNode {
       >
         {runs.length > 0 && (
           <div className="mb-4">
-            <p className="mb-1.5 text-[13px] font-medium tracking-[0.12em] text-muted-foreground uppercase">
+            <Typography as="p" variant="eyebrow" className="mb-1.5">
               Current run
-            </p>
+            </Typography>
             <RunSwitcher runs={runs} activeRunId={runId} onSwitch={handleSwitchRun} />
           </div>
         )}
@@ -93,13 +94,15 @@ export function AppShell(): ReactNode {
             >
               <span data-slot="nav-label">{item.label}</span>
               {counter !== undefined && (
-                <span
+                <Typography
+                  as="span"
+                  variant="number"
+                  tone="muted"
                   aria-hidden="true"
                   data-slot="nav-counter"
-                  className="font-mono text-muted-foreground"
                 >
                   {counter}
-                </span>
+                </Typography>
               )}
             </NavLink>
           );
