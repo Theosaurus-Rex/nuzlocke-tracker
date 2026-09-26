@@ -73,6 +73,7 @@ src/
   game/pokeapi/  fetch, map and resolve species and move data from PokéAPI, cached by TanStack Query
   features/      screens, one directory each
   app/           routing and the responsive shell
+  components/    shared Block Shadow components: Typography, Surface, chips
   components/ui/ shadcn primitives
 scripts/         one-shot generators and tooling (not run by the build)
 docs/            design specs, the visual direction, and the wireframes
