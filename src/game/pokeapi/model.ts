@@ -10,11 +10,19 @@ export interface PastTypes {
   types: Type[];
 }
 
+export interface SpeciesSprites {
+  animated: string | null;
+  animatedShiny: string | null;
+  still: string | null;
+  stillShiny: string | null;
+}
+
 export interface Species {
   id: number;
   name: string;
   types: Type[];
   pastTypes: PastTypes[];
+  sprites: SpeciesSprites;
 }
 
 export interface PastMoveValue {

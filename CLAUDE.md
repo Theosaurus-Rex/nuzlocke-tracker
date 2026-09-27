@@ -296,6 +296,11 @@ header comment. If a second game is ever wanted from upstream, bootstrap that su
 way. That bootstrap is one-shot, not a pipeline kept in sync with upstream — see the ownership
 decision below.
 
+**Sprites — cleared 2026-09-28.** Sprites load at runtime from PokéAPI's sprite host and are never
+committed. The host repo is CC0, but the images are copyright The Pokémon Company. The app uses
+the Showdown set, with the still standard sprite for reduced motion. See
+`docs/superpowers/specs/2026-09-28-pokemon-sprites-design.md`.
+
 **Game data is ours once seeded — decided 2026-09-18.** This now covers `nuzlocke.data` only.
 A generator (`scripts/extract-*.ts`) is a one-shot bootstrapper: run it to seed a new game, or a
 new kind of data, not something re-run to keep output in sync with upstream. After that, the
