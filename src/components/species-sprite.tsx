@@ -11,6 +11,7 @@ export interface SpeciesSpriteProps {
   shiny: boolean;
   size: number;
   variant?: SpeciesSpriteVariant;
+  placeholder?: boolean;
   className?: string;
 }
 
@@ -29,6 +30,7 @@ export function SpeciesSprite({
   shiny,
   size,
   variant = "sprite",
+  placeholder = true,
   className,
 }: SpeciesSpriteProps): ReactNode {
   const species = useSpecies(speciesId);
@@ -39,6 +41,7 @@ export function SpeciesSprite({
   const box = { width: size, height: size };
 
   if (src === null) {
+    if (!placeholder) return null;
     return (
       <span
         aria-hidden="true"

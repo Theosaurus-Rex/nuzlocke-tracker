@@ -64,7 +64,7 @@ There is no new request and no new query.
   icon or the icon fails to load.
 - An image that fails to load (the `error` event) is dropped, and the next address is tried. With
   none left, it shows the placeholder.
-- It shows the placeholder while the species loads, when the species fetch fails, when there is
+- Unless `placeholder` is `false`, it shows the placeholder while the species loads, when the species fetch fails, when there is
   no address at all, and when `speciesId` is null.
 - The image sits in a fixed square box with `image-rendering: pixelated`, `loading="lazy"` and
   `alt=""`. The mon's name is always beside it, so it is decorative. A still sprite is scaled to
@@ -85,9 +85,12 @@ encountered species and is never shiny.
   their text already says so.
 - **Phone route cards (`6c`).** A 40px icon in a left column on every card. Not-encountered and
   open cards show the placeholder, as the pending row in `6c` does.
-- **Party cards (`5b`, `6e`).** An 80px still sprite breaking out of the card's top-right corner.
-  The card is positioned so the sprite can overlap its top border. The title and the line under
-  it keep right padding, so a long nickname never runs under the sprite at 390px.
+- **Party cards (`5b`, `6e`).** The still sprite at exactly 2x (192px), so its pixels stay crisp and
+  the art comes out around 100 to 150px, as in the frames. It breaks out of the card's top-right
+  corner, and the grid leaves room above each row for it. The type badges and title keep right
+  padding, so a long nickname never runs under the sprite at 390px. A party card shows nothing
+  when there is no sprite, since the frames draw no placeholder there and a 192px dashed box would
+  cover the card. `SpeciesSprite` takes `placeholder: false` for this.
 
 ## Tests
 

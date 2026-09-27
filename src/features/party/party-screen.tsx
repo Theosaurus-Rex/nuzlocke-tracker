@@ -53,7 +53,7 @@ export function PartyScreen(): ReactNode {
         </Typography>
       )}
       {party.length > 0 && (
-        <ul className="grid gap-x-6 gap-y-12 p-4 pt-12 md:grid-cols-2">
+        <ul className="grid gap-x-6 gap-y-20 p-4 pt-20 md:grid-cols-2">
           {party.map((mon) => (
             <PartyCard
               key={mon.id}

@@ -8,7 +8,7 @@ import { SpeciesSprite, type SpeciesSpriteVariant } from "./species-sprite";
 
 function renderSprite(
   speciesId: string | null,
-  options: { shiny?: boolean; variant?: SpeciesSpriteVariant } = {},
+  options: { shiny?: boolean; variant?: SpeciesSpriteVariant; placeholder?: boolean } = {},
 ) {
   const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
   const view = render(
@@ -18,6 +18,7 @@ function renderSprite(
         shiny={options.shiny ?? false}
         size={40}
         variant={options.variant}
+        placeholder={options.placeholder}
       />
     </QueryClientProvider>,
   );
@@ -88,6 +89,17 @@ describe("SpeciesSprite", () => {
   it("shows the placeholder with no species", () => {
     const { container } = renderSprite(null);
     expect(placeholder(container)).not.toBeNull();
+  });
+
+  it("renders nothing instead of the placeholder when asked to", async () => {
+    const { container, client } = renderSprite("geodude", { placeholder: false });
+    await settled(client, "geodude", "success");
+    expect(container).toBeEmptyDOMElement();
+  });
+
+  it("still shows the sprite when the placeholder is turned off", async () => {
+    const { container } = renderSprite("chikorita", { placeholder: false });
+    expect(await findImg(container)).toHaveAttribute("src", "https://sprites.test/still/152.png");
   });
 
   describe("as an icon", () => {

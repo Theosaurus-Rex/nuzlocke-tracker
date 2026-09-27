@@ -55,6 +55,13 @@ describe("PartyCard", () => {
     );
   });
 
+  it("shows no sprite placeholder when the species has no sprite", async () => {
+    const { container } = renderCard(makeMon({ speciesId: "geodude", speciesIdCaught: "geodude" }));
+    await screen.findByText("rock");
+    expect(container.querySelector('[data-sprite="placeholder"]')).toBeNull();
+    expect(container.querySelector("img")).toBeNull();
+  });
+
   it("shows the shiny sprite for a shiny mon", async () => {
     const { container } = renderCard(makeMon({ shiny: true }));
     await waitFor(() =>
