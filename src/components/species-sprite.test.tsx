@@ -94,11 +94,27 @@ describe("SpeciesSprite", () => {
     expect(container.querySelector("img")).toBeNull();
   });
 
-  it("swaps to the placeholder when the image fails to load", async () => {
+  it("falls back to the still sprite when the animated one fails to load", async () => {
     const { container } = renderSprite("chikorita");
+    fireEvent.error(await findImg(container));
+    expect(container.querySelector("img")).toHaveAttribute(
+      "src",
+      "https://sprites.test/still/152.png",
+    );
+  });
+
+  it("swaps to the placeholder when every sprite fails to load", async () => {
+    const { container } = renderSprite("chikorita");
+    fireEvent.error(await findImg(container));
     fireEvent.error(await findImg(container));
     expect(placeholder(container)).not.toBeNull();
     expect(container.querySelector("img")).toBeNull();
+  });
+
+  it("swaps to the placeholder when a still-only sprite fails to load", async () => {
+    const { container } = renderSprite("clefairy");
+    fireEvent.error(await findImg(container));
+    expect(placeholder(container)).not.toBeNull();
   });
 
   it("shows the placeholder with no species", () => {

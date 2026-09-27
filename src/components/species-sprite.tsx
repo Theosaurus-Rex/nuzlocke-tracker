@@ -30,14 +30,16 @@ export function SpeciesSprite({
   className,
 }: SpeciesSpriteProps): ReactNode {
   const species = useSpecies(speciesId);
-  const [failedSrc, setFailedSrc] = useState<string | null>(null);
+  const [failed, setFailed] = useState<readonly string[]>([]);
   const pair: SpritePair = species.data
     ? pickPair(species.data.sprites, shiny)
     : { animated: null, still: null };
-  const src = pair.animated ?? pair.still;
+  const usable = (address: string | null): address is string =>
+    address !== null && !failed.includes(address);
+  const src = [pair.animated, pair.still].find(usable) ?? null;
   const box = { width: size, height: size };
 
-  if (src === null || src === failedSrc) {
+  if (src === null) {
     return (
       <span
         aria-hidden="true"
@@ -50,14 +52,14 @@ export function SpeciesSprite({
 
   return (
     <picture aria-hidden="true" style={box} className={cn("block shrink-0", className)}>
-      {pair.still !== null && (
+      {usable(pair.still) && (
         <source media="(prefers-reduced-motion: reduce)" srcSet={pair.still} />
       )}
       <img
         src={src}
         alt=""
         loading="lazy"
-        onError={() => setFailedSrc(src)}
+        onError={() => setFailed((current) => [...current, src])}
         className="size-full object-contain [image-rendering:pixelated]"
       />
     </picture>
