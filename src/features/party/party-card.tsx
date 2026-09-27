@@ -1,5 +1,6 @@
 import type { ReactNode } from "react";
 
+import { SpeciesSprite } from "@/components/species-sprite";
 import { SpeciesTypeBadge } from "@/components/species-type-badge";
 import { Surface } from "@/components/surface";
 import { Typography } from "@/components/typography";
@@ -27,14 +28,22 @@ export function PartyCard({ mon, routeName, generation }: PartyCardProps): React
   const footerRest = joinPresent([mon.ability, routeName]);
 
   return (
-    <Surface as="li" className="flex min-w-0 flex-col p-5">
-      <SpeciesTypeBadge speciesId={mon.speciesId} generation={generation} />
-      <Typography as="h2" variant="heading" className="mt-3 break-words uppercase">
-        {title}
-      </Typography>
-      <Typography variant="body" tone="muted" className="mt-1">
-        {joinPresent([species, genderSymbol(mon.gender), `L${mon.level}`, mon.nature])}
-      </Typography>
+    <Surface as="li" className="relative flex min-w-0 flex-col p-5">
+      <SpeciesSprite
+        speciesId={mon.speciesId}
+        shiny={mon.shiny}
+        size={80}
+        className="absolute -top-8 right-4"
+      />
+      <div className="pr-24">
+        <SpeciesTypeBadge speciesId={mon.speciesId} generation={generation} />
+        <Typography as="h2" variant="heading" className="mt-3 break-words uppercase">
+          {title}
+        </Typography>
+        <Typography variant="body" tone="muted" className="mt-1">
+          {joinPresent([species, genderSymbol(mon.gender), `L${mon.level}`, mon.nature])}
+        </Typography>
+      </div>
       <ul className="mt-4 grid grid-cols-2 gap-x-4 gap-y-3 border-t-[1.5px] border-border pt-4">
         {mon.moves.map((move) => (
           <li key={move}>

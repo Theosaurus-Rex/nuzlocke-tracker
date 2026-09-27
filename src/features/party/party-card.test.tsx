@@ -1,5 +1,5 @@
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { render, screen } from "@testing-library/react";
+import { render, screen, waitFor } from "@testing-library/react";
 import { describe, expect, it } from "vitest";
 
 import type { Mon } from "@/domain/types";
@@ -46,6 +46,24 @@ function renderCard(mon: Mon, routeName: string | null = null) {
 }
 
 describe("PartyCard", () => {
+  it("shows the mon's sprite", async () => {
+    const { container } = renderCard(makeMon());
+    await waitFor(() =>
+      expect(
+        container.querySelector('img[src="https://sprites.test/showdown/152.gif"]'),
+      ).not.toBeNull(),
+    );
+  });
+
+  it("shows the shiny sprite for a shiny mon", async () => {
+    const { container } = renderCard(makeMon({ shiny: true }));
+    await waitFor(() =>
+      expect(
+        container.querySelector('img[src="https://sprites.test/showdown/shiny/152.gif"]'),
+      ).not.toBeNull(),
+    );
+  });
+
   it("shows every detail of a fully filled-in mon", () => {
     renderCard(
       makeMon({
