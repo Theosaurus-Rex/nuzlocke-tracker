@@ -48,7 +48,8 @@ than throwing. No new request and no new query.
 `SpeciesSprite` in `src/components/species-sprite.tsx` takes `speciesId: string | null`,
 `shiny: boolean` and `size`, which is the box's edge in px.
 
-- It picks the shiny pair when `shiny` is true, otherwise the normal pair.
+- It picks the shiny pair when `shiny` is true, otherwise the normal pair. A shiny mon whose
+  species has neither shiny sprite falls back to the normal pair rather than the placeholder.
 - It renders a `<picture>`. When a still sprite exists, a
   `<source media="(prefers-reduced-motion: reduce)">` points at it. The `<img>` shows the animated
   sprite, or the still one when there is no animated sprite.
