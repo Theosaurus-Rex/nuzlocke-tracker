@@ -15,6 +15,7 @@ import {
   rowSpeciesId,
   rowTapAction,
   RowSpecies,
+  RowSprite,
 } from "./route-presentation";
 import { RowEndAction } from "./row-end-action";
 
@@ -50,14 +51,17 @@ function EncounterCell({ row }: { row: RouteRow }) {
   }
 
   return (
-    <RowSpecies
-      row={row}
-      emptyFallback={
-        <Typography as="span" variant="body" tone="muted">
-          &mdash;
-        </Typography>
-      }
-    />
+    <span className="flex items-center gap-3">
+      {rowSpeciesId(row) !== null && <RowSprite row={row} size={40} />}
+      <RowSpecies
+        row={row}
+        emptyFallback={
+          <Typography as="span" variant="body" tone="muted">
+            &mdash;
+          </Typography>
+        }
+      />
+    </span>
   );
 }
 

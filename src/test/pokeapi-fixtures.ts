@@ -16,6 +16,24 @@ function slot(n: number, type: string) {
   return { slot: n, type: { name: type, url: `${API}/type/0/` } };
 }
 
+const SPRITES = "https://sprites.test";
+
+function sprites(id: number, parts: { shiny?: boolean; icon?: boolean; icon8?: boolean }) {
+  const n = String(id);
+  return {
+    front_default: `${SPRITES}/still/${n}.png`,
+    front_shiny: parts.shiny ? `${SPRITES}/still/shiny/${n}.png` : null,
+    versions: {
+      "generation-vii": {
+        icons: { front_default: parts.icon ? `${SPRITES}/icon/${n}.png` : null },
+      },
+      "generation-viii": {
+        icons: { front_default: parts.icon8 ? `${SPRITES}/icon8/${n}.png` : null },
+      },
+    },
+  };
+}
+
 export const speciesIndexFixture: RawIndex = {
   results: [
     ref("pokemon", 35, "clefairy"),
@@ -43,6 +61,7 @@ export const pokemonFixtures: Record<string, RawPokemon> = {
     name: "clefairy",
     types: [slot(1, "fairy")],
     past_types: [{ generation: ref("generation", 5, "generation-v"), types: [slot(1, "normal")] }],
+    sprites: sprites(35, { shiny: true }),
   },
   bulbasaur: {
     id: 1,
@@ -50,7 +69,13 @@ export const pokemonFixtures: Record<string, RawPokemon> = {
     types: [slot(2, "poison"), slot(1, "grass")],
     past_types: [],
   },
-  pidgey: { id: 16, name: "pidgey", types: [slot(1, "normal"), slot(2, "flying")], past_types: [] },
+  pidgey: {
+    id: 16,
+    name: "pidgey",
+    types: [slot(1, "normal"), slot(2, "flying")],
+    past_types: [],
+    sprites: sprites(16, { icon8: true }),
+  },
   geodude: { id: 74, name: "geodude", types: [slot(1, "rock"), slot(2, "ground")], past_types: [] },
   gyarados: {
     id: 130,
@@ -58,7 +83,13 @@ export const pokemonFixtures: Record<string, RawPokemon> = {
     types: [slot(1, "water"), slot(2, "flying")],
     past_types: [],
   },
-  chikorita: { id: 152, name: "chikorita", types: [slot(1, "grass")], past_types: [] },
+  chikorita: {
+    id: 152,
+    name: "chikorita",
+    types: [slot(1, "grass")],
+    past_types: [],
+    sprites: sprites(152, { shiny: true, icon: true, icon8: true }),
+  },
   bellsprout: {
     id: 69,
     name: "bellsprout",
@@ -70,6 +101,7 @@ export const pokemonFixtures: Record<string, RawPokemon> = {
     name: "victreebel",
     types: [slot(1, "grass"), slot(2, "poison")],
     past_types: [],
+    sprites: sprites(71, { shiny: true, icon: true }),
   },
   jigglypuff: {
     id: 39,

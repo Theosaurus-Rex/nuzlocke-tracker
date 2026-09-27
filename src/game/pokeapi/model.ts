@@ -10,11 +10,18 @@ export interface PastTypes {
   types: Type[];
 }
 
+export interface SpeciesSprites {
+  still: string | null;
+  stillShiny: string | null;
+  icon: string | null;
+}
+
 export interface Species {
   id: number;
   name: string;
   types: Type[];
   pastTypes: PastTypes[];
+  sprites: SpeciesSprites;
 }
 
 export interface PastMoveValue {

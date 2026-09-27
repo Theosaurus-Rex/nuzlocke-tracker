@@ -47,6 +47,42 @@ describe("toSpecies", () => {
     };
     expect(toSpecies(raw).types).toEqual(["unknown"]);
   });
+
+  it("uses the Gen 8 icon when there is no Gen 7 one", () => {
+    expect(toSpecies(pokemonFixtures.pidgey!).sprites.icon).toBe(
+      "https://sprites.test/icon8/16.png",
+    );
+  });
+
+  it("reads the still sprites and prefers the Gen 7 icon", () => {
+    expect(toSpecies(pokemonFixtures.chikorita!).sprites).toEqual({
+      still: "https://sprites.test/still/152.png",
+      stillShiny: "https://sprites.test/still/shiny/152.png",
+      icon: "https://sprites.test/icon/152.png",
+    });
+  });
+
+  it("maps a missing icon or shiny sprite to null", () => {
+    expect(toSpecies(pokemonFixtures.clefairy!).sprites.icon).toBeNull();
+    expect(toSpecies(pokemonFixtures.pidgey!).sprites.stillShiny).toBeNull();
+  });
+
+  it("maps a response with no sprites at all to nulls", () => {
+    expect(toSpecies(pokemonFixtures.geodude!).sprites).toEqual({
+      still: null,
+      stillShiny: null,
+      icon: null,
+    });
+  });
+
+  it("maps sprites with no versions object to a null icon", () => {
+    const raw = {
+      ...pokemonFixtures.geodude!,
+      sprites: { front_default: "https://sprites.test/still/74.png", front_shiny: null },
+    };
+    expect(toSpecies(raw).sprites.icon).toBeNull();
+    expect(toSpecies(raw).sprites.still).toBe("https://sprites.test/still/74.png");
+  });
 });
 
 describe("toMove", () => {

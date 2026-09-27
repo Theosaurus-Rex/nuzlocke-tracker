@@ -1,5 +1,6 @@
 import type { ReactNode } from "react";
 
+import { SpeciesSprite } from "@/components/species-sprite";
 import type { StatusChipStatus } from "@/components/status-chip";
 import { Typography } from "@/components/typography";
 import type { RouteRow, RouteRowStatus } from "@/domain/route-rows";
@@ -19,6 +20,19 @@ export const STATUS_LABEL: Record<RouteRowStatus, string> = {
 /** The species a row is about: the mon's current species if caught, else what was encountered. */
 export function rowSpeciesId(row: RouteRow): string | null {
   return row.mon?.speciesId ?? row.encounter?.speciesId ?? null;
+}
+
+export function RowSprite({ row, size }: { row: RouteRow; size: number }): ReactNode {
+  const faded = row.status === "missed" || row.status === "skipped" || row.status === "dead";
+  return (
+    <SpeciesSprite
+      speciesId={rowSpeciesId(row)}
+      shiny={row.mon?.shiny ?? false}
+      size={size}
+      variant="icon"
+      className={faded ? "opacity-50" : undefined}
+    />
+  );
 }
 
 export function RowSpecies({

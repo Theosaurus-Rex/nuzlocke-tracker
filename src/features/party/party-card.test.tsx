@@ -1,5 +1,5 @@
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { render, screen } from "@testing-library/react";
+import { render, screen, waitFor } from "@testing-library/react";
 import { describe, expect, it } from "vitest";
 
 import type { Mon } from "@/domain/types";
@@ -46,6 +46,31 @@ function renderCard(mon: Mon, routeName: string | null = null) {
 }
 
 describe("PartyCard", () => {
+  it("shows the mon's sprite", async () => {
+    const { container } = renderCard(makeMon());
+    await waitFor(() =>
+      expect(
+        container.querySelector('img[src="https://sprites.test/still/152.png"]'),
+      ).not.toBeNull(),
+    );
+  });
+
+  it("shows no sprite placeholder when the species has no sprite", async () => {
+    const { container } = renderCard(makeMon({ speciesId: "geodude", speciesIdCaught: "geodude" }));
+    await screen.findByText("rock");
+    expect(container.querySelector('[data-sprite="placeholder"]')).toBeNull();
+    expect(container.querySelector("img")).toBeNull();
+  });
+
+  it("shows the shiny sprite for a shiny mon", async () => {
+    const { container } = renderCard(makeMon({ shiny: true }));
+    await waitFor(() =>
+      expect(
+        container.querySelector('img[src="https://sprites.test/still/shiny/152.png"]'),
+      ).not.toBeNull(),
+    );
+  });
+
   it("shows every detail of a fully filled-in mon", () => {
     renderCard(
       makeMon({
