@@ -68,7 +68,8 @@ The sprite follows the mon's current `speciesId` and its `shiny` flag. A row wit
 encountered species and is never shiny.
 
 - **Route table (`5a`).** A small sprite at the start of the encounter cell, on caught, dead and
-  missed rows. On missed rows it is faded, as drawn. Not-encountered and open rows show no sprite,
+  missed rows. It is faded on missed, fainted and skipped rows, on both the table and the phone
+  cards, since none of those mons is on the team. Not-encountered and open rows show no sprite,
   since their text already says so.
 - **Phone route cards (`6c`).** A sprite in a left column on every card. Not-encountered and open
   cards show the placeholder, as the pending row in `6c` does.

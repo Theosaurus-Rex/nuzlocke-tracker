@@ -23,7 +23,7 @@ export function rowSpeciesId(row: RouteRow): string | null {
 }
 
 export function RowSprite({ row, size }: { row: RouteRow; size: number }): ReactNode {
-  const faded = row.status === "missed" || row.status === "skipped";
+  const faded = row.status === "missed" || row.status === "skipped" || row.status === "dead";
   return (
     <SpeciesSprite
       speciesId={rowSpeciesId(row)}
