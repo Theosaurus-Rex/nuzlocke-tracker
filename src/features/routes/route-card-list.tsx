@@ -135,7 +135,7 @@ export function RouteCardList({
             )}
           >
             <RowSprite row={row} size={40} />
-            <div className="min-w-0 flex-1">
+            <div className="min-w-0 flex-1 break-words">
               <div className="min-w-0 truncate">
                 {action.kind === "none" ? (
                   <Typography as="span" variant="title" tone={nameTone}>
