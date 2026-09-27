@@ -34,7 +34,7 @@ export function PartyCard({ mon, routeName, generation }: PartyCardProps): React
         shiny={mon.shiny}
         size={192}
         placeholder={false}
-        className="pointer-events-none absolute -top-24 -right-4"
+        className="pointer-events-none absolute -top-16 -right-4"
       />
       <div className="pr-36">
         <SpeciesTypeBadge speciesId={mon.speciesId} generation={generation} />
