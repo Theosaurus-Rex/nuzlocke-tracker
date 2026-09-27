@@ -5,7 +5,7 @@
  */
 
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { render, screen, within } from "@testing-library/react";
+import { render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { describe, expect, it, vi } from "vitest";
 
@@ -108,6 +108,35 @@ function renderTable(input: {
 }
 
 describe("RouteTable", () => {
+  it("shows the caught mon's current species sprite", async () => {
+    const route = makeRoute();
+    const encounter = makeEncounter({ status: "caught", speciesId: "bellsprout", monId: "mon-1" });
+    const mon = makeMon({ speciesId: "victreebel", speciesIdCaught: "bellsprout" });
+    const { container } = renderTable({ routes: [route], encounters: [encounter], mons: [mon] });
+    await waitFor(() =>
+      expect(
+        container.querySelector('img[src="https://sprites.test/showdown/71.gif"]'),
+      ).not.toBeNull(),
+    );
+  });
+
+  it("fades the sprite on a missed row", async () => {
+    const route = makeRoute();
+    const encounter = makeEncounter({ status: "missed", speciesId: "chikorita" });
+    const { container } = renderTable({ routes: [route], encounters: [encounter], mons: [] });
+    const img = await waitFor(() => {
+      const found = container.querySelector('img[src="https://sprites.test/showdown/152.gif"]');
+      if (found === null) throw new Error("no sprite yet");
+      return found;
+    });
+    expect(img.closest("picture")).toHaveClass("opacity-50");
+  });
+
+  it("shows no sprite on a not-encountered row", () => {
+    const { container } = renderTable({ routes: [makeRoute()], encounters: [], mons: [] });
+    expect(container.querySelector("picture, [data-sprite='placeholder']")).toBeNull();
+  });
+
   it("renders one row per route with the four column headers", () => {
     const routes = [
       makeRoute({ id: "route-1", name: "New Bark Town" }),

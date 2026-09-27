@@ -5,7 +5,7 @@
  */
 
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { render, screen, within } from "@testing-library/react";
+import { render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { describe, expect, it, vi } from "vitest";
 
@@ -108,6 +108,26 @@ function renderCards(input: {
 }
 
 describe("RouteCardList", () => {
+  it("shows the placeholder on a not-encountered card", () => {
+    const { container } = renderCards({ routes: [makeRoute()], encounters: [], mons: [] });
+    expect(container.querySelector("li [data-sprite='placeholder']")).not.toBeNull();
+  });
+
+  it("shows the caught mon's sprite on its card", async () => {
+    const route = makeRoute();
+    const encounter = makeEncounter({ status: "caught", speciesId: "chikorita", monId: "mon-1" });
+    const { container } = renderCards({
+      routes: [route],
+      encounters: [encounter],
+      mons: [makeMon()],
+    });
+    await waitFor(() =>
+      expect(
+        container.querySelector('li img[src="https://sprites.test/showdown/152.gif"]'),
+      ).not.toBeNull(),
+    );
+  });
+
   it("renders one card per route, in the order rows arrives rather than route order", () => {
     const routes = [
       makeRoute({ id: "route-1", name: "Route 30", order: 600 }),

@@ -15,6 +15,7 @@ import {
   rowSpeciesId,
   rowTapAction,
   RowSpecies,
+  RowSprite,
   STATUS_LABEL,
 } from "./route-presentation";
 import { RowEndAction } from "./row-end-action";
@@ -128,11 +129,12 @@ export function RouteCardList({
             key={row.route.id}
             onClick={tappable ? handleRowTap : undefined}
             className={cn(
-              "flex items-start justify-between gap-3 border-b border-muted p-3 last:border-b-0",
+              "flex items-center justify-between gap-3 border-b border-muted p-3 last:border-b-0",
               canLogEncounter(row) && "bg-flag-tint",
               tappable && "cursor-pointer",
             )}
           >
+            <RowSprite row={row} size={40} />
             <div className="min-w-0 flex-1">
               <div className="min-w-0 truncate">
                 {action.kind === "none" ? (
