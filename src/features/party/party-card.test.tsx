@@ -50,7 +50,7 @@ describe("PartyCard", () => {
     const { container } = renderCard(makeMon());
     await waitFor(() =>
       expect(
-        container.querySelector('img[src="https://sprites.test/showdown/152.gif"]'),
+        container.querySelector('img[src="https://sprites.test/still/152.png"]'),
       ).not.toBeNull(),
     );
   });
@@ -59,7 +59,7 @@ describe("PartyCard", () => {
     const { container } = renderCard(makeMon({ shiny: true }));
     await waitFor(() =>
       expect(
-        container.querySelector('img[src="https://sprites.test/showdown/shiny/152.gif"]'),
+        container.querySelector('img[src="https://sprites.test/still/shiny/152.png"]'),
       ).not.toBeNull(),
     );
   });

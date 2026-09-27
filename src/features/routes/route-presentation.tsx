@@ -29,6 +29,7 @@ export function RowSprite({ row, size }: { row: RouteRow; size: number }): React
       speciesId={rowSpeciesId(row)}
       shiny={row.mon?.shiny ?? false}
       size={size}
+      variant="icon"
       className={faded ? "opacity-50" : undefined}
     />
   );

@@ -114,9 +114,7 @@ describe("RouteTable", () => {
     const mon = makeMon({ speciesId: "victreebel", speciesIdCaught: "bellsprout" });
     const { container } = renderTable({ routes: [route], encounters: [encounter], mons: [mon] });
     await waitFor(() =>
-      expect(
-        container.querySelector('img[src="https://sprites.test/showdown/71.gif"]'),
-      ).not.toBeNull(),
+      expect(container.querySelector('img[src="https://sprites.test/icon/71.png"]')).not.toBeNull(),
     );
   });
 
@@ -125,11 +123,11 @@ describe("RouteTable", () => {
     const encounter = makeEncounter({ status: "missed", speciesId: "chikorita" });
     const { container } = renderTable({ routes: [route], encounters: [encounter], mons: [] });
     const img = await waitFor(() => {
-      const found = container.querySelector('img[src="https://sprites.test/showdown/152.gif"]');
+      const found = container.querySelector('img[src="https://sprites.test/icon/152.png"]');
       if (found === null) throw new Error("no sprite yet");
       return found;
     });
-    expect(img.closest("picture")).toHaveClass("opacity-50");
+    expect(img).toHaveClass("opacity-50");
   });
 
   it("fades the sprite on a fainted row", async () => {
@@ -138,11 +136,11 @@ describe("RouteTable", () => {
     const mon = makeMon({ status: "dead", partySlot: null });
     const { container } = renderTable({ routes: [route], encounters: [encounter], mons: [mon] });
     const img = await waitFor(() => {
-      const found = container.querySelector('img[src="https://sprites.test/showdown/152.gif"]');
+      const found = container.querySelector('img[src="https://sprites.test/icon/152.png"]');
       if (found === null) throw new Error("no sprite yet");
       return found;
     });
-    expect(img.closest("picture")).toHaveClass("opacity-50");
+    expect(img).toHaveClass("opacity-50");
   });
 
   it("does not fade the sprite on a caught row", async () => {
@@ -154,16 +152,16 @@ describe("RouteTable", () => {
       mons: [makeMon()],
     });
     const img = await waitFor(() => {
-      const found = container.querySelector('img[src="https://sprites.test/showdown/152.gif"]');
+      const found = container.querySelector('img[src="https://sprites.test/icon/152.png"]');
       if (found === null) throw new Error("no sprite yet");
       return found;
     });
-    expect(img.closest("picture")).not.toHaveClass("opacity-50");
+    expect(img).not.toHaveClass("opacity-50");
   });
 
   it("shows no sprite on a not-encountered row", () => {
     const { container } = renderTable({ routes: [makeRoute()], encounters: [], mons: [] });
-    expect(container.querySelector("picture, [data-sprite='placeholder']")).toBeNull();
+    expect(container.querySelector("img, [data-sprite='placeholder']")).toBeNull();
   });
 
   it("renders one row per route with the four column headers", () => {

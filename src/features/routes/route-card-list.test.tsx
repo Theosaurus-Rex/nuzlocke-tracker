@@ -123,7 +123,7 @@ describe("RouteCardList", () => {
     });
     await waitFor(() =>
       expect(
-        container.querySelector('li img[src="https://sprites.test/showdown/152.gif"]'),
+        container.querySelector('li img[src="https://sprites.test/icon/152.png"]'),
       ).not.toBeNull(),
     );
   });

@@ -52,7 +52,7 @@ function EncounterCell({ row }: { row: RouteRow }) {
 
   return (
     <span className="flex items-center gap-3">
-      {rowSpeciesId(row) !== null && <RowSprite row={row} size={32} />}
+      {rowSpeciesId(row) !== null && <RowSprite row={row} size={40} />}
       <RowSpecies
         row={row}
         emptyFallback={

@@ -27,7 +27,12 @@ export interface RawPokemon {
   name: string;
   types: RawTypeSlot[];
   past_types: { generation: NamedRef; types: RawTypeSlot[] }[];
-  sprites?: RawSpritePair & { other?: { showdown?: RawSpritePair } };
+  sprites?: RawSpritePair & {
+    versions?: {
+      "generation-vii"?: { icons?: RawSpritePair };
+      "generation-viii"?: { icons?: RawSpritePair };
+    };
+  };
 }
 
 export interface RawMove {
@@ -87,17 +92,18 @@ export function toSpecies(raw: RawPokemon): Species {
     })
     .sort((a, b) => a.throughGeneration - b.throughGeneration);
 
-  const showdown = raw.sprites?.other?.showdown;
   return {
     id: raw.id,
     name: raw.name,
     types: slotTypes(raw.types),
     pastTypes,
     sprites: {
-      animated: showdown?.front_default ?? null,
-      animatedShiny: showdown?.front_shiny ?? null,
       still: raw.sprites?.front_default ?? null,
       stillShiny: raw.sprites?.front_shiny ?? null,
+      icon:
+        raw.sprites?.versions?.["generation-vii"]?.icons?.front_default ??
+        raw.sprites?.versions?.["generation-viii"]?.icons?.front_default ??
+        null,
     },
   };
 }

@@ -11,10 +11,9 @@ export interface PastTypes {
 }
 
 export interface SpeciesSprites {
-  animated: string | null;
-  animatedShiny: string | null;
   still: string | null;
   stillShiny: string | null;
+  icon: string | null;
 }
 
 export interface Species {
