@@ -3,8 +3,9 @@ import type { ReactNode } from "react";
 import type { StatusChipStatus } from "@/components/status-chip";
 import { Typography } from "@/components/typography";
 import type { RouteRow, RouteRowStatus } from "@/domain/route-rows";
-import type { Gender, Mon } from "@/domain/types";
+import type { Mon } from "@/domain/types";
 import { speciesDisplayName } from "@/game/pokeapi/resolve";
+import { genderSymbol } from "@/lib/gender";
 
 export const STATUS_LABEL: Record<RouteRowStatus, string> = {
   "not-encountered": "not encountered",
@@ -14,12 +15,6 @@ export const STATUS_LABEL: Record<RouteRowStatus, string> = {
   skipped: "skipped",
   dead: "dead",
 };
-
-export function genderSymbol(gender: Gender | null): string | null {
-  if (gender === "male") return "♂";
-  if (gender === "female") return "♀";
-  return null;
-}
 
 /** The species a row is about: the mon's current species if caught, else what was encountered. */
 export function rowSpeciesId(row: RouteRow): string | null {

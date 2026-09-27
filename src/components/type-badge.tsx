@@ -8,7 +8,7 @@ import { cn } from "@/lib/utils";
  */
 export type TypeBadgeType = Exclude<Type, "unknown">;
 
-const TYPE_CLASSES: Record<TypeBadgeType, string> = {
+export const TYPE_FILL: Record<TypeBadgeType, string> = {
   normal: "bg-type-normal",
   fire: "bg-type-fire",
   water: "bg-type-water",
@@ -36,6 +36,6 @@ export interface TypeBadgeProps {
 
 export function TypeBadge({ type, className }: TypeBadgeProps) {
   return (
-    <span className={cn(CHIP_SHAPE, "text-foreground", TYPE_CLASSES[type], className)}>{type}</span>
+    <span className={cn(CHIP_SHAPE, "text-foreground", TYPE_FILL[type], className)}>{type}</span>
   );
 }
