@@ -7,6 +7,7 @@ import { Typography } from "@/components/typography";
 import type { Mon } from "@/domain/types";
 import { speciesDisplayName } from "@/game/pokeapi/resolve";
 import { genderSymbol } from "@/lib/gender";
+import { joinPresent } from "@/lib/join-present";
 
 import { MoveChip } from "./move-chip";
 
@@ -14,10 +15,6 @@ export interface PartyCardProps {
   mon: Mon;
   routeName: string | null;
   generation: number;
-}
-
-function joinPresent(parts: readonly (string | null)[]): string {
-  return parts.filter((part): part is string => part !== null && part !== "").join(" · ");
 }
 
 export function PartyCard({ mon, routeName, generation }: PartyCardProps): ReactNode {
