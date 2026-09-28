@@ -151,5 +151,12 @@ export default tseslint.config(
       "react-refresh/only-export-components": ["error", { allowExportNames: ["partyMembers"] }],
     },
   },
+  {
+    // boxedMons is BoxesScreen's own filter and sort, exported for its own tests.
+    files: ["src/features/boxes/boxes-screen.tsx"],
+    rules: {
+      "react-refresh/only-export-components": ["error", { allowExportNames: ["boxedMons"] }],
+    },
+  },
   eslintConfigPrettier,
 );
