@@ -177,6 +177,10 @@ node scripts/slice-wireframes.ts --force
 `pnpm test` covers the domain rules, both storage adapters via the shared contract, the query
 layer, the game data's invariants, and the app shell's routing.
 
+In dev builds, Settings has a Developer section with a "Load sample run" button. It adds a
+run with a gapped party, a full box, deaths and open routes, so screens can be checked by hand.
+The section is compiled out of production builds.
+
 Two conventions worth keeping:
 
 - **Verify a new guarantee by watching the suite go red.** Break the thing deliberately, run

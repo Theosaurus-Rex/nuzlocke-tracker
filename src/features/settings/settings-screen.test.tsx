@@ -7,6 +7,7 @@
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
+import { MemoryRouter, Route, Routes } from "react-router";
 import { describe, expect, it } from "vitest";
 
 import { SCHEMA_VERSION } from "@/domain/schema";
@@ -54,7 +55,12 @@ function renderScreen(adapter: StorageAdapter): void {
   render(
     <QueryClientProvider client={queryClient}>
       <StorageProvider adapter={adapter}>
-        <SettingsScreen />
+        <MemoryRouter>
+          <Routes>
+            <Route path="/" element={<SettingsScreen />} />
+            <Route path="/runs/:runId/routes" element={<p>Sample run routes</p>} />
+          </Routes>
+        </MemoryRouter>
       </StorageProvider>
     </QueryClientProvider>,
   );
@@ -187,5 +193,33 @@ describe("SettingsScreen — import", () => {
       screen.getByRole("checkbox", { name: /permanently erase all current data/i }),
     );
     expect(confirmButton).toBeEnabled();
+  });
+});
+
+describe("SettingsScreen — developer section", () => {
+  it("loads the sample run and opens its routes screen", async () => {
+    const adapter = createMemoryAdapter();
+    await adapter.init();
+    renderScreen(adapter);
+
+    await userEvent.click(screen.getByRole("button", { name: "Load sample run" }));
+
+    await waitFor(() => {
+      expect(screen.getByText("Sample run routes")).toBeInTheDocument();
+    });
+    const runs = await adapter.runs.getAll();
+    expect(runs.map((run) => run.name)).toEqual(["Johto Hardcore"]);
+  });
+
+  it("shows the error and stays put when loading fails", async () => {
+    const adapter = createMemoryAdapter();
+    await adapter.init();
+    adapter.transaction = () => Promise.reject(new Error("disk full"));
+    renderScreen(adapter);
+
+    await userEvent.click(screen.getByRole("button", { name: "Load sample run" }));
+
+    expect(await screen.findByRole("alert")).toHaveTextContent("disk full");
+    expect(screen.queryByText("Sample run routes")).not.toBeInTheDocument();
   });
 });

@@ -3,6 +3,7 @@
 import { useState, type ChangeEvent, type ReactNode } from "react";
 
 import { useQueryClient } from "@tanstack/react-query";
+import { useNavigate } from "react-router";
 
 import { Button } from "@/components/ui/button";
 import type { ExportBundle } from "@/domain/schema";
@@ -21,11 +22,45 @@ import {
 } from "@/storage/backup";
 import { usePersistenceStatus } from "@/storage/persistence";
 import { useRuns } from "@/storage/queries";
+import { useLoadSampleRun } from "@/storage/sample-run";
 import { useStorage } from "@/storage/storage-context";
 
 interface PendingImport {
   bundle: ExportBundle;
   fileName: string;
+}
+
+function DeveloperSection(): ReactNode {
+  const navigate = useNavigate();
+  const loadSampleRun = useLoadSampleRun();
+
+  return (
+    <section className="space-y-2 border-t-[1.5px] border-border pt-6">
+      <Typography as="h2" variant="eyebrow" className="mb-1">
+        Developer
+      </Typography>
+      <Typography variant="body" tone="muted">
+        Adds a run with a party, boxed mons, deaths and open routes, for testing by hand.
+      </Typography>
+      <Button
+        disabled={loadSampleRun.isPending}
+        onClick={() =>
+          loadSampleRun.mutate(undefined, {
+            onSuccess: (run) => {
+              void navigate(`/runs/${run.id}/routes`);
+            },
+          })
+        }
+      >
+        {loadSampleRun.isPending ? "Loading…" : "Load sample run"}
+      </Button>
+      {loadSampleRun.isError && (
+        <Typography role="alert" variant="body" tone="alert">
+          Could not load the sample run: {loadSampleRun.error.message}. Nothing was saved.
+        </Typography>
+      )}
+    </section>
+  );
 }
 
 export function SettingsScreen(): ReactNode {
@@ -306,6 +341,8 @@ export function SettingsScreen(): ReactNode {
             </Surface>
           )}
         </section>
+
+        {import.meta.env.DEV && <DeveloperSection />}
       </div>
     </div>
   );

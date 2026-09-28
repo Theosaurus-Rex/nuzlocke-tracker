@@ -251,7 +251,10 @@ export interface CreateRunInput {
   rules?: Rules;
 }
 
-async function persistCreateRun(adapter: StorageAdapter, input: CreateRunInput): Promise<Run> {
+export async function persistCreateRun(
+  adapter: StorageAdapter,
+  input: CreateRunInput,
+): Promise<Run> {
   return adapter.transaction(async (tx) => {
     const run = await tx.runs.put({
       name: input.name,
@@ -293,7 +296,7 @@ export interface AddCustomRouteInput {
   routes: readonly Route[];
 }
 
-async function persistAddCustomRoute(
+export async function persistAddCustomRoute(
   adapter: StorageAdapter,
   input: AddCustomRouteInput,
 ): Promise<Route> {
