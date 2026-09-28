@@ -38,14 +38,15 @@ export function SpeciesPicker({
    * full name counts as choosing it, so the keyboard path needs no click.
    */
   const resolve = useCallback(
-    (text: string) => (entries === undefined ? "" : (findByName(entries, text)?.name ?? "")),
+    (text: string) =>
+      entries === undefined ? "" : (findByName(entries, text, speciesDisplayName)?.name ?? ""),
     [entries],
   );
   const search = useCallback(
     (query: string) =>
       entries === undefined
         ? []
-        : searchIndex(entries, query).map((s) => ({
+        : searchIndex(entries, query, speciesDisplayName).map((s) => ({
             id: s.name,
             label: speciesDisplayName(s.name),
           })),

@@ -15,7 +15,7 @@ import {
   type RawPokemonSpecies,
 } from "./map";
 import type { IndexEntry } from "./model";
-import { findByName } from "./resolve";
+import { findByName, speciesDisplayName } from "./resolve";
 
 const MAX_RETRIES = 2;
 
@@ -80,7 +80,7 @@ export function useNextEvolutions(speciesName: string | null): NextEvolutions {
   const id =
     entries === undefined || speciesName === null
       ? null
-      : (findByName(entries, speciesName)?.id ?? null);
+      : (findByName(entries, speciesName, speciesDisplayName)?.id ?? null);
 
   const chain = useQuery({
     queryKey: ["pokeapi", "evolutions", id],

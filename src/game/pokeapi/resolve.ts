@@ -1,3 +1,4 @@
+import { moveDisplayNames, speciesDisplayNames } from "@/game/data/display-names";
 import type { Type } from "@/game/types";
 
 import type { IndexEntry, Move, Species } from "./model";
@@ -28,18 +29,54 @@ export function moveStatsIn(move: Move, generation: number): ResolvedMoveStats {
   };
 }
 
+type DisplayName = (id: string) => string;
+
 function toNameForm(text: string): string {
-  return text.trim().toLowerCase().replace(/\s+/g, "-");
+  return text
+    .trim()
+    .toLowerCase()
+    .normalize("NFD")
+    .replace(/\p{M}/gu, "")
+    .replace(/♀/g, "f")
+    .replace(/♂/g, "m")
+    .replace(/['’.:]/g, "")
+    .replace(/[\s-]+/g, "-");
 }
 
-export function searchIndex(index: readonly IndexEntry[], query: string): IndexEntry[] {
+const displayForms = new WeakMap<readonly IndexEntry[], WeakMap<DisplayName, string[]>>();
+
+function displayFormsOf(index: readonly IndexEntry[], displayName: DisplayName): string[] {
+  let byFn = displayForms.get(index);
+  if (byFn === undefined) {
+    byFn = new WeakMap();
+    displayForms.set(index, byFn);
+  }
+  let forms = byFn.get(displayName);
+  if (forms === undefined) {
+    forms = index.map((entry) => toNameForm(displayName(entry.name)));
+    byFn.set(displayName, forms);
+  }
+  return forms;
+}
+
+export function searchIndex(
+  index: readonly IndexEntry[],
+  query: string,
+  displayName: DisplayName,
+): IndexEntry[] {
   const q = toNameForm(query);
-  return index.filter((entry) => entry.name.startsWith(q));
+  const forms = displayFormsOf(index, displayName);
+  return index.filter((entry, i) => entry.name.startsWith(q) || forms[i]?.startsWith(q) === true);
 }
 
-export function findByName(index: readonly IndexEntry[], text: string): IndexEntry | undefined {
+export function findByName(
+  index: readonly IndexEntry[],
+  text: string,
+  displayName: DisplayName,
+): IndexEntry | undefined {
   const name = toNameForm(text);
-  return index.find((entry) => entry.name === name);
+  const forms = displayFormsOf(index, displayName);
+  return index.find((entry, i) => entry.name === name || forms[i] === name);
 }
 
 function titleCase(name: string): string {
@@ -49,5 +86,10 @@ function titleCase(name: string): string {
     .join(" ");
 }
 
-export const speciesDisplayName = titleCase;
-export const moveDisplayName = titleCase;
+export function speciesDisplayName(id: string): string {
+  return speciesDisplayNames[id] ?? titleCase(id);
+}
+
+export function moveDisplayName(id: string): string {
+  return moveDisplayNames[id] ?? titleCase(id);
+}
