@@ -1,6 +1,6 @@
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { render, screen } from "@testing-library/react";
-import { describe, expect, it } from "vitest";
+import { fireEvent, render, screen, within } from "@testing-library/react";
+import { afterEach, describe, expect, it, vi } from "vitest";
 import { MemoryRouter, Route, Routes } from "react-router";
 
 import { DEFAULT_RULES } from "@/domain/rules";
@@ -10,6 +10,7 @@ import { createMemoryAdapter } from "@/storage/memory-adapter";
 import { StorageProvider } from "@/storage/storage-context";
 
 import { BoxesScreen, boxedMons } from "./boxes-screen";
+import { BOX_VIEW_STORAGE_KEY } from "./use-box-view";
 
 type MonDraft = Omit<Mon, "id" | "createdAt" | "updatedAt">;
 
@@ -69,6 +70,10 @@ function renderScreen(adapter: StorageAdapter, runId: string) {
     </QueryClientProvider>,
   );
 }
+
+afterEach(() => {
+  vi.restoreAllMocks();
+});
 
 async function cardHeadings(): Promise<string[]> {
   const headings = await screen.findAllByRole("heading", { level: 2 });
@@ -141,5 +146,114 @@ describe("BoxesScreen", () => {
 
     expect(await screen.findByText("No one in your boxes yet")).toBeInTheDocument();
     expect(screen.getByText("0 stored")).toBeInTheDocument();
+  });
+
+  describe("view toggle", () => {
+    async function setup() {
+      const adapter = createMemoryAdapter();
+      const run = await seedRun(adapter);
+      await adapter.mons.put(makeMonDraft(run.id, { nickname: "Sprig" }));
+      return { adapter, runId: run.id };
+    }
+
+    it("starts on grid and switches to list when clicked", async () => {
+      const { adapter, runId } = await setup();
+      renderScreen(adapter, runId);
+      await screen.findByText("“Sprig”");
+
+      expect(screen.getByRole("button", { name: "Grid" })).toHaveAttribute("aria-pressed", "true");
+      expect(screen.getByRole("button", { name: "List" })).toHaveAttribute("aria-pressed", "false");
+
+      fireEvent.click(screen.getByRole("button", { name: "List" }));
+
+      expect(screen.getByRole("button", { name: "List" })).toHaveAttribute("aria-pressed", "true");
+      expect(screen.getByRole("button", { name: "Grid" })).toHaveAttribute("aria-pressed", "false");
+    });
+
+    it("remembers the choice after the screen remounts", async () => {
+      const { adapter, runId } = await setup();
+      const first = renderScreen(adapter, runId);
+      fireEvent.click(await screen.findByRole("button", { name: "List" }));
+      first.unmount();
+
+      renderScreen(adapter, runId);
+
+      expect(await screen.findByRole("button", { name: "List" })).toHaveAttribute(
+        "aria-pressed",
+        "true",
+      );
+    });
+
+    it("falls back to grid when the stored value is not a known view", async () => {
+      localStorage.setItem(BOX_VIEW_STORAGE_KEY, "banana");
+      const { adapter, runId } = await setup();
+
+      renderScreen(adapter, runId);
+
+      expect(await screen.findByRole("button", { name: "Grid" })).toHaveAttribute(
+        "aria-pressed",
+        "true",
+      );
+    });
+
+    it("falls back to grid when storage cannot be read", async () => {
+      vi.spyOn(Storage.prototype, "getItem").mockImplementation(() => {
+        throw new Error("blocked");
+      });
+      const { adapter, runId } = await setup();
+
+      renderScreen(adapter, runId);
+
+      expect(await screen.findByRole("button", { name: "Grid" })).toHaveAttribute(
+        "aria-pressed",
+        "true",
+      );
+    });
+
+    it("still switches view when storage cannot be written", async () => {
+      vi.spyOn(Storage.prototype, "setItem").mockImplementation(() => {
+        throw new Error("blocked");
+      });
+      const errors: unknown[] = [];
+      const onError = (event: ErrorEvent) => {
+        event.preventDefault();
+        errors.push(event.error);
+      };
+      window.addEventListener("error", onError);
+      const { adapter, runId } = await setup();
+      renderScreen(adapter, runId);
+
+      fireEvent.click(await screen.findByRole("button", { name: "List" }));
+      window.removeEventListener("error", onError);
+
+      expect(errors).toEqual([]);
+      expect(screen.getByRole("button", { name: "List" })).toHaveAttribute("aria-pressed", "true");
+    });
+
+    it("lists boxed mons in box order in the list view", async () => {
+      const adapter = createMemoryAdapter();
+      const run = await seedRun(adapter);
+      await adapter.mons.put(makeMonDraft(run.id, { nickname: "Second", boxOrder: 4 }));
+      await adapter.mons.put(makeMonDraft(run.id, { nickname: "First", boxOrder: 1 }));
+      await adapter.mons.put(
+        makeMonDraft(run.id, {
+          nickname: "Partied",
+          status: "party",
+          partySlot: 0,
+          boxOrder: null,
+        }),
+      );
+      renderScreen(adapter, run.id);
+
+      fireEvent.click(await screen.findByRole("button", { name: "List" }));
+
+      const table = await screen.findByRole("table");
+      const names = within(table)
+        .getAllByRole("row")
+        .slice(1)
+        .map((row) => within(row).getAllByRole("cell").at(1)?.textContent);
+      expect(names).toEqual(["“First”", "“Second”"]);
+      expect(screen.queryByRole("heading", { level: 2 })).not.toBeInTheDocument();
+    });
   });
 });
