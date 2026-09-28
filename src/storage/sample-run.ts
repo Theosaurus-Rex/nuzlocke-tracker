@@ -321,7 +321,37 @@ const PLANS: Plan[] = [
       moves: ["tackle", "water-gun", "defense-curl", "bubble"],
     },
   },
+  extra(21, "mr-mime", "Mime", 20, 9),
+  extra(22, "nidoran-f", "Nido", 12, 10),
+  extra(23, "snubbull", "Fluff", 14, undefined, {
+    type: "status",
+    status: "burn",
+  }),
+  extra(24, "deoxys-normal", "Helix", 30, 11),
+  extra(25, "porygon-z", "Zed", 35, 12),
+  extra(26, "genesect", "Gene", 40, 13),
+  extra(27, "chespin", "Spike", 16, 14, undefined, ["vine-whip", "play-rough"]),
+  extra(28, "flabebe", "Bloom", 18, 15),
+  extra(29, "type-null", "Null", 25, 16),
+  extra(30, "tapu-koko", "Koko", 50, 17, undefined, ["thunderbolt", "spirit-break"]),
+  extra(31, "sirfetchd", "Leek", 42, 18),
+  extra(32, "great-tusk", "Tusk", 45, undefined, { type: "other", detail: "Fell off a cliff" }),
+  { route: 33, kind: "missed", species: "corviknight" },
 ];
+
+function extra(
+  route: number,
+  species: string,
+  nickname: string,
+  level: number,
+  boxOrder?: number,
+  cause?: Cause,
+  moves: string[] = ["tackle"],
+): Plan {
+  const death = cause && { cause, diedAt: `2026-09-01T12:${String(10 + route)}:00.000Z` };
+  const mon: MonPlan = { species, nickname, level, levelCaught: level - 3, moves, boxOrder, death };
+  return { route, kind: "caught", placement: "box", mon };
+}
 
 const CUSTOM_ROUTE_NAME = "Headbutt tree by Route 30";
 const CUSTOM_ROUTE_OUTCOME: Outcome = { kind: "missed", species: "heracross" };
