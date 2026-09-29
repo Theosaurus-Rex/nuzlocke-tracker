@@ -1,7 +1,7 @@
 import type { Cause, Fight } from "@/domain/types";
 import { moveDisplayName, speciesDisplayName } from "@/game/pokeapi/resolve";
 
-function titleCase(text: string): string {
+export function titleCase(text: string): string {
   return text
     .split("-")
     .map((word) => word.charAt(0).toUpperCase() + word.slice(1))
