@@ -110,38 +110,7 @@ describe("GraveyardScreen", () => {
     expect(screen.getByText("3 lost this run")).toBeInTheDocument();
   });
 
-  it("shows the stats strip with the newest death's route", async () => {
-    const adapter = createMemoryAdapter();
-    const run = await seedRun(adapter);
-    await bury(adapter, run.id, {
-      nickname: "Old",
-      diedAt: "2020-01-01T00:00:00.000Z",
-      routeName: "Route 30",
-    });
-    await bury(adapter, run.id, {
-      nickname: "New",
-      diedAt: "2020-02-01T00:00:00.000Z",
-      routeName: "Goldenrod City",
-    });
-
-    renderScreen(adapter, run.id);
-
-    expect(
-      await screen.findByText("2 lost · most recent: Goldenrod City · worst streak: 2 in a row"),
-    ).toBeInTheDocument();
-  });
-
-  it("leaves out most recent when the newest death has no route", async () => {
-    const adapter = createMemoryAdapter();
-    const run = await seedRun(adapter);
-    await bury(adapter, run.id, { nickname: "Only", diedAt: "2020-01-01T00:00:00.000Z" });
-
-    renderScreen(adapter, run.id);
-
-    expect(await screen.findByText("1 lost · worst streak: 1 in a row")).toBeInTheDocument();
-  });
-
-  it("shows the empty state and no strip when nobody has died", async () => {
+  it("shows the empty state when nobody has died", async () => {
     const adapter = createMemoryAdapter();
     const run = await seedRun(adapter);
 
@@ -149,7 +118,6 @@ describe("GraveyardScreen", () => {
 
     expect(await screen.findByText("No one has fallen yet")).toBeInTheDocument();
     expect(screen.getByText("0 lost this run")).toBeInTheDocument();
-    expect(screen.queryByText(/worst streak/)).not.toBeInTheDocument();
   });
 
   it("renders the cause line and chip for a trainer death", async () => {

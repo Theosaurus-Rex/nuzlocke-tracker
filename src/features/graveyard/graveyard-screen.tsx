@@ -3,7 +3,6 @@ import { Navigate, useParams } from "react-router";
 
 import { ScreenHeader } from "@/components/screen-header";
 import { Typography } from "@/components/typography";
-import { worstDeathStreak } from "@/domain/derive";
 import type { Death } from "@/domain/types";
 import { GAMES } from "@/game/registry";
 import { useDeaths, useFights, useMons, useRoutes, useRun } from "@/storage/queries";
@@ -35,18 +34,6 @@ export function GraveyardScreen(): ReactNode {
   const deaths = newestFirst(deathsQuery.data ?? []).filter((death) => monsById.has(death.monId));
   const loaded = !deathsQuery.isPending && !monsQuery.isPending;
 
-  const latest = deaths[0];
-  const latestRoute = latest?.routeId != null ? (routeNames.get(latest.routeId) ?? null) : null;
-  const streak = worstDeathStreak(deaths, mons);
-
-  const stripText = [
-    `${deaths.length} lost`,
-    latestRoute !== null && `most recent: ${latestRoute}`,
-    `worst streak: ${streak} in a row`,
-  ]
-    .filter(Boolean)
-    .join(" · ");
-
   return (
     <div>
       <ScreenHeader title="Graveyard">
@@ -56,15 +43,6 @@ export function GraveyardScreen(): ReactNode {
           </Typography>
         )}
       </ScreenHeader>
-      {loaded && deaths.length > 0 && (
-        <Typography
-          variant="number"
-          tone="muted"
-          className="hidden border-b-[1.5px] border-border px-4 py-3 text-sm md:flex"
-        >
-          {stripText}
-        </Typography>
-      )}
       {loaded && deaths.length === 0 && (
         <Typography variant="body" tone="muted" className="p-4">
           No one has fallen yet

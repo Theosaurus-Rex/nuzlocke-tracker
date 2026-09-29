@@ -1,12 +1,7 @@
 import { describe, expect, test } from "vitest";
 
-import {
-  countByMonStatus,
-  countRoutesCovered,
-  summariseRun,
-  worstDeathStreak,
-} from "@/domain/derive";
-import type { Death, Encounter, Mon } from "@/domain/types";
+import { countByMonStatus, countRoutesCovered, summariseRun } from "@/domain/derive";
+import type { Encounter, Mon } from "@/domain/types";
 
 const TIMESTAMP = "2026-09-17T00:00:00.000Z";
 
@@ -154,58 +149,5 @@ describe("summariseRun", () => {
   test("is all zeros for a freshly created run with no rows yet", () => {
     const summary = summariseRun({ encounters: [], mons: [] });
     expect(summary).toEqual({ routesCovered: 0, party: 0, boxed: 0, dead: 0 });
-  });
-});
-
-function makeDeath(diedAt: string): Death {
-  return {
-    id: `death-${diedAt}`,
-    runId: "run-1",
-    monId: "mon-1",
-    level: 5,
-    routeId: null,
-    cause: { type: "other", detail: "x" },
-    diedAt,
-    notes: null,
-    createdAt: TIMESTAMP,
-    updatedAt: TIMESTAMP,
-  };
-}
-
-const at = (minute: number) => `2026-09-17T00:${String(minute).padStart(2, "0")}:00.000Z`;
-
-describe("worstDeathStreak", () => {
-  test("is 0 with no deaths", () => {
-    expect(worstDeathStreak([], [makeMon()])).toBe(0);
-  });
-
-  test("is 1 for a single death", () => {
-    expect(worstDeathStreak([makeDeath(at(5))], [])).toBe(1);
-  });
-
-  test("is the number of deaths when nothing was caught between them", () => {
-    const deaths = [makeDeath(at(10)), makeDeath(at(20)), makeDeath(at(30))];
-    expect(worstDeathStreak(deaths, [makeMon({ createdAt: at(1) })])).toBe(3);
-  });
-
-  test("a catch between the 2nd and 3rd deaths leaves a streak of 2", () => {
-    const deaths = [makeDeath(at(10)), makeDeath(at(20)), makeDeath(at(30))];
-    expect(worstDeathStreak(deaths, [makeMon({ createdAt: at(25) })])).toBe(2);
-  });
-
-  test("a catch at the same instant as a death does not break the streak", () => {
-    const deaths = [makeDeath(at(10)), makeDeath(at(20))];
-    const mons = [makeMon({ createdAt: at(10) }), makeMon({ createdAt: at(20) })];
-    expect(worstDeathStreak(deaths, mons)).toBe(2);
-  });
-
-  test("sorts deaths before measuring", () => {
-    const deaths = [makeDeath(at(30)), makeDeath(at(10)), makeDeath(at(20))];
-    expect(worstDeathStreak(deaths, [makeMon({ createdAt: at(15) })])).toBe(2);
-  });
-
-  test("a later streak can be the worst", () => {
-    const deaths = [makeDeath(at(10)), makeDeath(at(20)), makeDeath(at(30)), makeDeath(at(40))];
-    expect(worstDeathStreak(deaths, [makeMon({ createdAt: at(15) })])).toBe(3);
   });
 });
