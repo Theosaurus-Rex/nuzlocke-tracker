@@ -3,7 +3,7 @@
 import type { Run, Route, Encounter, Mon, Death, Fight } from "./types";
 
 /** Bumped whenever a table's shape changes in a way that breaks import of an older export. */
-export const SCHEMA_VERSION = 2;
+export const SCHEMA_VERSION = 3;
 
 export interface ExportBundle {
   schemaVersion: number;
@@ -57,6 +57,8 @@ export const migrations: Record<number, Migration> = {
     schemaVersion: 2,
     mons: bundle.mons.map((mon) => ({ ...mon, shiny: false })),
   }),
+  // v3 only widens Cause.move to allow null, so every v2 bundle is already valid.
+  2: (bundle) => ({ ...bundle, schemaVersion: 3 }),
 };
 
 /**

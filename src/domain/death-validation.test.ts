@@ -16,10 +16,9 @@ function values(overrides: Partial<DeathFormValues> = {}): DeathFormValues {
 }
 
 describe("validateDeath", () => {
-  test.each(["trainer", "wild"] as const)("%s needs a species, a level and a move", (type) => {
+  test.each(["trainer", "wild"] as const)("%s needs a species and a level", (type) => {
     expect(validateDeath(values({ type }))).toEqual({});
     expect(validateDeath(values({ type, speciesId: "" })).speciesId).toBeDefined();
-    expect(validateDeath(values({ type, move: " " })).move).toBeDefined();
     expect(validateDeath(values({ type, level: Number.NaN })).level).toBeDefined();
   });
 
@@ -33,6 +32,11 @@ describe("validateDeath", () => {
 
   test("a trainer cause with a blank trainer name is valid", () => {
     expect(validateDeath(values({ trainerName: "   " }))).toEqual({});
+  });
+
+  test.each(["trainer", "wild"] as const)("%s is valid with a blank move", (type) => {
+    expect(validateDeath(values({ type, move: "" }))).toEqual({});
+    expect(validateDeath(values({ type, move: "  " }))).toEqual({});
   });
 
   test("status needs nothing beyond its status", () => {
@@ -70,6 +74,11 @@ describe("buildCause", () => {
       level: 20,
       move: "rollout",
     });
+  });
+
+  test.each(["trainer", "wild"] as const)("%s with a blank move saves move as null", (type) => {
+    const cause = buildCause(values({ type, move: "  " }));
+    expect(cause.type === type && cause.move).toBeNull();
   });
 
   test("status and other carry only their own field", () => {

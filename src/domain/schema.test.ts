@@ -115,3 +115,35 @@ describe("migrateBundle — v1 to v2", () => {
     }
   });
 });
+
+describe("migrateBundle — v2 to v3", () => {
+  const v2Bundle: ExportBundle = {
+    schemaVersion: 2,
+    exportedAt: "2026-09-29T00:00:00.000Z",
+    runs: [],
+    routes: [],
+    encounters: [],
+    mons: [],
+    deaths: [
+      {
+        id: "death-1",
+        runId: "run-1",
+        monId: "mon-1",
+        level: 10,
+        routeId: null,
+        cause: { type: "wild", species: "geodude", level: 10, move: "rock-throw" },
+        diedAt: "2026-01-01T00:00:00.000Z",
+        notes: null,
+        createdAt: "2026-01-01T00:00:00.000Z",
+        updatedAt: "2026-01-01T00:00:00.000Z",
+      },
+    ],
+    fights: [],
+  };
+
+  test("a v2 bundle comes out as v3 with nothing else changed", () => {
+    const result = migrateBundle(v2Bundle);
+
+    expect(result).toEqual({ ok: true, bundle: { ...v2Bundle, schemaVersion: 3 } });
+  });
+});
