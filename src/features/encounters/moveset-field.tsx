@@ -103,7 +103,7 @@ function MoveSlotPicker({
   const resolve = useCallback(
     (text: string) => {
       if (entries === undefined) return "";
-      const match = findByName(entries, text);
+      const match = findByName(entries, text, moveDisplayName);
       return match === undefined || existing.includes(match.name) ? "" : match.name;
     },
     [entries, existing],
@@ -112,7 +112,7 @@ function MoveSlotPicker({
     (query: string) =>
       entries === undefined
         ? []
-        : excludeChosen(searchIndex(entries, query), existing).map((m) => ({
+        : excludeChosen(searchIndex(entries, query, moveDisplayName), existing).map((m) => ({
             id: m.name,
             label: moveDisplayName(m.name),
           })),
