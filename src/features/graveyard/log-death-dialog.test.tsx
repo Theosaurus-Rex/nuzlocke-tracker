@@ -139,7 +139,7 @@ describe("LogDeathDialog", () => {
 
     expect(within(dialog).queryByLabelText("Species")).not.toBeInTheDocument();
     expect(within(dialog).queryByLabelText("Level")).not.toBeInTheDocument();
-    expect(within(dialog).queryByLabelText("Move")).not.toBeInTheDocument();
+    expect(within(dialog).queryByLabelText(/Move/)).not.toBeInTheDocument();
     expect(within(dialog).getByRole("combobox", { name: /Lost to/ })).toHaveTextContent("Poison");
   });
 
@@ -154,7 +154,7 @@ describe("LogDeathDialog", () => {
     await user.click(within(dialog).getByRole("button", { name: "Send to graveyard" }));
 
     expect(await within(dialog).findByText("Choose a species from the list.")).toBeInTheDocument();
-    expect(within(dialog).getByText("Choose a move from the list.")).toBeInTheDocument();
+    expect(within(dialog).queryByText("Choose a move from the list.")).not.toBeInTheDocument();
     expect(within(dialog).getByText("Enter a level from 1 to 100.")).toBeInTheDocument();
     expect(await adapter.deaths.getAll()).toHaveLength(0);
     expect((await adapter.mons.getAll()).filter((m) => m.status === "dead")).toHaveLength(1);
@@ -169,7 +169,7 @@ describe("LogDeathDialog", () => {
 
     await user.type(within(dialog).getByLabelText("Species"), "Pidgey");
     await user.type(within(dialog).getByLabelText("Level"), "20");
-    await user.type(within(dialog).getByLabelText("Move"), "Tackle");
+    await user.type(within(dialog).getByLabelText(/Move/), "Tackle");
     await user.type(within(dialog).getByLabelText(/Trainer/), "Joey");
     await user.click(within(dialog).getByRole("button", { name: "Send to graveyard" }));
 
@@ -181,5 +181,22 @@ describe("LogDeathDialog", () => {
     expect(death?.cause).toMatchObject({ type: "trainer", trainerName: "Joey", fightId: null });
     expect(death?.level).toBe(19);
     expect(death?.notes).toBeNull();
+  });
+
+  it("saves a wild death with no move", async () => {
+    const user = userEvent.setup();
+    const adapter = createMemoryAdapter();
+    const run = await seed(adapter, TWO_LIVING);
+    renderScreen(adapter, run.id);
+    const dialog = await openDialog(user);
+
+    await user.click(within(dialog).getByRole("button", { name: "wild" }));
+    await user.type(within(dialog).getByLabelText("Species"), "Pidgey");
+    await user.type(within(dialog).getByLabelText("Level"), "20");
+    await user.click(within(dialog).getByRole("button", { name: "Send to graveyard" }));
+
+    expect(await screen.findByText("wild Pidgey")).toBeInTheDocument();
+    const [death] = await adapter.deaths.getAll();
+    expect(death?.cause).toMatchObject({ type: "wild", move: null });
   });
 });

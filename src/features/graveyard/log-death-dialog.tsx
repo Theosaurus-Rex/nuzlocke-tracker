@@ -240,16 +240,9 @@ function LogDeathForm({ living, routes, generation, onDone }: LogDeathFormProps)
                     htmlFor="log-death-move"
                     className="mb-1 block"
                   >
-                    Move
+                    Move (optional)
                   </Typography>
-                  <MovePicker
-                    id="log-death-move"
-                    value={move}
-                    onChange={setMove}
-                    aria-invalid={errors.move !== undefined}
-                    aria-describedby={errors.move ? "log-death-move-error" : undefined}
-                  />
-                  <FieldError id="log-death-move-error" message={errors.move} />
+                  <MovePicker id="log-death-move" value={move} onChange={setMove} />
                 </div>
               </div>
             </div>
