@@ -5,7 +5,9 @@ import { SpeciesSprite } from "@/components/species-sprite";
 import { SpeciesTypeBadge } from "@/components/species-type-badge";
 import { Surface } from "@/components/surface";
 import { Typography } from "@/components/typography";
+import { Button } from "@/components/ui/button";
 import type { Death, Fight, Mon } from "@/domain/types";
+import { monTitle } from "@/features/encounters/mon-title";
 import { speciesDisplayName } from "@/game/pokeapi/resolve";
 
 import { causeText } from "./cause-text";
@@ -16,6 +18,7 @@ export interface DeathCardProps {
   routeName: string | null;
   fights: readonly Fight[];
   generation: number;
+  onEdit: () => void;
 }
 
 export function DeathCard({
@@ -24,6 +27,7 @@ export function DeathCard({
   routeName,
   fights,
   generation,
+  onEdit,
 }: DeathCardProps): ReactNode {
   const species = speciesDisplayName(mon.speciesId);
   const title = mon.nickname !== null ? `“${mon.nickname}” ${species}` : species;
@@ -60,11 +64,17 @@ export function DeathCard({
       <div className="col-start-3 row-start-1 self-start justify-self-end md:hidden">
         <SpeciesTypeBadge speciesId={mon.speciesId} generation={generation} />
       </div>
-      <span
-        className={`${CHIP_SHAPE} col-start-3 row-start-2 self-end justify-self-end bg-card md:col-start-4 md:row-start-1 md:self-center`}
-      >
-        {death.cause.type}
-      </span>
+      <div className="col-start-3 row-start-2 flex flex-col items-end gap-2 self-end md:col-start-4 md:row-start-1 md:flex-row md:items-center md:gap-3 md:self-center">
+        <span className={`${CHIP_SHAPE} bg-card`}>{death.cause.type}</span>
+        <Button
+          type="button"
+          variant="outline"
+          aria-label={`Edit death of ${monTitle(mon)}`}
+          onClick={onEdit}
+        >
+          Edit
+        </Button>
+      </div>
     </Surface>
   );
 }

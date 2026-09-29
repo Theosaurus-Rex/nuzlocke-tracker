@@ -21,7 +21,7 @@ import {
   type CauseType,
   type DeathField,
 } from "@/domain/death-validation";
-import type { Mon, Route, StatusCause } from "@/domain/types";
+import type { Death, Mon, Route, StatusCause } from "@/domain/types";
 import { EncounterDialogHeader } from "@/features/encounters/encounter-dialog-header";
 import { MovePicker } from "@/features/encounters/move-picker";
 import { SpeciesPicker } from "@/features/encounters/species-picker";
@@ -30,7 +30,7 @@ import { GAMES } from "@/game/registry";
 import { genderSymbol } from "@/lib/gender";
 import { joinPresent } from "@/lib/join-present";
 import { cn } from "@/lib/utils";
-import { useLogDeath } from "@/storage/mutations";
+import { useEditDeath, useLogDeath } from "@/storage/mutations";
 import { useMons, useRoutes, useRun } from "@/storage/queries";
 
 import { titleCase } from "./cause-text";
@@ -54,6 +54,21 @@ function monLabel(mon: Mon): string {
   return mon.nickname !== null ? `“${mon.nickname}” ${species}` : species;
 }
 
+function initialValuesFrom(death: Death | undefined) {
+  const cause = death?.cause;
+  return {
+    type: cause?.type ?? "trainer",
+    speciesId: cause !== undefined && "species" in cause ? cause.species : "",
+    levelText: cause !== undefined && "level" in cause ? String(cause.level) : "",
+    move: cause !== undefined && "move" in cause ? (cause.move ?? "") : "",
+    status: cause?.type === "status" ? cause.status : "poison",
+    detail: cause?.type === "other" ? cause.detail : "",
+    trainerName: cause?.type === "trainer" ? (cause.trainerName ?? "") : "",
+    routeChoice: death === undefined ? null : (death.routeId ?? UNKNOWN_ROUTE),
+    notes: death?.notes ?? "",
+  };
+}
+
 function FieldError({ id, message }: { id: string; message: string | undefined }): ReactNode {
   return message === undefined ? null : (
     <Typography as="p" id={id} variant="body" tone="alert" className="mt-1">
@@ -66,14 +81,22 @@ export interface LogDeathDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   runId: string;
+  death?: Death;
 }
 
-export function LogDeathDialog({ open, onOpenChange, runId }: LogDeathDialogProps): ReactNode {
+export function LogDeathDialog({
+  open,
+  onOpenChange,
+  runId,
+  death,
+}: LogDeathDialogProps): ReactNode {
   const runQuery = useRun(runId);
   const monsQuery = useMons(runId);
   const routesQuery = useRoutes(runId);
   const generation = GAMES[runQuery.data?.game ?? "heartgold"].generation;
-  const living = livingMons(monsQuery.data ?? []);
+  const allMons = monsQuery.data ?? [];
+  const deadMon = death && allMons.find((mon) => mon.id === death.monId);
+  const choices = death ? (deadMon ? [deadMon] : []) : livingMons(allMons);
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -84,10 +107,11 @@ export function LogDeathDialog({ open, onOpenChange, runId }: LogDeathDialogProp
           "sm:top-1/2 sm:left-1/2 sm:h-auto sm:max-h-[90vh] sm:w-full sm:max-w-2xl sm:-translate-x-1/2 sm:-translate-y-1/2 sm:rounded-xl",
         )}
       >
-        <EncounterDialogHeader title="Log a death" tone="alert" />
-        {living.length > 0 && (
+        <EncounterDialogHeader title={death ? "Edit death" : "Log a death"} tone="alert" />
+        {choices.length > 0 && (
           <LogDeathForm
-            living={living}
+            mons={choices}
+            death={death}
             routes={routesQuery.data ?? []}
             generation={generation}
             onDone={() => onOpenChange(false)}
@@ -99,28 +123,32 @@ export function LogDeathDialog({ open, onOpenChange, runId }: LogDeathDialogProp
 }
 
 interface LogDeathFormProps {
-  living: readonly Mon[];
+  mons: readonly Mon[];
+  death: Death | undefined;
   routes: readonly Route[];
   generation: number;
   onDone: () => void;
 }
 
-function LogDeathForm({ living, routes, generation, onDone }: LogDeathFormProps): ReactNode {
+function LogDeathForm({ mons, death, routes, generation, onDone }: LogDeathFormProps): ReactNode {
   const logDeath = useLogDeath();
+  const editDeath = useEditDeath();
+  const save = death ? editDeath : logDeath;
+  const initial = initialValuesFrom(death);
 
   const [monChoice, setMonChoice] = useState<string | null>(null);
-  const [type, setType] = useState<CauseType>("trainer");
-  const [speciesId, setSpeciesId] = useState("");
-  const [levelText, setLevelText] = useState("");
-  const [move, setMove] = useState("");
-  const [status, setStatus] = useState<StatusCause>("poison");
-  const [detail, setDetail] = useState("");
-  const [trainerName, setTrainerName] = useState("");
-  const [routeChoice, setRouteChoice] = useState<string | null>(null);
-  const [notes, setNotes] = useState("");
+  const [type, setType] = useState<CauseType>(initial.type);
+  const [speciesId, setSpeciesId] = useState(initial.speciesId);
+  const [levelText, setLevelText] = useState(initial.levelText);
+  const [move, setMove] = useState(initial.move);
+  const [status, setStatus] = useState<StatusCause>(initial.status);
+  const [detail, setDetail] = useState(initial.detail);
+  const [trainerName, setTrainerName] = useState(initial.trainerName);
+  const [routeChoice, setRouteChoice] = useState<string | null>(initial.routeChoice);
+  const [notes, setNotes] = useState(initial.notes);
   const [submitted, setSubmitted] = useState(false);
 
-  const mon = living.find((m) => m.id === monChoice) ?? living[0]!;
+  const mon = mons.find((m) => m.id === monChoice) ?? mons[0]!;
   const routeValue = routeChoice ?? mon.caughtRouteId ?? UNKNOWN_ROUTE;
   const routeName = (id: string | null): string | null =>
     routes.find((route) => route.id === id)?.name ?? null;
@@ -129,7 +157,7 @@ function LogDeathForm({ living, routes, generation, onDone }: LogDeathFormProps)
   const errors: Partial<Record<DeathField, string>> = submitted ? validateDeath(values) : {};
   const attacker = type === "trainer" || type === "wild";
 
-  const monItems = living.map((m) => ({ value: m.id, label: monLabel(m) }));
+  const monItems = mons.map((m) => ({ value: m.id, label: monLabel(m) }));
   const routeItems = [
     UNKNOWN_ROUTE_ITEM,
     ...routes.map((route) => ({ value: route.id, label: route.name })),
@@ -140,43 +168,72 @@ function LogDeathForm({ living, routes, generation, onDone }: LogDeathFormProps)
     setSubmitted(true);
     if (Object.keys(validateDeath(values)).length > 0) return;
 
-    logDeath
-      .mutateAsync({
-        monId: mon.id,
-        cause: buildCause(values),
-        routeId: routeValue === UNKNOWN_ROUTE ? null : routeValue,
-        notes: notes.trim() === "" ? null : notes.trim(),
-        diedAt: new Date().toISOString(),
-      })
-      .then(onDone, () => undefined);
+    const built = buildCause(values);
+    const previous = death?.cause;
+    const cause =
+      built.type === "trainer" &&
+      built.trainerName === null &&
+      previous?.type === "trainer" &&
+      previous.fightId !== null
+        ? { ...built, fightId: previous.fightId }
+        : built;
+    const routeId = routeValue === UNKNOWN_ROUTE ? null : routeValue;
+    const trimmedNotes = notes.trim() === "" ? null : notes.trim();
+
+    const saved = death
+      ? editDeath.mutateAsync({ deathId: death.id, cause, routeId, notes: trimmedNotes })
+      : logDeath.mutateAsync({
+          monId: mon.id,
+          cause,
+          routeId,
+          notes: trimmedNotes,
+          diedAt: new Date().toISOString(),
+        });
+    saved.then(onDone, () => undefined);
   }
 
   return (
     <form className="flex min-h-0 flex-1 flex-col" onSubmit={handleSubmit} noValidate>
       <div className="flex-1 space-y-4 overflow-y-auto p-4">
         <div>
-          <Typography as="label" variant="eyebrow" htmlFor="log-death-mon" className="mb-1 block">
-            Who died
-          </Typography>
-          <Select items={monItems} value={mon.id} onValueChange={(next) => setMonChoice(next)}>
-            <SelectTrigger
-              id="log-death-mon"
-              className="w-full bg-card py-2 data-[size=default]:h-auto"
+          {death ? (
+            <Typography as="span" id="log-death-mon-label" variant="eyebrow" className="mb-1 block">
+              Who died
+            </Typography>
+          ) : (
+            <Typography as="label" variant="eyebrow" htmlFor="log-death-mon" className="mb-1 block">
+              Who died
+            </Typography>
+          )}
+          {death ? (
+            <div
+              role="group"
+              aria-labelledby="log-death-mon-label"
+              className="border-[1.5px] border-border bg-card px-3 py-2"
             >
-              <SelectValue>
-                {(id: string) => (
-                  <MonOption mon={living.find((m) => m.id === id) ?? mon} routeName={routeName} />
-                )}
-              </SelectValue>
-            </SelectTrigger>
-            <SelectContent alignItemWithTrigger={false}>
-              {living.map((m) => (
-                <SelectItem key={m.id} value={m.id}>
-                  <MonOption mon={m} routeName={routeName} />
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
+              <MonOption mon={mon} routeName={routeName} />
+            </div>
+          ) : (
+            <Select items={monItems} value={mon.id} onValueChange={(next) => setMonChoice(next)}>
+              <SelectTrigger
+                id="log-death-mon"
+                className="w-full bg-card py-2 data-[size=default]:h-auto"
+              >
+                <SelectValue>
+                  {(id: string) => (
+                    <MonOption mon={mons.find((m) => m.id === id) ?? mon} routeName={routeName} />
+                  )}
+                </SelectValue>
+              </SelectTrigger>
+              <SelectContent alignItemWithTrigger={false}>
+                {mons.map((m) => (
+                  <SelectItem key={m.id} value={m.id}>
+                    <MonOption mon={m} routeName={routeName} />
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          )}
         </div>
 
         {attacker ? (
@@ -378,9 +435,10 @@ function LogDeathForm({ living, routes, generation, onDone }: LogDeathFormProps)
           </div>
         </div>
 
-        {logDeath.isError && (
+        {save.isError && (
           <Typography as="p" role="alert" variant="body" tone="alert">
-            Could not log the death: {logDeath.error.message}. Nothing was saved.
+            Could not {death ? "save the death" : "log the death"}: {save.error?.message}. Nothing
+            was saved.
           </Typography>
         )}
       </div>
@@ -391,10 +449,10 @@ function LogDeathForm({ living, routes, generation, onDone }: LogDeathFormProps)
         </Button>
         <Button
           type="submit"
-          disabled={logDeath.isPending}
+          disabled={save.isPending}
           className="bg-destructive text-primary-foreground hover:bg-destructive/90"
         >
-          {logDeath.isPending ? "Saving…" : "Send to graveyard"}
+          {save.isPending ? "Saving…" : death ? "Save changes" : "Send to graveyard"}
         </Button>
       </div>
     </form>

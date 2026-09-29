@@ -457,6 +457,44 @@ export async function persistLogDeath(
   });
 }
 
+export interface EditDeathInput {
+  deathId: string;
+  cause: Cause;
+  routeId: string | null;
+  notes: string | null;
+}
+
+/** Reads the death inside the transaction and leaves when, level and who untouched. */
+export async function persistEditDeath(
+  adapter: StorageAdapter,
+  input: EditDeathInput,
+): Promise<Death> {
+  return adapter.transaction(async (tx) => {
+    const current = await tx.deaths.get(input.deathId);
+    if (current === undefined) {
+      throw new Error(`Death ${input.deathId} no longer exists.`);
+    }
+    return tx.deaths.put({
+      ...current,
+      cause: input.cause,
+      routeId: input.routeId,
+      notes: input.notes,
+    });
+  });
+}
+
+export function useEditDeath(): UseMutationResult<Death, Error, EditDeathInput> {
+  const adapter = useStorage();
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: (input: EditDeathInput) => persistEditDeath(adapter, input),
+    onSuccess: async (death) => {
+      await invalidateRun(queryClient, death.runId);
+    },
+  });
+}
+
 export function useLogDeath(): UseMutationResult<LogDeathResult, Error, LogDeathInput> {
   const adapter = useStorage();
   const queryClient = useQueryClient();
