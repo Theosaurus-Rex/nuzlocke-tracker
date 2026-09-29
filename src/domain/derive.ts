@@ -2,7 +2,7 @@
  * Derived-state helpers over a run's rows. Pure functions only, no I/O, no storage, no React.
  */
 
-import type { Encounter, Mon } from "./types";
+import type { Death, Encounter, Mon } from "./types";
 
 export interface MonStatusCounts {
   party: number;
@@ -66,4 +66,23 @@ export function summariseRun({
     boxed,
     dead,
   };
+}
+
+/**
+ * The longest run of deaths, in `diedAt` order, with no catch between two neighbours. A catch
+ * breaks a streak only when its `createdAt` falls strictly between the two `diedAt` values.
+ */
+export function worstDeathStreak(deaths: readonly Death[], mons: readonly Mon[]): number {
+  const diedAt = deaths.map((death) => death.diedAt).sort();
+  const caughtAt = mons.map((mon) => mon.createdAt);
+
+  let worst = 0;
+  let current = 0;
+  for (const [index, time] of diedAt.entries()) {
+    const previous = diedAt[index - 1];
+    const broken = previous !== undefined && caughtAt.some((c) => c > previous && c < time);
+    current = broken ? 1 : current + 1;
+    worst = Math.max(worst, current);
+  }
+  return worst;
 }
