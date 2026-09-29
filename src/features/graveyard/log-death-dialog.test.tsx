@@ -200,3 +200,147 @@ describe("LogDeathDialog", () => {
     expect(death?.cause).toMatchObject({ type: "wild", move: null });
   });
 });
+
+describe("editing a death", () => {
+  async function seedWithDeaths() {
+    const adapter = createMemoryAdapter();
+    const run = await seed(adapter, [
+      { nickname: "Rocky", speciesId: "geodude", partySlot: 0 },
+      { nickname: "Ghost", speciesId: "clefairy", status: "dead", partySlot: null },
+      { nickname: "Fern", speciesId: "pidgey", status: "dead", partySlot: null },
+    ]);
+    const [route] = await adapter.routes.getAll();
+    const mons = await adapter.mons.getAll();
+    const byName = (name: string) => mons.find((m) => m.nickname === name)!;
+    await adapter.deaths.put({
+      runId: run.id,
+      monId: byName("Ghost").id,
+      level: 19,
+      routeId: route!.id,
+      cause: {
+        type: "trainer",
+        fightId: null,
+        trainerName: "Joey",
+        species: "pidgey",
+        level: 20,
+        move: "tackle",
+      },
+      diedAt: "2026-09-29T10:00:00.000Z",
+      notes: "too brave",
+    });
+    await adapter.deaths.put({
+      runId: run.id,
+      monId: byName("Fern").id,
+      level: 18,
+      routeId: null,
+      cause: { type: "status", status: "burn" },
+      diedAt: "2026-09-29T09:00:00.000Z",
+      notes: null,
+    });
+    return { adapter, run };
+  }
+
+  it("opens filled in for a trainer death", async () => {
+    const user = userEvent.setup();
+    const { adapter, run } = await seedWithDeaths();
+    renderScreen(adapter, run.id);
+
+    await user.click(await screen.findByRole("button", { name: "Edit death of “Ghost”" }));
+
+    const dialog = await screen.findByRole("dialog");
+    expect(within(dialog).getByText("Edit death")).toBeInTheDocument();
+    expect(within(dialog).getByLabelText("Species")).toHaveValue("Pidgey");
+    expect(within(dialog).getByLabelText("Level")).toHaveValue("20");
+    expect(within(dialog).getByLabelText(/Move/)).toHaveValue("Tackle");
+    expect(within(dialog).getByLabelText(/Trainer/)).toHaveValue("Joey");
+    expect(within(dialog).getByRole("combobox", { name: "Where" })).toHaveTextContent("Dark Cave");
+    expect(within(dialog).getByLabelText(/Notes/)).toHaveValue("too brave");
+    expect(within(dialog).getByRole("button", { name: "Save changes" })).toBeInTheDocument();
+  });
+
+  it("opens the death that was clicked, filled in for a status death", async () => {
+    const user = userEvent.setup();
+    const { adapter, run } = await seedWithDeaths();
+    renderScreen(adapter, run.id);
+
+    await user.click(await screen.findByRole("button", { name: "Edit death of “Fern”" }));
+
+    const dialog = await screen.findByRole("dialog");
+    expect(within(dialog).getByRole("combobox", { name: /Lost to/ })).toHaveTextContent("Burn");
+    expect(within(dialog).getByRole("combobox", { name: "Where" })).toHaveTextContent("Unknown");
+    expect(within(dialog).getByText("“Fern” Pidgey")).toBeInTheDocument();
+  });
+
+  it("shows who died as a fixed row, not a control", async () => {
+    const user = userEvent.setup();
+    const { adapter, run } = await seedWithDeaths();
+    renderScreen(adapter, run.id);
+
+    await user.click(await screen.findByRole("button", { name: "Edit death of “Ghost”" }));
+
+    const dialog = await screen.findByRole("dialog");
+    expect(within(dialog).getByRole("group", { name: "Who died" })).toHaveTextContent(
+      "“Ghost” Clefairy",
+    );
+    expect(within(dialog).queryByRole("combobox", { name: /Who died/ })).not.toBeInTheDocument();
+  });
+
+  it("saves a changed trainer name, closes, and updates the card", async () => {
+    const user = userEvent.setup();
+    const { adapter, run } = await seedWithDeaths();
+    renderScreen(adapter, run.id);
+    await user.click(await screen.findByRole("button", { name: "Edit death of “Ghost”" }));
+    const dialog = await screen.findByRole("dialog");
+
+    await user.clear(within(dialog).getByLabelText(/Trainer/));
+    await user.type(within(dialog).getByLabelText(/Trainer/), "Bugsy");
+    await user.click(within(dialog).getByRole("button", { name: "Save changes" }));
+
+    await waitFor(() => {
+      expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
+    });
+    expect(await screen.findByText("Bugsy's Pidgey — Tackle")).toBeInTheDocument();
+    expect(await adapter.deaths.getAll()).toHaveLength(2);
+  });
+
+  it("keeps the fight a trainer death is linked to when only the notes change", async () => {
+    const user = userEvent.setup();
+    const { adapter, run } = await seedWithDeaths();
+    const linked = (await adapter.deaths.getAll()).find((d) => d.cause.type === "trainer")!;
+    await adapter.deaths.put({
+      ...linked,
+      cause: {
+        type: "trainer",
+        fightId: "fight-1",
+        trainerName: null,
+        species: "pidgey",
+        level: 20,
+        move: null,
+      },
+    });
+    renderScreen(adapter, run.id);
+    await user.click(await screen.findByRole("button", { name: "Edit death of “Ghost”" }));
+    const dialog = await screen.findByRole("dialog");
+
+    await user.type(within(dialog).getByLabelText(/Notes/), "!");
+    await user.click(within(dialog).getByRole("button", { name: "Save changes" }));
+
+    await waitFor(() => {
+      expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
+    });
+    const stored = await adapter.deaths.get(linked.id);
+    expect(stored?.cause).toMatchObject({ fightId: "fight-1", trainerName: null });
+  });
+
+  it("still opens the log form empty", async () => {
+    const user = userEvent.setup();
+    const { adapter, run } = await seedWithDeaths();
+    renderScreen(adapter, run.id);
+
+    const dialog = await openDialog(user);
+
+    expect(within(dialog).getByText("Log a death")).toBeInTheDocument();
+    expect(within(dialog).getByLabelText("Species")).toHaveValue("");
+    expect(within(dialog).getByLabelText("Level")).toHaveValue("");
+  });
+});

@@ -25,6 +25,7 @@ export function GraveyardScreen(): ReactNode {
   const routesQuery = useRoutes(runId ?? "");
   const fightsQuery = useFights(runId ?? "");
   const [logOpen, setLogOpen] = useState(false);
+  const [editingDeathId, setEditingDeathId] = useState<string | null>(null);
 
   if (!runId) {
     return <Navigate to="/" replace />;
@@ -35,6 +36,7 @@ export function GraveyardScreen(): ReactNode {
   const monsById = new Map(mons.map((mon) => [mon.id, mon]));
   const routeNames = new Map((routesQuery.data ?? []).map((route) => [route.id, route.name]));
   const deaths = newestFirst(deathsQuery.data ?? []).filter((death) => monsById.has(death.monId));
+  const editingDeath = deaths.find((death) => death.id === editingDeathId);
   const hasLiving = mons.some((mon) => mon.status !== "dead");
   const loaded = !deathsQuery.isPending && !monsQuery.isPending;
 
@@ -79,12 +81,23 @@ export function GraveyardScreen(): ReactNode {
                 routeName={death.routeId === null ? null : (routeNames.get(death.routeId) ?? null)}
                 fights={fightsQuery.data ?? []}
                 generation={generation}
+                onEdit={() => setEditingDeathId(death.id)}
               />
             );
           })}
         </ul>
       )}
       <LogDeathDialog open={logOpen} onOpenChange={setLogOpen} runId={runId} />
+      {editingDeath !== undefined && (
+        <LogDeathDialog
+          open
+          onOpenChange={(open) => {
+            if (!open) setEditingDeathId(null);
+          }}
+          runId={runId}
+          death={editingDeath}
+        />
+      )}
     </div>
   );
 }
