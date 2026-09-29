@@ -75,6 +75,35 @@ describe("causeText", () => {
     expect(causeText(cause, [])).toBe("wild Ariados — U-turn");
   });
 
+  test("trainer with a null move and an owner drops the move", () => {
+    const cause = {
+      type: "trainer",
+      fightId: "fight-1",
+      trainerName: null,
+      species: "pidgeotto",
+      level: 9,
+      move: null,
+    } as const;
+    expect(causeText(cause, [falkner])).toBe("Falkner's Pidgeotto");
+  });
+
+  test("trainer with a null move and no owner is just the species", () => {
+    const cause = {
+      type: "trainer",
+      fightId: null,
+      trainerName: null,
+      species: "rattata",
+      level: 4,
+      move: null,
+    } as const;
+    expect(causeText(cause, [])).toBe("Rattata");
+  });
+
+  test("wild with a null move drops the move", () => {
+    const cause = { type: "wild", species: "ariados", level: 12, move: null } as const;
+    expect(causeText(cause, [])).toBe("wild Ariados");
+  });
+
   test("status is title case", () => {
     expect(causeText({ type: "status", status: "poison" }, [])).toBe("Poison");
     expect(causeText({ type: "status", status: "perish-song" }, [])).toBe("Perish Song");

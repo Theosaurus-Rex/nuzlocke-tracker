@@ -8,15 +8,20 @@ function titleCase(text: string): string {
     .join(" ");
 }
 
+function attackText(species: string, move: string | null): string {
+  const name = speciesDisplayName(species);
+  return move === null ? name : `${name} — ${moveDisplayName(move)}`;
+}
+
 export function causeText(cause: Cause, fights: readonly Fight[]): string {
   switch (cause.type) {
     case "trainer": {
       const owner = fights.find((fight) => fight.id === cause.fightId)?.name ?? cause.trainerName;
-      const attack = `${speciesDisplayName(cause.species)} — ${moveDisplayName(cause.move)}`;
+      const attack = attackText(cause.species, cause.move);
       return owner ? `${owner}'s ${attack}` : attack;
     }
     case "wild":
-      return `wild ${speciesDisplayName(cause.species)} — ${moveDisplayName(cause.move)}`;
+      return `wild ${attackText(cause.species, cause.move)}`;
     case "status":
       return titleCase(cause.status);
     case "other":

@@ -4,7 +4,7 @@
 
 import type { Cause, StatusCause } from "./types";
 
-export type DeathField = "speciesId" | "level" | "move" | "detail";
+export type DeathField = "speciesId" | "level" | "detail";
 
 export type CauseType = Cause["type"];
 
@@ -40,9 +40,6 @@ export function validateDeath(values: DeathFormValues): Partial<Record<DeathFiel
     if (!Number.isInteger(values.level) || values.level < 1 || values.level > 100) {
       errors.level = "Enter a level from 1 to 100.";
     }
-    if (values.move.trim() === "") {
-      errors.move = "Choose a move from the list.";
-    }
   }
 
   if (values.type === "other" && values.detail.trim() === "") {
@@ -50,6 +47,11 @@ export function validateDeath(values: DeathFormValues): Partial<Record<DeathFiel
   }
 
   return errors;
+}
+
+function blankToNull(text: string): string | null {
+  const trimmed = text.trim();
+  return trimmed === "" ? null : trimmed;
 }
 
 export function buildCause(values: DeathFormValues): Cause {
@@ -62,11 +64,16 @@ export function buildCause(values: DeathFormValues): Cause {
         trainerName: trainerName === "" ? null : trainerName,
         species: values.speciesId,
         level: values.level,
-        move: values.move,
+        move: blankToNull(values.move),
       };
     }
     case "wild":
-      return { type: "wild", species: values.speciesId, level: values.level, move: values.move };
+      return {
+        type: "wild",
+        species: values.speciesId,
+        level: values.level,
+        move: blankToNull(values.move),
+      };
     case "status":
       return { type: "status", status: values.status };
     case "other":

@@ -122,7 +122,7 @@ const PLANS: Plan[] = [
       levelCaught: 3,
       moves: ["tackle", "string-shot"],
       death: {
-        cause: { type: "wild", species: "zubat", level: 6, move: "wing-attack" },
+        cause: { type: "wild", species: "zubat", level: 6, move: null },
         diedAt: "2026-09-01T12:01:00.000Z",
       },
     },
