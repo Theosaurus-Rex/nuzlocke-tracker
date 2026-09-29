@@ -95,6 +95,10 @@ function isNonEmptyString(value: unknown): value is string {
   return typeof value === "string" && value.length > 0;
 }
 
+function isNullableNonEmptyString(value: unknown): boolean {
+  return value === null || isNonEmptyString(value);
+}
+
 function isNullableString(value: unknown): boolean {
   return value === null || typeof value === "string";
 }
@@ -280,8 +284,8 @@ function validateCause(label: string, causeValue: unknown): string[] {
       if (!isFiniteNumber(causeValue.level)) {
         errors.push(`${label}: "cause.level" must be a number.`);
       }
-      if (!isNonEmptyString(causeValue.move)) {
-        errors.push(`${label}: "cause.move" must be a non-empty string.`);
+      if (!isNullableNonEmptyString(causeValue.move)) {
+        errors.push(`${label}: "cause.move" must be a non-empty string or null.`);
       }
       errors.push(...validateCauseExtraFields(label, causeValue, CAUSE_VARIANT_FIELDS.trainer));
       break;
@@ -293,8 +297,8 @@ function validateCause(label: string, causeValue: unknown): string[] {
       if (!isFiniteNumber(causeValue.level)) {
         errors.push(`${label}: "cause.level" must be a number.`);
       }
-      if (!isNonEmptyString(causeValue.move)) {
-        errors.push(`${label}: "cause.move" must be a non-empty string.`);
+      if (!isNullableNonEmptyString(causeValue.move)) {
+        errors.push(`${label}: "cause.move" must be a non-empty string or null.`);
       }
       errors.push(...validateCauseExtraFields(label, causeValue, CAUSE_VARIANT_FIELDS.wild));
       break;

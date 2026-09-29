@@ -128,9 +128,9 @@ export type Cause =
       trainerName: string | null;
       species: string;
       level: number;
-      move: string;
+      move: string | null;
     }
-  | { type: "wild"; species: string; level: number; move: string }
+  | { type: "wild"; species: string; level: number; move: string | null }
   | { type: "status"; status: StatusCause }
   | { type: "other"; detail: string };
 

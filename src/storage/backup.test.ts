@@ -551,6 +551,52 @@ function bundleWithBadField(table: FieldRuleTable, field: string, badValue: unkn
   return { ...base, [table]: [patched] };
 }
 
+describe("parseBundle — killer's move", () => {
+  const trainerCause = {
+    type: "trainer",
+    fightId: null,
+    trainerName: null,
+    species: "rattata",
+    level: 4,
+  };
+  const wildCause = { type: "wild", species: "geodude", level: 10 };
+
+  function bundleWithCause(cause: Record<string, unknown>): string {
+    const base = baseValidBundle();
+    const [death] = base.deaths;
+    return JSON.stringify({ ...base, deaths: [{ ...death, cause }] });
+  }
+
+  it.each([
+    ["trainer", trainerCause],
+    ["wild", wildCause],
+  ])("accepts a %s cause with move null", (_type, cause) => {
+    expect(parseBundle(bundleWithCause({ ...cause, move: null })).ok).toBe(true);
+  });
+
+  it.each([
+    ["trainer", trainerCause],
+    ["wild", wildCause],
+  ])("rejects a %s cause with an empty move", (_type, cause) => {
+    const result = parseBundle(bundleWithCause({ ...cause, move: "" }));
+    expect(result.ok).toBe(false);
+    if (!result.ok) {
+      expect(result.errors.some((e) => e.includes('"cause.move"'))).toBe(true);
+    }
+  });
+
+  it.each([
+    ["trainer", trainerCause],
+    ["wild", wildCause],
+  ])("rejects a %s cause with no move key", (_type, cause) => {
+    const result = parseBundle(bundleWithCause(cause));
+    expect(result.ok).toBe(false);
+    if (!result.ok) {
+      expect(result.errors.some((e) => e.includes('"cause.move"'))).toBe(true);
+    }
+  });
+});
+
 describe("parseBundle — field rules", () => {
   it("accepts the base fixture bundle unmodified (control for the cases below)", () => {
     const result = parseBundle(JSON.stringify(baseValidBundle()));
