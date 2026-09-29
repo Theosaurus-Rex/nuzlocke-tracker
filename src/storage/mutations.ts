@@ -11,6 +11,8 @@ import {
   catchEncounter,
   evolveMon,
   missEncounter,
+  moveMonToBox,
+  moveMonToParty,
   planEncounterReset,
   skipEncounter,
   type CatchDetails,
@@ -176,15 +178,29 @@ export interface AmendMonInput {
   mon: Mon;
   amendments: MonAmendments;
   evolvedTo?: string;
+  placement?: "party" | "box";
 }
 
 async function persistAmendMon(adapter: StorageAdapter, input: AmendMonInput): Promise<Mon> {
-  const amended = amendMon({ mon: input.mon, amendments: input.amendments });
-  const final =
-    input.evolvedTo === undefined
-      ? amended
-      : evolveMon({ mon: amended, speciesId: input.evolvedTo });
-  return adapter.mons.put(final);
+  return adapter.transaction(async (tx) => {
+    const amended = amendMon({ mon: input.mon, amendments: input.amendments });
+    const evolved =
+      input.evolvedTo === undefined
+        ? amended
+        : evolveMon({ mon: amended, speciesId: input.evolvedTo });
+
+    if (input.placement === undefined || input.placement === input.mon.status) {
+      return tx.mons.put(evolved);
+    }
+
+    if (input.placement === "box") {
+      return tx.mons.put(moveMonToBox(evolved));
+    }
+
+    const runMons = await tx.mons.where("runId", input.mon.runId);
+    const party = runMons.filter((mon) => mon.status === "party");
+    return tx.mons.put(moveMonToParty({ mon: evolved, party }));
+  });
 }
 
 export function useAmendMon(): UseMutationResult<Mon, Error, AmendMonInput> {

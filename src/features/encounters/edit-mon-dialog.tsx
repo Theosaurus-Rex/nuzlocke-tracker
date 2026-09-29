@@ -5,13 +5,14 @@ import { Typography } from "@/components/typography";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
+import { countByMonStatus } from "@/domain/derive";
 import { validateAmendment, type EncounterField } from "@/domain/encounter-validation";
 import type { MonAmendments } from "@/domain/transitions";
 import type { Gender, Mon, Route, Rules } from "@/domain/types";
 import { GAMES } from "@/game/registry";
 import { speciesDisplayName } from "@/game/pokeapi/resolve";
 import { useAmendMon } from "@/storage/mutations";
-import { useRun } from "@/storage/queries";
+import { useMons, useRun } from "@/storage/queries";
 import { cn, joinIds } from "@/lib/utils";
 
 import { EncounterDialogHeader } from "./encounter-dialog-header";
@@ -25,6 +26,7 @@ import {
   ShinyField,
 } from "./mon-fields";
 import { MovesetField } from "./moveset-field";
+import { PlacementField, type Placement } from "./placement-field";
 import { SpeciesPicker } from "./species-picker";
 
 function levelFromText(text: string): number {
@@ -62,6 +64,7 @@ export function EditMonDialog({
         <EncounterDialogHeader title={route.name} />
         <EditMonForm
           mon={mon}
+          runId={route.runId}
           rules={rules}
           generation={generation}
           onDone={() => onOpenChange(false)}
@@ -73,13 +76,18 @@ export function EditMonDialog({
 
 interface EditMonFormProps {
   mon: Mon;
+  runId: string;
   rules: Rules;
   generation: number;
   onDone: () => void;
 }
 
-function EditMonForm({ mon, rules, generation, onDone }: EditMonFormProps): ReactNode {
+function EditMonForm({ mon, runId, rules, generation, onDone }: EditMonFormProps): ReactNode {
   const amendMon = useAmendMon();
+  const monsQuery = useMons(runId);
+  const partyFull = countByMonStatus(monsQuery.data ?? []).party >= 6 && mon.status !== "party";
+  const canPlace = mon.status !== "dead";
+  const [placement, setPlacement] = useState<Placement>(mon.status === "box" ? "box" : "party");
 
   const [pendingSpecies, setPendingSpecies] = useState(mon.speciesId);
   const [pickerValue, setPickerValue] = useState(mon.speciesId);
@@ -155,7 +163,12 @@ function EditMonForm({ mon, rules, generation, onDone }: EditMonFormProps): Reac
     }
 
     amendMon.mutate(
-      { mon, amendments, evolvedTo: evolved ? pendingSpecies : undefined },
+      {
+        mon,
+        amendments,
+        evolvedTo: evolved ? pendingSpecies : undefined,
+        placement: canPlace ? placement : undefined,
+      },
       { onSuccess: onDone },
     );
   }
@@ -319,13 +332,26 @@ function EditMonForm({ mon, rules, generation, onDone }: EditMonFormProps): Reac
         )}
       </div>
 
-      <div className="flex shrink-0 items-center justify-end gap-2 border-t-[1.5px] border-border p-4">
-        <Button type="button" variant="outline" onClick={onDone}>
-          Cancel
-        </Button>
-        <Button type="submit" disabled={amendMon.isPending}>
-          {amendMon.isPending ? "Saving…" : "Save changes"}
-        </Button>
+      <div className="flex shrink-0 flex-wrap items-center justify-between gap-2 border-t-[1.5px] border-border p-4">
+        {canPlace ? (
+          <PlacementField
+            id="edit-mon-placement"
+            value={placement}
+            onChange={setPlacement}
+            partyFull={partyFull}
+          />
+        ) : (
+          <span />
+        )}
+
+        <div className="flex gap-2">
+          <Button type="button" variant="outline" onClick={onDone}>
+            Cancel
+          </Button>
+          <Button type="submit" disabled={amendMon.isPending}>
+            {amendMon.isPending ? "Saving…" : "Save changes"}
+          </Button>
+        </div>
       </div>
     </form>
   );

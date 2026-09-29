@@ -385,13 +385,13 @@ describe("LogEncounterDialog", () => {
 
     renderDialog({ mons: fullParty });
 
-    expect(document.getElementById("log-encounter-placement")).toHaveTextContent(/box/i);
+    expect(document.getElementById("log-encounter-placement")).toHaveTextContent("Box");
   });
 
   it("defaults placement to party when the party has a free slot", () => {
     renderDialog({ mons: [makeMon({ id: "mon-0", partySlot: 0 })] });
 
-    expect(document.getElementById("log-encounter-placement")).toHaveTextContent(/party/i);
+    expect(document.getElementById("log-encounter-placement")).toHaveTextContent("Party");
   });
 
   it("surfaces a mutation failure instead of swallowing it", async () => {
