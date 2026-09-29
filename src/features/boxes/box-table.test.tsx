@@ -1,6 +1,7 @@
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { render, screen, within } from "@testing-library/react";
-import { describe, expect, it } from "vitest";
+import userEvent from "@testing-library/user-event";
+import { describe, expect, it, vi } from "vitest";
 
 import type { Mon } from "@/domain/types";
 import { defaultPokeApiRoutes, stubPokeApi } from "@/test/pokeapi-fetch";
@@ -33,12 +34,16 @@ function makeMon(overrides: Partial<Mon> = {}): Mon {
   };
 }
 
-function renderTable(mons: Mon[], routeNames = new Map<string, string>()) {
+function renderTable(
+  mons: Mon[],
+  routeNames = new Map<string, string>(),
+  onEdit: (monId: string) => void = vi.fn(),
+) {
   stubPokeApi(defaultPokeApiRoutes);
   const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
   return render(
     <QueryClientProvider client={client}>
-      <BoxTable mons={mons} routeNames={routeNames} />
+      <BoxTable mons={mons} routeNames={routeNames} onEdit={onEdit} />
     </QueryClientProvider>,
   );
 }
@@ -52,6 +57,20 @@ function cellsOf(rowIndex: number): string[] {
 }
 
 describe("BoxTable", () => {
+  it("opens a mon from its name button or from a click anywhere on the row, once each", async () => {
+    const onEdit = vi.fn();
+    renderTable([makeMon({ id: "a", nickname: "Sprig", nature: "Jolly" })], new Map(), onEdit);
+
+    await userEvent.click(screen.getByRole("button", { name: "Edit “Sprig”" }));
+    expect(onEdit).toHaveBeenCalledTimes(1);
+    await userEvent.click(screen.getByText("Lvl"));
+    expect(onEdit).toHaveBeenCalledTimes(1);
+    await userEvent.click(screen.getByText("Jolly"));
+
+    expect(onEdit).toHaveBeenCalledTimes(2);
+    expect(onEdit).toHaveBeenLastCalledWith("a");
+  });
+
   it("renders a header for every column", () => {
     renderTable([makeMon()]);
 

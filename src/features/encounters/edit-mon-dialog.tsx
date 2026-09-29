@@ -16,6 +16,7 @@ import { useMons, useRun } from "@/storage/queries";
 import { cn, joinIds } from "@/lib/utils";
 
 import { EncounterDialogHeader } from "./encounter-dialog-header";
+import { monTitle } from "./mon-title";
 import { EvolveControl } from "./evolve-control";
 import {
   AbilityField,
@@ -36,7 +37,7 @@ function levelFromText(text: string): number {
 export interface EditMonDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  route: Route;
+  route: Route | null;
   mon: Mon;
   rules: Rules;
 }
@@ -48,7 +49,7 @@ export function EditMonDialog({
   mon,
   rules,
 }: EditMonDialogProps): ReactNode {
-  const runQuery = useRun(route.runId);
+  const runQuery = useRun(mon.runId);
   // Falls back to HeartGold's generation, the only game seeded today, while the run is loading.
   const generation = GAMES[runQuery.data?.game ?? "heartgold"].generation;
 
@@ -61,10 +62,10 @@ export function EditMonDialog({
           "sm:top-1/2 sm:left-1/2 sm:h-auto sm:max-h-[90vh] sm:w-full sm:max-w-lg sm:-translate-x-1/2 sm:-translate-y-1/2 sm:rounded-xl",
         )}
       >
-        <EncounterDialogHeader title={route.name} />
+        <EncounterDialogHeader title={route?.name ?? monTitle(mon)} />
         <EditMonForm
           mon={mon}
-          runId={route.runId}
+          runId={mon.runId}
           rules={rules}
           generation={generation}
           onDone={() => onOpenChange(false)}

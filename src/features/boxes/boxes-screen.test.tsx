@@ -1,5 +1,6 @@
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { fireEvent, render, screen, within } from "@testing-library/react";
+import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { MemoryRouter, Route, Routes } from "react-router";
 
@@ -254,6 +255,36 @@ describe("BoxesScreen", () => {
         .map((row) => within(row).getAllByRole("cell").at(1)?.textContent);
       expect(names).toEqual(["“First”", "“Second”"]);
       expect(screen.queryByRole("heading", { level: 2 })).not.toBeInTheDocument();
+    });
+  });
+
+  describe("editing a mon", () => {
+    async function setup() {
+      const adapter = createMemoryAdapter();
+      const run = await seedRun(adapter);
+      await adapter.mons.put(makeMonDraft(run.id, { nickname: "First", boxOrder: 0, level: 7 }));
+      await adapter.mons.put(makeMonDraft(run.id, { nickname: "Second", boxOrder: 1, level: 9 }));
+      renderScreen(adapter, run.id);
+    }
+
+    it("opens the dialog for the tapped grid card", async () => {
+      const user = userEvent.setup();
+      await setup();
+
+      await user.click(await screen.findByRole("button", { name: "Edit “Second”" }));
+
+      expect(await screen.findByLabelText("Current level")).toHaveValue("9");
+    });
+
+    it("opens the dialog for the tapped list row", async () => {
+      const user = userEvent.setup();
+      await setup();
+      await user.click(await screen.findByRole("button", { name: "List" }));
+
+      const table = await screen.findByRole("table");
+      await user.click(within(table).getByRole("button", { name: "Edit “Second”" }));
+
+      expect(await screen.findByLabelText("Current level")).toHaveValue("9");
     });
   });
 });

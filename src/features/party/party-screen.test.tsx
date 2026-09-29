@@ -1,5 +1,6 @@
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { render, screen } from "@testing-library/react";
+import userEvent from "@testing-library/user-event";
 import { beforeEach, describe, expect, it } from "vitest";
 import { MemoryRouter, Route, Routes } from "react-router";
 
@@ -151,5 +152,45 @@ describe("PartyScreen", () => {
 
     expect(await screen.findByText("No one in your party yet")).toBeInTheDocument();
     expect(screen.getByText("0 of 6")).toBeInTheDocument();
+  });
+
+  it("opens the edit dialog for the tapped mon, and a saved level shows on its card", async () => {
+    const user = userEvent.setup();
+    const adapter = createMemoryAdapter();
+    const run = await seedRun(adapter);
+    await adapter.mons.put(makeMonDraft(run.id, { nickname: "First", partySlot: 0, level: 7 }));
+    await adapter.mons.put(makeMonDraft(run.id, { nickname: "Second", partySlot: 1, level: 9 }));
+    renderScreen(adapter, run.id);
+
+    await user.click(await screen.findByRole("button", { name: "Edit “Second”" }));
+
+    const level = await screen.findByLabelText("Current level");
+    expect(level).toHaveValue("9");
+    await user.clear(level);
+    await user.type(level, "12");
+    await user.click(screen.getByRole("button", { name: "Save changes" }));
+
+    expect(await screen.findByText(/L12/)).toBeInTheDocument();
+    expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
+    expect(screen.getByText(/L7/)).toBeInTheDocument();
+  });
+
+  it("titles the edit dialog with the route the mon was caught on", async () => {
+    const user = userEvent.setup();
+    const adapter = createMemoryAdapter();
+    const run = await seedRun(adapter);
+    const route = await adapter.routes.put({
+      runId: run.id,
+      name: "Route 29",
+      order: 1,
+      isCustom: false,
+      gameRouteId: null,
+    });
+    await adapter.mons.put(makeMonDraft(run.id, { nickname: "Sprig", caughtRouteId: route.id }));
+    renderScreen(adapter, run.id);
+
+    await user.click(await screen.findByRole("button", { name: "Edit “Sprig”" }));
+
+    expect(await screen.findByRole("dialog", { name: "Route 29" })).toBeInTheDocument();
   });
 });

@@ -1,6 +1,7 @@
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { render, screen, within } from "@testing-library/react";
-import { describe, expect, it } from "vitest";
+import userEvent from "@testing-library/user-event";
+import { describe, expect, it, vi } from "vitest";
 
 import type { Mon } from "@/domain/types";
 import { defaultPokeApiRoutes, stubPokeApi } from "@/test/pokeapi-fetch";
@@ -33,17 +34,29 @@ function makeMon(overrides: Partial<Mon> = {}): Mon {
   };
 }
 
-function renderList(mons: Mon[]) {
+function renderList(mons: Mon[], onEdit: (monId: string) => void = vi.fn()) {
   stubPokeApi(defaultPokeApiRoutes);
   const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
   return render(
     <QueryClientProvider client={client}>
-      <BoxRowList mons={mons} />
+      <BoxRowList mons={mons} onEdit={onEdit} />
     </QueryClientProvider>,
   );
 }
 
 describe("BoxRowList", () => {
+  it("has a button per row named for the mon that reports its id", async () => {
+    const onEdit = vi.fn();
+    renderList(
+      [makeMon({ id: "a", nickname: "Sprig" }), makeMon({ id: "b", nickname: null })],
+      onEdit,
+    );
+
+    await userEvent.click(screen.getByRole("button", { name: "Edit Chikorita" }));
+
+    expect(onEdit).toHaveBeenCalledWith("b");
+  });
+
   it("renders one row per mon", () => {
     renderList([makeMon({ id: "a" }), makeMon({ id: "b" })]);
 

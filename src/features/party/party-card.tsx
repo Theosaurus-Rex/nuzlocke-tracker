@@ -9,17 +9,20 @@ import { speciesDisplayName } from "@/game/pokeapi/resolve";
 import { genderSymbol } from "@/lib/gender";
 import { joinPresent } from "@/lib/join-present";
 
+import { EditMonButton } from "../encounters/edit-mon-button";
+import { monTitle } from "../encounters/mon-title";
 import { MoveChip } from "./move-chip";
 
 export interface PartyCardProps {
   mon: Mon;
   routeName: string | null;
   generation: number;
+  onEdit: () => void;
 }
 
-export function PartyCard({ mon, routeName, generation }: PartyCardProps): ReactNode {
+export function PartyCard({ mon, routeName, generation, onEdit }: PartyCardProps): ReactNode {
   const species = speciesDisplayName(mon.speciesId);
-  const title = mon.nickname !== null ? `“${mon.nickname}”` : species;
+  const title = monTitle(mon);
 
   const itemText = mon.heldItem ?? "no item";
   const footerRest = joinPresent([mon.ability, routeName]);
@@ -59,6 +62,7 @@ export function PartyCard({ mon, routeName, generation }: PartyCardProps): React
           </Typography>
         )}
       </Typography>
+      <EditMonButton mon={mon} onEdit={onEdit} />
     </Surface>
   );
 }

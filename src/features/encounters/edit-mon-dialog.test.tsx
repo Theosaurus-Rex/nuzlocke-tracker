@@ -87,12 +87,12 @@ function createWrapper(
 
 function renderDialog(overrides: {
   adapter?: StorageAdapter;
-  route?: Route;
+  route?: Route | null;
   mon?: Mon;
   rules?: Rules;
 }) {
   const adapter = overrides.adapter ?? createMemoryAdapter();
-  const route = overrides.route ?? makeRoute();
+  const route = overrides.route === undefined ? makeRoute() : overrides.route;
   const mon = overrides.mon ?? makeMon();
 
   const view = render(
@@ -114,6 +114,13 @@ describe("EditMonDialog", () => {
     renderDialog({ route: makeRoute({ name: "New Bark Town" }) });
 
     expect(screen.getByRole("dialog", { name: "New Bark Town" })).toBeInTheDocument();
+  });
+
+  it("opens for a mon with no route, titled by the mon", () => {
+    renderDialog({ route: null, mon: makeMon({ caughtRouteId: null, nickname: "Sprig" }) });
+
+    expect(screen.getByRole("dialog", { name: "“Sprig”" })).toBeInTheDocument();
+    expect(screen.getByLabelText("Current level")).toHaveValue("18");
   });
 
   it("shows the mon's species type inline, resolved for the run's generation", async () => {
