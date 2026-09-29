@@ -1,13 +1,15 @@
-import type { ReactNode } from "react";
+import { useState, type ReactNode } from "react";
 import { Navigate, useParams } from "react-router";
 
 import { ScreenHeader } from "@/components/screen-header";
 import { Typography } from "@/components/typography";
+import { Button } from "@/components/ui/button";
 import type { Death } from "@/domain/types";
 import { GAMES } from "@/game/registry";
 import { useDeaths, useFights, useMons, useRoutes, useRun } from "@/storage/queries";
 
 import { DeathCard } from "./death-card";
+import { LogDeathDialog } from "./log-death-dialog";
 
 function newestFirst(deaths: readonly Death[]): Death[] {
   return [...deaths].sort(
@@ -22,6 +24,7 @@ export function GraveyardScreen(): ReactNode {
   const monsQuery = useMons(runId);
   const routesQuery = useRoutes(runId ?? "");
   const fightsQuery = useFights(runId ?? "");
+  const [logOpen, setLogOpen] = useState(false);
 
   if (!runId) {
     return <Navigate to="/" replace />;
@@ -32,11 +35,26 @@ export function GraveyardScreen(): ReactNode {
   const monsById = new Map(mons.map((mon) => [mon.id, mon]));
   const routeNames = new Map((routesQuery.data ?? []).map((route) => [route.id, route.name]));
   const deaths = newestFirst(deathsQuery.data ?? []).filter((death) => monsById.has(death.monId));
+  const hasLiving = mons.some((mon) => mon.status !== "dead");
   const loaded = !deathsQuery.isPending && !monsQuery.isPending;
 
   return (
     <div>
-      <ScreenHeader title="Graveyard">
+      <ScreenHeader
+        title="Graveyard"
+        actions={
+          <Button
+            type="button"
+            aria-label="Log a death"
+            disabled={!hasLiving}
+            className="bg-destructive text-primary-foreground shadow-block hover:bg-destructive/90"
+            onClick={() => setLogOpen(true)}
+          >
+            <span className="sm:hidden">+ Log</span>
+            <span className="hidden sm:inline">+ Log a death</span>
+          </Button>
+        }
+      >
         {loaded && (
           <Typography variant="body" tone="muted">
             {deaths.length} lost this run
@@ -66,6 +84,7 @@ export function GraveyardScreen(): ReactNode {
           })}
         </ul>
       )}
+      <LogDeathDialog open={logOpen} onOpenChange={setLogOpen} runId={runId} />
     </div>
   );
 }
