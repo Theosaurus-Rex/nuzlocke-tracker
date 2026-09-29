@@ -1,6 +1,7 @@
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { render, screen } from "@testing-library/react";
-import { describe, expect, it } from "vitest";
+import userEvent from "@testing-library/user-event";
+import { describe, expect, it, vi } from "vitest";
 
 import type { Mon } from "@/domain/types";
 import { defaultPokeApiRoutes, stubPokeApi } from "@/test/pokeapi-fetch";
@@ -33,13 +34,13 @@ function makeMon(overrides: Partial<Mon> = {}): Mon {
   };
 }
 
-function renderCard(mon: Mon) {
+function renderCard(mon: Mon, onEdit: () => void = vi.fn()) {
   stubPokeApi(defaultPokeApiRoutes);
   const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
   return render(
     <QueryClientProvider client={client}>
       <ul>
-        <BoxCard mon={mon} generation={4} />
+        <BoxCard mon={mon} generation={4} onEdit={onEdit} />
       </ul>
     </QueryClientProvider>,
   );
@@ -84,5 +85,20 @@ describe("BoxCard", () => {
     renderCard(makeMon({ heldItem: "Magnet", ability: null }));
     const item = await screen.findByText("Magnet");
     expect(item.closest("p")?.textContent).toBe("Magnet");
+  });
+
+  it("is one button named for the nickname that calls onEdit", async () => {
+    const onEdit = vi.fn();
+    renderCard(makeMon({ nickname: "Sprig" }), onEdit);
+
+    await userEvent.click(screen.getByRole("button", { name: "Edit “Sprig”" }));
+
+    expect(onEdit).toHaveBeenCalledTimes(1);
+  });
+
+  it("names the button for the species when there is no nickname", () => {
+    renderCard(makeMon({ nickname: null, speciesId: "chikorita" }));
+
+    expect(screen.getByRole("button", { name: "Edit Chikorita" })).toBeInTheDocument();
   });
 });

@@ -1,6 +1,7 @@
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { render, screen, waitFor } from "@testing-library/react";
-import { describe, expect, it } from "vitest";
+import userEvent from "@testing-library/user-event";
+import { describe, expect, it, vi } from "vitest";
 
 import type { Mon } from "@/domain/types";
 import { defaultPokeApiRoutes, stubPokeApi } from "@/test/pokeapi-fetch";
@@ -33,13 +34,13 @@ function makeMon(overrides: Partial<Mon> = {}): Mon {
   };
 }
 
-function renderCard(mon: Mon, routeName: string | null = null) {
+function renderCard(mon: Mon, routeName: string | null = null, onEdit: () => void = vi.fn()) {
   stubPokeApi(defaultPokeApiRoutes);
   const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
   return render(
     <QueryClientProvider client={client}>
       <ul>
-        <PartyCard mon={mon} routeName={routeName} generation={4} />
+        <PartyCard mon={mon} routeName={routeName} generation={4} onEdit={onEdit} />
       </ul>
     </QueryClientProvider>,
   );
@@ -108,5 +109,20 @@ describe("PartyCard", () => {
   it("shows the caught route even when item and ability are missing", () => {
     renderCard(makeMon(), "Route 46");
     expect(screen.getByText("no item").closest("p")?.textContent).toBe("no item · Route 46");
+  });
+
+  it("is one button named for the nickname that calls onEdit", async () => {
+    const onEdit = vi.fn();
+    renderCard(makeMon({ nickname: "Sprig" }), null, onEdit);
+
+    await userEvent.click(screen.getByRole("button", { name: "Edit “Sprig”" }));
+
+    expect(onEdit).toHaveBeenCalledTimes(1);
+  });
+
+  it("names the button for the species when there is no nickname", () => {
+    renderCard(makeMon({ nickname: null, speciesId: "chikorita" }));
+
+    expect(screen.getByRole("button", { name: "Edit Chikorita" })).toBeInTheDocument();
   });
 });

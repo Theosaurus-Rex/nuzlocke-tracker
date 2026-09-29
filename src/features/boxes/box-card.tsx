@@ -8,15 +8,18 @@ import type { Mon } from "@/domain/types";
 import { speciesDisplayName } from "@/game/pokeapi/resolve";
 import { genderSymbol } from "@/lib/gender";
 import { joinPresent } from "@/lib/join-present";
+import { EditMonButton } from "../encounters/edit-mon-button";
+import { monTitle } from "../encounters/mon-title";
 
 export interface BoxCardProps {
   mon: Mon;
   generation: number;
+  onEdit: () => void;
 }
 
-export function BoxCard({ mon, generation }: BoxCardProps): ReactNode {
+export function BoxCard({ mon, generation, onEdit }: BoxCardProps): ReactNode {
   const species = speciesDisplayName(mon.speciesId);
-  const title = mon.nickname !== null ? `“${mon.nickname}”` : species;
+  const title = monTitle(mon);
 
   return (
     <Surface as="li" className="relative flex min-w-0 flex-col p-4">
@@ -49,6 +52,7 @@ export function BoxCard({ mon, generation }: BoxCardProps): ReactNode {
           </Typography>
         )}
       </Typography>
+      <EditMonButton mon={mon} onEdit={onEdit} />
     </Surface>
   );
 }

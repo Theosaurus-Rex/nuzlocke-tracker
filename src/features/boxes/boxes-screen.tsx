@@ -8,6 +8,7 @@ import { GAMES } from "@/game/registry";
 import { cn } from "@/lib/utils";
 import { useMons, useRoutes, useRun } from "@/storage/queries";
 
+import { useEditMonDialog } from "../encounters/use-edit-mon-dialog";
 import { BoxCard } from "./box-card";
 import { BoxRowList } from "./box-row-list";
 import { BoxTable } from "./box-table";
@@ -71,6 +72,11 @@ export function BoxesScreen(): ReactNode {
   const monsQuery = useMons(runId);
   const routesQuery = useRoutes(runId ?? "");
   const [view, setView] = useBoxView();
+  const { openEditor, dialog } = useEditMonDialog(
+    runId ?? "",
+    monsQuery.data ?? [],
+    routesQuery.data ?? [],
+  );
 
   if (!runId) {
     return <Navigate to="/" replace />;
@@ -97,20 +103,26 @@ export function BoxesScreen(): ReactNode {
       {boxed.length > 0 && view === "grid" && (
         <ul className="grid grid-cols-2 gap-x-6 gap-y-12 p-4 pt-12 lg:grid-cols-3">
           {boxed.map((mon) => (
-            <BoxCard key={mon.id} mon={mon} generation={generation} />
+            <BoxCard
+              key={mon.id}
+              mon={mon}
+              generation={generation}
+              onEdit={() => openEditor(mon.id)}
+            />
           ))}
         </ul>
       )}
       {boxed.length > 0 && view === "list" && (
         <>
           <div className="hidden md:block">
-            <BoxTable mons={boxed} routeNames={routeNames} />
+            <BoxTable mons={boxed} routeNames={routeNames} onEdit={openEditor} />
           </div>
           <div className="md:hidden">
-            <BoxRowList mons={boxed} />
+            <BoxRowList mons={boxed} onEdit={openEditor} />
           </div>
         </>
       )}
+      {dialog}
     </div>
   );
 }

@@ -8,6 +8,7 @@ import type { Mon } from "@/domain/types";
 import { GAMES } from "@/game/registry";
 import { useMons, useRoutes, useRun } from "@/storage/queries";
 
+import { useEditMonDialog } from "../encounters/use-edit-mon-dialog";
 import { PartyCard } from "./party-card";
 
 function partySlotOrder(mon: Mon): number {
@@ -29,6 +30,11 @@ export function PartyScreen(): ReactNode {
   const runQuery = useRun(runId ?? "");
   const routesQuery = useRoutes(runId ?? "");
   const monsQuery = useMons(runId);
+  const { openEditor, dialog } = useEditMonDialog(
+    runId ?? "",
+    monsQuery.data ?? [],
+    routesQuery.data ?? [],
+  );
 
   if (!runId) {
     return <Navigate to="/" replace />;
@@ -62,10 +68,12 @@ export function PartyScreen(): ReactNode {
                 mon.caughtRouteId === null ? null : (routeNames.get(mon.caughtRouteId) ?? null)
               }
               generation={generation}
+              onEdit={() => openEditor(mon.id)}
             />
           ))}
         </ul>
       )}
+      {dialog}
     </div>
   );
 }

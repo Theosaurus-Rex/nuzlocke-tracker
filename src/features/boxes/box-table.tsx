@@ -4,6 +4,7 @@ import { SpeciesSprite } from "@/components/species-sprite";
 import { Typography } from "@/components/typography";
 import type { Mon } from "@/domain/types";
 import { speciesDisplayName } from "@/game/pokeapi/resolve";
+import { monTitle } from "../encounters/mon-title";
 import { genderSymbol } from "@/lib/gender";
 
 const FEATURES = tableFeatures({});
@@ -16,9 +17,10 @@ function orDash(value: string | null): string {
 export interface BoxTableProps {
   mons: Mon[];
   routeNames: ReadonlyMap<string, string>;
+  onEdit: (monId: string) => void;
 }
 
-export function BoxTable({ mons, routeNames }: BoxTableProps) {
+export function BoxTable({ mons, routeNames, onEdit }: BoxTableProps) {
   const columns = columnHelper.columns([
     columnHelper.display({
       id: "sprite",
@@ -32,18 +34,25 @@ export function BoxTable({ mons, routeNames }: BoxTableProps) {
         />
       ),
     }),
-    columnHelper.accessor(
-      (mon) => (mon.nickname !== null ? `“${mon.nickname}”` : speciesDisplayName(mon.speciesId)),
-      {
-        id: "name",
-        header: "Name",
-        cell: ({ getValue }) => (
+    columnHelper.accessor((mon) => monTitle(mon), {
+      id: "name",
+      header: "Name",
+      cell: ({ row, getValue }) => (
+        <button
+          type="button"
+          aria-label={`Edit ${getValue()}`}
+          onClick={(event) => {
+            event.stopPropagation();
+            onEdit(row.original.id);
+          }}
+          className="cursor-pointer bg-transparent p-0 text-left focus-visible:outline-none focus-visible:ring-3 focus-visible:ring-ring/50"
+        >
           <Typography as="span" variant="strong">
             {getValue()}
           </Typography>
-        ),
-      },
-    ),
+        </button>
+      ),
+    }),
     columnHelper.accessor((mon) => speciesDisplayName(mon.speciesId), {
       id: "species",
       header: "Species",
@@ -95,7 +104,11 @@ export function BoxTable({ mons, routeNames }: BoxTableProps) {
       </thead>
       <tbody>
         {table.getRowModel().rows.map((row) => (
-          <tr key={row.id} className="border-b border-muted last:border-b-0">
+          <tr
+            key={row.id}
+            onClick={() => onEdit(row.original.id)}
+            className="cursor-pointer border-b border-muted last:border-b-0"
+          >
             {row.getAllCells().map((cell) => (
               <td key={cell.id} className="px-3 py-2">
                 <table.FlexRender cell={cell} />
