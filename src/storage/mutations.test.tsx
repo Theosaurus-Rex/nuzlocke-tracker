@@ -697,6 +697,104 @@ describe("useAmendMon", () => {
 
     expect(result.speciesId).toBe(mon.speciesId);
   });
+
+  async function seedPartyAt(
+    adapter: StorageAdapter,
+    template: Mon,
+    slots: number[],
+  ): Promise<Mon[]> {
+    return adapter.mons.restoreMany(
+      slots.map((slot) => ({
+        ...template,
+        id: crypto.randomUUID(),
+        status: "party" as const,
+        partySlot: slot,
+      })),
+    );
+  }
+
+  it("moves a party mon to the box and frees its slot", async () => {
+    const adapter = createMemoryAdapter();
+    const { wrapper, mon } = await seedCaughtMon(adapter);
+
+    const amend = renderHook(() => useAmendMon(), { wrapper });
+    const result = await amend.result.current.mutateAsync({ mon, amendments, placement: "box" });
+
+    expect(result.status).toBe("box");
+    expect(result.partySlot).toBeNull();
+    const persisted = await adapter.mons.get(mon.id);
+    expect(persisted?.status).toBe("box");
+    expect(persisted?.partySlot).toBeNull();
+  });
+
+  it("puts a boxed mon in the lowest free slot when the party has a gap", async () => {
+    const adapter = createMemoryAdapter();
+    const { wrapper, mon } = await seedCaughtMon(adapter);
+    await adapter.mons.put({ ...mon, status: "box", partySlot: null });
+    await seedPartyAt(adapter, mon, [0, 2, 3]);
+    const boxed = (await adapter.mons.get(mon.id))!;
+
+    const amend = renderHook(() => useAmendMon(), { wrapper });
+    const result = await amend.result.current.mutateAsync({
+      mon: boxed,
+      amendments,
+      placement: "party",
+    });
+
+    expect(result.status).toBe("party");
+    expect(result.partySlot).toBe(1);
+  });
+
+  it("rejects a boxed mon into a full party and writes nothing", async () => {
+    const adapter = createMemoryAdapter();
+    const { wrapper, mon } = await seedCaughtMon(adapter);
+    await adapter.mons.put({ ...mon, status: "box", partySlot: null });
+    await seedPartyAt(adapter, mon, [0, 1, 2, 3, 4, 5]);
+    const boxed = (await adapter.mons.get(mon.id))!;
+    const before = await adapter.mons.getAll();
+
+    const amend = renderHook(() => useAmendMon(), { wrapper });
+    await expect(
+      amend.result.current.mutateAsync({ mon: boxed, amendments, placement: "party" }),
+    ).rejects.toThrow(/Party cannot exceed/);
+
+    expect(await adapter.mons.getAll()).toEqual(before);
+    expect((await adapter.mons.get(mon.id))?.nickname).toBe(boxed.nickname);
+  });
+
+  it("keeps a party mon's slot when the placement is unchanged", async () => {
+    const adapter = createMemoryAdapter();
+    const { wrapper, mon } = await seedCaughtMon(adapter);
+    const inSlotFour = await adapter.mons.put({ ...mon, partySlot: 4 });
+
+    const amend = renderHook(() => useAmendMon(), { wrapper });
+    const result = await amend.result.current.mutateAsync({
+      mon: inSlotFour,
+      amendments,
+      placement: "party",
+    });
+
+    expect(result.partySlot).toBe(4);
+  });
+
+  it("applies amendments, evolution and placement in one write inside a transaction", async () => {
+    const adapter = createMemoryAdapter();
+    const { wrapper, mon } = await seedCaughtMon(adapter);
+
+    const putSpy = vi.spyOn(adapter.mons, "put");
+    const txSpy = vi.spyOn(adapter, "transaction");
+    const amend = renderHook(() => useAmendMon(), { wrapper });
+    const result = await amend.result.current.mutateAsync({
+      mon,
+      amendments,
+      evolvedTo: "weepinbell",
+      placement: "box",
+    });
+
+    expect(txSpy).toHaveBeenCalledTimes(1);
+    expect(putSpy).toHaveBeenCalledTimes(1);
+    expect(result).toMatchObject({ nickname: "Sprout", speciesId: "weepinbell", status: "box" });
+  });
 });
 
 function makeDeathDraft(

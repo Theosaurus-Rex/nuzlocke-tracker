@@ -335,6 +335,7 @@ describe("EditMonDialog", () => {
         ...adapter.mons,
         put: () => Promise.reject(new Error("simulated write failure")),
       },
+      transaction: (fn) => fn(failingAdapter),
     };
 
     renderDialog({ adapter: failingAdapter });
@@ -626,5 +627,80 @@ describe("EditMonDialog", () => {
     await user.click(await findMenuTrigger());
     expect(await screen.findByRole("menuitem", { name: "Weepinbell" })).toBeInTheDocument();
     expect(screen.getByLabelText("Species")).toHaveAttribute("readOnly");
+  });
+});
+
+describe("EditMonDialog placement", () => {
+  async function seedParty(adapter: StorageAdapter, count: number): Promise<void> {
+    for (let slot = 0; slot < count; slot++) {
+      await adapter.mons.put(makeMon({ id: `party-${slot}`, partySlot: slot }));
+    }
+  }
+
+  function placement(): HTMLElement {
+    return document.getElementById("edit-mon-placement")!;
+  }
+
+  it("shows the mon's current placement", () => {
+    const boxed = renderDialog({ mon: makeMon({ status: "box", partySlot: null }) });
+    expect(placement()).toHaveTextContent("Box");
+    boxed.unmount();
+
+    renderDialog({ mon: makeMon({ status: "party" }) });
+    expect(placement()).toHaveTextContent("Party");
+  });
+
+  it("disables Party with a reason when the party is full and the mon is boxed", async () => {
+    const user = userEvent.setup();
+    const adapter = createMemoryAdapter();
+    await seedParty(adapter, 6);
+    renderDialog({ adapter, mon: makeMon({ status: "box", partySlot: null }) });
+
+    expect(await screen.findByText("Party is full")).toBeInTheDocument();
+    await user.click(placement());
+    expect(await screen.findByRole("option", { name: "Party" })).toHaveAttribute(
+      "aria-disabled",
+      "true",
+    );
+  });
+
+  it("keeps Party enabled when the mon is one of the full party", async () => {
+    const user = userEvent.setup();
+    const adapter = createMemoryAdapter();
+    await seedParty(adapter, 6);
+    const mon = (await adapter.mons.get("party-2"))!;
+    renderDialog({ adapter, mon });
+
+    await user.click(placement());
+    expect(await screen.findByRole("option", { name: "Party" })).not.toHaveAttribute(
+      "aria-disabled",
+      "true",
+    );
+    expect(screen.queryByText("Party is full")).not.toBeInTheDocument();
+  });
+
+  it("boxes the mon when Box is chosen and saved", async () => {
+    const user = userEvent.setup();
+    const adapter = createMemoryAdapter();
+    const mon = makeMon();
+    await adapter.mons.put(mon);
+    renderDialog({ adapter, mon });
+
+    await user.click(placement());
+    await user.click(await screen.findByRole("option", { name: "Box" }));
+    await user.click(screen.getByRole("button", { name: "Save changes" }));
+
+    await waitFor(async () => {
+      const saved = await adapter.mons.get(mon.id);
+      expect(saved?.status).toBe("box");
+      expect(saved?.partySlot).toBeNull();
+    });
+  });
+
+  it("shows no placement control for a dead mon", () => {
+    renderDialog({ mon: makeMon({ status: "dead", partySlot: null }) });
+
+    expect(placement()).toBeNull();
+    expect(screen.queryByText("Placement")).not.toBeInTheDocument();
   });
 });

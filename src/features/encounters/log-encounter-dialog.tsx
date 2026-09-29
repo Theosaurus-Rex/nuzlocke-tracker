@@ -4,13 +4,6 @@ import { Typography } from "@/components/typography";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
 import { countByMonStatus } from "@/domain/derive";
 import { validateEncounter, type EncounterField } from "@/domain/encounter-validation";
 import type { CatchDetails } from "@/domain/transitions";
@@ -30,6 +23,7 @@ import {
   ShinyField,
 } from "./mon-fields";
 import { MovesetField } from "./moveset-field";
+import { PlacementField } from "./placement-field";
 import { SpeciesPicker } from "./species-picker";
 
 type Outcome = "caught" | "missed" | "skipped";
@@ -377,25 +371,7 @@ function LogEncounterForm({
 
       <div className="flex shrink-0 flex-wrap items-center justify-between gap-2 border-t-[1.5px] border-border p-4">
         {outcome === "caught" ? (
-          <div>
-            <Typography
-              as="label"
-              variant="eyebrow"
-              htmlFor="log-encounter-placement"
-              className="mb-1 block"
-            >
-              Placement
-            </Typography>
-            <Select value={placement} onValueChange={(value) => setPlacement(value!)}>
-              <SelectTrigger id="log-encounter-placement" className="w-full">
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="party">Party</SelectItem>
-                <SelectItem value="box">Box</SelectItem>
-              </SelectContent>
-            </Select>
-          </div>
+          <PlacementField id="log-encounter-placement" value={placement} onChange={setPlacement} />
         ) : (
           <span />
         )}
