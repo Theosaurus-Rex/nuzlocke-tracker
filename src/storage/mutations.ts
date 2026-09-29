@@ -10,6 +10,7 @@ import {
   amendMon,
   catchEncounter,
   evolveMon,
+  killMon,
   missEncounter,
   moveMonToBox,
   moveMonToParty,
@@ -18,7 +19,7 @@ import {
   type CatchDetails,
   type MonAmendments,
 } from "@/domain/transitions";
-import type { Encounter, GameId, Mon, Route, Rules, Run } from "@/domain/types";
+import type { Cause, Death, Encounter, GameId, Mon, Route, Rules, Run } from "@/domain/types";
 import { GAMES } from "@/game/registry";
 import { seedRoutes } from "@/game/seed";
 
@@ -408,6 +409,62 @@ export function useResetEncounter(): UseMutationResult<void, Error, ResetEncount
     mutationFn: (input: ResetEncounterInput) => persistResetEncounter(adapter, input),
     onSuccess: async (_result, input) => {
       await invalidateRun(queryClient, input.encounter.runId);
+    },
+  });
+}
+
+export interface LogDeathInput {
+  monId: string;
+  cause: Cause;
+  routeId: string | null;
+  notes: string | null;
+  diedAt: string;
+}
+
+export interface LogDeathResult {
+  mon: Mon;
+  death: Death;
+}
+
+/** Reads the mon inside the transaction so a stale caller cannot bury a mon twice. */
+export async function persistLogDeath(
+  adapter: StorageAdapter,
+  input: LogDeathInput,
+): Promise<LogDeathResult> {
+  const deathId = crypto.randomUUID();
+
+  return adapter.transaction(async (tx) => {
+    const current = await tx.mons.get(input.monId);
+    if (current === undefined) {
+      throw new Error(`Mon ${input.monId} no longer exists.`);
+    }
+
+    const { mon: deadMon, death: deathDraft } = killMon({
+      mon: current,
+      deathId,
+      details: {
+        level: current.level,
+        routeId: input.routeId,
+        cause: input.cause,
+        diedAt: input.diedAt,
+        notes: input.notes,
+      },
+    });
+
+    const mon = await tx.mons.put(deadMon);
+    const death = await tx.deaths.put(deathDraft);
+    return { mon, death };
+  });
+}
+
+export function useLogDeath(): UseMutationResult<LogDeathResult, Error, LogDeathInput> {
+  const adapter = useStorage();
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: (input: LogDeathInput) => persistLogDeath(adapter, input),
+    onSuccess: async (result) => {
+      await invalidateRun(queryClient, result.mon.runId);
     },
   });
 }
