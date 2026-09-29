@@ -10,6 +10,7 @@ import {
   moveMonToBox,
   moveMonToParty,
   planEncounterReset,
+  reviveMon,
   skipEncounter,
   type CatchDetails,
   type KillDetails,
@@ -759,5 +760,31 @@ describe("input immutability", () => {
     const snapshot = { ...input };
     run();
     expect(input).toEqual(snapshot);
+  });
+});
+
+describe("reviveMon", () => {
+  const dead = () => makeMon({ id: "dead-mon", status: "dead", partySlot: null });
+
+  test("a dead mon goes to the box with no party slot", () => {
+    const result = reviveMon({ mon: dead(), party: partyInSlots([0, 1]), placement: "box" });
+    expect(result.status).toBe("box");
+    expect(result.partySlot).toBeNull();
+  });
+
+  test("a gap in the party is reused: slots 0, 2, 3 occupied gets slot 1", () => {
+    const result = reviveMon({ mon: dead(), party: partyInSlots([0, 2, 3]), placement: "party" });
+    expect(result.status).toBe("party");
+    expect(result.partySlot).toBe(1);
+  });
+
+  test("throws when the party is already full", () => {
+    const party = partyInSlots([0, 1, 2, 3, 4, 5]);
+    expect(() => reviveMon({ mon: dead(), party, placement: "party" })).toThrow(/cannot exceed 6/);
+  });
+
+  test("throws for a living mon", () => {
+    const mon = makeMon({ id: "alive", status: "box", partySlot: null });
+    expect(() => reviveMon({ mon, party: [], placement: "box" })).toThrow(/not dead/);
   });
 });
