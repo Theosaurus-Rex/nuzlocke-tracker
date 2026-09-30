@@ -1,4 +1,4 @@
-import { useQuery, type QueryClient } from "@tanstack/react-query";
+import { useQueries, useQuery, type QueryClient } from "@tanstack/react-query";
 
 import { fetchJson, PokeApiError } from "./client";
 import {
@@ -14,7 +14,7 @@ import {
   type RawPokemon,
   type RawPokemonSpecies,
 } from "./map";
-import type { IndexEntry } from "./model";
+import type { IndexEntry, Species } from "./model";
 import { findByName, speciesDisplayName } from "./resolve";
 
 const MAX_RETRIES = 2;
@@ -41,12 +41,32 @@ export function useSpeciesIndex() {
   });
 }
 
-export function useSpecies(name: string | null) {
-  return useQuery({
+function speciesQueryOptions(name: string | null) {
+  return {
     queryKey: ["pokeapi", "species", name],
     queryFn: async () =>
       toSpecies(await fetchJson<RawPokemon>(`/pokemon/${encodeURIComponent(name ?? "")}`)),
     enabled: name !== null && name !== "",
+  };
+}
+
+export function useSpecies(name: string | null) {
+  return useQuery(speciesQueryOptions(name));
+}
+
+export function useSpeciesMany(names: readonly string[]): Map<string, Species> {
+  const unique = [...new Set(names)];
+  return useQueries({
+    queries: unique.map((name) => speciesQueryOptions(name)),
+    combine: (results) =>
+      new Map(
+        results.flatMap((result, i) => {
+          const name = unique[i];
+          return name !== undefined && result.data !== undefined
+            ? [[name, result.data] as const]
+            : [];
+        }),
+      ),
   });
 }
 

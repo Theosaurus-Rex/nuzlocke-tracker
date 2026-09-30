@@ -1,5 +1,5 @@
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { fireEvent, render, screen, within } from "@testing-library/react";
+import { fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { MemoryRouter, Route, Routes } from "react-router";
@@ -255,6 +255,119 @@ describe("BoxesScreen", () => {
         .map((row) => within(row).getAllByRole("cell").at(1)?.textContent);
       expect(names).toEqual(["“First”", "“Second”"]);
       expect(screen.queryByRole("heading", { level: 2 })).not.toBeInTheDocument();
+    });
+  });
+
+  describe("sorting and searching", () => {
+    async function setup(drafts: Partial<Mon>[]) {
+      const adapter = createMemoryAdapter();
+      const run = await seedRun(adapter);
+      for (const [boxOrder, draft] of drafts.entries()) {
+        await adapter.mons.put(makeMonDraft(run.id, { boxOrder, ...draft }));
+      }
+      renderScreen(adapter, run.id);
+    }
+
+    async function chooseSort(user: ReturnType<typeof userEvent.setup>, label: string) {
+      await user.click(await screen.findByRole("combobox", { name: "Sort boxes" }));
+      await user.click(await screen.findByRole("option", { name: label }));
+    }
+
+    it("starts sorted by caught order", async () => {
+      await setup([
+        { nickname: "Low", level: 5 },
+        { nickname: "High", level: 9 },
+      ]);
+
+      expect(await cardHeadings()).toEqual(["“Low”", "“High”"]);
+      expect(screen.getByRole("combobox", { name: "Sort boxes" })).toHaveTextContent(
+        "Sort: Caught",
+      );
+    });
+
+    it("reorders the cards when Level is chosen", async () => {
+      const user = userEvent.setup();
+      await setup([
+        { nickname: "Low", level: 5 },
+        { nickname: "High", level: 9 },
+        { nickname: "Mid", level: 7 },
+      ]);
+      await cardHeadings();
+
+      await chooseSort(user, "Level");
+
+      expect(await cardHeadings()).toEqual(["“High”", "“Mid”", "“Low”"]);
+      expect(screen.getByRole("combobox", { name: "Sort boxes" })).toHaveTextContent("Sort: Level");
+    });
+
+    it("sorts by type once the species have loaded", async () => {
+      const user = userEvent.setup();
+      await setup([
+        { nickname: "Leaf", speciesId: "chikorita" },
+        { nickname: "Fish", speciesId: "gyarados" },
+        { nickname: "Bird", speciesId: "pidgey" },
+      ]);
+      await cardHeadings();
+
+      await chooseSort(user, "Type");
+
+      await waitFor(async () =>
+        expect(await cardHeadings()).toEqual(["“Bird”", "“Fish”", "“Leaf”"]),
+      );
+    });
+
+    it("narrows the cards as you type", async () => {
+      const user = userEvent.setup();
+      await setup([{ nickname: "Sprig" }, { nickname: "Zubb" }, { nickname: "Spark" }]);
+      await cardHeadings();
+
+      await user.type(screen.getByRole("textbox", { name: "Search boxes" }), "sp");
+
+      expect(await cardHeadings()).toEqual(["“Sprig”", "“Spark”"]);
+    });
+
+    it("narrows the table in list view", async () => {
+      const user = userEvent.setup();
+      await setup([{ nickname: "Sprig" }, { nickname: "Zubb" }]);
+      await user.click(await screen.findByRole("button", { name: "List" }));
+
+      await user.type(screen.getByRole("textbox", { name: "Search boxes" }), "zu");
+
+      const table = await screen.findByRole("table");
+      expect(within(table).getAllByRole("row")).toHaveLength(2);
+      expect(within(table).getByText("“Zubb”")).toBeInTheDocument();
+      expect(within(table).queryByText("“Sprig”")).not.toBeInTheDocument();
+    });
+
+    it("says nothing matches, and still counts everyone stored", async () => {
+      const user = userEvent.setup();
+      await setup([{ nickname: "Sprig" }, { nickname: "Zubb" }]);
+      await cardHeadings();
+
+      await user.type(screen.getByRole("textbox", { name: "Search boxes" }), "qq");
+
+      expect(await screen.findByText("No boxed mons match “qq”")).toBeInTheDocument();
+      expect(screen.queryByRole("heading", { level: 2 })).not.toBeInTheDocument();
+      expect(screen.getByText("2 stored")).toBeInTheDocument();
+      expect(screen.queryByText("No one in your boxes yet")).not.toBeInTheDocument();
+    });
+
+    it("brings the cards back when the search is cleared", async () => {
+      const user = userEvent.setup();
+      await setup([{ nickname: "Sprig" }, { nickname: "Zubb" }]);
+      await cardHeadings();
+      await user.type(screen.getByRole("textbox", { name: "Search boxes" }), "qq");
+
+      await user.click(await screen.findByRole("button", { name: "Clear search" }));
+
+      expect(await cardHeadings()).toEqual(["“Sprig”", "“Zubb”"]);
+    });
+
+    it("has no search box for an empty box", async () => {
+      await setup([]);
+
+      await screen.findByText("No one in your boxes yet");
+      expect(screen.queryByRole("textbox", { name: "Search boxes" })).not.toBeInTheDocument();
     });
   });
 
