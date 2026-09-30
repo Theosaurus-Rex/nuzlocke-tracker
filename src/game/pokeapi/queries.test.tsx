@@ -21,6 +21,7 @@ import {
   useNextEvolutions,
   useSpecies,
   useSpeciesIndex,
+  useSpeciesMany,
 } from "./queries";
 
 const extendedSpeciesIndex: RawIndex = {
@@ -97,6 +98,34 @@ describe("hooks", () => {
     const { result } = renderHook(() => useSpecies("clefairy"), { wrapper: wrapper(testClient()) });
     await waitFor(() => expect(result.current.isSuccess).toBe(true));
     expect(result.current.data?.pastTypes).toEqual([{ throughGeneration: 5, types: ["normal"] }]);
+  });
+
+  it("loads many species into a map, fetching each name once and skipping failures", async () => {
+    const fetchMock = stubPokeApi(defaultPokeApiRoutes);
+    const { result } = renderHook(
+      () => useSpeciesMany(["clefairy", "pidgey", "clefairy", "missingno"]),
+      { wrapper: wrapper(testClient()) },
+    );
+    await waitFor(() => expect(result.current.size).toBe(2));
+    expect([...result.current.keys()].sort()).toEqual(["clefairy", "pidgey"]);
+    const clefairyCalls = fetchMock.mock.calls.filter(
+      ([url]) => typeof url === "string" && url.endsWith("/pokemon/clefairy"),
+    );
+    expect(clefairyCalls).toHaveLength(1);
+  });
+
+  it("shares its cache with useSpecies", async () => {
+    const fetchMock = stubPokeApi(defaultPokeApiRoutes);
+    const client = testClient();
+    configurePokeApiQueries(client);
+    const single = renderHook(() => useSpecies("clefairy"), { wrapper: wrapper(client) });
+    await waitFor(() => expect(single.result.current.isSuccess).toBe(true));
+    fetchMock.mockClear();
+
+    const many = renderHook(() => useSpeciesMany(["clefairy"]), { wrapper: wrapper(client) });
+
+    await waitFor(() => expect(many.result.current.has("clefairy")).toBe(true));
+    expect(fetchMock).not.toHaveBeenCalled();
   });
 
   it("fetches nothing for an empty name", () => {

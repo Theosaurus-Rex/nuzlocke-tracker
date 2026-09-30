@@ -31,7 +31,7 @@ export function moveStatsIn(move: Move, generation: number): ResolvedMoveStats {
 
 type DisplayName = (id: string) => string;
 
-function toNameForm(text: string): string {
+export function toNameForm(text: string): string {
   return text
     .trim()
     .toLowerCase()
