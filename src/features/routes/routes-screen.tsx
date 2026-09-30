@@ -1,13 +1,12 @@
-import { XIcon } from "lucide-react";
 import { useState, type FormEvent, type ReactNode } from "react";
 import { Navigate, useParams } from "react-router";
 
 import { CHIP_SHAPE } from "@/components/chip";
+import { SearchInput } from "@/components/search-input";
 import { ScreenHeader } from "@/components/screen-header";
 import { statusChipFill, type StatusChipStatus } from "@/components/status-chip";
 import { Typography } from "@/components/typography";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
 import { DEFAULT_RULES } from "@/domain/rules";
 import { buildRouteRows, type RouteRow } from "@/domain/route-rows";
 import type { Mon, Route } from "@/domain/types";
@@ -89,49 +88,6 @@ function RouteCounters({
       <Typography as="span" variant="number" tone="muted" className="text-sm">
         {counters.covered} / {counters.total}
       </Typography>
-    </div>
-  );
-}
-
-function RouteSearchInput({
-  value,
-  onChange,
-  className,
-}: {
-  value: string;
-  onChange: (value: string) => void;
-  className?: string;
-}): ReactNode {
-  return (
-    <div className={cn("relative", className)}>
-      <label htmlFor="route-search" className="sr-only">
-        Search routes
-      </label>
-      <Input
-        id="route-search"
-        type="text"
-        value={value}
-        onChange={(event) => onChange(event.target.value)}
-        onKeyDown={(event) => {
-          if (event.key === "Escape") {
-            onChange("");
-          }
-        }}
-        placeholder="Search routes"
-        className="pr-8"
-      />
-      {value !== "" && (
-        <Button
-          type="button"
-          variant="ghost"
-          size="icon-xs"
-          aria-label="Clear search"
-          className="absolute top-1/2 right-1 -translate-y-1/2"
-          onClick={() => onChange("")}
-        >
-          <XIcon />
-        </Button>
-      )}
     </div>
   );
 }
@@ -233,7 +189,13 @@ export function RoutesScreen(): ReactNode {
       {!loading && routes.length > 0 && (
         <div className="border-b-[1.5px] border-border bg-background p-4">
           <div className="flex justify-end">
-            <RouteSearchInput value={search} onChange={setSearch} className="w-full sm:w-64" />
+            <SearchInput
+              id="route-search"
+              label="Search routes"
+              value={search}
+              onChange={setSearch}
+              className="w-full sm:w-64"
+            />
           </div>
         </div>
       )}

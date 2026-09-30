@@ -1,4 +1,5 @@
 import { createColumnHelper, tableFeatures, useTable } from "@tanstack/react-table";
+import { useMemo } from "react";
 
 import { SpeciesSprite } from "@/components/species-sprite";
 import { Typography } from "@/components/typography";
@@ -21,62 +22,66 @@ export interface BoxTableProps {
 }
 
 export function BoxTable({ mons, routeNames, onEdit }: BoxTableProps) {
-  const columns = columnHelper.columns([
-    columnHelper.display({
-      id: "sprite",
-      header: () => <span className="sr-only">Sprite</span>,
-      cell: ({ row }) => (
-        <SpeciesSprite
-          speciesId={row.original.speciesId}
-          shiny={row.original.shiny}
-          size={40}
-          variant="icon"
-        />
-      ),
-    }),
-    columnHelper.accessor((mon) => monTitle(mon), {
-      id: "name",
-      header: "Name",
-      cell: ({ row, getValue }) => (
-        <button
-          type="button"
-          aria-label={`Edit ${getValue()}`}
-          onClick={(event) => {
-            event.stopPropagation();
-            onEdit(row.original.id);
-          }}
-          className="cursor-pointer bg-transparent p-0 text-left focus-visible:outline-none focus-visible:ring-3 focus-visible:ring-ring/50"
-        >
-          <Typography as="span" variant="strong">
-            {getValue()}
-          </Typography>
-        </button>
-      ),
-    }),
-    columnHelper.accessor((mon) => speciesDisplayName(mon.speciesId), {
-      id: "species",
-      header: "Species",
-    }),
-    columnHelper.accessor("level", {
-      header: "Lvl",
-      cell: ({ row }) => (
-        <Typography as="span" variant="number" className="text-base">
-          {row.original.level}
-        </Typography>
-      ),
-    }),
-    columnHelper.accessor((mon) => genderSymbol(mon.gender) ?? "—", {
-      id: "gender",
-      header: "Gender",
-    }),
-    columnHelper.accessor((mon) => orDash(mon.nature), { id: "nature", header: "Nature" }),
-    columnHelper.accessor((mon) => orDash(mon.ability), { id: "ability", header: "Ability" }),
-    columnHelper.accessor((mon) => mon.heldItem ?? "no item", { id: "item", header: "Item" }),
-    columnHelper.accessor(
-      (mon) => (mon.caughtRouteId === null ? "—" : (routeNames.get(mon.caughtRouteId) ?? "—")),
-      { id: "caughtOn", header: "Caught on" },
-    ),
-  ]);
+  const columns = useMemo(
+    () =>
+      columnHelper.columns([
+        columnHelper.display({
+          id: "sprite",
+          header: () => <span className="sr-only">Sprite</span>,
+          cell: ({ row }) => (
+            <SpeciesSprite
+              speciesId={row.original.speciesId}
+              shiny={row.original.shiny}
+              size={40}
+              variant="icon"
+            />
+          ),
+        }),
+        columnHelper.accessor((mon) => monTitle(mon), {
+          id: "name",
+          header: "Name",
+          cell: ({ row, getValue }) => (
+            <button
+              type="button"
+              aria-label={`Edit ${getValue()}`}
+              onClick={(event) => {
+                event.stopPropagation();
+                onEdit(row.original.id);
+              }}
+              className="cursor-pointer bg-transparent p-0 text-left focus-visible:outline-none focus-visible:ring-3 focus-visible:ring-ring/50"
+            >
+              <Typography as="span" variant="strong">
+                {getValue()}
+              </Typography>
+            </button>
+          ),
+        }),
+        columnHelper.accessor((mon) => speciesDisplayName(mon.speciesId), {
+          id: "species",
+          header: "Species",
+        }),
+        columnHelper.accessor("level", {
+          header: "Lvl",
+          cell: ({ row }) => (
+            <Typography as="span" variant="number" className="text-base">
+              {row.original.level}
+            </Typography>
+          ),
+        }),
+        columnHelper.accessor((mon) => genderSymbol(mon.gender) ?? "—", {
+          id: "gender",
+          header: "Gender",
+        }),
+        columnHelper.accessor((mon) => orDash(mon.nature), { id: "nature", header: "Nature" }),
+        columnHelper.accessor((mon) => orDash(mon.ability), { id: "ability", header: "Ability" }),
+        columnHelper.accessor((mon) => mon.heldItem ?? "no item", { id: "item", header: "Item" }),
+        columnHelper.accessor(
+          (mon) => (mon.caughtRouteId === null ? "—" : (routeNames.get(mon.caughtRouteId) ?? "—")),
+          { id: "caughtOn", header: "Caught on" },
+        ),
+      ]),
+    [routeNames, onEdit],
+  );
 
   const table = useTable({
     features: FEATURES,
