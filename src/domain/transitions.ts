@@ -23,6 +23,12 @@ function assertMonAlive(mon: Mon): void {
   }
 }
 
+function assertMonDead(mon: Mon): void {
+  if (mon.status !== "dead") {
+    throw new Error(`Cannot revive mon ${mon.id}: it is not dead.`);
+  }
+}
+
 /**
  * Lowest unoccupied party slot, or null when full. A boxed or dead mon can carry a stale
  * `partySlot`, so occupancy checks status too. Scans for the lowest free index rather than
@@ -136,6 +142,30 @@ export function moveMonToBox(mon: Mon): Mon {
 
 export function moveMonToParty({ mon, party }: { mon: Mon; party: readonly Mon[] }): Mon {
   assertMonAlive(mon);
+
+  const slot = nextFreeSlot(party, mon.id);
+
+  if (slot === null) {
+    throw new Error(`Party cannot exceed ${MAX_PARTY_SIZE} mons (currently at ${MAX_PARTY_SIZE}).`);
+  }
+
+  return { ...mon, status: "party", partySlot: slot };
+}
+
+export function reviveMon({
+  mon,
+  party,
+  placement,
+}: {
+  mon: Mon;
+  party: readonly Mon[];
+  placement: "party" | "box";
+}): Mon {
+  assertMonDead(mon);
+
+  if (placement === "box") {
+    return { ...mon, status: "box", partySlot: null };
+  }
 
   const slot = nextFreeSlot(party, mon.id);
 

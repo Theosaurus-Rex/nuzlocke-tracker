@@ -21,16 +21,20 @@ import {
   type CauseType,
   type DeathField,
 } from "@/domain/death-validation";
+import { countByMonStatus } from "@/domain/derive";
+import { MAX_PARTY_SIZE } from "@/domain/transitions";
 import type { Death, Mon, Route, StatusCause } from "@/domain/types";
 import { EncounterDialogHeader } from "@/features/encounters/encounter-dialog-header";
+import { monTitle } from "@/features/encounters/mon-title";
 import { MovePicker } from "@/features/encounters/move-picker";
+import { PlacementField, type Placement } from "@/features/encounters/placement-field";
 import { SpeciesPicker } from "@/features/encounters/species-picker";
 import { speciesDisplayName } from "@/game/pokeapi/resolve";
 import { GAMES } from "@/game/registry";
 import { genderSymbol } from "@/lib/gender";
 import { joinPresent } from "@/lib/join-present";
 import { cn } from "@/lib/utils";
-import { useEditDeath, useLogDeath } from "@/storage/mutations";
+import { useEditDeath, useLogDeath, useUndoDeath } from "@/storage/mutations";
 import { useMons, useRoutes, useRun } from "@/storage/queries";
 
 import { titleCase } from "./cause-text";
@@ -114,6 +118,7 @@ export function LogDeathDialog({
             death={death}
             routes={routesQuery.data ?? []}
             generation={generation}
+            partyFull={countByMonStatus(allMons).party >= MAX_PARTY_SIZE}
             onDone={() => onOpenChange(false)}
           />
         )}
@@ -127,10 +132,18 @@ interface LogDeathFormProps {
   death: Death | undefined;
   routes: readonly Route[];
   generation: number;
+  partyFull: boolean;
   onDone: () => void;
 }
 
-function LogDeathForm({ mons, death, routes, generation, onDone }: LogDeathFormProps): ReactNode {
+function LogDeathForm({
+  mons,
+  death,
+  routes,
+  generation,
+  partyFull,
+  onDone,
+}: LogDeathFormProps): ReactNode {
   const logDeath = useLogDeath();
   const editDeath = useEditDeath();
   const save = death ? editDeath : logDeath;
@@ -147,6 +160,7 @@ function LogDeathForm({ mons, death, routes, generation, onDone }: LogDeathFormP
   const [routeChoice, setRouteChoice] = useState<string | null>(initial.routeChoice);
   const [notes, setNotes] = useState(initial.notes);
   const [submitted, setSubmitted] = useState(false);
+  const [confirmingUndo, setConfirmingUndo] = useState(false);
 
   const mon = mons.find((m) => m.id === monChoice) ?? mons[0]!;
   const routeValue = routeChoice ?? mon.caughtRouteId ?? UNKNOWN_ROUTE;
@@ -190,6 +204,18 @@ function LogDeathForm({ mons, death, routes, generation, onDone }: LogDeathFormP
           diedAt: new Date().toISOString(),
         });
     saved.then(onDone, () => undefined);
+  }
+
+  if (confirmingUndo && death) {
+    return (
+      <UndoDeathConfirm
+        death={death}
+        mon={mon}
+        partyFull={partyFull}
+        onBack={() => setConfirmingUndo(false)}
+        onDone={onDone}
+      />
+    );
   }
 
   return (
@@ -444,6 +470,16 @@ function LogDeathForm({ mons, death, routes, generation, onDone }: LogDeathFormP
       </div>
 
       <div className="flex shrink-0 justify-end gap-2 border-t-[1.5px] border-border p-4">
+        {death && (
+          <Button
+            type="button"
+            variant="ghost"
+            className="mr-auto"
+            onClick={() => setConfirmingUndo(true)}
+          >
+            This wasn't a death
+          </Button>
+        )}
         <Button type="button" variant="outline" onClick={onDone}>
           Cancel
         </Button>
@@ -453,6 +489,59 @@ function LogDeathForm({ mons, death, routes, generation, onDone }: LogDeathFormP
           className="bg-destructive text-primary-foreground hover:bg-destructive/90"
         >
           {save.isPending ? "Saving…" : death ? "Save changes" : "Send to graveyard"}
+        </Button>
+      </div>
+    </form>
+  );
+}
+
+interface UndoDeathConfirmProps {
+  death: Death;
+  mon: Mon;
+  partyFull: boolean;
+  onBack: () => void;
+  onDone: () => void;
+}
+
+function UndoDeathConfirm({
+  death,
+  mon,
+  partyFull,
+  onBack,
+  onDone,
+}: UndoDeathConfirmProps): ReactNode {
+  const undoDeath = useUndoDeath();
+  const [placement, setPlacement] = useState<Placement>("box");
+
+  function handleSubmit(event: FormEvent<HTMLFormElement>): void {
+    event.preventDefault();
+    undoDeath.mutateAsync({ deathId: death.id, placement }).then(onDone, () => undefined);
+  }
+
+  return (
+    <form className="flex min-h-0 flex-1 flex-col" onSubmit={handleSubmit}>
+      <div className="flex-1 space-y-4 overflow-y-auto p-4">
+        <Typography as="p" variant="body">
+          Bring {monTitle(mon)} back? This deletes the death record.
+        </Typography>
+        <PlacementField
+          id="undo-death-placement"
+          value={placement}
+          onChange={setPlacement}
+          partyFull={partyFull}
+        />
+        {undoDeath.isError && (
+          <Typography as="p" role="alert" variant="body" tone="alert">
+            Could not bring the mon back: {undoDeath.error.message}. Nothing was saved.
+          </Typography>
+        )}
+      </div>
+      <div className="flex shrink-0 justify-end gap-2 border-t-[1.5px] border-border p-4">
+        <Button type="button" variant="outline" onClick={onBack}>
+          Back
+        </Button>
+        <Button type="submit" disabled={undoDeath.isPending}>
+          {undoDeath.isPending ? "Bringing back…" : "Bring back"}
         </Button>
       </div>
     </form>

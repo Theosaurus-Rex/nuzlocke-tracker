@@ -15,6 +15,7 @@ import {
   moveMonToBox,
   moveMonToParty,
   planEncounterReset,
+  reviveMon,
   skipEncounter,
   type CatchDetails,
   type MonAmendments,
@@ -491,6 +492,45 @@ export function useEditDeath(): UseMutationResult<Death, Error, EditDeathInput> 
     mutationFn: (input: EditDeathInput) => persistEditDeath(adapter, input),
     onSuccess: async (death) => {
       await invalidateRun(queryClient, death.runId);
+    },
+  });
+}
+
+export interface UndoDeathInput {
+  deathId: string;
+  placement: "party" | "box";
+}
+
+export async function persistUndoDeath(
+  adapter: StorageAdapter,
+  input: UndoDeathInput,
+): Promise<Mon> {
+  return adapter.transaction(async (tx) => {
+    const death = await tx.deaths.get(input.deathId);
+    if (death === undefined) {
+      throw new Error(`Death ${input.deathId} no longer exists.`);
+    }
+    const mon = await tx.mons.get(death.monId);
+    if (mon === undefined) {
+      throw new Error(`Mon ${death.monId} no longer exists.`);
+    }
+
+    const runMons = await tx.mons.where("runId", death.runId);
+    const party = runMons.filter((m) => m.status === "party");
+    const revived = await tx.mons.put(reviveMon({ mon, party, placement: input.placement }));
+    await tx.deaths.delete(death.id);
+    return revived;
+  });
+}
+
+export function useUndoDeath(): UseMutationResult<Mon, Error, UndoDeathInput> {
+  const adapter = useStorage();
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: (input: UndoDeathInput) => persistUndoDeath(adapter, input),
+    onSuccess: async (mon) => {
+      await invalidateRun(queryClient, mon.runId);
     },
   });
 }

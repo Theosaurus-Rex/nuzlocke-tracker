@@ -344,3 +344,102 @@ describe("editing a death", () => {
     expect(within(dialog).getByLabelText("Level")).toHaveValue("");
   });
 });
+
+describe("undoing a death", () => {
+  async function openEdit(user: ReturnType<typeof userEvent.setup>, partyCount = 1) {
+    const adapter = createMemoryAdapter();
+    const living = Array.from({ length: partyCount }, (_, slot) => ({
+      nickname: `Mate${String(slot)}`,
+      partySlot: slot,
+    }));
+    const run = await seed(adapter, [
+      ...living,
+      { nickname: "Ghost", speciesId: "clefairy", status: "dead", partySlot: null },
+    ]);
+    const ghost = (await adapter.mons.getAll()).find((m) => m.nickname === "Ghost")!;
+    await adapter.deaths.put({
+      runId: run.id,
+      monId: ghost.id,
+      level: 19,
+      routeId: null,
+      cause: { type: "status", status: "burn" },
+      diedAt: "2026-09-29T10:00:00.000Z",
+      notes: "too brave",
+    });
+    renderScreen(adapter, run.id);
+    await user.click(await screen.findByRole("button", { name: "Edit death of “Ghost”" }));
+    return { adapter, dialog: await screen.findByRole("dialog") };
+  }
+
+  it("offers the button when editing but not when logging", async () => {
+    const user = userEvent.setup();
+    const { dialog } = await openEdit(user);
+    expect(within(dialog).getByRole("button", { name: "This wasn't a death" })).toBeInTheDocument();
+
+    await user.click(within(dialog).getByRole("button", { name: "Cancel" }));
+    await waitFor(() => {
+      expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
+    });
+    const logDialog = await openDialog(user);
+    expect(
+      within(logDialog).queryByRole("button", { name: "This wasn't a death" }),
+    ).not.toBeInTheDocument();
+  });
+
+  it("asks for confirmation with Box chosen", async () => {
+    const user = userEvent.setup();
+    const { dialog } = await openEdit(user);
+
+    await user.click(within(dialog).getByRole("button", { name: "This wasn't a death" }));
+
+    expect(
+      within(dialog).getByText("Bring “Ghost” back? This deletes the death record."),
+    ).toBeInTheDocument();
+    expect(within(dialog).getByRole("combobox", { name: "Placement" })).toHaveTextContent("Box");
+  });
+
+  it("keeps edited fields when going back", async () => {
+    const user = userEvent.setup();
+    const { dialog } = await openEdit(user);
+    await user.type(within(dialog).getByLabelText(/Notes/), "!");
+
+    await user.click(within(dialog).getByRole("button", { name: "This wasn't a death" }));
+    await user.click(within(dialog).getByRole("button", { name: "Back" }));
+
+    expect(within(dialog).getByLabelText(/Notes/)).toHaveValue("too brave!");
+  });
+
+  it("brings the mon back to the box, closes and removes the card", async () => {
+    const user = userEvent.setup();
+    const { adapter, dialog } = await openEdit(user);
+
+    await user.click(within(dialog).getByRole("button", { name: "This wasn't a death" }));
+    await user.click(within(dialog).getByRole("button", { name: "Bring back" }));
+
+    await waitFor(() => {
+      expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
+    });
+    await waitFor(() => {
+      expect(
+        screen.queryByRole("button", { name: "Edit death of “Ghost”" }),
+      ).not.toBeInTheDocument();
+    });
+    expect(await adapter.deaths.getAll()).toHaveLength(0);
+    const ghost = (await adapter.mons.getAll()).find((m) => m.nickname === "Ghost");
+    expect(ghost?.status).toBe("box");
+  });
+
+  it("greys out Party when the party is full", async () => {
+    const user = userEvent.setup();
+    const { dialog } = await openEdit(user, 6);
+
+    await user.click(within(dialog).getByRole("button", { name: "This wasn't a death" }));
+    await user.click(within(dialog).getByRole("combobox", { name: "Placement" }));
+
+    expect(await screen.findByRole("option", { name: "Party" })).toHaveAttribute(
+      "aria-disabled",
+      "true",
+    );
+    expect(within(dialog).getByText("Party is full")).toBeInTheDocument();
+  });
+});
