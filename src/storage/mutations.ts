@@ -15,6 +15,7 @@ import {
   moveMonToBox,
   moveMonToParty,
   planEncounterReset,
+  reorderParty,
   reviveMon,
   skipEncounter,
   type CatchDetails,
@@ -531,6 +532,36 @@ export function useUndoDeath(): UseMutationResult<Mon, Error, UndoDeathInput> {
     mutationFn: (input: UndoDeathInput) => persistUndoDeath(adapter, input),
     onSuccess: async (mon) => {
       await invalidateRun(queryClient, mon.runId);
+    },
+  });
+}
+
+export interface ReorderPartyInput {
+  runId: string;
+  orderedIds: readonly string[];
+}
+
+export async function persistReorderParty(
+  adapter: StorageAdapter,
+  input: ReorderPartyInput,
+): Promise<void> {
+  await adapter.transaction(async (tx) => {
+    const runMons = await tx.mons.where("runId", input.runId);
+    const party = runMons.filter((m) => m.status === "party");
+    for (const mon of reorderParty(party, input.orderedIds)) {
+      await tx.mons.put(mon);
+    }
+  });
+}
+
+export function useReorderParty(): UseMutationResult<void, Error, ReorderPartyInput> {
+  const adapter = useStorage();
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: (input: ReorderPartyInput) => persistReorderParty(adapter, input),
+    onSuccess: async (_, input) => {
+      await invalidateRun(queryClient, input.runId);
     },
   });
 }

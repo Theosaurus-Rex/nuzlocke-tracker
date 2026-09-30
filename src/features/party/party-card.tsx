@@ -1,4 +1,7 @@
-import type { ReactNode } from "react";
+import { useSortable } from "@dnd-kit/sortable";
+import { CSS } from "@dnd-kit/utilities";
+import { GripVerticalIcon } from "lucide-react";
+import type { KeyboardEventHandler, ReactNode } from "react";
 
 import { SpeciesSprite } from "@/components/species-sprite";
 import { SpeciesTypeBadge } from "@/components/species-type-badge";
@@ -8,6 +11,7 @@ import type { Mon } from "@/domain/types";
 import { speciesDisplayName } from "@/game/pokeapi/resolve";
 import { genderSymbol } from "@/lib/gender";
 import { joinPresent } from "@/lib/join-present";
+import { cn } from "@/lib/utils";
 
 import { EditMonButton } from "../encounters/edit-mon-button";
 import { monTitle } from "../encounters/mon-title";
@@ -24,11 +28,29 @@ export function PartyCard({ mon, routeName, generation, onEdit }: PartyCardProps
   const species = speciesDisplayName(mon.speciesId);
   const title = monTitle(mon);
 
+  const {
+    attributes,
+    listeners,
+    setNodeRef,
+    setActivatorNodeRef,
+    transform,
+    transition,
+    isDragging,
+  } = useSortable({ id: mon.id });
+  const { onKeyDown, ...pointerListeners } = listeners ?? {};
+  const onHandleKeyDown = onKeyDown as KeyboardEventHandler<HTMLButtonElement> | undefined;
+
   const itemText = mon.heldItem ?? "no item";
   const footerRest = joinPresent([mon.ability, routeName]);
 
   return (
-    <Surface as="li" className="relative flex min-w-0 flex-col p-5">
+    <Surface
+      as="li"
+      ref={setNodeRef}
+      style={{ transform: CSS.Transform.toString(transform), transition }}
+      className={cn("relative flex min-w-0 flex-col p-5", isDragging && "z-20 scale-[1.02]")}
+      {...pointerListeners}
+    >
       <SpeciesSprite
         speciesId={mon.speciesId}
         shiny={mon.shiny}
@@ -63,6 +85,16 @@ export function PartyCard({ mon, routeName, generation, onEdit }: PartyCardProps
         )}
       </Typography>
       <EditMonButton mon={mon} onEdit={onEdit} />
+      <button
+        type="button"
+        ref={setActivatorNodeRef}
+        aria-label={`Reorder ${title}`}
+        onKeyDown={onHandleKeyDown}
+        {...attributes}
+        className="absolute top-1 left-1 z-20 cursor-grab p-0.5 text-muted-foreground focus-visible:outline-none focus-visible:ring-3 focus-visible:ring-ring/50"
+      >
+        <GripVerticalIcon aria-hidden="true" className="size-4" />
+      </button>
     </Surface>
   );
 }

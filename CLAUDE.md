@@ -108,7 +108,7 @@ between the table being written and the code being built.
 | Tailwind | 4, via `@tailwindcss/vite` | CSS-first. There is no `tailwind.config.js` and should not be |
 | shadcn/ui | CLI 4, `base-nova`, neutral | Now ships **Base UI** (`@base-ui/react`), *not* Radix |
 | `cn()` | the `cn` package | Replaces hand-rolled `clsx` + `tailwind-merge`; `src/lib/utils.ts` just re-exports it |
-| dnd-kit | not installed | Arrives at M3. Check `@dnd-kit/sortable` 10.x peers `core` 6.x before pinning — the two version independently, and the "v6 line" rule means `core` |
+| dnd-kit | `core` 6.3.x · `sortable` 10.0.x · `utilities` 3.2.x | `sortable` and `core` version independently, and the "v6 line" rule means `core`. `sortable` 10 peers `core ^6.3.0` |
 | TanStack Table | **9.x** | The v8 API every tutorial shows is gone. There is no `useReactTable` and no `getCoreRowModel`: v9 is `useTable` + `tableFeatures({})` + `createColumnHelper`. `@tanstack/react-table/legacy` still exports the v8 shape, deprecated. Do not use the shim |
 
 The shadcn CLI reads path aliases from `tsconfig.json` only, but the Vite template splits

@@ -10,6 +10,7 @@ import {
   moveMonToBox,
   moveMonToParty,
   planEncounterReset,
+  reorderParty,
   reviveMon,
   skipEncounter,
   type CatchDetails,
@@ -786,5 +787,53 @@ describe("reviveMon", () => {
   test("throws for a living mon", () => {
     const mon = makeMon({ id: "alive", status: "box", partySlot: null });
     expect(() => reviveMon({ mon, party: [], placement: "box" })).toThrow(/not dead/);
+  });
+});
+
+describe("reorderParty", () => {
+  const ids = (mons: Mon[]) => mons.map((m) => [m.id, m.partySlot]);
+
+  test("compacts a gapped party into slots 0, 1, 2 in the new order", () => {
+    const result = reorderParty(partyInSlots([0, 2, 5]), [
+      "party-mon-2",
+      "party-mon-5",
+      "party-mon-0",
+    ]);
+    expect(ids(result)).toEqual([
+      ["party-mon-2", 0],
+      ["party-mon-5", 1],
+      ["party-mon-0", 2],
+    ]);
+  });
+
+  test("returns only the mons whose slot changed", () => {
+    const result = reorderParty(partyInSlots([0, 1, 2]), [
+      "party-mon-0",
+      "party-mon-2",
+      "party-mon-1",
+    ]);
+    expect(ids(result).sort()).toEqual([
+      ["party-mon-1", 2],
+      ["party-mon-2", 1],
+    ]);
+  });
+
+  test("refuses a list that misses a party mon", () => {
+    expect(() => reorderParty(partyInSlots([0, 1]), ["party-mon-0"])).toThrow(/exactly once/);
+  });
+
+  test("refuses a list with an id that is not in the party", () => {
+    expect(() =>
+      reorderParty(partyInSlots([0, 1]), ["party-mon-0", "party-mon-1", "stranger"]),
+    ).toThrow(/exactly once/);
+    expect(() => reorderParty(partyInSlots([0, 1]), ["party-mon-0", "stranger"])).toThrow(
+      /exactly once/,
+    );
+  });
+
+  test("refuses a list with a duplicate id", () => {
+    expect(() => reorderParty(partyInSlots([0, 1]), ["party-mon-0", "party-mon-0"])).toThrow(
+      /exactly once/,
+    );
   });
 });
