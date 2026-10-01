@@ -1,5 +1,5 @@
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { fireEvent, render, screen, waitFor } from "@testing-library/react";
+import { fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { MemoryRouter, Route, Routes } from "react-router";
@@ -171,14 +171,165 @@ describe("PartyScreen", () => {
     expect(item.closest("p")?.textContent).toBe("no item · Route 29");
   });
 
-  it("says so when the party is empty", async () => {
+  it("shows six empty tiles for an empty party and keeps the count", async () => {
     const adapter = createMemoryAdapter();
     const run = await seedRun(adapter);
 
     renderScreen(adapter, run.id);
 
-    expect(await screen.findByText("No one in your party yet")).toBeInTheDocument();
+    expect(await screen.findAllByRole("button", { name: /^empty · / })).toHaveLength(6);
     expect(screen.getByText("0 of 6")).toBeInTheDocument();
+    expect(screen.queryByText("No one in your party yet")).not.toBeInTheDocument();
+  });
+
+  it("shows one empty tile per free slot", async () => {
+    const adapter = createMemoryAdapter();
+    const run = await seedRun(adapter);
+    for (let slot = 0; slot < 4; slot += 1) {
+      await adapter.mons.put(makeMonDraft(run.id, { partySlot: slot }));
+    }
+
+    renderScreen(adapter, run.id);
+
+    expect(await screen.findAllByRole("button", { name: /^empty · / })).toHaveLength(2);
+  });
+
+  it("disables the tiles and says the box is empty when nothing is boxed", async () => {
+    const adapter = createMemoryAdapter();
+    const run = await seedRun(adapter);
+    await adapter.mons.put(makeMonDraft(run.id, { partySlot: 0 }));
+
+    renderScreen(adapter, run.id);
+
+    const tiles = await screen.findAllByRole("button", { name: "empty · box is empty" });
+    expect(tiles).toHaveLength(5);
+    for (const tile of tiles) {
+      expect(tile).toBeDisabled();
+    }
+    expect(screen.getAllByText("empty · box is empty")).toHaveLength(5);
+  });
+
+  it("gives empty tiles no reorder handle", async () => {
+    const adapter = createMemoryAdapter();
+    const run = await seedRun(adapter);
+
+    renderScreen(adapter, run.id);
+
+    await screen.findAllByRole("button", { name: /^empty · / });
+    expect(screen.queryByRole("button", { name: /Reorder/ })).not.toBeInTheDocument();
+  });
+
+  describe("adding from the box", () => {
+    async function seedMixed() {
+      const adapter = createMemoryAdapter();
+      const run = await seedRun(adapter);
+      await adapter.mons.put(makeMonDraft(run.id, { nickname: "Lead", partySlot: 0 }));
+      await adapter.mons.put(
+        makeMonDraft(run.id, {
+          nickname: "Rocky",
+          speciesId: "geodude",
+          status: "box",
+          partySlot: null,
+          boxOrder: 0,
+          level: 12,
+        }),
+      );
+      await adapter.mons.put(
+        makeMonDraft(run.id, {
+          nickname: "Zippy",
+          speciesId: "pidgey",
+          status: "box",
+          partySlot: null,
+          boxOrder: 1,
+        }),
+      );
+      await adapter.mons.put(
+        makeMonDraft(run.id, { nickname: "Gone", status: "dead", partySlot: null }),
+      );
+      return { adapter, run };
+    }
+
+    it("lists only boxed mons in the picker", async () => {
+      const user = userEvent.setup();
+      const { adapter, run } = await seedMixed();
+      renderScreen(adapter, run.id);
+
+      await user.click(
+        (await screen.findAllByRole("button", { name: "empty · add from box" }))[0]!,
+      );
+
+      const dialog = await screen.findByRole("dialog", { name: "Add to party" });
+      expect(
+        within(dialog).getByRole("button", { name: "Add “Rocky” to the party" }),
+      ).toBeVisible();
+      expect(within(dialog).getByText("L12")).toBeInTheDocument();
+      expect(
+        within(dialog).getByRole("button", { name: "Add “Zippy” to the party" }),
+      ).toBeVisible();
+      expect(within(dialog).getAllByRole("button", { name: /to the party/ })).toHaveLength(2);
+    });
+
+    it("narrows the list as you search and says when nothing matches", async () => {
+      const user = userEvent.setup();
+      const { adapter, run } = await seedMixed();
+      renderScreen(adapter, run.id);
+      await user.click(
+        (await screen.findAllByRole("button", { name: "empty · add from box" }))[0]!,
+      );
+      const dialog = await screen.findByRole("dialog", { name: "Add to party" });
+
+      await user.type(within(dialog).getByLabelText("Search boxes"), "zip");
+      expect(within(dialog).getAllByRole("button", { name: /to the party/ })).toHaveLength(1);
+      expect(
+        within(dialog).getByRole("button", { name: "Add “Zippy” to the party" }),
+      ).toBeVisible();
+
+      await user.clear(within(dialog).getByLabelText("Search boxes"));
+      await user.type(within(dialog).getByLabelText("Search boxes"), "qqq");
+      expect(within(dialog).getByText("No boxed mons match “qqq”")).toBeInTheDocument();
+    });
+
+    it("moves the picked mon into the party, closes the dialog and drops a tile", async () => {
+      const user = userEvent.setup();
+      const { adapter, run } = await seedMixed();
+      renderScreen(adapter, run.id);
+      await user.click(
+        (await screen.findAllByRole("button", { name: "empty · add from box" }))[0]!,
+      );
+
+      await user.click(await screen.findByRole("button", { name: "Add “Rocky” to the party" }));
+
+      await waitFor(() => {
+        expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
+      });
+      expect(await cardHeadings()).toEqual(["“Lead”", "“Rocky”"]);
+      expect(screen.getAllByRole("button", { name: "empty · add from box" })).toHaveLength(4);
+      expect(screen.getByText("2 of 6")).toBeInTheDocument();
+    });
+
+    it("says so and keeps the dialog open when saving fails", async () => {
+      const user = userEvent.setup();
+      const base = createMemoryAdapter();
+      const adapter: StorageAdapter = {
+        ...base,
+        transaction: () => Promise.reject(new Error("simulated failure")),
+      };
+      const run = await seedRun(adapter);
+      await adapter.mons.put(
+        makeMonDraft(run.id, { nickname: "Rocky", status: "box", partySlot: null, boxOrder: 0 }),
+      );
+      renderScreen(adapter, run.id);
+      await user.click(
+        (await screen.findAllByRole("button", { name: "empty · add from box" }))[0]!,
+      );
+
+      await user.click(await screen.findByRole("button", { name: "Add “Rocky” to the party" }));
+
+      expect(await screen.findByRole("alert")).toHaveTextContent(
+        "Could not add “Rocky” to the party. Nothing was changed.",
+      );
+      expect(screen.getByRole("dialog", { name: "Add to party" })).toBeInTheDocument();
+    });
   });
 
   it("opens the edit dialog for the tapped mon, and a saved level shows on its card", async () => {
