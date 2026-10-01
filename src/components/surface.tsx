@@ -21,5 +21,5 @@ export function Surface<E extends SurfaceElement = "div">({
   ...rest
 }: SurfaceProps<E>): ReactNode {
   const Element = (as ?? "div") as ElementType;
-  return <Element className={cn(className, TONE_CLASS[tone])} {...rest} />;
+  return <Element className={cn(TONE_CLASS[tone], className)} {...rest} />;
 }
