@@ -554,6 +554,37 @@ export async function persistReorderParty(
   });
 }
 
+export interface MoveMonToPartyInput {
+  monId: string;
+}
+
+export async function persistMoveMonToParty(
+  adapter: StorageAdapter,
+  input: MoveMonToPartyInput,
+): Promise<Mon> {
+  return adapter.transaction(async (tx) => {
+    const mon = await tx.mons.get(input.monId);
+    if (mon === undefined) {
+      throw new Error(`Mon ${input.monId} not found`);
+    }
+    const runMons = await tx.mons.where("runId", mon.runId);
+    const party = runMons.filter((m) => m.status === "party");
+    return tx.mons.put(moveMonToParty({ mon, party }));
+  });
+}
+
+export function useMoveMonToParty(): UseMutationResult<Mon, Error, MoveMonToPartyInput> {
+  const adapter = useStorage();
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: (input: MoveMonToPartyInput) => persistMoveMonToParty(adapter, input),
+    onSuccess: async (mon) => {
+      await invalidateRun(queryClient, mon.runId);
+    },
+  });
+}
+
 export function useReorderParty(): UseMutationResult<void, Error, ReorderPartyInput> {
   const adapter = useStorage();
   const queryClient = useQueryClient();

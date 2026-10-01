@@ -28,6 +28,8 @@ import { useMons, useRoutes, useRun } from "@/storage/queries";
 
 import { useEditMonDialog } from "../encounters/use-edit-mon-dialog";
 import { monTitle } from "../encounters/mon-title";
+import { boxedMons } from "../boxes/boxes-screen";
+import { AddToPartyDialog } from "./add-to-party-dialog";
 import { PartyCard } from "./party-card";
 
 function partySlotOrder(mon: Mon): number {
@@ -72,6 +74,21 @@ function orderedBy(party: Mon[], ids: readonly string[] | null): Mon[] {
   return ordered.length === party.length ? ordered : party;
 }
 
+function EmptySlotTile({ disabled, onAdd }: { disabled: boolean; onAdd: () => void }): ReactNode {
+  return (
+    <li>
+      <button
+        type="button"
+        disabled={disabled}
+        onClick={onAdd}
+        className="flex min-h-24 w-full cursor-pointer items-center justify-center border-[1.5px] border-dashed border-placeholder bg-transparent p-4 text-center text-muted-foreground hover:bg-muted focus-visible:outline-none focus-visible:ring-3 focus-visible:ring-ring/50 disabled:cursor-not-allowed disabled:opacity-60 disabled:hover:bg-transparent md:min-h-64"
+      >
+        {disabled ? "empty · box is empty" : "empty · add from box"}
+      </button>
+    </li>
+  );
+}
+
 export function PartyScreen(): ReactNode {
   const { runId } = useParams<{ runId: string }>();
   const runQuery = useRun(runId ?? "");
@@ -86,6 +103,7 @@ export function PartyScreen(): ReactNode {
   const reorder = useReorderParty();
   const [override, setOverride] = useState<string[] | null>(null);
   const [saveFailed, setSaveFailed] = useState(false);
+  const [picking, setPicking] = useState(false);
   const sensors = useSensors(
     // Not PointerSensor: touch fires pointer events too, so a swipe to scroll would start a drag.
     useSensor(MouseSensor, { activationConstraint: { distance: 8 } }),
@@ -99,6 +117,8 @@ export function PartyScreen(): ReactNode {
 
   const generation = GAMES[runQuery.data?.game ?? "heartgold"].generation;
   const party = orderedBy(partyMembers(monsQuery.data ?? []), override);
+  const boxed = boxedMons(monsQuery.data ?? []);
+  const freeSlots = Math.max(0, MAX_PARTY_SIZE - party.length);
   const routeNames = new Map((routesQuery.data ?? []).map((route) => [route.id, route.name]));
 
   const handleDragEnd = ({ active, over }: DragEndEvent): void => {
@@ -127,12 +147,7 @@ export function PartyScreen(): ReactNode {
           </Typography>
         )}
       </ScreenHeader>
-      {!monsQuery.isPending && party.length === 0 && (
-        <Typography variant="body" tone="muted" className="p-4">
-          No one in your party yet
-        </Typography>
-      )}
-      {party.length > 0 && (
+      {!monsQuery.isPending && (
         <DndContext
           sensors={sensors}
           collisionDetection={closestCenter}
@@ -152,6 +167,13 @@ export function PartyScreen(): ReactNode {
                   onEdit={() => openEditor(mon.id)}
                 />
               ))}
+              {Array.from({ length: freeSlots }, (_, index) => (
+                <EmptySlotTile
+                  key={`empty-${String(index)}`}
+                  disabled={boxed.length === 0}
+                  onAdd={() => setPicking(true)}
+                />
+              ))}
             </ul>
           </SortableContext>
         </DndContext>
@@ -168,6 +190,7 @@ export function PartyScreen(): ReactNode {
         </Typography>
       )}
       {dialog}
+      {picking && <AddToPartyDialog open onOpenChange={setPicking} boxed={boxed} />}
     </div>
   );
 }
