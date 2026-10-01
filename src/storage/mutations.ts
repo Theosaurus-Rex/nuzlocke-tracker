@@ -4,6 +4,7 @@
 
 import { useMutation, useQueryClient, type UseMutationResult } from "@tanstack/react-query";
 
+import { boxLayout } from "@/domain/box-slots";
 import { DEFAULT_RULES } from "@/domain/rules";
 import { canDeleteRoute, nextRouteOrder } from "@/domain/routes";
 import {
@@ -31,8 +32,6 @@ import { useStorage } from "./storage-context";
 
 export interface CatchEncounterInput {
   encounter: Encounter;
-  /** The current party, used to find the lowest free party slot (or overflow to the box). */
-  party: readonly Mon[];
   details: CatchDetails;
 }
 
@@ -41,25 +40,51 @@ export interface CatchEncounterResult {
   mon: Mon;
 }
 
+const partyOf = (mons: readonly Mon[]): Mon[] => mons.filter((mon) => mon.status === "party");
+
+/**
+ * Pins every boxed mon to its `boxLayout` slot and returns the run's mons with that applied.
+ * Run it first in any write that changes box membership, so a mon that only had a computed
+ * position does not jump when another mon leaves.
+ */
+async function settleBoxSlots(tx: StorageAdapter, runId: string): Promise<Mon[]> {
+  const runMons = await tx.mons.where("runId", runId);
+  const layout = boxLayout(runMons);
+  const settled: Mon[] = [];
+
+  for (const mon of runMons) {
+    const slot = layout.get(mon.id);
+    settled.push(
+      slot !== undefined && slot !== mon.boxOrder
+        ? await tx.mons.put({ ...mon, boxOrder: slot })
+        : mon,
+    );
+  }
+
+  return settled;
+}
+
 /**
  * Writes the updated encounter and new mon in one transaction, so a partial write never leaves
  * an encounter pointing at a mon that doesn't exist. monId is generated here, not inside
  * catchEncounter, which stays pure.
  */
-async function persistCatch(
+export async function persistCatch(
   adapter: StorageAdapter,
   input: CatchEncounterInput,
 ): Promise<CatchEncounterResult> {
   const monId = crypto.randomUUID();
 
-  const { encounter: updatedEncounter, mon: monDraft } = catchEncounter({
-    encounter: input.encounter,
-    party: input.party,
-    monId,
-    details: input.details,
-  });
-
   return adapter.transaction(async (tx) => {
+    const runMons = await settleBoxSlots(tx, input.encounter.runId);
+    const { encounter: updatedEncounter, mon: monDraft } = catchEncounter({
+      encounter: input.encounter,
+      party: partyOf(runMons),
+      box: runMons,
+      monId,
+      details: input.details,
+    });
+
     const [savedEncounter, savedMon] = await Promise.all([
       tx.encounters.put(updatedEncounter),
       tx.mons.put(monDraft),
@@ -89,8 +114,6 @@ export interface LogEncounterInput {
   runId: string;
   routeId: string;
   outcome: "caught" | "missed" | "skipped";
-  /** The current party, used to find the lowest free party slot (or overflow to the box). */
-  party: readonly Mon[];
   /** Required when `outcome` is `'caught'`. */
   details?: CatchDetails;
   /** What was seen, when `outcome` is `'missed'` or `'skipped'`. Optional: a player often does
@@ -121,6 +144,7 @@ async function persistLogEncounter(
   const monId = crypto.randomUUID();
 
   return adapter.transaction(async (tx) => {
+    const runMons = await settleBoxSlots(tx, input.runId);
     const openEncounter = await tx.encounters.put({
       runId: input.runId,
       routeId: input.routeId,
@@ -151,7 +175,8 @@ async function persistLogEncounter(
 
     const { encounter: caughtEncounter, mon: monDraft } = catchEncounter({
       encounter: openEncounter,
-      party: input.party,
+      party: partyOf(runMons),
+      box: runMons,
       monId,
       details,
     });
@@ -184,9 +209,17 @@ export interface AmendMonInput {
   placement?: "party" | "box";
 }
 
-async function persistAmendMon(adapter: StorageAdapter, input: AmendMonInput): Promise<Mon> {
+export async function persistAmendMon(adapter: StorageAdapter, input: AmendMonInput): Promise<Mon> {
   return adapter.transaction(async (tx) => {
-    const amended = amendMon({ mon: input.mon, amendments: input.amendments });
+    const runMons = await settleBoxSlots(tx, input.mon.runId);
+    const settled = runMons.find((mon) => mon.id === input.mon.id);
+    const amended = amendMon({
+      mon: {
+        ...input.mon,
+        boxOrder: settled === undefined ? input.mon.boxOrder : settled.boxOrder,
+      },
+      amendments: input.amendments,
+    });
     const evolved =
       input.evolvedTo === undefined
         ? amended
@@ -197,12 +230,10 @@ async function persistAmendMon(adapter: StorageAdapter, input: AmendMonInput): P
     }
 
     if (input.placement === "box") {
-      return tx.mons.put(moveMonToBox(evolved));
+      return tx.mons.put(moveMonToBox({ mon: evolved, box: runMons }));
     }
 
-    const runMons = await tx.mons.where("runId", input.mon.runId);
-    const party = runMons.filter((mon) => mon.status === "party");
-    return tx.mons.put(moveMonToParty({ mon: evolved, party }));
+    return tx.mons.put(moveMonToParty({ mon: evolved, party: partyOf(runMons) }));
   });
 }
 
@@ -380,11 +411,12 @@ export interface ResetEncounterInput {
 }
 
 /** Re-reads inside the transaction so a stale encounter throws instead of deleting twice. */
-async function persistResetEncounter(
+export async function persistResetEncounter(
   adapter: StorageAdapter,
   input: ResetEncounterInput,
 ): Promise<void> {
   await adapter.transaction(async (tx) => {
+    await settleBoxSlots(tx, input.encounter.runId);
     const encounter = await tx.encounters.get(input.encounter.id);
     if (encounter === undefined) {
       throw new Error(`Encounter ${input.encounter.id} no longer exists.`);
@@ -436,10 +468,12 @@ export async function persistLogDeath(
   const deathId = crypto.randomUUID();
 
   return adapter.transaction(async (tx) => {
-    const current = await tx.mons.get(input.monId);
-    if (current === undefined) {
+    const found = await tx.mons.get(input.monId);
+    if (found === undefined) {
       throw new Error(`Mon ${input.monId} no longer exists.`);
     }
+    const runMons = await settleBoxSlots(tx, found.runId);
+    const current = runMons.find((mon) => mon.id === found.id) ?? found;
 
     const { mon: deadMon, death: deathDraft } = killMon({
       mon: current,
@@ -511,14 +545,15 @@ export async function persistUndoDeath(
     if (death === undefined) {
       throw new Error(`Death ${input.deathId} no longer exists.`);
     }
-    const mon = await tx.mons.get(death.monId);
+    const runMons = await settleBoxSlots(tx, death.runId);
+    const mon = runMons.find((m) => m.id === death.monId);
     if (mon === undefined) {
       throw new Error(`Mon ${death.monId} no longer exists.`);
     }
 
-    const runMons = await tx.mons.where("runId", death.runId);
-    const party = runMons.filter((m) => m.status === "party");
-    const revived = await tx.mons.put(reviveMon({ mon, party, placement: input.placement }));
+    const revived = await tx.mons.put(
+      reviveMon({ mon, party: partyOf(runMons), box: runMons, placement: input.placement }),
+    );
     await tx.deaths.delete(death.id);
     return revived;
   });
@@ -563,13 +598,13 @@ export async function persistMoveMonToParty(
   input: MoveMonToPartyInput,
 ): Promise<Mon> {
   return adapter.transaction(async (tx) => {
-    const mon = await tx.mons.get(input.monId);
-    if (mon === undefined) {
+    const found = await tx.mons.get(input.monId);
+    if (found === undefined) {
       throw new Error(`Mon ${input.monId} not found`);
     }
-    const runMons = await tx.mons.where("runId", mon.runId);
-    const party = runMons.filter((m) => m.status === "party");
-    return tx.mons.put(moveMonToParty({ mon, party }));
+    const runMons = await settleBoxSlots(tx, found.runId);
+    const mon = runMons.find((m) => m.id === found.id) ?? found;
+    return tx.mons.put(moveMonToParty({ mon, party: partyOf(runMons) }));
   });
 }
 
