@@ -58,6 +58,14 @@ Desktop is 942×629 on the sidebar shell; mobile is 340×715.
 | `6g` | Mobile: graveyard |
 | `6h` | Mobile: log a death, full-screen |
 | `6i` | Mobile: gyms and Elite Four |
+| `7d` | Desktop: graveyard timeline, many deaths, one expanded |
+| `7e` | Mobile: graveyard timeline, many deaths, one expanded |
+| `7f` | Desktop: graveyard timeline, one death |
+| `7g` | Mobile: graveyard timeline, one death |
+| `7h` | Desktop: graveyard timeline, empty |
+| `7i` | Mobile: graveyard timeline, empty |
+
+`7d` and `7e` are drawn taller than the rest to show a whole scroll of the timeline.
 
 `3a`, `3b` and `3d` are kept only so the choice is legible. Do not build from them.
 
