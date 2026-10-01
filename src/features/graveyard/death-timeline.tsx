@@ -2,7 +2,7 @@ import type { ReactNode } from "react";
 
 import { CHIP_SHAPE } from "@/components/chip";
 import { Typography } from "@/components/typography";
-import type { Death, Fight, Mon } from "@/domain/types";
+import type { Death, Fight, Mon, Route } from "@/domain/types";
 
 import { DeathCard } from "./death-card";
 import type { Timeline } from "./timeline";
@@ -17,6 +17,7 @@ const MARKER = "absolute top-1/2 -left-8 size-3.5 -translate-y-1/2 md:-left-10";
 
 export interface DeathTimelineProps {
   timeline: Timeline;
+  routes: readonly Route[];
   monsById: ReadonlyMap<string, Mon>;
   fights: readonly Fight[];
   generation: number;
@@ -25,12 +26,15 @@ export interface DeathTimelineProps {
 
 export function DeathTimeline({
   timeline,
+  routes,
   monsById,
   fights,
   generation,
   onEdit,
 }: DeathTimelineProps): ReactNode {
-  function cards(deaths: readonly Death[], routeName: string | null): ReactNode {
+  const routeNames = new Map(routes.map((route) => [route.id, route.name]));
+
+  function cards(deaths: readonly Death[]): ReactNode {
     return deaths.map((death) => {
       const mon = monsById.get(death.monId);
       if (!mon) return null;
@@ -39,7 +43,9 @@ export function DeathTimeline({
           key={death.id}
           death={death}
           mon={mon}
-          routeName={routeName}
+          caughtRouteName={
+            mon.caughtRouteId === null ? null : (routeNames.get(mon.caughtRouteId) ?? null)
+          }
           fights={fights}
           generation={generation}
           onEdit={() => onEdit(death.id)}
@@ -68,7 +74,7 @@ export function DeathTimeline({
                 <span className={`${CHIP_SHAPE} bg-secondary`}>{deaths.length} LOST</span>
               )}
             </div>
-            <ul className={`grid gap-y-5 ${SOLID_NODES}`}>{cards(deaths, route.name)}</ul>
+            <ul className={`grid gap-y-5 ${SOLID_NODES}`}>{cards(deaths)}</ul>
           </li>
         ))}
       </ol>
@@ -77,7 +83,7 @@ export function DeathTimeline({
           <Typography as="h2" variant="title" className="mb-3">
             Route not recorded
           </Typography>
-          <ul className="grid gap-y-5">{cards(unrecorded, null)}</ul>
+          <ul className="grid gap-y-5">{cards(unrecorded)}</ul>
         </section>
       )}
     </div>

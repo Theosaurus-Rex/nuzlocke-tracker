@@ -60,6 +60,7 @@ export function GraveyardScreen(): ReactNode {
       {deaths.length > 0 && (
         <DeathTimeline
           timeline={groupDeathsByRoute(deaths, routesQuery.data ?? [])}
+          routes={routesQuery.data ?? []}
           monsById={monsById}
           fights={fightsQuery.data ?? []}
           generation={generation}

@@ -89,6 +89,11 @@ beforeEach(() => {
   stubPokeApi(defaultPokeApiRoutes);
 });
 
+async function openEditCard(user: ReturnType<typeof userEvent.setup>, title: string) {
+  await user.click(await screen.findByRole("button", { name: `Details for ${title}` }));
+  await user.click(await screen.findByRole("button", { name: `Edit death of ${title}` }));
+}
+
 describe("LogDeathDialog", () => {
   it("offers only living mons, party first", async () => {
     const user = userEvent.setup();
@@ -245,7 +250,7 @@ describe("editing a death", () => {
     const { adapter, run } = await seedWithDeaths();
     renderScreen(adapter, run.id);
 
-    await user.click(await screen.findByRole("button", { name: "Edit death of “Ghost”" }));
+    await openEditCard(user, "“Ghost”");
 
     const dialog = await screen.findByRole("dialog");
     expect(within(dialog).getByText("Edit death")).toBeInTheDocument();
@@ -263,7 +268,7 @@ describe("editing a death", () => {
     const { adapter, run } = await seedWithDeaths();
     renderScreen(adapter, run.id);
 
-    await user.click(await screen.findByRole("button", { name: "Edit death of “Fern”" }));
+    await openEditCard(user, "“Fern”");
 
     const dialog = await screen.findByRole("dialog");
     expect(within(dialog).getByRole("combobox", { name: /Lost to/ })).toHaveTextContent("Burn");
@@ -276,7 +281,7 @@ describe("editing a death", () => {
     const { adapter, run } = await seedWithDeaths();
     renderScreen(adapter, run.id);
 
-    await user.click(await screen.findByRole("button", { name: "Edit death of “Ghost”" }));
+    await openEditCard(user, "“Ghost”");
 
     const dialog = await screen.findByRole("dialog");
     expect(within(dialog).getByRole("group", { name: "Who died" })).toHaveTextContent(
@@ -289,7 +294,7 @@ describe("editing a death", () => {
     const user = userEvent.setup();
     const { adapter, run } = await seedWithDeaths();
     renderScreen(adapter, run.id);
-    await user.click(await screen.findByRole("button", { name: "Edit death of “Ghost”" }));
+    await openEditCard(user, "“Ghost”");
     const dialog = await screen.findByRole("dialog");
 
     await user.clear(within(dialog).getByLabelText(/Trainer/));
@@ -319,7 +324,7 @@ describe("editing a death", () => {
       },
     });
     renderScreen(adapter, run.id);
-    await user.click(await screen.findByRole("button", { name: "Edit death of “Ghost”" }));
+    await openEditCard(user, "“Ghost”");
     const dialog = await screen.findByRole("dialog");
 
     await user.type(within(dialog).getByLabelText(/Notes/), "!");
@@ -367,7 +372,7 @@ describe("undoing a death", () => {
       notes: "too brave",
     });
     renderScreen(adapter, run.id);
-    await user.click(await screen.findByRole("button", { name: "Edit death of “Ghost”" }));
+    await openEditCard(user, "“Ghost”");
     return { adapter, dialog: await screen.findByRole("dialog") };
   }
 
@@ -420,9 +425,7 @@ describe("undoing a death", () => {
       expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
     });
     await waitFor(() => {
-      expect(
-        screen.queryByRole("button", { name: "Edit death of “Ghost”" }),
-      ).not.toBeInTheDocument();
+      expect(screen.queryByRole("button", { name: "Details for “Ghost”" })).not.toBeInTheDocument();
     });
     expect(await adapter.deaths.getAll()).toHaveLength(0);
     const ghost = (await adapter.mons.getAll()).find((m) => m.nickname === "Ghost");
