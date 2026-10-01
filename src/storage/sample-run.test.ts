@@ -40,7 +40,7 @@ describe("loadSampleRun", () => {
     expect(run.name).toBe("Johto Hardcore");
     expect(mons.every((mon) => mon.runId === run.id)).toBe(true);
     expect(mons.filter((mon) => mon.status === "party")).toHaveLength(4);
-    expect(mons.filter((mon) => mon.status === "box")).toHaveLength(19);
+    expect(mons.filter((mon) => mon.status === "box")).toHaveLength(35);
     expect(mons.filter((mon) => mon.status === "dead")).toHaveLength(6);
     expect(await adapter.deaths.getAll()).toHaveLength(6);
   });
@@ -63,6 +63,7 @@ describe("loadSampleRun", () => {
     expect(boxed.slice(0, 9).map((mon) => mon.nickname)).toEqual(FRAME_5C_NICKNAMES);
     expect(boxed.map((mon) => mon.boxOrder)).toEqual(boxed.map((_, index) => index));
     expect(boxed.filter((mon) => mon.shiny).map((mon) => mon.nickname)).toEqual(["Tock"]);
+    expect(boxed.filter((mon) => (mon.boxOrder ?? 0) >= 30)).toHaveLength(5);
   });
 
   it("links each death to exactly one dead mon", async () => {
@@ -105,7 +106,7 @@ describe("loadSampleRun", () => {
     expect(await adapter.runs.getAll()).toHaveLength(2);
     expect(await adapter.runs.get(first.id)).toEqual(runBefore);
     expect(await adapter.mons.where("runId", first.id)).toEqual(monsBefore);
-    expect(await adapter.mons.where("runId", second.id)).toHaveLength(29);
+    expect(await adapter.mons.where("runId", second.id)).toHaveLength(45);
   });
 
   it("leaves nothing behind when a write fails partway", async () => {
@@ -150,7 +151,7 @@ describe("loadSampleRun on Dexie", () => {
     const party = mons.filter((mon) => mon.status === "party");
     expect(party).toHaveLength(4);
     expect(party.map((mon) => mon.partySlot).sort()).toEqual([0, 2, 3, 4]);
-    expect(mons.filter((mon) => mon.status === "box")).toHaveLength(19);
+    expect(mons.filter((mon) => mon.status === "box")).toHaveLength(35);
     expect(mons.filter((mon) => mon.status === "dead")).toHaveLength(6);
     expect(await adapter.deaths.getAll()).toHaveLength(6);
   });
