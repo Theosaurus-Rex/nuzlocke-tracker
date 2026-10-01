@@ -84,8 +84,8 @@ describe("persistMoveBoxedMon", () => {
   it("pins mons that only had a computed slot", async () => {
     const { adapter, ids } = await seed([null, null, null]);
     const shown = boxLayout(await adapter.mons.getAll());
-    const [mover, untouched, displaced] = [0, 1, 2].map(
-      (slot) => ids.find((id) => shown.get(id) === slot)!,
+    const [mover, untouched, displaced] = [0, 1, 2].map((slot) =>
+      ids.find((id) => shown.get(id) === slot)!,
     );
 
     await persistMoveBoxedMon(adapter, { runId: "run-1", monId: mover!, toSlot: 2 });
