@@ -337,6 +337,22 @@ const PLANS: Plan[] = [
   extra(31, "sirfetchd", "Leek", 42, 18),
   extra(32, "great-tusk", "Tusk", 45, undefined, { type: "other", detail: "Fell off a cliff" }),
   { route: 33, kind: "missed", species: "corviknight" },
+  extra(34, "sandshrew", "Dusty", 15, 19),
+  extra(35, "onix", "Slate", 16, 20),
+  extra(36, "gastly", "Wisp", 17, 21),
+  extra(37, "abra", "Blink", 14, 22),
+  extra(38, "natu", "Tiki", 13, 23),
+  extra(39, "aipom", "Swing", 15, 24),
+  extra(40, "yanma", "Buzz", 16, 25),
+  extra(41, "slowpoke", "Doze", 18, 26),
+  extra(42, "drowzee", "Snooze", 17, 27),
+  extra(43, "sunkern", "Seed", 10, 28),
+  extra(44, "phanpy", "Trunk", 19, 29),
+  extra(45, "houndour", "Cinder", 20, 30),
+  extra(46, "teddiursa", "Honey", 18, 31),
+  extra(47, "magnemite", "Bolt", 16, 32),
+  extra(48, "krabby", "Pinch", 17, 33),
+  extra(49, "tentacool", "Jelly", 19, 34),
 ];
 
 function extra(

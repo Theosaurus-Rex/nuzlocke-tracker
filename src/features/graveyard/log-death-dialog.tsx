@@ -21,6 +21,7 @@ import {
   type CauseType,
   type DeathField,
 } from "@/domain/death-validation";
+import { boxLayout } from "@/domain/box-slots";
 import { countByMonStatus } from "@/domain/derive";
 import { MAX_PARTY_SIZE } from "@/domain/transitions";
 import type { Death, Mon, Route, StatusCause } from "@/domain/types";
@@ -47,9 +48,10 @@ function livingMons(mons: readonly Mon[]): Mon[] {
   const party = mons
     .filter((mon) => mon.status === "party")
     .sort((a, b) => (a.partySlot ?? 0) - (b.partySlot ?? 0));
+  const layout = boxLayout(mons);
   const box = mons
     .filter((mon) => mon.status === "box")
-    .sort((a, b) => (a.boxOrder ?? 0) - (b.boxOrder ?? 0));
+    .sort((a, b) => (layout.get(a.id) ?? 0) - (layout.get(b.id) ?? 0));
   return [...party, ...box];
 }
 

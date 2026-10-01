@@ -76,9 +76,21 @@ afterEach(() => {
   vi.restoreAllMocks();
 });
 
-async function cardHeadings(): Promise<string[]> {
-  const headings = await screen.findAllByRole("heading", { level: 2 });
-  return headings.map((heading) => heading.textContent ?? "");
+async function gridNames(): Promise<string[]> {
+  const buttons = await screen.findAllByRole("button", { name: /^Edit / });
+  return buttons.map((button) => (button.getAttribute("aria-label") ?? "").replace("Edit ", ""));
+}
+
+async function openList(user: ReturnType<typeof userEvent.setup>) {
+  await user.click(await screen.findByRole("button", { name: "List" }));
+}
+
+async function tableNames(): Promise<string[]> {
+  const table = await screen.findByRole("table");
+  return within(table)
+    .getAllByRole("row")
+    .slice(1)
+    .map((row) => within(row).getAllByRole("cell").at(1)?.textContent ?? "");
 }
 
 describe("boxedMons", () => {
@@ -91,7 +103,7 @@ describe("boxedMons", () => {
     expect(result.map((m) => m.id)).toEqual(["boxed"]);
   });
 
-  it("orders by box order across gaps and puts a null order last", () => {
+  it("orders by slot across gaps and fills a null order into the lowest free slot", () => {
     const at = "2026-09-27T00:00:00.000Z";
     const result = boxedMons([
       mon("none", at, { boxOrder: null }),
@@ -99,16 +111,16 @@ describe("boxedMons", () => {
       mon("a", at, { boxOrder: 0 }),
       mon("b", at, { boxOrder: 3 }),
     ]);
-    expect(result.map((m) => m.id)).toEqual(["a", "b", "c", "none"]);
+    expect(result.map((m) => m.id)).toEqual(["a", "none", "b", "c"]);
   });
 
-  it("breaks a tie on box order by creation time, whatever the input order", () => {
+  it("gives a shared slot to the earliest catch and moves the rest to free slots", () => {
     const result = boxedMons([
       mon("late", "2026-09-27T00:00:03.000Z", { boxOrder: 1 }),
       mon("early", "2026-09-27T00:00:01.000Z", { boxOrder: 1 }),
       mon("mid", "2026-09-27T00:00:02.000Z", { boxOrder: 1 }),
     ]);
-    expect(result.map((m) => m.id)).toEqual(["early", "mid", "late"]);
+    expect(result.map((m) => m.id)).toEqual(["mid", "early", "late"]);
   });
 
   it("breaks a tie between null orders by creation time", () => {
@@ -135,7 +147,7 @@ describe("BoxesScreen", () => {
 
     renderScreen(adapter, run.id);
 
-    expect(await cardHeadings()).toEqual(["“First”", "“Second”"]);
+    expect(await gridNames()).toEqual(["“First”", "“Second”"]);
     expect(screen.getByText("2 stored")).toBeInTheDocument();
   });
 
@@ -160,7 +172,7 @@ describe("BoxesScreen", () => {
     it("starts on grid and switches to list when clicked", async () => {
       const { adapter, runId } = await setup();
       renderScreen(adapter, runId);
-      await screen.findByText("“Sprig”");
+      await screen.findByRole("button", { name: "Edit “Sprig”" });
 
       expect(screen.getByRole("button", { name: "Grid" })).toHaveAttribute("aria-pressed", "true");
       expect(screen.getByRole("button", { name: "List" })).toHaveAttribute("aria-pressed", "false");
@@ -254,7 +266,7 @@ describe("BoxesScreen", () => {
         .slice(1)
         .map((row) => within(row).getAllByRole("cell").at(1)?.textContent);
       expect(names).toEqual(["“First”", "“Second”"]);
-      expect(screen.queryByRole("heading", { level: 2 })).not.toBeInTheDocument();
+      expect(screen.queryByText("Tap a Pokémon to edit it.")).not.toBeInTheDocument();
     });
   });
 
@@ -274,29 +286,31 @@ describe("BoxesScreen", () => {
     }
 
     it("starts sorted by caught order", async () => {
+      const user = userEvent.setup();
       await setup([
         { nickname: "Low", level: 5 },
         { nickname: "High", level: 9 },
       ]);
+      await openList(user);
 
-      expect(await cardHeadings()).toEqual(["“Low”", "“High”"]);
+      expect(await tableNames()).toEqual(["“Low”", "“High”"]);
       expect(screen.getByRole("combobox", { name: "Sort boxes" })).toHaveTextContent(
         "Sort: Caught",
       );
     });
 
-    it("reorders the cards when Level is chosen", async () => {
+    it("reorders the rows when Level is chosen", async () => {
       const user = userEvent.setup();
       await setup([
         { nickname: "Low", level: 5 },
         { nickname: "High", level: 9 },
         { nickname: "Mid", level: 7 },
       ]);
-      await cardHeadings();
+      await openList(user);
 
       await chooseSort(user, "Level");
 
-      expect(await cardHeadings()).toEqual(["“High”", "“Mid”", "“Low”"]);
+      expect(await tableNames()).toEqual(["“High”", "“Mid”", "“Low”"]);
       expect(screen.getByRole("combobox", { name: "Sort boxes" })).toHaveTextContent("Sort: Level");
     });
 
@@ -307,64 +321,65 @@ describe("BoxesScreen", () => {
         { nickname: "Fish", speciesId: "gyarados" },
         { nickname: "Bird", speciesId: "pidgey" },
       ]);
-      await cardHeadings();
+      await openList(user);
 
       await chooseSort(user, "Type");
 
-      await waitFor(async () =>
-        expect(await cardHeadings()).toEqual(["“Bird”", "“Fish”", "“Leaf”"]),
-      );
+      await waitFor(async () => expect(await tableNames()).toEqual(["“Bird”", "“Fish”", "“Leaf”"]));
     });
 
-    it("narrows the cards as you type", async () => {
+    it("narrows the table as you type", async () => {
       const user = userEvent.setup();
       await setup([{ nickname: "Sprig" }, { nickname: "Zubb" }, { nickname: "Spark" }]);
-      await cardHeadings();
+      await openList(user);
 
       await user.type(screen.getByRole("textbox", { name: "Search boxes" }), "sp");
 
-      expect(await cardHeadings()).toEqual(["“Sprig”", "“Spark”"]);
-    });
-
-    it("narrows the table in list view", async () => {
-      const user = userEvent.setup();
-      await setup([{ nickname: "Sprig" }, { nickname: "Zubb" }]);
-      await user.click(await screen.findByRole("button", { name: "List" }));
-
-      await user.type(screen.getByRole("textbox", { name: "Search boxes" }), "zu");
-
-      const table = await screen.findByRole("table");
-      expect(within(table).getAllByRole("row")).toHaveLength(2);
-      expect(within(table).getByText("“Zubb”")).toBeInTheDocument();
-      expect(within(table).queryByText("“Sprig”")).not.toBeInTheDocument();
+      expect(await tableNames()).toEqual(["“Sprig”", "“Spark”"]);
     });
 
     it("says nothing matches, and still counts everyone stored", async () => {
       const user = userEvent.setup();
       await setup([{ nickname: "Sprig" }, { nickname: "Zubb" }]);
-      await cardHeadings();
+      await openList(user);
 
       await user.type(screen.getByRole("textbox", { name: "Search boxes" }), "qq");
 
       expect(await screen.findByText("No boxed mons match “qq”")).toBeInTheDocument();
-      expect(screen.queryByRole("heading", { level: 2 })).not.toBeInTheDocument();
+      expect(screen.queryByRole("table")).not.toBeInTheDocument();
       expect(screen.getByText("2 stored")).toBeInTheDocument();
       expect(screen.queryByText("No one in your boxes yet")).not.toBeInTheDocument();
     });
 
-    it("brings the cards back when the search is cleared", async () => {
+    it("brings the rows back when the search is cleared", async () => {
       const user = userEvent.setup();
       await setup([{ nickname: "Sprig" }, { nickname: "Zubb" }]);
-      await cardHeadings();
+      await openList(user);
       await user.type(screen.getByRole("textbox", { name: "Search boxes" }), "qq");
 
       await user.click(await screen.findByRole("button", { name: "Clear search" }));
 
-      expect(await cardHeadings()).toEqual(["“Sprig”", "“Zubb”"]);
+      expect(await tableNames()).toEqual(["“Sprig”", "“Zubb”"]);
+    });
+
+    it("hides sort and search in grid view and shows them in list view", async () => {
+      const user = userEvent.setup();
+      await setup([{ nickname: "Sprig" }]);
+      await screen.findByRole("button", { name: "Edit “Sprig”" });
+
+      expect(screen.queryByRole("combobox", { name: "Sort boxes" })).not.toBeInTheDocument();
+      expect(screen.queryByRole("textbox", { name: "Search boxes" })).not.toBeInTheDocument();
+
+      await openList(user);
+
+      expect(screen.getByRole("combobox", { name: "Sort boxes" })).toBeInTheDocument();
+      expect(screen.getByRole("textbox", { name: "Search boxes" })).toBeInTheDocument();
     });
 
     it("has no search box for an empty box", async () => {
+      const user = userEvent.setup();
       await setup([]);
+      await openList(user);
 
       await screen.findByText("No one in your boxes yet");
       expect(screen.queryByRole("textbox", { name: "Search boxes" })).not.toBeInTheDocument();
