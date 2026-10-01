@@ -43,6 +43,7 @@ which links back here. This file is the one to correct.
 | `4a` | party, box and detail cards |
 | `5a`–`5i` | desktop, 942×629, on the sidebar shell |
 | `6a`–`6i` | mobile, 340×715 |
+| `7d`–`7i` | the graveyard timeline, desktop and mobile in pairs, drawn after the rest |
 
 All under `docs/wireframes/hifi/frames/`. `docs/wireframes/README.md` maps each one to its screen.
 

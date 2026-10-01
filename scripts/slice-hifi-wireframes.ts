@@ -23,13 +23,14 @@ const VIEWPORT = { width: 1600, height: 1550 };
 const DEVICE_SCALE_FACTOR = 2;
 const WAIT_TIMEOUT_MS = 30_000;
 
-// Only the 23 hi-fi frames. 1a, 1d and 2a-2h sit on the same canvas but were already cut
+// Only the hi-fi frames. 1a, 1d and 2a-2h sit on the same canvas but were already cut
 // from the PDF at better fidelity by scripts/slice-wireframes.ts.
 // prettier-ignore
 const FRAME_IDS = [
   "3a", "3b", "3c", "3d", "4a",
   "5a", "5b", "5c", "5d", "5e", "5f", "5g", "5h", "5i",
   "6a", "6b", "6c", "6d", "6e", "6f", "6g", "6h", "6i",
+  "7d", "7e", "7f", "7g", "7h", "7i",
 ];
 
 interface ClipBox {
