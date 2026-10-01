@@ -1,6 +1,5 @@
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { render, screen, within } from "@testing-library/react";
-import { fireEvent } from "@testing-library/react";
 import { beforeEach, describe, expect, it } from "vitest";
 import { MemoryRouter, Route, Routes } from "react-router";
 
@@ -11,7 +10,7 @@ import { createMemoryAdapter } from "@/storage/memory-adapter";
 import { StorageProvider } from "@/storage/storage-context";
 import { defaultPokeApiRoutes, stubPokeApi } from "@/test/pokeapi-fetch";
 
-import { GRAVEYARD_VIEW_STORAGE_KEY, GraveyardScreen } from "./graveyard-screen";
+import { GraveyardScreen } from "./graveyard-screen";
 
 async function seedRun(adapter: StorageAdapter) {
   return adapter.runs.put({
@@ -86,9 +85,11 @@ function renderScreen(adapter: StorageAdapter, runId: string) {
   );
 }
 
-async function cardHeadings(): Promise<string[]> {
+async function fallenNames(): Promise<string[]> {
   const headings = await screen.findAllByRole("heading", { level: 2 });
-  return headings.map((heading) => heading.textContent ?? "");
+  return headings
+    .map((heading) => heading.textContent ?? "")
+    .filter((text) => text.includes("Chikorita"));
 }
 
 beforeEach(() => {
@@ -96,11 +97,7 @@ beforeEach(() => {
 });
 
 describe("GraveyardScreen", () => {
-  beforeEach(() => {
-    localStorage.setItem(GRAVEYARD_VIEW_STORAGE_KEY, "list");
-  });
-
-  it("lists this run's deaths newest first and counts them", async () => {
+  it("shows only this run's deaths and counts them", async () => {
     const adapter = createMemoryAdapter();
     const run = await seedRun(adapter);
     const other = await seedRun(adapter);
@@ -111,7 +108,11 @@ describe("GraveyardScreen", () => {
 
     renderScreen(adapter, run.id);
 
-    expect(await cardHeadings()).toEqual(["“New” Chikorita", "“Mid” Chikorita", "“Old” Chikorita"]);
+    expect((await fallenNames()).sort()).toEqual([
+      "“Mid” Chikorita",
+      "“New” Chikorita",
+      "“Old” Chikorita",
+    ]);
     expect(screen.getByText("3 lost this run")).toBeInTheDocument();
   });
 
@@ -122,7 +123,9 @@ describe("GraveyardScreen", () => {
     renderScreen(adapter, run.id);
 
     expect(await screen.findByText("No one has fallen yet")).toBeInTheDocument();
-    expect(screen.queryByText(/placed on the route/)).not.toBeInTheDocument();
+    expect(
+      screen.getByText("Deaths you log are placed on the route where they happened."),
+    ).toBeInTheDocument();
     expect(screen.getByText("0 lost this run")).toBeInTheDocument();
   });
 
@@ -164,9 +167,8 @@ describe("GraveyardScreen", () => {
 
     renderScreen(adapter, run.id);
 
-    expect(await cardHeadings()).toEqual(["“Real” Chikorita"]);
+    expect(await fallenNames()).toEqual(["“Real” Chikorita"]);
     expect(screen.getByText("1 lost this run")).toBeInTheDocument();
-    expect(screen.getByText(/^1 lost/, { selector: "p" })).toBeInTheDocument();
   });
 });
 
@@ -236,7 +238,7 @@ describe("GraveyardScreen timeline", () => {
     return { adapter, runId: run.id, r1, r2, r3, r4 };
   }
 
-  it("is the default view, with route headers and position over all routes", async () => {
+  it("shows route headers and position over all routes", async () => {
     const { adapter, runId, r2, r4 } = await setup();
     await buryOn(adapter, runId, "Late", r4.id, "2020-01-02T00:00:00.000Z");
     await buryOn(adapter, runId, "Early", r2.id, "2020-01-03T00:00:00.000Z");
@@ -250,10 +252,6 @@ describe("GraveyardScreen timeline", () => {
     expect(sections).toEqual(["Violet City", "Goldenrod City"]);
     expect(screen.getByText("2/4")).toBeInTheDocument();
     expect(screen.getByText("4/4")).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: "Timeline" })).toHaveAttribute(
-      "aria-pressed",
-      "true",
-    );
   });
 
   it("shows the lost chip only on a route with more than one death", async () => {
@@ -289,43 +287,15 @@ describe("GraveyardScreen timeline", () => {
     expect(within(byRoute).queryByText("“Ghost” Chikorita")).not.toBeInTheDocument();
   });
 
-  it("switches to the list, and remembers the choice across a remount", async () => {
-    const { adapter, runId, r2 } = await setup();
-    await buryOn(adapter, runId, "A", r2.id, "2020-01-01T00:00:00.000Z");
-
-    const first = renderScreen(adapter, runId);
-    fireEvent.click(await screen.findByRole("button", { name: "List" }));
-
-    expect(screen.queryByRole("list", { name: "Deaths by route" })).not.toBeInTheDocument();
-    expect(screen.getByText("“A” Chikorita")).toBeInTheDocument();
-    first.unmount();
-
-    renderScreen(adapter, runId);
-    expect(await screen.findByRole("button", { name: "List" })).toHaveAttribute(
-      "aria-pressed",
-      "true",
-    );
-    expect(screen.queryByRole("list", { name: "Deaths by route" })).not.toBeInTheDocument();
-  });
-
-  it("falls back to the timeline for an unknown stored view", async () => {
-    localStorage.setItem(GRAVEYARD_VIEW_STORAGE_KEY, "banana");
+  it("has no view toggle", async () => {
     const { adapter, runId, r2 } = await setup();
     await buryOn(adapter, runId, "A", r2.id, "2020-01-01T00:00:00.000Z");
 
     renderScreen(adapter, runId);
+    await screen.findByRole("list", { name: "Deaths by route" });
 
-    expect(await screen.findByRole("list", { name: "Deaths by route" })).toBeInTheDocument();
-  });
-
-  it("explains the empty timeline", async () => {
-    const { adapter, runId } = await setup();
-
-    renderScreen(adapter, runId);
-
-    expect(await screen.findByText("No one has fallen yet")).toBeInTheDocument();
-    expect(
-      screen.getByText("Deaths you log are placed on the route where they happened."),
-    ).toBeInTheDocument();
+    expect(screen.queryByRole("group", { name: "Graveyard view" })).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Timeline" })).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "List" })).not.toBeInTheDocument();
   });
 });
