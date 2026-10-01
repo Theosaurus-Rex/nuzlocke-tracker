@@ -132,6 +132,7 @@ describe("catchEncounter", () => {
     const { encounter: result, mon } = catchEncounter({
       encounter,
       party: [],
+      box: [],
       monId: "mon-1",
       details: catchDetails,
     });
@@ -157,6 +158,7 @@ describe("catchEncounter", () => {
     const { mon } = catchEncounter({
       encounter: makeEncounter(),
       party: partyInSlots([0, 1, 2]),
+      box: [],
       monId: "mon-4",
       details: catchDetails,
     });
@@ -169,6 +171,7 @@ describe("catchEncounter", () => {
     const { mon } = catchEncounter({
       encounter: makeEncounter(),
       party: partyInSlots([0, 2, 3]),
+      box: [],
       monId: "mon-new",
       details: catchDetails,
     });
@@ -182,6 +185,7 @@ describe("catchEncounter", () => {
     const { mon } = catchEncounter({
       encounter: makeEncounter(),
       party,
+      box: [],
       monId: "mon-new",
       details: catchDetails,
     });
@@ -195,6 +199,7 @@ describe("catchEncounter", () => {
     const { mon } = catchEncounter({
       encounter: makeEncounter(),
       party: partyInSlots([0, 1, 2, 3, 4, 5]),
+      box: [],
       monId: "mon-7",
       details: catchDetails,
     });
@@ -211,6 +216,7 @@ describe("catchEncounter", () => {
     const { mon } = catchEncounter({
       encounter: makeEncounter(),
       party,
+      box: [],
       monId: "mon-new",
       details: catchDetails,
     });
@@ -228,7 +234,7 @@ describe("catchEncounter", () => {
       moves: ["tackle", "growl", "vine-whip", "razor-leaf", "synthesis"],
     };
     expect(() =>
-      catchEncounter({ encounter, party: [], monId: "mon-1", details: tooManyMoves }),
+      catchEncounter({ encounter, party: [], box: [], monId: "mon-1", details: tooManyMoves }),
     ).toThrow(/4 moves/);
   });
 
@@ -237,6 +243,7 @@ describe("catchEncounter", () => {
     const { encounter: result, mon } = catchEncounter({
       encounter: makeEncounter(),
       party: [],
+      box: [],
       monId: "mon-1",
       details,
     });
@@ -251,6 +258,7 @@ describe("catchEncounter", () => {
     const { mon } = catchEncounter({
       encounter: makeEncounter(),
       party: [],
+      box: [],
       monId: "mon-1",
       details,
     });
@@ -267,6 +275,7 @@ describe("catchEncounter", () => {
     const { mon } = catchEncounter({
       encounter: makeEncounter(),
       party,
+      box: [],
       monId: "mon-new",
       details,
     });
@@ -280,6 +289,7 @@ describe("catchEncounter", () => {
     const { mon } = catchEncounter({
       encounter: makeEncounter(),
       party: partyInSlots([0, 1, 2, 3, 4, 5]),
+      box: [],
       monId: "mon-7",
       details,
     });
@@ -292,6 +302,7 @@ describe("catchEncounter", () => {
     const { mon } = catchEncounter({
       encounter: makeEncounter(),
       party: [],
+      box: [],
       monId: "mon-1",
       details: { ...catchDetails, shiny: true },
     });
@@ -304,7 +315,7 @@ describe("catchEncounter", () => {
     const details: CatchDetails = { ...catchDetails, levelCaught: 20, level: 19 };
     let error: unknown;
     try {
-      catchEncounter({ encounter, party: [], monId: "mon-1", details });
+      catchEncounter({ encounter, party: [], box: [], monId: "mon-1", details });
     } catch (caught) {
       error = caught;
     }
@@ -312,6 +323,59 @@ describe("catchEncounter", () => {
     expect(error).toBeInstanceOf(Error);
     expect((error as Error).message).toContain("20");
     expect((error as Error).message).toContain("19");
+  });
+});
+
+describe("catchEncounter box slots", () => {
+  const boxedMon = (id: string, boxOrder: number) =>
+    makeMon({ id, status: "box", partySlot: null, boxOrder });
+  const toBox = { ...catchDetails, placement: "box" as const };
+
+  test("a box catch takes the lowest free slot, reusing a gap", () => {
+    const { mon } = catchEncounter({
+      encounter: makeEncounter(),
+      party: [],
+      box: [boxedMon("a", 0), boxedMon("b", 1), boxedMon("c", 3)],
+      monId: "new",
+      details: toBox,
+    });
+    expect(mon.status).toBe("box");
+    expect(mon.boxOrder).toBe(2);
+  });
+
+  test("a party catch has no box slot", () => {
+    const { mon } = catchEncounter({
+      encounter: makeEncounter(),
+      party: [],
+      box: [boxedMon("a", 0)],
+      monId: "new",
+      details: catchDetails,
+    });
+    expect(mon.boxOrder).toBeNull();
+  });
+
+  test("a catch overflowing a full party goes to the box with a slot", () => {
+    const { mon } = catchEncounter({
+      encounter: makeEncounter(),
+      party: partyInSlots([0, 1, 2, 3, 4, 5]),
+      box: [boxedMon("a", 0)],
+      monId: "new",
+      details: catchDetails,
+    });
+    expect(mon.status).toBe("box");
+    expect(mon.boxOrder).toBe(1);
+  });
+
+  test("a full first box overflows into slot 30", () => {
+    const box = Array.from({ length: 30 }, (_, i) => boxedMon(`m${String(i)}`, i));
+    const { mon } = catchEncounter({
+      encounter: makeEncounter(),
+      party: [],
+      box,
+      monId: "new",
+      details: toBox,
+    });
+    expect(mon.boxOrder).toBe(30);
   });
 });
 
@@ -334,13 +398,37 @@ describe("missEncounter / skipEncounter", () => {
 describe("moveMonToBox", () => {
   test("boxes a party mon and clears its slot", () => {
     const mon = makeMon({ status: "party", partySlot: 2 });
-    const result = moveMonToBox(mon);
+    const result = moveMonToBox({ mon, box: [] });
     expect(result.status).toBe("box");
     expect(result.partySlot).toBeNull();
   });
 });
 
+describe("moveMonToBox slots", () => {
+  const boxedMon = (id: string, boxOrder: number) =>
+    makeMon({ id, status: "box", partySlot: null, boxOrder });
+
+  test("takes the lowest free slot, reusing a gap", () => {
+    const mon = makeMon({ status: "party", partySlot: 2 });
+    const result = moveMonToBox({
+      mon,
+      box: [boxedMon("a", 0), boxedMon("b", 1), boxedMon("c", 3)],
+    });
+    expect(result.boxOrder).toBe(2);
+  });
+
+  test("does not count the mon's own stale slot", () => {
+    const mon = makeMon({ status: "party", partySlot: 2, boxOrder: 0 });
+    expect(moveMonToBox({ mon, box: [mon, boxedMon("b", 1)] }).boxOrder).toBe(0);
+  });
+});
+
 describe("moveMonToParty", () => {
+  test("clears the box slot", () => {
+    const mon = makeMon({ id: "boxed-mon", status: "box", partySlot: null, boxOrder: 7 });
+    expect(moveMonToParty({ mon, party: [] }).boxOrder).toBeNull();
+  });
+
   test("assigns the next free slot when the party has room", () => {
     const mon = makeMon({ id: "boxed-mon", status: "box", partySlot: null });
     const party = partyInSlots([0, 1, 2, 3]);
@@ -386,6 +474,12 @@ describe("killMon", () => {
     expect(death.id).toBe("death-1");
     expect(death.monId).toBe(mon.id);
     expect(death.cause).toEqual(killDetails.cause);
+  });
+
+  test("clears the box slot of a boxed mon", () => {
+    const mon = makeMon({ status: "box", partySlot: null, boxOrder: 4 });
+    const { mon: result } = killMon({ mon, deathId: "death-5", details: killDetails });
+    expect(result.boxOrder).toBeNull();
   });
 
   test("marks a boxed mon dead", () => {
@@ -644,7 +738,7 @@ describe("guard: encounter must be open", () => {
     [
       "catchEncounter",
       (encounter) =>
-        catchEncounter({ encounter, party: [], monId: "mon-1", details: catchDetails }),
+        catchEncounter({ encounter, party: [], box: [], monId: "mon-1", details: catchDetails }),
     ],
     ["missEncounter", (encounter) => missEncounter(encounter)],
     ["skipEncounter", (encounter) => skipEncounter(encounter)],
@@ -658,7 +752,7 @@ describe("guard: encounter must be open", () => {
 
 describe("guard: mon must be alive", () => {
   const cases: [string, (mon: Mon) => unknown][] = [
-    ["moveMonToBox", (mon) => moveMonToBox(mon)],
+    ["moveMonToBox", (mon) => moveMonToBox({ mon, box: [] })],
     ["moveMonToParty", (mon) => moveMonToParty({ mon, party: [] })],
   ];
 
@@ -689,6 +783,7 @@ describe("input immutability", () => {
         catchEncounter({
           encounter: catchEncounterInput,
           party: [],
+          box: [],
           monId: "mon-1",
           details: catchDetails,
         });
@@ -712,7 +807,7 @@ describe("input immutability", () => {
       label: "moveMonToBox",
       input: moveMonToBoxInput,
       run: () => {
-        moveMonToBox(moveMonToBoxInput);
+        moveMonToBox({ mon: moveMonToBoxInput, box: [] });
       },
     },
     {
@@ -768,25 +863,51 @@ describe("reviveMon", () => {
   const dead = () => makeMon({ id: "dead-mon", status: "dead", partySlot: null });
 
   test("a dead mon goes to the box with no party slot", () => {
-    const result = reviveMon({ mon: dead(), party: partyInSlots([0, 1]), placement: "box" });
+    const result = reviveMon({
+      mon: dead(),
+      party: partyInSlots([0, 1]),
+      box: [],
+      placement: "box",
+    });
     expect(result.status).toBe("box");
     expect(result.partySlot).toBeNull();
   });
 
+  test("a revived box mon takes the lowest free box slot", () => {
+    const box = [0, 1, 3].map((slot) =>
+      makeMon({ id: `box-${String(slot)}`, status: "box", partySlot: null, boxOrder: slot }),
+    );
+    const result = reviveMon({ mon: dead(), party: [], box, placement: "box" });
+    expect(result.boxOrder).toBe(2);
+  });
+
+  test("a revived party mon has no box slot", () => {
+    const stale = makeMon({ id: "dead-mon", status: "dead", partySlot: null, boxOrder: 5 });
+    const result = reviveMon({ mon: stale, party: [], box: [], placement: "party" });
+    expect(result.boxOrder).toBeNull();
+  });
+
   test("a gap in the party is reused: slots 0, 2, 3 occupied gets slot 1", () => {
-    const result = reviveMon({ mon: dead(), party: partyInSlots([0, 2, 3]), placement: "party" });
+    const result = reviveMon({
+      mon: dead(),
+      party: partyInSlots([0, 2, 3]),
+      box: [],
+      placement: "party",
+    });
     expect(result.status).toBe("party");
     expect(result.partySlot).toBe(1);
   });
 
   test("throws when the party is already full", () => {
     const party = partyInSlots([0, 1, 2, 3, 4, 5]);
-    expect(() => reviveMon({ mon: dead(), party, placement: "party" })).toThrow(/cannot exceed 6/);
+    expect(() => reviveMon({ mon: dead(), party, box: [], placement: "party" })).toThrow(
+      /cannot exceed 6/,
+    );
   });
 
   test("throws for a living mon", () => {
     const mon = makeMon({ id: "alive", status: "box", partySlot: null });
-    expect(() => reviveMon({ mon, party: [], placement: "box" })).toThrow(/not dead/);
+    expect(() => reviveMon({ mon, party: [], box: [], placement: "box" })).toThrow(/not dead/);
   });
 });
 

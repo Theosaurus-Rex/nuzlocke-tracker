@@ -383,6 +383,7 @@ async function resolveEncounter(
   const { encounter, mon } = catchEncounter({
     encounter: open,
     party: mons,
+    box: mons,
     monId: crypto.randomUUID(),
     details: {
       speciesId: plan.species,

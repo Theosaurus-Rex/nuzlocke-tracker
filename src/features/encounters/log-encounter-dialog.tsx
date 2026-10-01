@@ -166,7 +166,6 @@ function LogEncounterForm({
         runId,
         routeId,
         outcome,
-        party: mons,
         details: outcome === "caught" ? details : undefined,
         speciesId: outcome === "caught" ? undefined : speciesId.trim() === "" ? null : speciesId,
         existingEncounters,

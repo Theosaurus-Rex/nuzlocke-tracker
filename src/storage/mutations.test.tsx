@@ -259,7 +259,6 @@ describe("useLogEncounter", () => {
       runId: run.id,
       routeId: route.id,
       outcome: "caught",
-      party: [],
       details: CATCH_DETAILS,
       existingEncounters: [],
     });
@@ -294,7 +293,6 @@ describe("useLogEncounter", () => {
       runId: run.id,
       routeId: route.id,
       outcome: "caught",
-      party: [],
       details: { ...CATCH_DETAILS, shiny: true },
       existingEncounters: [],
     });
@@ -320,7 +318,6 @@ describe("useLogEncounter", () => {
       runId: run.id,
       routeId: route.id,
       outcome: "missed",
-      party: [],
       existingEncounters: [],
     });
 
@@ -346,7 +343,6 @@ describe("useLogEncounter", () => {
       runId: run.id,
       routeId: route.id,
       outcome: "missed",
-      party: [],
       speciesId: "geodude",
       existingEncounters: [],
     });
@@ -368,7 +364,6 @@ describe("useLogEncounter", () => {
       runId: run.id,
       routeId: route.id,
       outcome: "skipped",
-      party: [],
       existingEncounters: [],
     });
 
@@ -402,7 +397,6 @@ describe("useLogEncounter", () => {
       runId: run.id,
       routeId: route.id,
       outcome: "caught",
-      party: [],
       details: CATCH_DETAILS,
       existingEncounters: [],
     });
@@ -443,7 +437,6 @@ describe("useLogEncounter", () => {
         runId: run.id,
         routeId: route.id,
         outcome: "skipped",
-        party: [],
         existingEncounters: [alreadyLogged],
       }),
     ).rejects.toThrow(/already has an encounter/);
@@ -466,7 +459,6 @@ describe("useLogEncounter", () => {
         runId: run.id,
         routeId: route.id,
         outcome: "caught",
-        party: [],
         existingEncounters: [],
       }),
     ).rejects.toThrow(/requires details/);
@@ -493,7 +485,6 @@ describe("useLogEncounter", () => {
         runId: run.id,
         routeId: route.id,
         outcome: "caught",
-        party: [],
         details: CATCH_DETAILS,
         existingEncounters: [],
       }),
@@ -520,7 +511,6 @@ async function seedCaughtMon(
     runId: run.id,
     routeId: route.id,
     outcome: "caught",
-    party: [],
     details: CATCH_DETAILS,
     existingEncounters: [],
   });
@@ -559,7 +549,6 @@ describe("useAmendMon", () => {
       runId: run.id,
       routeId: routeA.id,
       outcome: "caught",
-      party: [],
       details: CATCH_DETAILS,
       existingEncounters: [],
     });
@@ -571,7 +560,6 @@ describe("useAmendMon", () => {
       runId: run.id,
       routeId: routeB.id,
       outcome: "caught",
-      party: [],
       details: CATCH_DETAILS,
       existingEncounters: [],
     });
@@ -613,7 +601,6 @@ describe("useAmendMon", () => {
       runId: run.id,
       routeId: route.id,
       outcome: "caught",
-      party: [],
       details: CATCH_DETAILS,
       existingEncounters: [],
     });
@@ -646,7 +633,6 @@ describe("useAmendMon", () => {
       runId: run.id,
       routeId: route.id,
       outcome: "caught",
-      party: [],
       details: CATCH_DETAILS,
       existingEncounters: [],
     });
@@ -866,7 +852,6 @@ async function seedTwoEncounters(
     runId: run.id,
     routeId: routeA.id,
     outcome: firstOutcome,
-    party: [],
     details: firstOutcome === "caught" ? CATCH_DETAILS : undefined,
     existingEncounters: [],
   });
@@ -875,7 +860,6 @@ async function seedTwoEncounters(
     runId: run.id,
     routeId: routeB.id,
     outcome: "caught",
-    party: [],
     details: CATCH_DETAILS,
     existingEncounters: [target],
   });
@@ -1005,14 +989,10 @@ describe("useResetEncounter", () => {
 
     const caughtEncounters: Encounter[] = [];
     for (let i = 0; i < 6; i++) {
-      const party = (await adapter.mons.where("runId", run.id)).filter(
-        (candidate) => candidate.status === "party",
-      );
       const { encounter } = await log.result.current.mutateAsync({
         runId: run.id,
         routeId: routes[i]!.id,
         outcome: "caught",
-        party,
         details: CATCH_DETAILS,
         existingEncounters: caughtEncounters,
       });
@@ -1035,15 +1015,10 @@ describe("useResetEncounter", () => {
     const reset = renderHook(() => useResetEncounter(), { wrapper });
     await reset.result.current.mutateAsync({ encounter: slotTwoEncounter });
 
-    const partyAfterReset = (await adapter.mons.where("runId", run.id)).filter(
-      (candidate) => candidate.status === "party",
-    );
-
     const { mon: newMon } = await log.result.current.mutateAsync({
       runId: run.id,
       routeId: routes[6]!.id,
       outcome: "caught",
-      party: partyAfterReset,
       details: CATCH_DETAILS,
       existingEncounters: caughtEncounters,
     });

@@ -4,6 +4,7 @@
  * mutating its input.
  */
 
+import { nextFreeBoxSlot } from "./box-slots";
 import type { Cause, Draft, Encounter, Fight, Gender, Mon, Death } from "./types";
 
 export const MAX_PARTY_SIZE = 6;
@@ -69,11 +70,13 @@ export interface CatchDetails {
 export function catchEncounter({
   encounter,
   party,
+  box,
   monId,
   details,
 }: {
   encounter: Encounter;
   party: readonly Mon[];
+  box: readonly Mon[];
   monId: string;
   details: CatchDetails;
 }): { encounter: Encounter; mon: Draft<Mon> } {
@@ -117,7 +120,7 @@ export function catchEncounter({
     moves: details.moves,
     status: slot === null ? "box" : "party",
     partySlot: slot,
-    boxOrder: null,
+    boxOrder: slot === null ? nextFreeBoxSlot(box) : null,
     caughtRouteId: encounter.routeId,
     shiny: details.shiny,
   };
@@ -135,9 +138,9 @@ export function skipEncounter(encounter: Encounter): Encounter {
   return { ...encounter, status: "skipped" };
 }
 
-export function moveMonToBox(mon: Mon): Mon {
+export function moveMonToBox({ mon, box }: { mon: Mon; box: readonly Mon[] }): Mon {
   assertMonAlive(mon);
-  return { ...mon, status: "box", partySlot: null };
+  return { ...mon, status: "box", partySlot: null, boxOrder: nextFreeBoxSlot(box, mon.id) };
 }
 
 export function moveMonToParty({ mon, party }: { mon: Mon; party: readonly Mon[] }): Mon {
@@ -149,7 +152,7 @@ export function moveMonToParty({ mon, party }: { mon: Mon; party: readonly Mon[]
     throw new Error(`Party cannot exceed ${MAX_PARTY_SIZE} mons (currently at ${MAX_PARTY_SIZE}).`);
   }
 
-  return { ...mon, status: "party", partySlot: slot };
+  return { ...mon, status: "party", partySlot: slot, boxOrder: null };
 }
 
 /** Returns only the mons whose slot changed. Slots are compacted to 0..n-1, which closes gaps. */
@@ -177,16 +180,18 @@ export function reorderParty(party: readonly Mon[], orderedIds: readonly string[
 export function reviveMon({
   mon,
   party,
+  box,
   placement,
 }: {
   mon: Mon;
   party: readonly Mon[];
+  box: readonly Mon[];
   placement: "party" | "box";
 }): Mon {
   assertMonDead(mon);
 
   if (placement === "box") {
-    return { ...mon, status: "box", partySlot: null };
+    return { ...mon, status: "box", partySlot: null, boxOrder: nextFreeBoxSlot(box, mon.id) };
   }
 
   const slot = nextFreeSlot(party, mon.id);
@@ -195,7 +200,7 @@ export function reviveMon({
     throw new Error(`Party cannot exceed ${MAX_PARTY_SIZE} mons (currently at ${MAX_PARTY_SIZE}).`);
   }
 
-  return { ...mon, status: "party", partySlot: slot };
+  return { ...mon, status: "party", partySlot: slot, boxOrder: null };
 }
 
 /** The attributes of a death known only at the moment it happens. */
@@ -218,7 +223,7 @@ export function killMon({
 }): { mon: Mon; death: Draft<Death> } {
   assertMonAlive(mon);
 
-  const updatedMon: Mon = { ...mon, status: "dead", partySlot: null };
+  const updatedMon: Mon = { ...mon, status: "dead", partySlot: null, boxOrder: null };
 
   const death: Draft<Death> = {
     id: deathId,

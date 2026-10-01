@@ -347,7 +347,6 @@ describe("useCatchEncounter", () => {
 
     const mutationResult = await result.current.mutateAsync({
       encounter,
-      party: [],
       details: CATCH_DETAILS,
     });
 
@@ -382,7 +381,6 @@ describe("useCatchEncounter", () => {
 
     await catchHook.result.current.mutateAsync({
       encounter,
-      party: [],
       details: CATCH_DETAILS,
     });
 
@@ -404,9 +402,9 @@ describe("useCatchEncounter", () => {
       wrapper: createWrapper(failingAdapter),
     });
 
-    await expect(
-      result.current.mutateAsync({ encounter, party: [], details: CATCH_DETAILS }),
-    ).rejects.toThrow("simulated write failure");
+    await expect(result.current.mutateAsync({ encounter, details: CATCH_DETAILS })).rejects.toThrow(
+      "simulated write failure",
+    );
 
     const persistedEncounter = await adapter.encounters.get(encounter.id);
     expect(persistedEncounter?.status).toBe("open");
