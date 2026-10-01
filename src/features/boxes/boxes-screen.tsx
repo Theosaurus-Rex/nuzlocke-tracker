@@ -179,7 +179,9 @@ export function BoxesScreen(): ReactNode {
           No boxed mons match “{search.trim()}”
         </Typography>
       )}
-      {boxed.length > 0 && view === "grid" && <BoxGrid mons={boxed} onEdit={openEditor} />}
+      {boxed.length > 0 && view === "grid" && (
+        <BoxGrid runId={runId} mons={boxed} onEdit={openEditor} />
+      )}
       {visible.length > 0 && view === "list" && (
         <>
           <div className="hidden md:block">

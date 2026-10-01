@@ -5,6 +5,8 @@ import { describe, expect, it, vi } from "vitest";
 
 import { BOX_SIZE } from "@/domain/box-slots";
 import type { Mon } from "@/domain/types";
+import { createMemoryAdapter } from "@/storage/memory-adapter";
+import { StorageProvider } from "@/storage/storage-context";
 
 import { BoxGrid } from "./box-grid";
 
@@ -38,7 +40,9 @@ function renderGrid(mons: Mon[], onEdit = vi.fn()) {
   const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
   render(
     <QueryClientProvider client={client}>
-      <BoxGrid mons={mons} onEdit={onEdit} />
+      <StorageProvider adapter={createMemoryAdapter()}>
+        <BoxGrid runId="run-1" mons={mons} onEdit={onEdit} />
+      </StorageProvider>
     </QueryClientProvider>,
   );
   return onEdit;
@@ -136,9 +140,13 @@ describe("BoxGrid", () => {
     expect(onEdit).toHaveBeenCalledWith("Sprig");
   });
 
-  it("tells you how to edit", () => {
+  it("tells you how to edit and how to move", () => {
     renderGrid([mon("Sprig")]);
 
-    expect(screen.getByText("Tap a Pokémon to edit it.")).toBeInTheDocument();
+    expect(
+      screen.getByText(
+        "Tap a Pokémon to edit it. Long-press to pick it up, then drop it on any slot to move it.",
+      ),
+    ).toBeInTheDocument();
   });
 });
