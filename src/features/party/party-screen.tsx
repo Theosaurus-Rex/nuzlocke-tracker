@@ -1,4 +1,21 @@
-import type { ReactNode } from "react";
+import {
+  DndContext,
+  KeyboardSensor,
+  MouseSensor,
+  TouchSensor,
+  closestCenter,
+  useSensor,
+  useSensors,
+  type Announcements,
+  type DragEndEvent,
+} from "@dnd-kit/core";
+import {
+  SortableContext,
+  arrayMove,
+  rectSortingStrategy,
+  sortableKeyboardCoordinates,
+} from "@dnd-kit/sortable";
+import { useState, type ReactNode } from "react";
 import { Navigate, useParams } from "react-router";
 
 import { ScreenHeader } from "@/components/screen-header";
@@ -6,9 +23,11 @@ import { Typography } from "@/components/typography";
 import { MAX_PARTY_SIZE } from "@/domain/transitions";
 import type { Mon } from "@/domain/types";
 import { GAMES } from "@/game/registry";
+import { useReorderParty } from "@/storage/mutations";
 import { useMons, useRoutes, useRun } from "@/storage/queries";
 
 import { useEditMonDialog } from "../encounters/use-edit-mon-dialog";
+import { monTitle } from "../encounters/mon-title";
 import { PartyCard } from "./party-card";
 
 function partySlotOrder(mon: Mon): number {
@@ -25,6 +44,34 @@ export function partyMembers(mons: readonly Mon[]): Mon[] {
     });
 }
 
+function announcementsFor(party: readonly Mon[]): Announcements {
+  const name = (id: string | number): string => {
+    const mon = party.find((m) => m.id === id);
+    return mon === undefined ? "party member" : monTitle(mon);
+  };
+  const slot = (id: string | number | undefined): number => party.findIndex((m) => m.id === id) + 1;
+
+  return {
+    onDragStart: ({ active }) =>
+      `Picked up ${name(active.id)}. Slot ${String(slot(active.id))} of ${String(party.length)}.`,
+    onDragOver: ({ active, over }) =>
+      over ? `Moved ${name(active.id)} to slot ${String(slot(over.id))}.` : undefined,
+    onDragEnd: ({ active, over }) =>
+      `Dropped ${name(active.id)} in slot ${String(slot(over?.id ?? active.id))}.`,
+    onDragCancel: ({ active }) =>
+      `Cancelled. ${name(active.id)} is back in slot ${String(slot(active.id))}.`,
+  };
+}
+
+function orderedBy(party: Mon[], ids: readonly string[] | null): Mon[] {
+  if (ids === null) {
+    return party;
+  }
+  const byId = new Map(party.map((mon) => [mon.id, mon]));
+  const ordered = ids.flatMap((id) => byId.get(id) ?? []);
+  return ordered.length === party.length ? ordered : party;
+}
+
 export function PartyScreen(): ReactNode {
   const { runId } = useParams<{ runId: string }>();
   const runQuery = useRun(runId ?? "");
@@ -36,13 +83,40 @@ export function PartyScreen(): ReactNode {
     routesQuery.data ?? [],
   );
 
+  const reorder = useReorderParty();
+  const [override, setOverride] = useState<string[] | null>(null);
+  const [saveFailed, setSaveFailed] = useState(false);
+  const sensors = useSensors(
+    // Not PointerSensor: touch fires pointer events too, so a swipe to scroll would start a drag.
+    useSensor(MouseSensor, { activationConstraint: { distance: 8 } }),
+    useSensor(TouchSensor, { activationConstraint: { delay: 250, tolerance: 5 } }),
+    useSensor(KeyboardSensor, { coordinateGetter: sortableKeyboardCoordinates }),
+  );
+
   if (!runId) {
     return <Navigate to="/" replace />;
   }
 
   const generation = GAMES[runQuery.data?.game ?? "heartgold"].generation;
-  const party = partyMembers(monsQuery.data ?? []);
+  const party = orderedBy(partyMembers(monsQuery.data ?? []), override);
   const routeNames = new Map((routesQuery.data ?? []).map((route) => [route.id, route.name]));
+
+  const handleDragEnd = ({ active, over }: DragEndEvent): void => {
+    if (!over || active.id === over.id) {
+      return;
+    }
+    const ids = party.map((mon) => mon.id);
+    const orderedIds = arrayMove(ids, ids.indexOf(String(active.id)), ids.indexOf(String(over.id)));
+    setOverride(orderedIds);
+    setSaveFailed(false);
+    reorder.mutate(
+      { runId, orderedIds },
+      {
+        onError: () => setSaveFailed(true),
+        onSettled: () => setOverride(null),
+      },
+    );
+  };
 
   return (
     <div>
@@ -59,19 +133,39 @@ export function PartyScreen(): ReactNode {
         </Typography>
       )}
       {party.length > 0 && (
-        <ul className="grid gap-x-6 gap-y-14 p-4 pt-14 md:grid-cols-2">
-          {party.map((mon) => (
-            <PartyCard
-              key={mon.id}
-              mon={mon}
-              routeName={
-                mon.caughtRouteId === null ? null : (routeNames.get(mon.caughtRouteId) ?? null)
-              }
-              generation={generation}
-              onEdit={() => openEditor(mon.id)}
-            />
-          ))}
-        </ul>
+        <DndContext
+          sensors={sensors}
+          collisionDetection={closestCenter}
+          onDragEnd={handleDragEnd}
+          accessibility={{ announcements: announcementsFor(party) }}
+        >
+          <SortableContext items={party.map((mon) => mon.id)} strategy={rectSortingStrategy}>
+            <ul className="grid gap-x-6 gap-y-14 p-4 pt-14 md:grid-cols-2">
+              {party.map((mon) => (
+                <PartyCard
+                  key={mon.id}
+                  mon={mon}
+                  routeName={
+                    mon.caughtRouteId === null ? null : (routeNames.get(mon.caughtRouteId) ?? null)
+                  }
+                  generation={generation}
+                  onEdit={() => openEditor(mon.id)}
+                />
+              ))}
+            </ul>
+          </SortableContext>
+        </DndContext>
+      )}
+      {saveFailed && (
+        <Typography role="alert" variant="body" tone="alert" className="px-4">
+          Could not save the new order. Nothing was changed.
+        </Typography>
+      )}
+      {party.length > 0 && (
+        <Typography variant="body" tone="muted" className="border-t-[1.5px] border-border p-4">
+          <span className="hidden md:inline">Drag cards to reorder the party</span>
+          <span className="md:hidden">Long-press a card to reorder the party</span>
+        </Typography>
       )}
       {dialog}
     </div>

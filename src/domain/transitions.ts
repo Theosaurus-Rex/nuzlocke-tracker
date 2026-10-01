@@ -152,6 +152,28 @@ export function moveMonToParty({ mon, party }: { mon: Mon; party: readonly Mon[]
   return { ...mon, status: "party", partySlot: slot };
 }
 
+/** Returns only the mons whose slot changed. Slots are compacted to 0..n-1, which closes gaps. */
+export function reorderParty(party: readonly Mon[], orderedIds: readonly string[]): Mon[] {
+  const partyIds = new Set(party.map((mon) => mon.id));
+  const orderedSet = new Set(orderedIds);
+  if (
+    orderedIds.length !== party.length ||
+    orderedSet.size !== orderedIds.length ||
+    orderedIds.some((id) => !partyIds.has(id))
+  ) {
+    throw new Error("The new order must list every party mon exactly once.");
+  }
+
+  const changed: Mon[] = [];
+  orderedIds.forEach((id, slot) => {
+    const mon = party.find((m) => m.id === id);
+    if (mon !== undefined && mon.partySlot !== slot) {
+      changed.push({ ...mon, partySlot: slot });
+    }
+  });
+  return changed;
+}
+
 export function reviveMon({
   mon,
   party,
