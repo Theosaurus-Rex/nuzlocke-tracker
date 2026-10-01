@@ -1,6 +1,6 @@
 import { describe, expect, test } from "vitest";
 
-import { BOX_SIZE, boxLayout, nextFreeBoxSlot } from "@/domain/box-slots";
+import { BOX_SIZE, boxLayout, moveBoxedMon, nextFreeBoxSlot } from "@/domain/box-slots";
 import type { Mon } from "@/domain/types";
 
 function boxed(id: string, boxOrder: number | null, overrides: Partial<Mon> = {}): Mon {
@@ -119,5 +119,58 @@ describe("nextFreeBoxSlot", () => {
     const mons = [boxed("a", 0), boxed("b", 1)];
     expect(nextFreeBoxSlot(mons, "a")).toBe(0);
     expect(nextFreeBoxSlot(mons, "b")).toBe(1);
+  });
+});
+
+describe("moveBoxedMon", () => {
+  const slotsOf = (changed: Mon[]) => changed.map((m) => [m.id, m.boxOrder]);
+
+  test("moves a mon onto an empty slot", () => {
+    const changed = moveBoxedMon([boxed("a", 0), boxed("b", 1)], "a", 7);
+    expect(slotsOf(changed)).toEqual([["a", 7]]);
+  });
+
+  test("swaps with the mon already in the target slot", () => {
+    const changed = moveBoxedMon([boxed("a", 0), boxed("b", 4)], "a", 4);
+    expect(slotsOf(changed)).toEqual([
+      ["a", 4],
+      ["b", 0],
+    ]);
+  });
+
+  test("returns nothing when dropped on its own slot", () => {
+    expect(moveBoxedMon([boxed("a", 2), boxed("b", 3)], "a", 2)).toEqual([]);
+  });
+
+  test("moves into the second box", () => {
+    const changed = moveBoxedMon([boxed("a", 0)], "a", BOX_SIZE + 2);
+    expect(slotsOf(changed)).toEqual([["a", BOX_SIZE + 2]]);
+  });
+
+  test("swaps with a mon shown by layout and stores both slots", () => {
+    const changed = moveBoxedMon([boxed("a", 5), boxed("b", null)], "a", 0);
+    expect(slotsOf(changed)).toEqual([
+      ["a", 0],
+      ["b", 5],
+    ]);
+  });
+
+  test("treats a mon with no stored slot as sitting at its layout slot", () => {
+    expect(moveBoxedMon([boxed("a", null)], "a", 0)).toEqual([]);
+  });
+
+  test("ignores party mons when looking for a swap target", () => {
+    const party = boxed("p", 3, { status: "party", partySlot: 0, boxOrder: null });
+    expect(slotsOf(moveBoxedMon([boxed("a", 0), party], "a", 3))).toEqual([["a", 3]]);
+  });
+
+  test("throws for a mon that is not boxed", () => {
+    const party = boxed("p", null, { status: "party", partySlot: 0 });
+    expect(() => moveBoxedMon([party], "p", 1)).toThrow(/not in the box/);
+    expect(() => moveBoxedMon([], "ghost", 1)).toThrow(/not in the box/);
+  });
+
+  test.each([-1, 1.5, Number.NaN, Infinity])("throws for slot %s", (slot) => {
+    expect(() => moveBoxedMon([boxed("a", 0)], "a", slot)).toThrow(/non-negative integer/);
   });
 });

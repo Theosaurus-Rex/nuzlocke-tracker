@@ -4,7 +4,7 @@
 
 import { useMutation, useQueryClient, type UseMutationResult } from "@tanstack/react-query";
 
-import { boxLayout } from "@/domain/box-slots";
+import { boxLayout, moveBoxedMon } from "@/domain/box-slots";
 import { DEFAULT_RULES } from "@/domain/rules";
 import { canDeleteRoute, nextRouteOrder } from "@/domain/routes";
 import {
@@ -589,6 +589,24 @@ export async function persistReorderParty(
   });
 }
 
+export interface MoveBoxedMonInput {
+  runId: string;
+  monId: string;
+  toSlot: number;
+}
+
+export async function persistMoveBoxedMon(
+  adapter: StorageAdapter,
+  input: MoveBoxedMonInput,
+): Promise<void> {
+  await adapter.transaction(async (tx) => {
+    const runMons = await settleBoxSlots(tx, input.runId);
+    for (const mon of moveBoxedMon(runMons, input.monId, input.toSlot)) {
+      await tx.mons.put(mon);
+    }
+  });
+}
+
 export interface MoveMonToPartyInput {
   monId: string;
 }
@@ -616,6 +634,18 @@ export function useMoveMonToParty(): UseMutationResult<Mon, Error, MoveMonToPart
     mutationFn: (input: MoveMonToPartyInput) => persistMoveMonToParty(adapter, input),
     onSuccess: async (mon) => {
       await invalidateRun(queryClient, mon.runId);
+    },
+  });
+}
+
+export function useMoveBoxedMon(): UseMutationResult<void, Error, MoveBoxedMonInput> {
+  const adapter = useStorage();
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: (input: MoveBoxedMonInput) => persistMoveBoxedMon(adapter, input),
+    onSuccess: async (_, input) => {
+      await invalidateRun(queryClient, input.runId);
     },
   });
 }
