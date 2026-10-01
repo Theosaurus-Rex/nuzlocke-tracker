@@ -1,7 +1,6 @@
 import { useMemo, useState, type ReactNode } from "react";
 import { Navigate, useParams } from "react-router";
 
-import { ViewToggle } from "@/components/view-toggle";
 import { SearchInput } from "@/components/search-input";
 import { ScreenHeader } from "@/components/screen-header";
 import { Typography } from "@/components/typography";
@@ -17,6 +16,7 @@ import { typesIn } from "@/game/pokeapi/resolve";
 import { useSpeciesMany } from "@/game/pokeapi/queries";
 import { GAMES } from "@/game/registry";
 import type { Type } from "@/game/types";
+import { cn } from "@/lib/utils";
 import { useMons, useRoutes, useRun } from "@/storage/queries";
 
 import { useEditMonDialog } from "../encounters/use-edit-mon-dialog";
@@ -41,10 +41,42 @@ export function boxedMons(mons: readonly Mon[]): Mon[] {
     });
 }
 
-const VIEW_OPTIONS: readonly { value: BoxView; label: string }[] = [
-  { value: "grid", label: "Grid" },
-  { value: "list", label: "List" },
+const VIEW_OPTIONS: readonly { view: BoxView; label: string }[] = [
+  { view: "grid", label: "Grid" },
+  { view: "list", label: "List" },
 ];
+
+function ViewToggle({
+  view,
+  onChange,
+}: {
+  view: BoxView;
+  onChange: (view: BoxView) => void;
+}): ReactNode {
+  return (
+    <div role="group" aria-label="Box view" className="flex items-center gap-3">
+      {VIEW_OPTIONS.map((option) => {
+        const active = option.view === view;
+        return (
+          <button
+            key={option.view}
+            type="button"
+            aria-pressed={active}
+            onClick={() => onChange(option.view)}
+            className={cn(
+              "cursor-pointer border-[1.5px] px-4 py-2 text-base font-medium focus-visible:outline-none focus-visible:ring-3 focus-visible:ring-ring/50",
+              active
+                ? "border-border bg-flag shadow-block"
+                : "border-muted bg-background hover:bg-muted",
+            )}
+          >
+            {option.label}
+          </button>
+        );
+      })}
+    </div>
+  );
+}
 
 const SORT_OPTIONS: readonly { sort: BoxSort; label: string }[] = [
   { sort: "caught", label: "Caught" },
@@ -120,7 +152,7 @@ export function BoxesScreen(): ReactNode {
         title="Boxes"
         actions={
           <div className="flex flex-wrap items-center gap-3">
-            <ViewToggle label="Box view" options={VIEW_OPTIONS} value={view} onChange={setView} />
+            <ViewToggle view={view} onChange={setView} />
             <SortSelect sort={sort} onChange={setSort} />
           </div>
         }
