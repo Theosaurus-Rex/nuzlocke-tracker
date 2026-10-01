@@ -67,3 +67,27 @@ export function nextFreeBoxSlot(mons: readonly Mon[], excludeMonId?: string): nu
   }
   return slot;
 }
+
+/** Moves a boxed mon to a slot. A mon already there swaps places. Returns only the mons that changed. */
+export function moveBoxedMon(mons: readonly Mon[], monId: string, toSlot: number): Mon[] {
+  if (!Number.isInteger(toSlot) || toSlot < 0) {
+    throw new Error(`Box slot ${String(toSlot)} is not a non-negative integer`);
+  }
+
+  const layout = boxLayout(mons);
+  const fromSlot = layout.get(monId);
+  const mon = mons.find((m) => m.id === monId);
+  if (mon === undefined || fromSlot === undefined) {
+    throw new Error(`Mon ${monId} is not in the box`);
+  }
+  if (fromSlot === toSlot) {
+    return [];
+  }
+
+  const moved: Mon[] = [{ ...mon, boxOrder: toSlot }];
+  const occupant = mons.find((m) => m.id !== monId && layout.get(m.id) === toSlot);
+  if (occupant !== undefined) {
+    moved.push({ ...occupant, boxOrder: fromSlot });
+  }
+  return moved;
+}
