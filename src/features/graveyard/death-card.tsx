@@ -1,3 +1,4 @@
+import { ChevronDownIcon } from "lucide-react";
 import { useId, useState, type ReactNode } from "react";
 
 import { CHIP_SHAPE } from "@/components/chip";
@@ -76,10 +77,14 @@ export function DeathCard({
               aria-expanded={open}
               aria-controls={detailsId}
               aria-label={`Details for ${monTitle(mon)}`}
-              className="px-1"
+              className="-m-1 flex size-9 cursor-pointer items-center justify-center focus-visible:outline-none focus-visible:ring-3 focus-visible:ring-ring/50"
               onClick={() => setOpen((value) => !value)}
             >
-              {open ? "▴" : "▾"}
+              <ChevronDownIcon
+                aria-hidden
+                strokeWidth={2.5}
+                className={`size-6 transition-transform ${open ? "rotate-180" : ""}`}
+              />
             </button>
           </span>
         </div>
