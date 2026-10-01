@@ -282,9 +282,11 @@ describe("GraveyardScreen timeline", () => {
     renderScreen(adapter, runId);
 
     expect(await screen.findByText("Route not recorded")).toBeInTheDocument();
-    expect(screen.getByText("sits outside the route order")).toBeInTheDocument();
     expect(screen.getByText("“Lost” Chikorita")).toBeInTheDocument();
     expect(screen.getByText("“Ghost” Chikorita")).toBeInTheDocument();
+    const byRoute = screen.getByRole("list", { name: "Deaths by route" });
+    expect(within(byRoute).queryByText("“Lost” Chikorita")).not.toBeInTheDocument();
+    expect(within(byRoute).queryByText("“Ghost” Chikorita")).not.toBeInTheDocument();
   });
 
   it("switches to the list, and remembers the choice across a remount", async () => {

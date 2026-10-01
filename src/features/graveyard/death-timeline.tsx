@@ -10,7 +10,6 @@ import type { Timeline } from "./timeline";
 const NODE_BASE =
   "[&>li]:relative [&>li]:before:absolute [&>li]:before:top-1/2 [&>li]:before:z-10 [&>li]:before:size-3 [&>li]:before:-translate-y-1/2 [&>li]:before:content-[''] [&>li]:before:-left-[31px] md:[&>li]:before:-left-[39px] [&>li]:after:absolute [&>li]:after:top-1/2 [&>li]:after:h-0 [&>li]:after:content-[''] [&>li]:after:-left-[25px] [&>li]:after:w-[25px] md:[&>li]:after:-left-[33px] md:[&>li]:after:w-[33px]";
 const SOLID_NODES = `${NODE_BASE} [&>li]:before:bg-destructive [&>li]:after:border-t-[1.5px] [&>li]:after:border-border`;
-const DASHED_NODES = `${NODE_BASE} [&>li]:before:border-[1.5px] [&>li]:before:border-dashed [&>li]:before:border-destructive [&>li]:after:border-t-[1.5px] [&>li]:after:border-dashed [&>li]:after:border-border`;
 
 const SECTION = "relative pb-6 pl-8 md:pl-10";
 const RAIL = "absolute top-0 bottom-0 left-[6px] border-l-2 border-border";
@@ -75,22 +74,10 @@ export function DeathTimeline({
       </ol>
       {unrecorded.length > 0 && (
         <section className="mt-2 border-t border-muted pt-6">
-          <div className={SECTION}>
-            <span aria-hidden className={`${RAIL} border-dashed`} />
-            <div className="relative mb-3 flex flex-wrap items-center gap-x-3 gap-y-1">
-              <span
-                aria-hidden
-                className={`${MARKER} border-[1.5px] border-dashed border-border`}
-              />
-              <Typography as="h2" variant="title">
-                Route not recorded
-              </Typography>
-              <Typography variant="body" tone="muted">
-                sits outside the route order
-              </Typography>
-            </div>
-            <ul className={`grid gap-y-5 ${DASHED_NODES}`}>{cards(unrecorded, null)}</ul>
-          </div>
+          <Typography as="h2" variant="title" className="mb-3">
+            Route not recorded
+          </Typography>
+          <ul className="grid gap-y-5">{cards(unrecorded, null)}</ul>
         </section>
       )}
     </div>
