@@ -11,6 +11,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { boxLayout } from "@/domain/box-slots";
 import type { Mon } from "@/domain/types";
 import { typesIn } from "@/game/pokeapi/resolve";
 import { useSpeciesMany } from "@/game/pokeapi/queries";
@@ -20,25 +21,17 @@ import { cn } from "@/lib/utils";
 import { useMons, useRoutes, useRun } from "@/storage/queries";
 
 import { useEditMonDialog } from "../encounters/use-edit-mon-dialog";
-import { BoxCard } from "./box-card";
+import { BoxGrid } from "./box-grid";
 import { searchMons, sortBoxedMons, type BoxSort } from "./box-sort";
 import { BoxRowList } from "./box-row-list";
 import { BoxTable } from "./box-table";
 import { useBoxView, type BoxView } from "./use-box-view";
 
-function boxOrderOf(mon: Mon): number {
-  return mon.boxOrder ?? Number.POSITIVE_INFINITY;
-}
-
 export function boxedMons(mons: readonly Mon[]): Mon[] {
+  const layout = boxLayout(mons);
   return mons
     .filter((mon) => mon.status === "box")
-    .sort((a, b) => {
-      const orderA = boxOrderOf(a);
-      const orderB = boxOrderOf(b);
-      if (orderA !== orderB) return orderA < orderB ? -1 : 1;
-      return a.createdAt < b.createdAt ? -1 : a.createdAt > b.createdAt ? 1 : 0;
-    });
+    .sort((a, b) => (layout.get(a.id) ?? 0) - (layout.get(b.id) ?? 0));
 }
 
 const VIEW_OPTIONS: readonly { view: BoxView; label: string }[] = [
@@ -153,7 +146,7 @@ export function BoxesScreen(): ReactNode {
         actions={
           <div className="flex flex-wrap items-center gap-3">
             <ViewToggle view={view} onChange={setView} />
-            <SortSelect sort={sort} onChange={setSort} />
+            {view === "list" && <SortSelect sort={sort} onChange={setSort} />}
           </div>
         }
       >
@@ -163,7 +156,7 @@ export function BoxesScreen(): ReactNode {
           </Typography>
         )}
       </ScreenHeader>
-      {boxed.length > 0 && (
+      {boxed.length > 0 && view === "list" && (
         <div className="border-b-[1.5px] border-border bg-background p-4">
           <div className="flex justify-end">
             <SearchInput
@@ -181,23 +174,12 @@ export function BoxesScreen(): ReactNode {
           No one in your boxes yet
         </Typography>
       )}
-      {boxed.length > 0 && visible.length === 0 && (
+      {boxed.length > 0 && view === "list" && visible.length === 0 && (
         <Typography variant="body" tone="muted" className="p-4">
           No boxed mons match “{search.trim()}”
         </Typography>
       )}
-      {visible.length > 0 && view === "grid" && (
-        <ul className="grid grid-cols-2 gap-x-6 gap-y-12 p-4 pt-12 lg:grid-cols-3">
-          {visible.map((mon) => (
-            <BoxCard
-              key={mon.id}
-              mon={mon}
-              generation={generation}
-              onEdit={() => openEditor(mon.id)}
-            />
-          ))}
-        </ul>
-      )}
+      {boxed.length > 0 && view === "grid" && <BoxGrid mons={boxed} onEdit={openEditor} />}
       {visible.length > 0 && view === "list" && (
         <>
           <div className="hidden md:block">
