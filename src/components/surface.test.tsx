@@ -24,4 +24,11 @@ describe("Surface", () => {
     );
     expect(screen.getByText("Alert").className).not.toBe(screen.getByText("Card").className);
   });
+
+  it("lets a caller's shadow class override the tone's shadow", () => {
+    render(<Surface className="shadow-block-alert">Card</Surface>);
+    const classes = screen.getByText("Card").classList;
+    expect(classes).toContain("shadow-block-alert");
+    expect(classes).not.toContain("shadow-block");
+  });
 });
