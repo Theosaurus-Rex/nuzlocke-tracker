@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { BOX_SIZE } from "@/domain/box-slots";
+import { BOX_SIZE, boxLayout } from "@/domain/box-slots";
 
 import type { StorageAdapter } from "./adapter";
 import { createMemoryAdapter } from "./memory-adapter";
@@ -83,10 +83,14 @@ describe("persistMoveBoxedMon", () => {
 
   it("pins mons that only had a computed slot", async () => {
     const { adapter, ids } = await seed([null, null, null]);
+    const shown = boxLayout(await adapter.mons.getAll());
+    const [mover, untouched, displaced] = [0, 1, 2].map(
+      (slot) => ids.find((id) => shown.get(id) === slot)!,
+    );
 
-    await persistMoveBoxedMon(adapter, { runId: "run-1", monId: ids[0]!, toSlot: 2 });
+    await persistMoveBoxedMon(adapter, { runId: "run-1", monId: mover!, toSlot: 2 });
 
-    expect(await slots(adapter, ids)).toEqual([2, 1, 0]);
+    expect(await slots(adapter, [mover!, untouched!, displaced!])).toEqual([2, 1, 0]);
   });
 
   it("reads the target slot inside the transaction, not from the caller's view", async () => {
