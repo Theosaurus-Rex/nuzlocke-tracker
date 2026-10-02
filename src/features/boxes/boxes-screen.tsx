@@ -115,14 +115,10 @@ function SortControl({
       </Select>
       <button
         type="button"
-        aria-label="Sort descending"
-        aria-pressed={sorting?.desc ?? false}
+        aria-label={`Sort direction: ${sorting?.desc ? "descending" : "ascending"}`}
         disabled={sorting === null}
         onClick={() => sorting && onChange({ ...sorting, desc: !sorting.desc })}
-        className={cn(
-          "cursor-pointer border-[1.5px] border-border p-2 focus-visible:outline-none focus-visible:ring-3 focus-visible:ring-ring/50 disabled:cursor-default disabled:opacity-40",
-          sorting?.desc && "bg-flag shadow-block",
-        )}
+        className="cursor-pointer border-[1.5px] border-border bg-background p-2 hover:bg-muted focus-visible:outline-none focus-visible:ring-3 focus-visible:ring-ring/50 disabled:cursor-default disabled:opacity-40"
       >
         {sorting?.desc ? (
           <ArrowDown aria-hidden="true" className="size-4" />

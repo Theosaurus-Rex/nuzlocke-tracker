@@ -309,7 +309,7 @@ describe("BoxesScreen", () => {
       expect(screen.getByRole("combobox", { name: "Sort boxes" })).toHaveTextContent(
         "Sort: Caught",
       );
-      expect(screen.getByRole("button", { name: "Sort descending" })).toBeDisabled();
+      expect(screen.getByRole("button", { name: "Sort direction: ascending" })).toBeDisabled();
     });
 
     it("reorders the table when the Lvl header is clicked", async () => {
@@ -340,11 +340,10 @@ describe("BoxesScreen", () => {
       await chooseSort(user, "Level");
       expect(phoneNames()).toEqual(["Edit “Low”", "Edit “Mid”", "Edit “High”"]);
 
-      await user.click(screen.getByRole("button", { name: "Sort descending" }));
-      expect(screen.getByRole("button", { name: "Sort descending" })).toHaveAttribute(
-        "aria-pressed",
-        "true",
-      );
+      await user.click(screen.getByRole("button", { name: "Sort direction: ascending" }));
+      expect(
+        screen.getByRole("button", { name: "Sort direction: descending" }),
+      ).toBeInTheDocument();
       expect(phoneNames()).toEqual(["Edit “High”", "Edit “Mid”", "Edit “Low”"]);
 
       await chooseSort(user, "Caught");
