@@ -10,7 +10,8 @@ import { validateAmendment, type EncounterField } from "@/domain/encounter-valid
 import type { MonAmendments } from "@/domain/transitions";
 import type { Gender, Mon, Route, Rules } from "@/domain/types";
 import { GAMES } from "@/game/registry";
-import { speciesDisplayName } from "@/game/pokeapi/resolve";
+import { useAbilityIndex } from "@/game/pokeapi/queries";
+import { speciesDisplayName, toNameForm } from "@/game/pokeapi/resolve";
 import { useAmendMon } from "@/storage/mutations";
 import { useMons, useRun } from "@/storage/queries";
 import { cn, joinIds } from "@/lib/utils";
@@ -120,7 +121,17 @@ function EditMonForm({ mon, runId, rules, generation, onDone }: EditMonFormProps
   const [gender, setGender] = useState<Gender | null>(mon.gender);
   const [levelText, setLevelText] = useState(String(mon.level));
   const [nature, setNature] = useState<string | null>(mon.nature);
-  const [ability, setAbility] = useState(mon.ability ?? "");
+  const [ability, setAbility] = useState(mon.ability === null ? "" : toNameForm(mon.ability));
+  const [abilityKey, setAbilityKey] = useState(0);
+  const abilityEntries = useAbilityIndex().data;
+  if (
+    abilityEntries !== undefined &&
+    ability !== "" &&
+    !abilityEntries.some((entry) => entry.name === ability)
+  ) {
+    setAbility("");
+    setAbilityKey(abilityKey + 1);
+  }
   const [heldItem, setHeldItem] = useState(mon.heldItem ?? "");
   const [moves, setMoves] = useState<string[]>(mon.moves);
   const [shiny, setShiny] = useState(mon.shiny);
@@ -315,7 +326,12 @@ function EditMonForm({ mon, runId, rules, generation, onDone }: EditMonFormProps
 
           <NatureField id="edit-mon-nature" value={nature} onChange={setNature} />
 
-          <AbilityField id="edit-mon-ability" value={ability} onChange={setAbility} />
+          <AbilityField
+            key={abilityKey}
+            id="edit-mon-ability"
+            value={ability}
+            onChange={setAbility}
+          />
 
           <HeldItemField id="edit-mon-held-item" value={heldItem} onChange={setHeldItem} />
 

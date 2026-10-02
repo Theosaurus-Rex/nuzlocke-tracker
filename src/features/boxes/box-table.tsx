@@ -4,7 +4,7 @@ import { useMemo } from "react";
 import { SpeciesSprite } from "@/components/species-sprite";
 import { Typography } from "@/components/typography";
 import type { Mon } from "@/domain/types";
-import { speciesDisplayName } from "@/game/pokeapi/resolve";
+import { abilityDisplayName, speciesDisplayName } from "@/game/pokeapi/resolve";
 import { monTitle } from "../encounters/mon-title";
 import { genderSymbol } from "@/lib/gender";
 
@@ -73,7 +73,10 @@ export function BoxTable({ mons, routeNames, onEdit }: BoxTableProps) {
           header: "Gender",
         }),
         columnHelper.accessor((mon) => orDash(mon.nature), { id: "nature", header: "Nature" }),
-        columnHelper.accessor((mon) => orDash(mon.ability), { id: "ability", header: "Ability" }),
+        columnHelper.accessor(
+          (mon) => orDash(mon.ability === null ? null : abilityDisplayName(mon.ability)),
+          { id: "ability", header: "Ability" },
+        ),
         columnHelper.accessor((mon) => mon.heldItem ?? "no item", { id: "item", header: "Item" }),
         columnHelper.accessor(
           (mon) => (mon.caughtRouteId === null ? "—" : (routeNames.get(mon.caughtRouteId) ?? "—")),

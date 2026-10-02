@@ -292,7 +292,7 @@ describe("LogEncounterDialog", () => {
     expect(mon).toMatchObject({
       nickname: "Sprig",
       gender: "male",
-      ability: "Overgrow",
+      ability: "overgrow",
       heldItem: "Miracle Seed",
     });
   });

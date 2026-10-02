@@ -5,6 +5,7 @@ import { moveFixtures, pokemonFixtures, speciesIndexFixture } from "@/test/pokea
 import type { IndexEntry } from "./model";
 import { toMove, toSpecies, toSpeciesIndex } from "./map";
 import {
+  abilityDisplayName,
   findByName,
   moveDisplayName,
   moveStatsIn,
@@ -136,6 +137,14 @@ describe("findByName", () => {
   it("finds moves by their displayed spelling", () => {
     expect(findByName(moves, "U-turn", moveDisplayName)?.name).toBe("u-turn");
     expect(findByName(moves, "Will-O-Wisp", moveDisplayName)?.name).toBe("will-o-wisp");
+  });
+});
+
+describe("abilityDisplayName", () => {
+  it("shows a PokéAPI name and old typed text the same way", () => {
+    expect(abilityDisplayName("water-absorb")).toBe("Water Absorb");
+    expect(abilityDisplayName("Water Absorb")).toBe("Water Absorb");
+    expect(abilityDisplayName("  chlorophyll ")).toBe("Chlorophyll");
   });
 });
 

@@ -127,6 +127,16 @@ describe("BoxTable", () => {
     ]);
   });
 
+  it("shows an old typed ability and a PokéAPI name the same way", () => {
+    renderTable([
+      makeMon({ id: "a", ability: "Water Absorb" }),
+      makeMon({ id: "b", ability: "water-absorb" }),
+    ]);
+
+    expect(cellsOf(1)[6]).toBe("Water Absorb");
+    expect(cellsOf(2)[6]).toBe("Water Absorb");
+  });
+
   it("shows a dash for missing values and no item for a missing item", () => {
     renderTable([makeMon()]);
 

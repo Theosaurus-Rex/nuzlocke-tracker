@@ -15,6 +15,8 @@ import type { Gender } from "@/domain/types";
 import { natures } from "@/game/natures";
 import { cn } from "@/lib/utils";
 
+import { AbilityPicker } from "./ability-picker";
+
 const GENDERS: { value: Gender; label: string }[] = [
   { value: "male", label: "Male" },
   { value: "female", label: "Female" },
@@ -155,19 +157,18 @@ export interface AbilityFieldProps {
 
 export function AbilityField({ id, value, onChange, error }: AbilityFieldProps): ReactNode {
   const errorId = `${id}-error`;
-  const errorProps =
-    error !== undefined ? { "aria-invalid": true, "aria-describedby": errorId } : {};
 
   return (
     <div>
       <Typography as="label" variant="eyebrow" htmlFor={id} className="mb-1 block">
         Ability
       </Typography>
-      <Input
+      <AbilityPicker
         id={id}
         value={value}
-        onChange={(event) => onChange(event.target.value)}
-        {...errorProps}
+        onChange={onChange}
+        aria-invalid={error !== undefined}
+        aria-describedby={error ? errorId : undefined}
       />
       {error && (
         <Typography as="p" id={errorId} variant="body" tone="alert" className="mt-1">

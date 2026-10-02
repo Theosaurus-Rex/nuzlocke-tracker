@@ -4,6 +4,7 @@ import { fetchJson, PokeApiError } from "./client";
 import {
   idFromUrl,
   nextStages,
+  toAbilityIndex,
   toMove,
   toMoveIndex,
   toSpecies,
@@ -74,6 +75,13 @@ export function useMoveIndex() {
   return useQuery({
     queryKey: ["pokeapi", "move-index"],
     queryFn: async () => toMoveIndex(await fetchJson<RawIndex>("/move?limit=100000")),
+  });
+}
+
+export function useAbilityIndex() {
+  return useQuery({
+    queryKey: ["pokeapi", "ability-index"],
+    queryFn: async () => toAbilityIndex(await fetchJson<RawIndex>("/ability?limit=100000")),
   });
 }
 

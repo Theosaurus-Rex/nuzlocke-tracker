@@ -3,7 +3,7 @@ import type { ReactNode } from "react";
 import { SpeciesSprite } from "@/components/species-sprite";
 import { Typography } from "@/components/typography";
 import type { Mon } from "@/domain/types";
-import { speciesDisplayName } from "@/game/pokeapi/resolve";
+import { abilityDisplayName, speciesDisplayName } from "@/game/pokeapi/resolve";
 import { genderSymbol } from "@/lib/gender";
 import { joinPresent } from "@/lib/join-present";
 import { EditMonButton } from "../encounters/edit-mon-button";
@@ -35,7 +35,10 @@ export function BoxRowList({ mons, onEdit }: BoxRowListProps): ReactNode {
                 {joinPresent([species, genderSymbol(mon.gender), `L${mon.level}`])}
               </Typography>
               <Typography as="p" variant="body" tone="muted">
-                {joinPresent([mon.heldItem ?? "no item", mon.ability])}
+                {joinPresent([
+                  mon.heldItem ?? "no item",
+                  mon.ability === null ? null : abilityDisplayName(mon.ability),
+                ])}
               </Typography>
             </div>
             <EditMonButton mon={mon} onEdit={() => onEdit(mon.id)} />
