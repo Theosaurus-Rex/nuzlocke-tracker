@@ -1,3 +1,4 @@
+import { ArrowDown, ArrowUp } from "lucide-react";
 import { useMemo, useState, type ReactNode } from "react";
 import { Navigate, useParams } from "react-router";
 
@@ -13,16 +14,18 @@ import {
 } from "@/components/ui/select";
 import { boxLayout } from "@/domain/box-slots";
 import type { Mon } from "@/domain/types";
-import { typesIn } from "@/game/pokeapi/resolve";
-import { useSpeciesMany } from "@/game/pokeapi/queries";
-import { GAMES } from "@/game/registry";
-import type { Type } from "@/game/types";
 import { cn } from "@/lib/utils";
-import { useMons, useRoutes, useRun } from "@/storage/queries";
+import { useMons, useRoutes } from "@/storage/queries";
 
 import { useEditMonDialog } from "../encounters/use-edit-mon-dialog";
 import { BoxGrid } from "./box-grid";
-import { searchMons, sortBoxedMons, type BoxSort } from "./box-sort";
+import {
+  BOX_SORT_FIELDS,
+  searchMons,
+  sortBoxedMons,
+  type BoxSortField,
+  type BoxSorting,
+} from "./box-sort";
 import { BoxRowList } from "./box-row-list";
 import { BoxTable } from "./box-table";
 import { useBoxView, type BoxView } from "./use-box-view";
@@ -71,56 +74,74 @@ function ViewToggle({
   );
 }
 
-const SORT_OPTIONS: readonly { sort: BoxSort; label: string }[] = [
-  { sort: "caught", label: "Caught" },
-  { sort: "level", label: "Level" },
-  { sort: "name", label: "Name" },
-  { sort: "type", label: "Type" },
+const CAUGHT = "caught";
+
+const SORT_ITEMS = [
+  { value: CAUGHT, label: "Sort: Caught" },
+  ...BOX_SORT_FIELDS.map(({ field, label }) => ({ value: field, label: `Sort: ${label}` })),
 ];
 
-const SORT_ITEMS = SORT_OPTIONS.map(({ sort, label }) => ({
-  value: sort,
-  label: `Sort: ${label}`,
-}));
-
-function SortSelect({
-  sort,
+function SortControl({
+  sorting,
   onChange,
 }: {
-  sort: BoxSort;
-  onChange: (sort: BoxSort) => void;
+  sorting: BoxSorting | null;
+  onChange: (sorting: BoxSorting | null) => void;
 }): ReactNode {
   return (
-    <Select items={SORT_ITEMS} value={sort} onValueChange={(next) => onChange(next!)}>
-      <SelectTrigger aria-label="Sort boxes" className="h-auto px-4 py-2 text-base font-medium">
-        <SelectValue />
-      </SelectTrigger>
-      <SelectContent>
-        {SORT_OPTIONS.map((option) => (
-          <SelectItem key={option.sort} value={option.sort}>
-            {option.label}
-          </SelectItem>
-        ))}
-      </SelectContent>
-    </Select>
+    <div className="flex items-center gap-2 md:hidden">
+      <Select
+        items={SORT_ITEMS}
+        value={sorting?.field ?? CAUGHT}
+        onValueChange={(next) =>
+          onChange(
+            next === CAUGHT || next === null
+              ? null
+              : { field: next as BoxSortField, desc: sorting?.desc ?? false },
+          )
+        }
+      >
+        <SelectTrigger aria-label="Sort boxes" className="h-auto px-4 py-2 text-base font-medium">
+          <SelectValue />
+        </SelectTrigger>
+        <SelectContent>
+          <SelectItem value={CAUGHT}>Caught</SelectItem>
+          {BOX_SORT_FIELDS.map((option) => (
+            <SelectItem key={option.field} value={option.field}>
+              {option.label}
+            </SelectItem>
+          ))}
+        </SelectContent>
+      </Select>
+      <button
+        type="button"
+        aria-label={`Sort direction: ${sorting?.desc ? "descending" : "ascending"}`}
+        disabled={sorting === null}
+        onClick={() => sorting && onChange({ ...sorting, desc: !sorting.desc })}
+        className="cursor-pointer border-[1.5px] border-border bg-background p-2 hover:bg-muted focus-visible:outline-none focus-visible:ring-3 focus-visible:ring-ring/50 disabled:cursor-default disabled:opacity-40"
+      >
+        {sorting?.desc ? (
+          <ArrowDown aria-hidden="true" className="size-4" />
+        ) : (
+          <ArrowUp aria-hidden="true" className="size-4" />
+        )}
+      </button>
+    </div>
   );
 }
 
 export function BoxesScreen(): ReactNode {
   const { runId } = useParams<{ runId: string }>();
-  const runQuery = useRun(runId ?? "");
   const monsQuery = useMons(runId);
   const routesQuery = useRoutes(runId ?? "");
   const [view, setView] = useBoxView();
-  const [sort, setSort] = useState<BoxSort>("caught");
+  const [sorting, setSorting] = useState<BoxSorting | null>(null);
   const [search, setSearch] = useState("");
   const boxed = boxedMons(monsQuery.data ?? []);
-  const generation = GAMES[runQuery.data?.game ?? "heartgold"].generation;
   const routeNames = useMemo(
     () => new Map((routesQuery.data ?? []).map((route) => [route.id, route.name])),
     [routesQuery.data],
   );
-  const speciesById = useSpeciesMany(boxed.map((mon) => mon.speciesId));
   const { openEditor, dialog } = useEditMonDialog(
     runId ?? "",
     monsQuery.data ?? [],
@@ -131,13 +152,7 @@ export function BoxesScreen(): ReactNode {
     return <Navigate to="/" replace />;
   }
 
-  const typesById = new Map<string, Type[]>(
-    [...speciesById].map(([id, species]) => [
-      id,
-      typesIn(species, generation).filter((type) => type !== "unknown"),
-    ]),
-  );
-  const visible = sortBoxedMons(searchMons(boxed, search), sort, typesById);
+  const visible = searchMons(boxed, search);
 
   return (
     <div>
@@ -146,7 +161,7 @@ export function BoxesScreen(): ReactNode {
         actions={
           <div className="flex flex-wrap items-center gap-3">
             <ViewToggle view={view} onChange={setView} />
-            {view === "list" && <SortSelect sort={sort} onChange={setSort} />}
+            {view === "list" && <SortControl sorting={sorting} onChange={setSorting} />}
           </div>
         }
       >
@@ -185,10 +200,16 @@ export function BoxesScreen(): ReactNode {
       {visible.length > 0 && view === "list" && (
         <>
           <div className="hidden md:block">
-            <BoxTable mons={visible} routeNames={routeNames} onEdit={openEditor} />
+            <BoxTable
+              mons={visible}
+              sorting={sorting}
+              onSortingChange={setSorting}
+              routeNames={routeNames}
+              onEdit={openEditor}
+            />
           </div>
           <div className="md:hidden">
-            <BoxRowList mons={visible} onEdit={openEditor} />
+            <BoxRowList mons={sortBoxedMons(visible, sorting)} onEdit={openEditor} />
           </div>
         </>
       )}

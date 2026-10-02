@@ -1,50 +1,69 @@
 import type { Mon } from "@/domain/types";
-import { speciesDisplayName, toNameForm } from "@/game/pokeapi/resolve";
-import { TYPES, type Type } from "@/game/types";
+import {
+  abilityDisplayName,
+  itemDisplayName,
+  speciesDisplayName,
+  toNameForm,
+} from "@/game/pokeapi/resolve";
 
-export type BoxSort = "caught" | "level" | "name" | "type";
+export type BoxSortField = "name" | "species" | "level" | "gender" | "nature" | "ability" | "item";
 
-function displayedName(mon: Mon): string {
-  return mon.nickname ?? speciesDisplayName(mon.speciesId);
+export interface BoxSorting {
+  field: BoxSortField;
+  desc: boolean;
 }
 
-function typeKey(types: readonly Type[] | undefined): [number, number] {
-  const primary = types?.[0];
-  if (primary === undefined) return [Number.POSITIVE_INFINITY, 0];
-  const secondary = types?.[1];
-  return [TYPES.indexOf(primary), secondary === undefined ? -1 : TYPES.indexOf(secondary)];
+export const BOX_SORT_FIELDS: readonly { field: BoxSortField; label: string }[] = [
+  { field: "name", label: "Name" },
+  { field: "species", label: "Species" },
+  { field: "level", label: "Level" },
+  { field: "gender", label: "Gender" },
+  { field: "nature", label: "Nature" },
+  { field: "ability", label: "Ability" },
+  { field: "item", label: "Item" },
+];
+
+function present(value: string | null): string | undefined {
+  return value === null || value === "" ? undefined : value;
 }
 
-function compare(
-  sort: BoxSort,
-  a: Mon,
-  b: Mon,
-  typesById: ReadonlyMap<string, readonly Type[]>,
-): number {
-  switch (sort) {
-    case "caught":
-      return 0;
-    case "level":
-      return b.level - a.level;
+export function boxSortValue(mon: Mon, field: BoxSortField): string | number | undefined {
+  switch (field) {
     case "name":
-      return displayedName(a).localeCompare(displayedName(b), undefined, { sensitivity: "base" });
-    case "type": {
-      const [primaryA, secondaryA] = typeKey(typesById.get(a.speciesId));
-      const [primaryB, secondaryB] = typeKey(typesById.get(b.speciesId));
-      if (primaryA !== primaryB) return primaryA < primaryB ? -1 : 1;
-      return secondaryA - secondaryB;
-    }
+      return mon.nickname ?? speciesDisplayName(mon.speciesId);
+    case "species":
+      return speciesDisplayName(mon.speciesId);
+    case "level":
+      return mon.level;
+    case "gender":
+      return present(mon.gender);
+    case "nature":
+      return present(mon.nature);
+    case "ability":
+      return present(mon.ability === null ? null : abilityDisplayName(mon.ability));
+    case "item":
+      return present(mon.heldItem === null ? null : itemDisplayName(mon.heldItem));
   }
 }
 
-export function sortBoxedMons(
-  mons: readonly Mon[],
-  sort: BoxSort,
-  typesById: ReadonlyMap<string, readonly Type[]>,
-): Mon[] {
+export function compareBoxSortValues(a: string | number, b: string | number): number {
+  if (typeof a === "number" && typeof b === "number") return a - b;
+  return String(a).localeCompare(String(b), undefined, { sensitivity: "base" });
+}
+
+export function sortBoxedMons(mons: readonly Mon[], sorting: BoxSorting | null): Mon[] {
+  if (sorting === null) return [...mons];
+  const { field, desc } = sorting;
   return mons
-    .map((mon, index) => ({ mon, index }))
-    .sort((a, b) => compare(sort, a.mon, b.mon, typesById) || a.index - b.index)
+    .map((mon) => ({ mon, value: boxSortValue(mon, field) }))
+    .sort((a, b) => {
+      if (a.value === undefined || b.value === undefined) {
+        if (a.value === b.value) return 0;
+        return a.value === undefined ? 1 : -1;
+      }
+      const order = compareBoxSortValues(a.value, b.value);
+      return desc ? -order : order;
+    })
     .map(({ mon }) => mon);
 }
 

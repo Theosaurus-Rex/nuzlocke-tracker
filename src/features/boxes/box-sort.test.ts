@@ -1,9 +1,15 @@
 import { describe, expect, it } from "vitest";
 
 import type { Mon } from "@/domain/types";
-import type { Type } from "@/game/types";
 
-import { searchMons, sortBoxedMons } from "./box-sort";
+import {
+  boxSortValue,
+  compareBoxSortValues,
+  searchMons,
+  sortBoxedMons,
+  type BoxSortField,
+  type BoxSorting,
+} from "./box-sort";
 
 function mon(id: string, overrides: Partial<Mon> = {}): Mon {
   return {
@@ -35,117 +41,93 @@ function ids(mons: readonly Mon[]): string[] {
   return mons.map((m) => m.id);
 }
 
-const NO_TYPES = new Map<string, Type[]>();
+const asc = (field: BoxSortField): BoxSorting => ({ field, desc: false });
+const desc = (field: BoxSortField): BoxSorting => ({ field, desc: true });
 
 describe("sortBoxedMons", () => {
-  it("leaves caught order alone", () => {
+  it("leaves slot order alone with no sorting", () => {
     const input = [mon("b", { level: 9 }), mon("a", { level: 3 }), mon("c", { level: 6 })];
-    expect(ids(sortBoxedMons(input, "caught", NO_TYPES))).toEqual(["b", "a", "c"]);
-  });
-
-  it("puts the highest level first and keeps caught order between equal levels", () => {
-    const input = [
-      mon("low", { level: 5 }),
-      mon("tie-first", { level: 9 }),
-      mon("tie-second", { level: 9 }),
-      mon("mid", { level: 7 }),
-    ];
-    expect(ids(sortBoxedMons(input, "level", NO_TYPES))).toEqual([
-      "tie-first",
-      "tie-second",
-      "mid",
-      "low",
-    ]);
+    expect(ids(sortBoxedMons(input, null))).toEqual(["b", "a", "c"]);
   });
 
   it("does not change the list it was given", () => {
-    const input = [mon("a", { level: 1 }), mon("b", { level: 2 })];
-    sortBoxedMons(input, "level", NO_TYPES);
+    const input = [mon("a", { level: 2 }), mon("b", { level: 1 })];
+    sortBoxedMons(input, asc("level"));
     expect(ids(input)).toEqual(["a", "b"]);
   });
 
-  describe("by name", () => {
-    it("sorts nicknames and species names together, A to Z, ignoring case", () => {
-      const input = [
-        mon("zed", { nickname: "Zed" }),
-        mon("pidgey", { speciesId: "pidgey" }),
-        mon("gyarados", { speciesId: "gyarados" }),
-        mon("apple", { nickname: "apple" }),
-      ];
-      expect(ids(sortBoxedMons(input, "name", NO_TYPES))).toEqual([
-        "apple",
-        "gyarados",
-        "pidgey",
-        "zed",
-      ]);
-    });
-
-    it("uses the species name for a mon with no nickname", () => {
-      const input = [
-        mon("nicknamed", { speciesId: "pidgey", nickname: "Zed" }),
-        mon("plain", { speciesId: "gyarados" }),
-      ];
-      expect(ids(sortBoxedMons(input, "name", NO_TYPES))).toEqual(["plain", "nicknamed"]);
-    });
-
-    it("keeps caught order between equal names", () => {
-      const input = [
-        mon("z", { nickname: "Zed" }),
-        mon("first", { speciesId: "pidgey" }),
-        mon("second", { speciesId: "pidgey" }),
-      ];
-      expect(ids(sortBoxedMons(input, "name", NO_TYPES))).toEqual(["first", "second", "z"]);
-    });
+  it("sorts level as a number, both ways", () => {
+    const input = [
+      mon("ten", { level: 10 }),
+      mon("nine", { level: 9 }),
+      mon("hundred", { level: 100 }),
+    ];
+    expect(ids(sortBoxedMons(input, asc("level")))).toEqual(["nine", "ten", "hundred"]);
+    expect(ids(sortBoxedMons(input, desc("level")))).toEqual(["hundred", "ten", "nine"]);
   });
 
-  describe("by type", () => {
-    const typesById = new Map<string, Type[]>([
-      ["bulbasaur", ["grass", "poison"]],
-      ["gyarados", ["water", "flying"]],
-      ["abomasnow", ["grass", "ice"]],
-      ["chikorita", ["grass"]],
-      ["totodile", ["water"]],
-      ["pidgey", ["normal", "flying"]],
-    ]);
+  it("sorts nicknames and species names together, ignoring case", () => {
+    const input = [
+      mon("zed", { nickname: "Zed" }),
+      mon("bulbasaur", { speciesId: "bulbasaur" }),
+      mon("alpha", { nickname: "alpha" }),
+    ];
+    expect(ids(sortBoxedMons(input, asc("name")))).toEqual(["alpha", "bulbasaur", "zed"]);
+    expect(ids(sortBoxedMons(input, desc("name")))).toEqual(["zed", "bulbasaur", "alpha"]);
+  });
 
-    it("orders by primary type, then single before dual, then secondary type", () => {
-      const input = [
-        mon("bulbasaur", { speciesId: "bulbasaur" }),
-        mon("mystery", { speciesId: "mystery" }),
-        mon("gyarados", { speciesId: "gyarados" }),
-        mon("abomasnow", { speciesId: "abomasnow" }),
-        mon("chikorita", { speciesId: "chikorita" }),
-        mon("totodile", { speciesId: "totodile" }),
-        mon("pidgey", { speciesId: "pidgey" }),
-      ];
-      expect(ids(sortBoxedMons(input, "type", typesById))).toEqual([
-        "pidgey",
-        "totodile",
-        "gyarados",
-        "chikorita",
-        "abomasnow",
-        "bulbasaur",
-        "mystery",
-      ]);
-    });
+  it("sorts ability and item by what is shown", () => {
+    const input = [
+      mon("b", { heldItem: "miracle-seed", ability: "water-absorb" }),
+      mon("a", { heldItem: "Oran Berry", ability: "Overgrow" }),
+    ];
+    expect(ids(sortBoxedMons(input, asc("item")))).toEqual(["b", "a"]);
+    expect(ids(sortBoxedMons(input, asc("ability")))).toEqual(["a", "b"]);
+  });
 
-    it("keeps caught order between mons of the same types", () => {
-      const input = [
-        mon("water-b", { speciesId: "totodile" }),
-        mon("normal", { speciesId: "pidgey" }),
-        mon("water-a", { speciesId: "totodile" }),
-      ];
-      expect(ids(sortBoxedMons(input, "type", typesById))).toEqual([
-        "normal",
-        "water-b",
-        "water-a",
-      ]);
-    });
+  it.each(["nature", "item", "ability", "gender"] as const)(
+    "puts a mon with no %s last in either direction",
+    (field) => {
+      const low: Partial<Mon> = {
+        nature: "Adamant",
+        heldItem: "apicot-berry",
+        ability: "adaptability",
+        gender: "female",
+      };
+      const high: Partial<Mon> = {
+        nature: "Jolly",
+        heldItem: "oran-berry",
+        ability: "overgrow",
+        gender: "male",
+      };
+      const input = [mon("empty"), mon("a", low), mon("b", high)];
+      expect(ids(sortBoxedMons(input, asc(field)))).toEqual(["a", "b", "empty"]);
+      expect(ids(sortBoxedMons(input, desc(field)))).toEqual(["b", "a", "empty"]);
+    },
+  );
 
-    it("puts every mon last when no types have loaded, in caught order", () => {
-      const input = [mon("b"), mon("a")];
-      expect(ids(sortBoxedMons(input, "type", NO_TYPES))).toEqual(["b", "a"]);
-    });
+  it("keeps slot order between ties, in either direction", () => {
+    const input = [mon("z", { level: 9 }), mon("first", { level: 5 }), mon("second", { level: 5 })];
+    expect(ids(sortBoxedMons(input, asc("level")))).toEqual(["first", "second", "z"]);
+    expect(ids(sortBoxedMons(input, desc("level")))).toEqual(["z", "first", "second"]);
+  });
+});
+
+describe("boxSortValue", () => {
+  it("is undefined for empty fields, including an empty string", () => {
+    const empty = mon("a", { nature: "" });
+    expect(boxSortValue(empty, "nature")).toBeUndefined();
+    expect(boxSortValue(empty, "item")).toBeUndefined();
+    expect(boxSortValue(empty, "ability")).toBeUndefined();
+    expect(boxSortValue(empty, "gender")).toBeUndefined();
+  });
+});
+
+describe("compareBoxSortValues", () => {
+  it("compares numbers numerically and strings ignoring case", () => {
+    expect(compareBoxSortValues(9, 10)).toBeLessThan(0);
+    expect(compareBoxSortValues("apple", "Banana")).toBeLessThan(0);
+    expect(compareBoxSortValues("Apple", "apple")).toBe(0);
   });
 });
 
