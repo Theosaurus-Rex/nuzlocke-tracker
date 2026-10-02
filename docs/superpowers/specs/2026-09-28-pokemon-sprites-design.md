@@ -12,6 +12,8 @@ phone route cards and the party cards were all built without the sprite.
 **Licence, decided 2026-09-28.** Theo has cleared showing sprites hosted by the PokéAPI project.
 The sprite repository is CC0, but its licence file states the images are copyright The Pokémon
 Company. So the app loads them from PokéAPI's host at runtime and never commits a copy.
+Held item sprites are covered too. They load from the same host, by address, and are never
+committed.
 
 **Still pixel sprites, decided 2026-09-28.** The party cards show PokéAPI's standard sprite
 (`front_default`, `front_shiny`). It is Black/White pixel art for every generation. Gen 1 to 5 are

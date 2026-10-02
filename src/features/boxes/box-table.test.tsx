@@ -158,4 +158,16 @@ describe("BoxTable", () => {
 
     expect(cellsOf(1)[8]).toBe("—");
   });
+
+  it("shows the held item sprite, and none for no item", () => {
+    renderTable([makeMon({ id: "a", heldItem: "miracle-seed" }), makeMon({ id: "b" })]);
+
+    const [, withItem, without] = screen.getAllByRole("row");
+    expect(
+      withItem!.querySelector(
+        'img[src="https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/items/miracle-seed.png"]',
+      ),
+    ).not.toBeNull();
+    expect(without!.querySelector('img[src*="/items/"]')).toBeNull();
+  });
 });

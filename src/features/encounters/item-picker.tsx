@@ -1,5 +1,6 @@
 import { useCallback, type ReactNode } from "react";
 
+import { ItemSprite } from "@/components/item-sprite";
 import { useItemIndex } from "@/game/pokeapi/queries";
 import { itemDisplayName, findByName, searchIndex } from "@/game/pokeapi/resolve";
 import { joinIds } from "@/lib/utils";
@@ -52,6 +53,7 @@ export function ItemPicker({
       resolve={resolve}
       displayName={itemDisplayName}
       search={search}
+      icon={(itemId) => <ItemSprite item={itemId} />}
       notice={<PokeApiNotice id={noticeId} query={index} loadingText="Loading items…" />}
     />
   );

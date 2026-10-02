@@ -1,6 +1,7 @@
 import { createColumnHelper, tableFeatures, useTable } from "@tanstack/react-table";
 import { useMemo } from "react";
 
+import { ItemSprite } from "@/components/item-sprite";
 import { SpeciesSprite } from "@/components/species-sprite";
 import { Typography } from "@/components/typography";
 import type { Mon } from "@/domain/types";
@@ -79,7 +80,16 @@ export function BoxTable({ mons, routeNames, onEdit }: BoxTableProps) {
         ),
         columnHelper.accessor(
           (mon) => (mon.heldItem === null ? "no item" : itemDisplayName(mon.heldItem)),
-          { id: "item", header: "Item" },
+          {
+            id: "item",
+            header: "Item",
+            cell: ({ row, getValue }) => (
+              <span className="inline-flex items-center gap-1.5">
+                {row.original.heldItem !== null && <ItemSprite item={row.original.heldItem} />}
+                {getValue()}
+              </span>
+            ),
+          },
         ),
         columnHelper.accessor(
           (mon) => (mon.caughtRouteId === null ? "—" : (routeNames.get(mon.caughtRouteId) ?? "—")),

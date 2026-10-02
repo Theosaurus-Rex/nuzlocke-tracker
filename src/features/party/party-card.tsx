@@ -3,6 +3,7 @@ import { CSS } from "@dnd-kit/utilities";
 import { GripVerticalIcon } from "lucide-react";
 import type { KeyboardEventHandler, ReactNode } from "react";
 
+import { ItemSprite } from "@/components/item-sprite";
 import { SpeciesSprite } from "@/components/species-sprite";
 import { SpeciesTypeBadge } from "@/components/species-type-badge";
 import { Surface } from "@/components/surface";
@@ -78,9 +79,12 @@ export function PartyCard({ mon, routeName, generation, onEdit }: PartyCardProps
         ))}
       </ul>
       <Typography variant="body" className="mt-4 break-words border-t border-muted pt-3">
-        <Typography as="span" variant="body" tone="ink">
-          {itemText}
-        </Typography>
+        <span className="inline-flex items-center gap-1 align-middle">
+          {mon.heldItem !== null && <ItemSprite item={mon.heldItem} />}
+          <Typography as="span" variant="body" tone="ink">
+            {itemText}
+          </Typography>
+        </span>
         {footerRest !== "" && (
           <Typography as="span" variant="body" tone="muted">
             {` · ${footerRest}`}
