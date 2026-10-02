@@ -1,11 +1,13 @@
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { render, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
+import { useState } from "react";
 import { describe, expect, it, vi } from "vitest";
 
 import type { Mon } from "@/domain/types";
 import { defaultPokeApiRoutes, stubPokeApi } from "@/test/pokeapi-fetch";
 
+import type { BoxSorting } from "./box-sort";
 import { BoxTable } from "./box-table";
 
 function makeMon(overrides: Partial<Mon> = {}): Mon {
@@ -34,6 +36,27 @@ function makeMon(overrides: Partial<Mon> = {}): Mon {
   };
 }
 
+function Harness({
+  mons,
+  routeNames,
+  onEdit,
+}: {
+  mons: Mon[];
+  routeNames: ReadonlyMap<string, string>;
+  onEdit: (monId: string) => void;
+}) {
+  const [sorting, setSorting] = useState<BoxSorting | null>(null);
+  return (
+    <BoxTable
+      mons={mons}
+      sorting={sorting}
+      onSortingChange={setSorting}
+      routeNames={routeNames}
+      onEdit={onEdit}
+    />
+  );
+}
+
 function renderTable(
   mons: Mon[],
   routeNames = new Map<string, string>(),
@@ -43,9 +66,24 @@ function renderTable(
   const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
   return render(
     <QueryClientProvider client={client}>
-      <BoxTable mons={mons} routeNames={routeNames} onEdit={onEdit} />
+      <Harness mons={mons} routeNames={routeNames} onEdit={onEdit} />
     </QueryClientProvider>,
   );
+}
+
+function header(name: string): HTMLElement {
+  return screen.getByRole("columnheader", { name });
+}
+
+function clickHeader(name: string) {
+  return userEvent.click(within(header(name)).getByRole("button"));
+}
+
+function nameColumn(): string[] {
+  return screen
+    .getAllByRole("row")
+    .slice(1)
+    .map((row) => within(row).getAllByRole("cell")[1]?.textContent ?? "");
 }
 
 function cellsOf(rowIndex: number): string[] {
@@ -169,5 +207,91 @@ describe("BoxTable", () => {
       ),
     ).not.toBeNull();
     expect(without!.querySelector('img[src*="/items/"]')).toBeNull();
+  });
+
+  describe("sorting", () => {
+    const slots = [
+      makeMon({ id: "b", nickname: "beta", level: 10, nature: "Jolly", heldItem: "oran-berry" }),
+      makeMon({ id: "e", nickname: null, level: 9 }),
+      makeMon({
+        id: "a",
+        nickname: "alpha",
+        level: 100,
+        nature: "Adamant",
+        heldItem: "apicot-berry",
+      }),
+    ];
+
+    it("cycles ascending, descending, then back to slot order", async () => {
+      renderTable(slots);
+      expect(header("Lvl")).toHaveAttribute("aria-sort", "none");
+
+      await clickHeader("Lvl");
+      expect(nameColumn()).toEqual(["Chikorita", "“beta”", "“alpha”"]);
+      expect(header("Lvl")).toHaveAttribute("aria-sort", "ascending");
+
+      await clickHeader("Lvl");
+      expect(nameColumn()).toEqual(["“alpha”", "“beta”", "Chikorita"]);
+      expect(header("Lvl")).toHaveAttribute("aria-sort", "descending");
+
+      await clickHeader("Lvl");
+      expect(nameColumn()).toEqual(["“beta”", "Chikorita", "“alpha”"]);
+      expect(header("Lvl")).toHaveAttribute("aria-sort", "none");
+    });
+
+    it("sorts names ignoring case, nickname and species together", async () => {
+      renderTable(slots);
+
+      await clickHeader("Name");
+
+      expect(nameColumn()).toEqual(["“alpha”", "“beta”", "Chikorita"]);
+    });
+
+    it("moves the sort to the newly clicked column", async () => {
+      renderTable(slots);
+      await clickHeader("Lvl");
+
+      await clickHeader("Name");
+
+      expect(header("Lvl")).toHaveAttribute("aria-sort", "none");
+      expect(header("Name")).toHaveAttribute("aria-sort", "ascending");
+    });
+
+    it.each(["Nature", "Item"])("keeps empty %s last in both directions", async (name) => {
+      const input = [
+        makeMon({ id: "empty", nickname: "empty" }),
+        makeMon({ id: "x", nickname: "x", nature: "Jolly", heldItem: "oran-berry" }),
+        makeMon({ id: "y", nickname: "y", nature: "Adamant", heldItem: "apicot-berry" }),
+      ];
+      renderTable(input);
+
+      await clickHeader(name);
+      expect(nameColumn().at(-1)).toBe("“empty”");
+
+      await clickHeader(name);
+      expect(header(name)).toHaveAttribute("aria-sort", "descending");
+      expect(nameColumn().at(-1)).toBe("“empty”");
+    });
+
+    it("keeps slot order between ties", async () => {
+      renderTable([
+        makeMon({ id: "1", nickname: "one", level: 5 }),
+        makeMon({ id: "2", nickname: "two", level: 5 }),
+        makeMon({ id: "3", nickname: "three", level: 1 }),
+      ]);
+
+      await clickHeader("Lvl");
+
+      expect(nameColumn()).toEqual(["“three”", "“one”", "“two”"]);
+    });
+
+    it("does not make the sprite or caught on headers sortable", () => {
+      renderTable(slots);
+
+      for (const name of ["Sprite", "Caught on"]) {
+        expect(within(header(name)).queryByRole("button")).toBeNull();
+        expect(header(name)).not.toHaveAttribute("aria-sort");
+      }
+    });
   });
 });

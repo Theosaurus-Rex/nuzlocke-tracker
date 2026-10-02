@@ -1,5 +1,5 @@
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { fireEvent, render, screen, waitFor, within } from "@testing-library/react";
+import { fireEvent, render, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { MemoryRouter, Route, Routes } from "react-router";
@@ -285,7 +285,19 @@ describe("BoxesScreen", () => {
       await user.click(await screen.findByRole("option", { name: label }));
     }
 
-    it("starts sorted by caught order", async () => {
+    function phoneNames(): string[] {
+      const list = screen.getByRole("list");
+      return within(list)
+        .getAllByRole("listitem")
+        .map(
+          (item) =>
+            within(item)
+              .getByRole("button", { name: /^Edit / })
+              .getAttribute("aria-label") ?? "",
+        );
+    }
+
+    it("starts in slot order with nothing sorted", async () => {
       const user = userEvent.setup();
       await setup([
         { nickname: "Low", level: 5 },
@@ -297,9 +309,26 @@ describe("BoxesScreen", () => {
       expect(screen.getByRole("combobox", { name: "Sort boxes" })).toHaveTextContent(
         "Sort: Caught",
       );
+      expect(screen.getByRole("button", { name: "Sort descending" })).toBeDisabled();
     });
 
-    it("reorders the rows when Level is chosen", async () => {
+    it("reorders the table when the Lvl header is clicked", async () => {
+      const user = userEvent.setup();
+      await setup([
+        { nickname: "Low", level: 5 },
+        { nickname: "High", level: 9 },
+        { nickname: "Mid", level: 7 },
+      ]);
+      await openList(user);
+
+      await user.click(
+        within(await screen.findByRole("columnheader", { name: "Lvl" })).getByRole("button"),
+      );
+
+      expect(await tableNames()).toEqual(["“Low”", "“Mid”", "“High”"]);
+    });
+
+    it("sorts the phone list with the sort control and its direction button", async () => {
       const user = userEvent.setup();
       await setup([
         { nickname: "Low", level: 5 },
@@ -309,23 +338,36 @@ describe("BoxesScreen", () => {
       await openList(user);
 
       await chooseSort(user, "Level");
+      expect(phoneNames()).toEqual(["Edit “Low”", "Edit “Mid”", "Edit “High”"]);
 
-      expect(await tableNames()).toEqual(["“High”", "“Mid”", "“Low”"]);
-      expect(screen.getByRole("combobox", { name: "Sort boxes" })).toHaveTextContent("Sort: Level");
+      await user.click(screen.getByRole("button", { name: "Sort descending" }));
+      expect(screen.getByRole("button", { name: "Sort descending" })).toHaveAttribute(
+        "aria-pressed",
+        "true",
+      );
+      expect(phoneNames()).toEqual(["Edit “High”", "Edit “Mid”", "Edit “Low”"]);
+
+      await chooseSort(user, "Caught");
+      expect(phoneNames()).toEqual(["Edit “Low”", "Edit “High”", "Edit “Mid”"]);
     });
 
-    it("sorts by type once the species have loaded", async () => {
+    it("shares one sort between the table and the phone list", async () => {
       const user = userEvent.setup();
       await setup([
-        { nickname: "Leaf", speciesId: "chikorita" },
-        { nickname: "Fish", speciesId: "gyarados" },
-        { nickname: "Bird", speciesId: "pidgey" },
+        { nickname: "Low", level: 5 },
+        { nickname: "High", level: 9 },
       ]);
       await openList(user);
 
-      await chooseSort(user, "Type");
+      await user.click(
+        within(await screen.findByRole("columnheader", { name: "Lvl" })).getByRole("button"),
+      );
+      await user.click(
+        within(screen.getByRole("columnheader", { name: "Lvl" })).getByRole("button"),
+      );
 
-      await waitFor(async () => expect(await tableNames()).toEqual(["“Bird”", "“Fish”", "“Leaf”"]));
+      expect(phoneNames()).toEqual(["Edit “High”", "Edit “Low”"]);
+      expect(screen.getByRole("combobox", { name: "Sort boxes" })).toHaveTextContent("Sort: Level");
     });
 
     it("narrows the table as you type", async () => {
