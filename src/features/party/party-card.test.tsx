@@ -145,4 +145,17 @@ describe("PartyCard", () => {
 
     expect(screen.getByRole("button", { name: "Edit Chikorita" })).toBeInTheDocument();
   });
+
+  it("shows the held item sprite before the item name, and none for no item", () => {
+    const { container, unmount } = renderCard(makeMon({ heldItem: "Miracle Seed" }));
+    expect(
+      container.querySelector(
+        'img[src="https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/items/miracle-seed.png"]',
+      ),
+    ).not.toBeNull();
+    unmount();
+
+    const empty = renderCard(makeMon());
+    expect(empty.container.querySelector('img[src*="/items/"]')).toBeNull();
+  });
 });

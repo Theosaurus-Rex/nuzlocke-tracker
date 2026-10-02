@@ -106,4 +106,16 @@ describe("BoxRowList", () => {
     expect(within(row).getByText("Chikorita · L5")).toBeInTheDocument();
     expect(within(row).getByText("no item")).toBeInTheDocument();
   });
+
+  it("shows the held item sprite, and none for no item", () => {
+    renderList([makeMon({ id: "a", heldItem: "miracle-seed" }), makeMon({ id: "b" })]);
+
+    const [withItem, without] = screen.getAllByRole("listitem");
+    expect(
+      withItem!.querySelector(
+        'img[src="https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/items/miracle-seed.png"]',
+      ),
+    ).not.toBeNull();
+    expect(without!.querySelector('img[src*="/items/"]')).toBeNull();
+  });
 });

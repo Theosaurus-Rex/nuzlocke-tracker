@@ -70,4 +70,14 @@ describe("AbilityPicker", () => {
 
     expect(await screen.findByRole("alert")).toHaveTextContent("Couldn't reach PokéAPI");
   });
+
+  it("shows no sprite on its options", async () => {
+    const user = userEvent.setup();
+    render(<StatefulPicker />);
+
+    await user.type(screen.getByRole("combobox"), "wa");
+
+    const option = await screen.findByRole("option", { name: "Water Absorb" });
+    expect(option.querySelector("img")).toBeNull();
+  });
 });

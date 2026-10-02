@@ -21,6 +21,8 @@ export interface ComboboxFieldProps {
   placeholder?: string;
   /** Rendered inside the field, right-aligned, once a value resolves. Purely decorative. */
   suffix?: ReactNode;
+  /** Rendered before the label in each option. */
+  icon?: (id: string) => ReactNode;
   /** Rendered under the input, outside the popup, which is hidden while it has no items. */
   notice?: ReactNode;
   inputClassName?: string;
@@ -51,6 +53,7 @@ export function ComboboxField({
   displayName,
   placeholder,
   suffix,
+  icon,
   notice,
   inputClassName,
   "aria-invalid": ariaInvalid,
@@ -135,9 +138,11 @@ export function ComboboxField({
                   onClick={() => select(item)}
                   className={cn(
                     "px-2.5 py-1 outline-none data-highlighted:bg-muted",
+                    icon && "flex items-center gap-2",
                     value === item.id && "font-medium",
                   )}
                 >
+                  {icon?.(item.id)}
                   {item.label}
                 </Autocomplete.Item>
               )}

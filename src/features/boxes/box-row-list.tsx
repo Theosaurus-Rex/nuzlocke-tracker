@@ -1,5 +1,6 @@
 import type { ReactNode } from "react";
 
+import { ItemSprite } from "@/components/item-sprite";
 import { SpeciesSprite } from "@/components/species-sprite";
 import { Typography } from "@/components/typography";
 import type { Mon } from "@/domain/types";
@@ -34,12 +35,15 @@ export function BoxRowList({ mons, onEdit }: BoxRowListProps): ReactNode {
               <Typography as="p" variant="body" tone="muted">
                 {joinPresent([species, genderSymbol(mon.gender), `L${mon.level}`])}
               </Typography>
-              <Typography as="p" variant="body" tone="muted">
-                {joinPresent([
-                  mon.heldItem === null ? "no item" : itemDisplayName(mon.heldItem),
-                  mon.ability === null ? null : abilityDisplayName(mon.ability),
-                ])}
-              </Typography>
+              <div className="flex items-center gap-1.5">
+                {mon.heldItem !== null && <ItemSprite item={mon.heldItem} />}
+                <Typography as="p" variant="body" tone="muted">
+                  {joinPresent([
+                    mon.heldItem === null ? "no item" : itemDisplayName(mon.heldItem),
+                    mon.ability === null ? null : abilityDisplayName(mon.ability),
+                  ])}
+                </Typography>
+              </div>
             </div>
             <EditMonButton mon={mon} onEdit={() => onEdit(mon.id)} />
           </li>

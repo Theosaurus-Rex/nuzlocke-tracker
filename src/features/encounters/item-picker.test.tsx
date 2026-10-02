@@ -79,4 +79,18 @@ describe("ItemPicker", () => {
 
     expect(await screen.findByRole("alert")).toHaveTextContent("Couldn't reach PokéAPI");
   });
+
+  it("shows the item sprite on each option", async () => {
+    const user = userEvent.setup();
+    render(<StatefulPicker />);
+
+    await user.type(screen.getByRole("combobox"), "mi");
+
+    const option = await screen.findByRole("option", { name: "Miracle Seed" });
+    expect(
+      option.querySelector(
+        'img[src="https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/items/miracle-seed.png"]',
+      ),
+    ).not.toBeNull();
+  });
 });
