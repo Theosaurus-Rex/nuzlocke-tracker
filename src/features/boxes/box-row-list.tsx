@@ -3,7 +3,7 @@ import type { ReactNode } from "react";
 import { SpeciesSprite } from "@/components/species-sprite";
 import { Typography } from "@/components/typography";
 import type { Mon } from "@/domain/types";
-import { abilityDisplayName, speciesDisplayName } from "@/game/pokeapi/resolve";
+import { abilityDisplayName, itemDisplayName, speciesDisplayName } from "@/game/pokeapi/resolve";
 import { genderSymbol } from "@/lib/gender";
 import { joinPresent } from "@/lib/join-present";
 import { EditMonButton } from "../encounters/edit-mon-button";
@@ -36,7 +36,7 @@ export function BoxRowList({ mons, onEdit }: BoxRowListProps): ReactNode {
               </Typography>
               <Typography as="p" variant="body" tone="muted">
                 {joinPresent([
-                  mon.heldItem ?? "no item",
+                  mon.heldItem === null ? "no item" : itemDisplayName(mon.heldItem),
                   mon.ability === null ? null : abilityDisplayName(mon.ability),
                 ])}
               </Typography>

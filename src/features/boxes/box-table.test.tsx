@@ -137,6 +137,16 @@ describe("BoxTable", () => {
     expect(cellsOf(2)[6]).toBe("Water Absorb");
   });
 
+  it("shows an old typed item and a PokéAPI name the same way", () => {
+    renderTable([
+      makeMon({ id: "a", heldItem: "Miracle Seed" }),
+      makeMon({ id: "b", heldItem: "miracle-seed" }),
+    ]);
+
+    expect(cellsOf(1)[7]).toBe("Miracle Seed");
+    expect(cellsOf(2)[7]).toBe("Miracle Seed");
+  });
+
   it("shows a dash for missing values and no item for a missing item", () => {
     renderTable([makeMon()]);
 

@@ -8,7 +8,7 @@ import { SpeciesTypeBadge } from "@/components/species-type-badge";
 import { Surface } from "@/components/surface";
 import { Typography } from "@/components/typography";
 import type { Mon } from "@/domain/types";
-import { abilityDisplayName, speciesDisplayName } from "@/game/pokeapi/resolve";
+import { abilityDisplayName, itemDisplayName, speciesDisplayName } from "@/game/pokeapi/resolve";
 import { genderSymbol } from "@/lib/gender";
 import { joinPresent } from "@/lib/join-present";
 import { cn } from "@/lib/utils";
@@ -40,7 +40,7 @@ export function PartyCard({ mon, routeName, generation, onEdit }: PartyCardProps
   const { onKeyDown, ...pointerListeners } = listeners ?? {};
   const onHandleKeyDown = onKeyDown as KeyboardEventHandler<HTMLButtonElement> | undefined;
 
-  const itemText = mon.heldItem ?? "no item";
+  const itemText = mon.heldItem === null ? "no item" : itemDisplayName(mon.heldItem);
   const footerRest = joinPresent([
     mon.ability === null ? null : abilityDisplayName(mon.ability),
     routeName,

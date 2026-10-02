@@ -106,6 +106,14 @@ describe("PartyCard", () => {
     );
   });
 
+  it("shows an old typed item and a PokéAPI name the same way", () => {
+    const { unmount } = renderCard(makeMon({ heldItem: "Miracle Seed" }));
+    expect(screen.getByText("Miracle Seed")).toBeInTheDocument();
+    unmount();
+    renderCard(makeMon({ heldItem: "miracle-seed" }));
+    expect(screen.getByText("Miracle Seed")).toBeInTheDocument();
+  });
+
   it("falls back to the species name, unquoted, with no nickname", () => {
     renderCard(makeMon());
     expect(screen.getByRole("heading", { name: "Chikorita" })).toBeInTheDocument();

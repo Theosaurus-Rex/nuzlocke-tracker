@@ -10,7 +10,7 @@ import { validateAmendment, type EncounterField } from "@/domain/encounter-valid
 import type { MonAmendments } from "@/domain/transitions";
 import type { Gender, Mon, Route, Rules } from "@/domain/types";
 import { GAMES } from "@/game/registry";
-import { useAbilityIndex } from "@/game/pokeapi/queries";
+import { useAbilityIndex, useItemIndex } from "@/game/pokeapi/queries";
 import { speciesDisplayName, toNameForm } from "@/game/pokeapi/resolve";
 import { useAmendMon } from "@/storage/mutations";
 import { useMons, useRun } from "@/storage/queries";
@@ -132,7 +132,17 @@ function EditMonForm({ mon, runId, rules, generation, onDone }: EditMonFormProps
     setAbility("");
     setAbilityKey(abilityKey + 1);
   }
-  const [heldItem, setHeldItem] = useState(mon.heldItem ?? "");
+  const [heldItem, setHeldItem] = useState(mon.heldItem === null ? "" : toNameForm(mon.heldItem));
+  const [heldItemKey, setHeldItemKey] = useState(0);
+  const itemEntries = useItemIndex().data;
+  if (
+    itemEntries !== undefined &&
+    heldItem !== "" &&
+    !itemEntries.some((entry) => entry.name === heldItem)
+  ) {
+    setHeldItem("");
+    setHeldItemKey(heldItemKey + 1);
+  }
   const [moves, setMoves] = useState<string[]>(mon.moves);
   const [shiny, setShiny] = useState(mon.shiny);
   const [submitted, setSubmitted] = useState(false);
@@ -327,13 +337,18 @@ function EditMonForm({ mon, runId, rules, generation, onDone }: EditMonFormProps
           <NatureField id="edit-mon-nature" value={nature} onChange={setNature} />
 
           <AbilityField
-            key={abilityKey}
+            key={`ability-${String(abilityKey)}`}
             id="edit-mon-ability"
             value={ability}
             onChange={setAbility}
           />
 
-          <HeldItemField id="edit-mon-held-item" value={heldItem} onChange={setHeldItem} />
+          <HeldItemField
+            key={`held-item-${String(heldItemKey)}`}
+            id="edit-mon-held-item"
+            value={heldItem}
+            onChange={setHeldItem}
+          />
 
           <div className="sm:col-span-2">
             <MovesetField id="edit-mon-move" value={moves} onChange={setMoves} />

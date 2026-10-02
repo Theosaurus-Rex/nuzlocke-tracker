@@ -7,6 +7,7 @@ import { toMove, toSpecies, toSpeciesIndex } from "./map";
 import {
   abilityDisplayName,
   findByName,
+  itemDisplayName,
   moveDisplayName,
   moveStatsIn,
   searchIndex,
@@ -145,6 +146,18 @@ describe("abilityDisplayName", () => {
     expect(abilityDisplayName("water-absorb")).toBe("Water Absorb");
     expect(abilityDisplayName("Water Absorb")).toBe("Water Absorb");
     expect(abilityDisplayName("  chlorophyll ")).toBe("Chlorophyll");
+  });
+});
+
+describe("itemDisplayName", () => {
+  it("shows a PokéAPI name and old typed text the same way", () => {
+    expect(itemDisplayName("miracle-seed")).toBe("Miracle Seed");
+    expect(itemDisplayName("Miracle Seed")).toBe("Miracle Seed");
+  });
+
+  it("spells items title case gets wrong", () => {
+    expect(itemDisplayName("never-melt-ice")).toBe("Never-Melt Ice");
+    expect(itemDisplayName("King's Rock")).toBe("King’s Rock");
   });
 });
 

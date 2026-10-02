@@ -5,6 +5,7 @@ import {
   idFromUrl,
   nextStages,
   toAbilityIndex,
+  toItemIndex,
   toMove,
   toMoveIndex,
   toSpecies,
@@ -82,6 +83,13 @@ export function useAbilityIndex() {
   return useQuery({
     queryKey: ["pokeapi", "ability-index"],
     queryFn: async () => toAbilityIndex(await fetchJson<RawIndex>("/ability?limit=100000")),
+  });
+}
+
+export function useItemIndex() {
+  return useQuery({
+    queryKey: ["pokeapi", "item-index"],
+    queryFn: async () => toItemIndex(await fetchJson<RawIndex>("/item?limit=100000")),
   });
 }
 

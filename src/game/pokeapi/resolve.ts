@@ -1,4 +1,4 @@
-import { moveDisplayNames, speciesDisplayNames } from "@/game/data/display-names";
+import { itemDisplayNames, moveDisplayNames, speciesDisplayNames } from "@/game/data/display-names";
 import type { Type } from "@/game/types";
 
 import type { IndexEntry, Move, Species } from "./model";
@@ -92,6 +92,11 @@ export function speciesDisplayName(id: string): string {
 
 export function abilityDisplayName(value: string): string {
   return titleCase(toNameForm(value));
+}
+
+export function itemDisplayName(value: string): string {
+  const name = toNameForm(value);
+  return itemDisplayNames[name] ?? titleCase(name);
 }
 
 export function moveDisplayName(id: string): string {

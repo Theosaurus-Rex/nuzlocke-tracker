@@ -331,12 +331,14 @@ the field unset and the form refuses to save. This narrows the rule above: *all 
 still holds, *anything typed* does not. Romhack species are deferred, and when they come they
 get a local layer behind the same hooks.
 
-Ability is a selection too, built like the move picker over PokéAPI's ability list and stored as
-the PokéAPI name, such as `water-absorb`. Runs saved before this hold typed text like "Water
-Absorb", so every read normalises through `abilityDisplayName`, and the edit dialog opens a known
-old value as the matching selection. An old value that matches no ability is cleared in the
-edit dialog once the list loads, decided 2026-10-02. Held item is still free text until PER-104
-wires in PokéAPI's item list.
+Ability and held item are selections too, built like the move picker over PokéAPI's ability and
+item lists and stored as the PokéAPI name, such as `water-absorb` or `miracle-seed`. Runs saved
+before this hold typed text like "Water Absorb", so every read normalises through
+`abilityDisplayName` or `itemDisplayName`, and the edit dialog opens a known old value as the
+matching selection. An old value that matches nothing in the list is cleared in the edit dialog
+once the list loads, decided 2026-10-02. The item list is unfiltered. PokéAPI's `holdable`
+attributes miss real held items such as Dragon Scale, Up-Grade, Eviolite and Mega Stones, so
+filtering would block real picks.
 
 **The moveset editor takes a selection too — decided 2026-09-21.** Same rule as the species
 picker: typing filters the move index, a fully typed move name counts as choosing it, and a name
