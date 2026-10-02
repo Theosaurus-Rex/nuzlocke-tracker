@@ -90,6 +90,10 @@ export function speciesDisplayName(id: string): string {
   return speciesDisplayNames[id] ?? titleCase(id);
 }
 
+export function abilityDisplayName(value: string): string {
+  return titleCase(toNameForm(value));
+}
+
 export function moveDisplayName(id: string): string {
   return moveDisplayNames[id] ?? titleCase(id);
 }

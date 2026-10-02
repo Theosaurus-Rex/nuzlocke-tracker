@@ -82,6 +82,10 @@ export function toMoveIndex(raw: RawIndex): IndexEntry[] {
   return toIndex(raw);
 }
 
+export function toAbilityIndex(raw: RawIndex): IndexEntry[] {
+  return toIndex(raw);
+}
+
 export function toSpecies(raw: RawPokemon): Species {
   const pastTypes: PastTypes[] = raw.past_types
     .flatMap((entry) => {

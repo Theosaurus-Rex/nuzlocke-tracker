@@ -249,7 +249,48 @@ describe("EditMonDialog", () => {
 
     await waitFor(async () => {
       const saved = await adapter.mons.get(mon.id);
-      expect(saved?.ability).toBe("Overgrow");
+      expect(saved?.ability).toBe("overgrow");
+    });
+  });
+
+  it("opens an old typed ability as the matching selection and saves its PokéAPI name", async () => {
+    const user = userEvent.setup();
+    const { adapter, mon } = renderDialog({ mon: makeMon({ ability: "Chlorophyll" }) });
+    await adapter.mons.put(mon);
+
+    expect(screen.getByLabelText("Ability")).toHaveValue("Chlorophyll");
+    await user.click(screen.getByRole("button", { name: "Save changes" }));
+
+    await waitFor(async () => {
+      expect((await adapter.mons.get(mon.id))?.ability).toBe("chlorophyll");
+    });
+  });
+
+  it("clears an old ability the list does not know when the dialog saves", async () => {
+    const user = userEvent.setup();
+    const { adapter, mon } = renderDialog({ mon: makeMon({ ability: "Gooey Typo" }) });
+    await adapter.mons.put(mon);
+
+    await waitFor(() => {
+      expect(screen.getByLabelText("Ability")).toHaveValue("");
+    });
+    await user.click(screen.getByRole("button", { name: "Save changes" }));
+
+    await waitFor(async () => {
+      expect((await adapter.mons.get(mon.id))?.ability).toBeNull();
+    });
+  });
+
+  it("saves null when the ability is cleared", async () => {
+    const user = userEvent.setup();
+    const { adapter, mon } = renderDialog({});
+    await adapter.mons.put(mon);
+
+    await user.clear(screen.getByLabelText("Ability"));
+    await user.click(screen.getByRole("button", { name: "Save changes" }));
+
+    await waitFor(async () => {
+      expect((await adapter.mons.get(mon.id))?.ability).toBeNull();
     });
   });
 

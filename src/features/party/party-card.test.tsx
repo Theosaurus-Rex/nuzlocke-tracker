@@ -94,6 +94,18 @@ describe("PartyCard", () => {
     );
   });
 
+  it("shows an old typed ability and a PokéAPI name the same way", () => {
+    const { unmount } = renderCard(makeMon({ ability: "Water Absorb" }), "Route 29");
+    expect(screen.getByText("no item").closest("p")?.textContent).toBe(
+      "no item · Water Absorb · Route 29",
+    );
+    unmount();
+    renderCard(makeMon({ ability: "water-absorb" }), "Route 29");
+    expect(screen.getByText("no item").closest("p")?.textContent).toBe(
+      "no item · Water Absorb · Route 29",
+    );
+  });
+
   it("falls back to the species name, unquoted, with no nickname", () => {
     renderCard(makeMon());
     expect(screen.getByRole("heading", { name: "Chikorita" })).toBeInTheDocument();

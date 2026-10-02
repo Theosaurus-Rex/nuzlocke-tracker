@@ -80,6 +80,15 @@ describe("BoxRowList", () => {
     expect(within(row).getByText("Oran Berry · Overgrow")).toBeInTheDocument();
   });
 
+  it("shows an old typed ability and a PokéAPI name the same way", () => {
+    renderList([
+      makeMon({ id: "a", ability: "Water Absorb" }),
+      makeMon({ id: "b", ability: "water-absorb" }),
+    ]);
+
+    expect(screen.getAllByText("no item · Water Absorb")).toHaveLength(2);
+  });
+
   it("falls back to the species name and drops missing parts", () => {
     renderList([makeMon()]);
 

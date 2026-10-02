@@ -5,6 +5,7 @@ import { POKEAPI_BASE } from "@/game/pokeapi/client";
 import type { RawIndex } from "@/game/pokeapi/map";
 
 import {
+  abilityIndexFixture,
   evolutionChainFixtures,
   evolutionSpeciesIndexRefs,
   moveFixtures,
@@ -31,6 +32,7 @@ export const STUB_PENDING = Symbol("pending");
 export const defaultPokeApiRoutes: Record<string, unknown> = {
   "/pokemon?limit=100000": speciesIndexFixture,
   "/move?limit=100000": moveIndexFixture,
+  "/ability?limit=100000": abilityIndexFixture,
   ...Object.fromEntries(
     Object.entries(pokemonFixtures).map(([n, body]) => [`/pokemon/${n}`, body]),
   ),
