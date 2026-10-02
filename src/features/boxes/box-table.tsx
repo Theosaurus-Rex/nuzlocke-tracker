@@ -7,7 +7,7 @@ import {
   type Row,
   type SortingState,
 } from "@tanstack/react-table";
-import { ArrowDown, ArrowUp } from "lucide-react";
+import { ArrowDown, ArrowUp, ArrowUpDown } from "lucide-react";
 import { useMemo } from "react";
 
 import { ItemSprite } from "@/components/item-sprite";
@@ -42,6 +42,18 @@ const SORT_LABELS = { asc: "ascending", desc: "descending", none: "none" } as co
 
 function sortedDirection(column: { getIsSorted: () => false | "asc" | "desc" }) {
   return column.getIsSorted() || "none";
+}
+
+function SortIcon({ direction }: { direction: false | "asc" | "desc" }) {
+  if (direction === "asc") return <ArrowUp aria-hidden="true" className="size-3.5" />;
+  if (direction === "desc") return <ArrowDown aria-hidden="true" className="size-3.5" />;
+  return (
+    <ArrowUpDown
+      aria-hidden="true"
+      data-testid="sort-icon-unsorted"
+      className="size-3.5 opacity-40"
+    />
+  );
 }
 
 function toTableSorting(sorting: BoxSorting | null): SortingState {
@@ -173,15 +185,10 @@ export function BoxTable({ mons, sorting, onSortingChange, routeNames, onEdit }:
                       <button
                         type="button"
                         onClick={header.column.getToggleSortingHandler()}
-                        className="inline-flex cursor-pointer items-center gap-1 bg-transparent p-0 uppercase focus-visible:outline-none focus-visible:ring-3 focus-visible:ring-ring/50"
+                        className="inline-flex cursor-pointer items-center gap-1 bg-transparent p-0 uppercase hover:bg-background focus-visible:outline-none focus-visible:ring-3 focus-visible:ring-ring/50"
                       >
                         <table.FlexRender header={header} />
-                        {header.column.getIsSorted() === "asc" && (
-                          <ArrowUp aria-hidden="true" className="size-3.5" />
-                        )}
-                        {header.column.getIsSorted() === "desc" && (
-                          <ArrowDown aria-hidden="true" className="size-3.5" />
-                        )}
+                        <SortIcon direction={header.column.getIsSorted()} />
                       </button>
                     ) : (
                       <table.FlexRender header={header} />

@@ -293,5 +293,26 @@ describe("BoxTable", () => {
         expect(header(name)).not.toHaveAttribute("aria-sort");
       }
     });
+
+    it("shows an unsorted icon on all sortable headers when none are sorted, then hides it on the sorted column", async () => {
+      renderTable(slots);
+
+      const sortableHeaders = ["Name", "Species", "Lvl", "Gender", "Nature", "Ability", "Item"];
+      const unsortableHeaders = ["Sprite", "Caught on"];
+
+      for (const name of sortableHeaders) {
+        const btn = within(header(name)).getByRole("button");
+        expect(btn.querySelector('[data-testid="sort-icon-unsorted"]')).not.toBeNull();
+      }
+
+      for (const name of unsortableHeaders) {
+        expect(header(name).querySelector('[data-testid="sort-icon-unsorted"]')).toBeNull();
+      }
+
+      await clickHeader("Lvl");
+
+      expect(header("Lvl").querySelector('[data-testid="sort-icon-unsorted"]')).toBeNull();
+      expect(header("Name").querySelector('[data-testid="sort-icon-unsorted"]')).not.toBeNull();
+    });
   });
 });
