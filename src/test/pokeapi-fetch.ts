@@ -8,6 +8,7 @@ import {
   abilityIndexFixture,
   evolutionChainFixtures,
   evolutionSpeciesIndexRefs,
+  itemIndexFixture,
   moveFixtures,
   moveIndexFixture,
   pokemonFixtures,
@@ -33,6 +34,7 @@ export const defaultPokeApiRoutes: Record<string, unknown> = {
   "/pokemon?limit=100000": speciesIndexFixture,
   "/move?limit=100000": moveIndexFixture,
   "/ability?limit=100000": abilityIndexFixture,
+  "/item?limit=100000": itemIndexFixture,
   ...Object.fromEntries(
     Object.entries(pokemonFixtures).map(([n, body]) => [`/pokemon/${n}`, body]),
   ),

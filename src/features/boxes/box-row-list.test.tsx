@@ -89,6 +89,15 @@ describe("BoxRowList", () => {
     expect(screen.getAllByText("no item · Water Absorb")).toHaveLength(2);
   });
 
+  it("shows an old typed item and a PokéAPI name the same way", () => {
+    renderList([
+      makeMon({ id: "a", heldItem: "Miracle Seed" }),
+      makeMon({ id: "b", heldItem: "miracle-seed" }),
+    ]);
+
+    expect(screen.getAllByText("Miracle Seed")).toHaveLength(2);
+  });
+
   it("falls back to the species name and drops missing parts", () => {
     renderList([makeMon()]);
 

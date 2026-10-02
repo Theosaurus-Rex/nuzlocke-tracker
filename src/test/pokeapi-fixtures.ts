@@ -65,6 +65,16 @@ export const abilityIndexFixture: RawIndex = {
   ],
 };
 
+export const itemIndexFixture: RawIndex = {
+  results: [
+    ref("item", 138, "miracle-seed"),
+    ref("item", 214, "kings-rock"),
+    ref("item", 234, "leftovers"),
+    ref("item", 132, "quick-claw"),
+    ref("item", 126, "oran-berry"),
+  ],
+};
+
 export const pokemonFixtures: Record<string, RawPokemon> = {
   clefairy: {
     id: 35,

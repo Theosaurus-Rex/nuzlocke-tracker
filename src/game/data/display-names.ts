@@ -1,5 +1,5 @@
 /**
- * Official English spellings for species and moves whose PokéAPI id cannot spell them.
+ * Official English spellings for species, moves and items whose PokéAPI id cannot spell them.
  * Bootstrapped from PokéAPI names. Hand-owned now: edit directly, per CLAUDE.md "Game data".
  */
 
@@ -126,4 +126,20 @@ export const moveDisplayNames: Readonly<Record<string, string>> = {
   "10-000-000-volt-thunderbolt": "10,000,000 Volt Thunderbolt",
   "light-that-burns-the-sky": "Light That Burns the Sky",
   "lets-snuggle-forever": "Let's Snuggle Forever",
+};
+
+export const itemDisplayNames: Readonly<Record<string, string>> = {
+  "exp-share": "Exp. Share",
+  "guard-spec": "Guard Spec.",
+  "hp-up": "HP Up",
+  "kings-rock": "King’s Rock",
+  "never-melt-ice": "Never-Melt Ice",
+  "poke-ball": "Poké Ball",
+  "poke-doll": "Poké Doll",
+  "pp-max": "PP Max",
+  "pp-up": "PP Up",
+  stick: "Leek",
+  "x-sp-atk": "X Sp. Atk",
+  "x-sp-def": "X Sp. Def",
+  "up-grade": "Upgrade",
 };

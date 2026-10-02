@@ -293,7 +293,7 @@ describe("LogEncounterDialog", () => {
       nickname: "Sprig",
       gender: "male",
       ability: "overgrow",
-      heldItem: "Miracle Seed",
+      heldItem: "miracle-seed",
     });
   });
 

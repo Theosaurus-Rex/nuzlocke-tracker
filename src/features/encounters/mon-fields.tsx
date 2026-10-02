@@ -16,6 +16,7 @@ import { natures } from "@/game/natures";
 import { cn } from "@/lib/utils";
 
 import { AbilityPicker } from "./ability-picker";
+import { ItemPicker } from "./item-picker";
 
 const GENDERS: { value: Gender; label: string }[] = [
   { value: "male", label: "Male" },
@@ -188,19 +189,18 @@ export interface HeldItemFieldProps {
 
 export function HeldItemField({ id, value, onChange, error }: HeldItemFieldProps): ReactNode {
   const errorId = `${id}-error`;
-  const errorProps =
-    error !== undefined ? { "aria-invalid": true, "aria-describedby": errorId } : {};
 
   return (
     <div>
       <Typography as="label" variant="eyebrow" htmlFor={id} className="mb-1 block">
         Held item
       </Typography>
-      <Input
+      <ItemPicker
         id={id}
         value={value}
-        onChange={(event) => onChange(event.target.value)}
-        {...errorProps}
+        onChange={onChange}
+        aria-invalid={error !== undefined}
+        aria-describedby={error ? errorId : undefined}
       />
       {error && (
         <Typography as="p" id={errorId} variant="body" tone="alert" className="mt-1">
