@@ -1,5 +1,6 @@
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { render, screen, within } from "@testing-library/react";
+import { render, screen, waitFor, within } from "@testing-library/react";
+import userEvent from "@testing-library/user-event";
 import { describe, expect, it } from "vitest";
 import { MemoryRouter, Route, Routes } from "react-router";
 
@@ -218,5 +219,32 @@ describe("FightsScreen", () => {
     expect(item("Falkner").querySelector("img")).toHaveAttribute("data-muted", "false");
     expect(item("Bugsy").querySelector("img")).toHaveAttribute("data-muted", "true");
     expect(item("Will").querySelector("img")).toBeNull();
+  });
+
+  it("offers Log on the next fight only", async () => {
+    const adapter = createMemoryAdapter();
+    const { run } = await seed(adapter);
+    renderScreen(adapter, run.id);
+
+    const table = await findTable();
+    expect(table.getAllByRole("button", { name: /^Log attempt at/ })).toHaveLength(1);
+    expect(table.getByRole("button", { name: "Log attempt at Bugsy" })).toBeInTheDocument();
+  });
+
+  it("returns a cleared fight to pending after confirming the undo", async () => {
+    const user = userEvent.setup();
+    const adapter = createMemoryAdapter();
+    const { run } = await seed(adapter);
+    renderScreen(adapter, run.id);
+
+    const table = await findTable();
+    await user.click(table.getByRole("button", { name: "Undo clear of Falkner" }));
+    expect(table.getByText("Cleared")).toBeInTheDocument();
+    await user.click(table.getByRole("button", { name: "Confirm undo" }));
+
+    await waitFor(() => {
+      expect(table.queryByText("Cleared")).not.toBeInTheDocument();
+    });
+    expect(rowFor(table, "Falkner")).toHaveAttribute("aria-current", "step");
   });
 });

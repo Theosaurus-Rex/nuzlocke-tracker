@@ -5,16 +5,18 @@ import { BadgeSprite } from "@/components/badge-sprite";
 import { StatusChip } from "@/components/status-chip";
 import { Typography } from "@/components/typography";
 import type { FightSection } from "@/domain/fight-list";
-import type { Mon } from "@/domain/types";
+import type { Fight, Mon } from "@/domain/types";
 
+import { LogAttemptButton, UndoClear } from "./fight-actions";
 import { capLabel, fightLabel, lossNames } from "./loss-names";
 
 export interface FightListProps {
   sections: FightSection[];
   monsById: ReadonlyMap<string, Mon>;
+  onLog: (fight: Fight, label: string) => void;
 }
 
-export function FightTable({ sections, monsById }: FightListProps): ReactNode {
+export function FightTable({ sections, monsById, onLog }: FightListProps): ReactNode {
   return (
     <table aria-label="Fights" className="w-full border-collapse bg-background text-left text-sm">
       <thead>
@@ -70,7 +72,18 @@ export function FightTable({ sections, monsById }: FightListProps): ReactNode {
                   )}
                 </td>
                 <td className="px-3 py-2">
-                  {state === "cleared" && <StatusChip status="cleared">Cleared</StatusChip>}
+                  {state === "cleared" && (
+                    <span className="flex flex-wrap items-center gap-2">
+                      <StatusChip status="cleared">Cleared</StatusChip>
+                      <UndoClear fightId={fight.id} fightName={fight.name} />
+                    </span>
+                  )}
+                  {state === "next" && (
+                    <LogAttemptButton
+                      fightName={fight.name}
+                      onClick={() => onLog(fight, fightLabel(fight.name, badge))}
+                    />
+                  )}
                 </td>
               </tr>
             );

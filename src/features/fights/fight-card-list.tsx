@@ -5,10 +5,11 @@ import { BadgeSprite } from "@/components/badge-sprite";
 import { StatusChip } from "@/components/status-chip";
 import { Typography } from "@/components/typography";
 
+import { LogAttemptButton, UndoClear } from "./fight-actions";
 import type { FightListProps } from "./fight-table";
 import { capLabel, fightLabel, lossNames } from "./loss-names";
 
-export function FightCardList({ sections, monsById }: FightListProps): ReactNode {
+export function FightCardList({ sections, monsById, onLog }: FightListProps): ReactNode {
   return (
     <div aria-label="Fights" role="group" className="border-b-[1.5px] border-border bg-card">
       {sections.map((section) => (
@@ -54,6 +55,13 @@ export function FightCardList({ sections, monsById }: FightListProps): ReactNode
                       <span aria-hidden="true">✓</span>
                       <span className="sr-only">Cleared</span>
                     </StatusChip>
+                  )}
+                  {state === "cleared" && <UndoClear fightId={fight.id} fightName={fight.name} />}
+                  {state === "next" && (
+                    <LogAttemptButton
+                      fightName={fight.name}
+                      onClick={() => onLog(fight, fightLabel(fight.name, badge))}
+                    />
                   )}
                 </li>
               );

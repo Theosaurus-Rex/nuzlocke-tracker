@@ -1,16 +1,18 @@
-import type { ReactNode } from "react";
+import { useState, type ReactNode } from "react";
 import { Navigate, useParams } from "react-router";
 
 import { ScreenHeader } from "@/components/screen-header";
 import { StatusChip } from "@/components/status-chip";
 import { Typography } from "@/components/typography";
 import { badgeCount, buildFightSections } from "@/domain/fight-list";
+import type { Fight } from "@/domain/types";
 import { currentLevelCap } from "@/domain/rules-summary";
 import { GAMES } from "@/game/registry";
 import { useDeaths, useFights, useMons, useRun } from "@/storage/queries";
 
 import { FightCardList } from "./fight-card-list";
 import { FightTable } from "./fight-table";
+import { LogAttemptDialog } from "./log-attempt-dialog";
 
 export function FightsScreen(): ReactNode {
   const { runId } = useParams<{ runId: string }>();
@@ -18,6 +20,7 @@ export function FightsScreen(): ReactNode {
   const fightsQuery = useFights(runId ?? "");
   const deathsQuery = useDeaths(runId ?? "");
   const monsQuery = useMons(runId);
+  const [logging, setLogging] = useState<{ fight: Fight; label: string } | null>(null);
 
   if (!runId) {
     return <Navigate to="/" replace />;
@@ -31,6 +34,7 @@ export function FightsScreen(): ReactNode {
   const monsById = new Map((monsQuery.data ?? []).map((mon) => [mon.id, mon]));
   const { earned, total } = badgeCount(fights);
   const cap = run?.rules.levelCaps ? currentLevelCap(fights) : null;
+  const onLog = (fight: Fight, label: string): void => setLogging({ fight, label });
   const badges = `${String(earned)} of ${String(total)} badges`;
 
   return (
@@ -56,12 +60,24 @@ export function FightsScreen(): ReactNode {
       {loaded && sections.length > 0 && (
         <>
           <div className="hidden md:block">
-            <FightTable sections={sections} monsById={monsById} />
+            <FightTable sections={sections} monsById={monsById} onLog={onLog} />
           </div>
           <div className="md:hidden">
-            <FightCardList sections={sections} monsById={monsById} />
+            <FightCardList sections={sections} monsById={monsById} onLog={onLog} />
           </div>
         </>
+      )}
+      {logging !== null && (
+        <LogAttemptDialog
+          open
+          onOpenChange={(open) => {
+            if (!open) setLogging(null);
+          }}
+          runId={runId}
+          fightId={logging.fight.id}
+          label={logging.label}
+          roster={defs.get(logging.fight.gameFightId ?? "")?.roster ?? null}
+        />
       )}
     </div>
   );
