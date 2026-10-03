@@ -14,7 +14,7 @@ import { useDeaths, useFights, useMons, useRun } from "@/storage/queries";
 import { AddFightDialog } from "./add-fight-dialog";
 import { FightCardList } from "./fight-card-list";
 import { FightTable } from "./fight-table";
-import { fightLabel } from "./loss-names";
+import { numberedFightLabels } from "./loss-names";
 import { LogAttemptDialog } from "./log-attempt-dialog";
 
 export function FightsScreen(): ReactNode {
@@ -40,11 +40,13 @@ export function FightsScreen(): ReactNode {
   const { earned, total } = badgeCount(fights);
   const cap = run?.rules.levelCaps ? currentLevelCap(fights) : null;
   const onLog = (fight: Fight, label: string): void => setLogging({ fight, label });
-  const pending = sections.flatMap((section) =>
-    section.rows
-      .filter((row) => row.state !== "cleared")
-      .map((row) => ({ id: row.fight.id, label: fightLabel(row.fight.name, row.badge) })),
+  const allRows = sections.flatMap((section) => section.rows);
+  const labels = numberedFightLabels(
+    allRows.map((row) => ({ id: row.fight.id, name: row.fight.name, badge: row.badge })),
   );
+  const pending = allRows
+    .filter((row) => row.state !== "cleared")
+    .map((row) => ({ id: row.fight.id, label: labels.get(row.fight.id) ?? row.fight.name }));
   const badges = `${String(earned)} of ${String(total)} badges`;
 
   return (

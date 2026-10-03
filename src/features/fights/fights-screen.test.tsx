@@ -277,6 +277,41 @@ describe("FightsScreen", () => {
       expect(rowFor(table, "Rematch")).toHaveAttribute("aria-current", "step");
     });
 
+    it("numbers repeated fight names, counting cleared ones", async () => {
+      const user = userEvent.setup();
+      const adapter = createMemoryAdapter();
+      const run = await adapter.runs.put({
+        name: "Test Run",
+        game: "heartgold",
+        status: "active",
+        rules: DEFAULT_RULES,
+        finishedAt: null,
+      });
+      await adapter.fights.put(
+        fightDraft(run.id, {
+          name: "Silver",
+          kind: "rival",
+          order: 1,
+          grantsBadge: false,
+          status: "cleared",
+          clearedAt: "2020-01-01T00:00:00.000Z",
+        }),
+      );
+      for (const order of [2, 3]) {
+        await adapter.fights.put(
+          fightDraft(run.id, { name: "Silver", kind: "rival", order, grantsBadge: false }),
+        );
+      }
+      renderScreen(adapter, run.id);
+
+      const dialog = within(await openDialog(user));
+      const select = dialog.getByRole("combobox", { name: "Comes before" });
+      expect(select).toHaveTextContent("Silver (2)");
+      await user.click(select);
+      expect(await screen.findByRole("option", { name: "Silver (3)" })).toBeInTheDocument();
+      expect(screen.queryByRole("option", { name: "Silver (1)" })).not.toBeInTheDocument();
+    });
+
     it("lets the fight go before a later fight", async () => {
       const user = userEvent.setup();
       const adapter = createMemoryAdapter();
