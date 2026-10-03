@@ -94,13 +94,20 @@ describe("loadSampleRun", () => {
     expect(encounters.some((e) => e.routeId === custom?.id)).toBe(true);
   });
 
-  it("clears the first two badge fights and links a death to one", async () => {
+  it("clears every fight up to Bugsy and links a death to him", async () => {
     const adapter = await freshAdapter();
     const run = await loadSampleRun(adapter);
 
     const fights = await adapter.fights.where("runId", run.id);
     const cleared = fights.filter((fight) => fight.status === "cleared");
-    expect(cleared.map((fight) => fight.name).sort()).toEqual(["Bugsy", "Falkner"]);
+    const bugsyFight = fights.find((fight) => fight.name === "Bugsy");
+    const ordered = [...fights].sort((a, b) => a.order - b.order);
+    const firstPending = ordered.find((fight) => fight.status === "pending");
+    expect(firstPending?.order).toBeGreaterThan(bugsyFight?.order ?? Infinity);
+    expect(cleared.map((fight) => fight.name)).toEqual(
+      expect.arrayContaining(["Falkner", "Bugsy"]),
+    );
+    expect(cleared.every((fight) => fight.order <= (bugsyFight?.order ?? -1))).toBe(true);
     expect(cleared.every((fight) => fight.clearedAt !== null)).toBe(true);
     const bugsy = fights.find((fight) => fight.name === "Bugsy");
     const deaths = await adapter.deaths.getAll();

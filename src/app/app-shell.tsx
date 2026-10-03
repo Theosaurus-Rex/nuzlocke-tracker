@@ -168,7 +168,14 @@ export function AppShell(): ReactNode {
               )
             }
           >
-            <span data-slot="nav-label">{item.label}</span>
+            <span data-slot="nav-label" className={item.shortLabel ? "sr-only" : undefined}>
+              {item.label}
+            </span>
+            {item.shortLabel && (
+              <span aria-hidden="true" data-slot="nav-short-label">
+                {item.shortLabel}
+              </span>
+            )}
           </NavLink>
         ))}
       </nav>

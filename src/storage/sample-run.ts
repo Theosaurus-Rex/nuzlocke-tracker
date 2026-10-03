@@ -18,7 +18,7 @@ interface DeathPlan {
   fightGameId?: string;
 }
 
-const CLEARED_FIGHT_COUNT = 2;
+const LAST_CLEARED_FIGHT_GAME_ID = "gym-bugsy";
 const CLEARED_AT = "2026-09-01T11:00:00.000Z";
 
 interface MonPlan {
@@ -448,7 +448,11 @@ export async function loadSampleRun(adapter: StorageAdapter): Promise<Run> {
     const routes = (await tx.routes.where("runId", run.id)).sort(compareRoutes);
 
     const fights = (await tx.fights.where("runId", run.id)).sort((a, b) => a.order - b.order);
-    const cleared = fights.filter((fight) => fight.grantsBadge).slice(0, CLEARED_FIGHT_COUNT);
+    const lastCleared = fights.find((fight) => fight.gameFightId === LAST_CLEARED_FIGHT_GAME_ID);
+    if (lastCleared === undefined) {
+      throw new Error(`Sample run needs fight ${LAST_CLEARED_FIGHT_GAME_ID}.`);
+    }
+    const cleared = fights.filter((fight) => fight.order <= lastCleared.order);
     for (const fight of cleared) {
       await tx.fights.put({ ...fight, status: "cleared", clearedAt: CLEARED_AT });
     }
