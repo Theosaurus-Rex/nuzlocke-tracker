@@ -11,7 +11,6 @@ type AssertExhaustive<T extends never> = T;
 
 export const CLAUSE_FIELDS = [
   "dupesClause",
-  "speciesClause",
   "shinyClause",
   "nicknamesRequired",
   "levelCaps",
@@ -62,7 +61,6 @@ export const RANDOMISER_OFF: Rules["randomiser"] = {
  */
 export const DEFAULT_RULES: Rules = {
   dupesClause: true,
-  speciesClause: true,
   shinyClause: true,
   nicknamesRequired: false,
   levelCaps: true,

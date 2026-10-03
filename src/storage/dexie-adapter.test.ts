@@ -70,3 +70,56 @@ describe("DexieAdapter — mons predating shiny", () => {
     expect((await adapter.mons.getAll())[0]?.shiny).toBe(false);
   });
 });
+
+describe("DexieAdapter — runs predating the folded species clause", () => {
+  async function readRunWithRules(rules: Record<string, unknown>) {
+    counter += 1;
+    const databaseName = `nuzlocke-tracker-test-${Date.now()}-${counter}`;
+    currentDatabaseName = databaseName;
+
+    const rawDb = new Dexie(databaseName);
+    rawDb.version(1).stores({ runs: "id, status" });
+    await rawDb.open();
+    await rawDb.table("runs").put({
+      id: "run-1",
+      name: "Legacy",
+      status: "active",
+      rules,
+      createdAt: "2020-01-01T00:00:00.000Z",
+      updatedAt: "2020-01-01T00:00:00.000Z",
+    });
+    rawDb.close();
+
+    const adapter = createDexieAdapter(databaseName);
+    await adapter.init();
+    return adapter;
+  }
+
+  it("reads species on and dupes off as dupes on, with no speciesClause key", async () => {
+    const adapter = await readRunWithRules({ dupesClause: false, speciesClause: true });
+
+    const rules = (await adapter.runs.get("run-1"))?.rules as unknown as Record<string, unknown>;
+    expect(rules.dupesClause).toBe(true);
+    expect("speciesClause" in rules).toBe(false);
+    const [listed] = await adapter.runs.getAll();
+    expect(listed?.rules.dupesClause).toBe(true);
+  });
+
+  it("reads both off as dupes off", async () => {
+    const adapter = await readRunWithRules({ dupesClause: false, speciesClause: false });
+
+    expect((await adapter.runs.get("run-1"))?.rules.dupesClause).toBe(false);
+  });
+
+  it("leaves a run with no speciesClause key alone", async () => {
+    const adapter = await readRunWithRules({ dupesClause: true, hardcore: true });
+
+    expect((await adapter.runs.get("run-1"))?.rules).toEqual({ dupesClause: true, hardcore: true });
+  });
+
+  it("returns undefined for a run that does not exist", async () => {
+    const adapter = await readRunWithRules({ dupesClause: true });
+
+    expect(await adapter.runs.get("missing")).toBeUndefined();
+  });
+});

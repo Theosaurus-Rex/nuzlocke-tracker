@@ -3,7 +3,7 @@
 import type { Run, Route, Encounter, Mon, Death, Fight } from "./types";
 
 /** Bumped whenever a table's shape changes in a way that breaks import of an older export. */
-export const SCHEMA_VERSION = 3;
+export const SCHEMA_VERSION = 4;
 
 export interface ExportBundle {
   schemaVersion: number;
@@ -49,6 +49,18 @@ export function isExportBundle(value: unknown): value is ExportBundle {
 /** Upgrades a bundle written at one schema version to the next. Pure, no I/O. */
 export type Migration = (bundle: ExportBundle) => ExportBundle;
 
+/** Folds a legacy `speciesClause` into `dupesClause` and drops the key. */
+export function foldSpeciesClause<T extends object>(rules: T): T {
+  const { speciesClause, ...rest } = rules as T & {
+    speciesClause?: boolean;
+    dupesClause?: boolean;
+  };
+  return {
+    ...rest,
+    dupesClause: rest.dupesClause === true || speciesClause === true,
+  } as unknown as T;
+}
+
 /** Keyed by the FROM version. */
 export const migrations: Record<number, Migration> = {
   // v1 predates Mon.shiny, so every mon in a v1 bundle is missing the field, not merely false.
@@ -59,6 +71,12 @@ export const migrations: Record<number, Migration> = {
   }),
   // v3 only widens Cause.move to allow null, so every v2 bundle is already valid.
   2: (bundle) => ({ ...bundle, schemaVersion: 3 }),
+  // v4 drops the species clause, which is the same rule as the dupes clause.
+  3: (bundle) => ({
+    ...bundle,
+    schemaVersion: 4,
+    runs: bundle.runs.map((run) => ({ ...run, rules: foldSpeciesClause(run.rules) })),
+  }),
 };
 
 /**

@@ -24,7 +24,6 @@ import { NewRunScreen } from "./new-run-screen";
 // can be driven generically rather than with seven near-identical userEvent.click calls.
 const CLAUSE_LABELS = [
   "Dupes clause",
-  "Species clause",
   "Shiny clause",
   "Nicknames required",
   "Level caps by badge",
@@ -202,7 +201,6 @@ describe("NewRunScreen", () => {
     // added rule can't be silently dropped from the form without this test noticing.
     const expectedRules: Rules = {
       dupesClause: !DEFAULT_RULES.dupesClause,
-      speciesClause: !DEFAULT_RULES.speciesClause,
       shinyClause: !DEFAULT_RULES.shinyClause,
       nicknamesRequired: !DEFAULT_RULES.nicknamesRequired,
       levelCaps: !DEFAULT_RULES.levelCaps,

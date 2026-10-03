@@ -42,7 +42,6 @@ const RUN_A: Run = {
   updatedAt: "2026-01-01T00:00:00.000Z",
   rules: {
     dupesClause: false,
-    speciesClause: false,
     shinyClause: false,
     nicknamesRequired: false,
     levelCaps: false,

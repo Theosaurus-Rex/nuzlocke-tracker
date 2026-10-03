@@ -20,7 +20,6 @@ function makeRunDraft(overrides: Partial<Draft<Run>> = {}): Draft<Run> {
     status: "active",
     rules: {
       dupesClause: false,
-      speciesClause: false,
       shinyClause: false,
       nicknamesRequired: false,
       levelCaps: false,

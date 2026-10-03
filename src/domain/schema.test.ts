@@ -1,6 +1,12 @@
 import { describe, expect, test } from "vitest";
 
-import { isExportBundle, migrateBundle, SCHEMA_VERSION, type ExportBundle } from "@/domain/schema";
+import {
+  isExportBundle,
+  migrateBundle,
+  migrations,
+  SCHEMA_VERSION,
+  type ExportBundle,
+} from "@/domain/schema";
 import type { Mon } from "@/domain/types";
 
 function validBundle(): ExportBundle {
@@ -142,8 +148,50 @@ describe("migrateBundle — v2 to v3", () => {
   };
 
   test("a v2 bundle comes out as v3 with nothing else changed", () => {
-    const result = migrateBundle(v2Bundle);
+    expect(migrations[2]!(v2Bundle)).toEqual({ ...v2Bundle, schemaVersion: 3 });
+  });
+});
 
-    expect(result).toEqual({ ok: true, bundle: { ...v2Bundle, schemaVersion: 3 } });
+describe("migrateBundle — v3 to v4", () => {
+  function v3Bundle(rules: Record<string, unknown>): ExportBundle {
+    return {
+      schemaVersion: 3,
+      exportedAt: "2026-10-03T00:00:00.000Z",
+      runs: [{ id: "run-1", name: "Test", rules }] as unknown as ExportBundle["runs"],
+      routes: [],
+      encounters: [],
+      mons: [],
+      deaths: [],
+      fights: [],
+    };
+  }
+
+  function migratedRules(rules: Record<string, unknown>): Record<string, unknown> {
+    const result = migrateBundle(v3Bundle(rules));
+    if (!result.ok) throw new Error(result.error);
+    expect(result.bundle.schemaVersion).toBe(4);
+    return result.bundle.runs[0]!.rules as unknown as Record<string, unknown>;
+  }
+
+  test("species on and dupes off comes out as dupes on", () => {
+    expect(migratedRules({ dupesClause: false, speciesClause: true }).dupesClause).toBe(true);
+  });
+
+  test("both off comes out as dupes off", () => {
+    expect(migratedRules({ dupesClause: false, speciesClause: false }).dupesClause).toBe(false);
+  });
+
+  test("dupes on stays on when species is off", () => {
+    expect(migratedRules({ dupesClause: true, speciesClause: false }).dupesClause).toBe(true);
+  });
+
+  test("a missing speciesClause counts as off", () => {
+    expect(migratedRules({ dupesClause: false }).dupesClause).toBe(false);
+  });
+
+  test("the speciesClause key is gone and other rules are kept", () => {
+    const rules = migratedRules({ dupesClause: true, speciesClause: true, hardcore: true });
+    expect("speciesClause" in rules).toBe(false);
+    expect(rules.hardcore).toBe(true);
   });
 });

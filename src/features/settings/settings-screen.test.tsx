@@ -20,7 +20,6 @@ import { SettingsScreen } from "./settings-screen";
 
 const RULES_FIXTURE: Run["rules"] = {
   dupesClause: false,
-  speciesClause: false,
   shinyClause: false,
   nicknamesRequired: false,
   levelCaps: false,
