@@ -5,6 +5,7 @@ import { Typography } from "@/components/typography";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
+import { LevelInput } from "@/components/level-input";
 import { countByMonStatus } from "@/domain/derive";
 import { validateAmendment, type EncounterField } from "@/domain/encounter-validation";
 import type { MonAmendments } from "@/domain/transitions";
@@ -312,12 +313,11 @@ function EditMonForm({ mon, runId, rules, generation, onDone }: EditMonFormProps
             >
               Current level
             </Typography>
-            <Input
+            <LevelInput
               id="edit-mon-level"
-              inputMode="numeric"
               className="font-mono"
               value={levelText}
-              onChange={(event) => setLevelText(event.target.value)}
+              onValueChange={setLevelText}
               aria-invalid={errors.level !== undefined}
               aria-describedby={errors.level ? "edit-mon-level-error" : undefined}
             />

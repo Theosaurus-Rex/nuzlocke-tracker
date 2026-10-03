@@ -2,7 +2,7 @@ import type { ReactNode } from "react";
 
 import { SpeciesSprite } from "@/components/species-sprite";
 import { Typography } from "@/components/typography";
-import { Input } from "@/components/ui/input";
+import { LevelInput } from "@/components/level-input";
 import type { DeathField } from "@/domain/death-validation";
 import { MovePicker } from "@/features/encounters/move-picker";
 import { SpeciesPicker } from "@/features/encounters/species-picker";
@@ -72,12 +72,11 @@ export function AttackerFields({
           >
             Level
           </Typography>
-          <Input
+          <LevelInput
             id={`${idPrefix}-level`}
-            inputMode="numeric"
             className="font-mono"
             value={levelText}
-            onChange={(event) => onLevelChange(event.target.value)}
+            onValueChange={onLevelChange}
             aria-invalid={errors.level !== undefined}
             aria-describedby={errors.level ? `${idPrefix}-level-error` : undefined}
           />

@@ -181,6 +181,17 @@ describe("EditMonDialog", () => {
     expect(levelCaught).toHaveValue("6");
   });
 
+  it("keeps only digits typed into the current level", async () => {
+    const user = userEvent.setup();
+    renderDialog({});
+
+    const level = screen.getByLabelText("Current level");
+    await user.clear(level);
+    await user.type(level, "2a5");
+
+    expect(level).toHaveValue("25");
+  });
+
   it("saves a new nickname", async () => {
     const user = userEvent.setup();
     const { adapter, mon } = renderDialog({});

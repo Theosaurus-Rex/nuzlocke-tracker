@@ -348,6 +348,19 @@ describe("FightsScreen", () => {
       expect(await screen.findByText("Cap L15")).toBeInTheDocument();
     });
 
+    it("keeps only digits typed into the level cap", async () => {
+      const user = userEvent.setup();
+      const adapter = createMemoryAdapter();
+      const { run } = await seed(adapter);
+      renderScreen(adapter, run.id);
+
+      const dialog = within(await openDialog(user));
+      const cap = dialog.getByRole("textbox", { name: "Level cap (optional)" });
+      await user.type(cap, "2a5");
+
+      expect(cap).toHaveValue("25");
+    });
+
     it("requires a name", async () => {
       const user = userEvent.setup();
       const adapter = createMemoryAdapter();
@@ -362,7 +375,7 @@ describe("FightsScreen", () => {
       expect(await adapter.fights.where("runId", run.id)).toHaveLength(3);
     });
 
-    it.each(["0", "101", "1.5", "abc"])("refuses a level cap of %s", async (cap) => {
+    it.each(["0", "101"])("refuses a level cap of %s", async (cap) => {
       const user = userEvent.setup();
       const adapter = createMemoryAdapter();
       const { run } = await seed(adapter);
