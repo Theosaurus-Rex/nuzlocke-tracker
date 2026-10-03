@@ -49,9 +49,9 @@ function makeDeath(overrides: Partial<Death> = {}): Death {
 
 const lookup: FightLookup = (id) =>
   ({
-    j1: { region: "johto", badge: "Zephyr" },
-    j2: { region: "johto", badge: null },
-    k1: { region: "kanto", badge: "Thunder" },
+    j1: { region: "johto", badge: "Zephyr", badgeSprite: 9 },
+    j2: { region: "johto", badge: null, badgeSprite: null },
+    k1: { region: "kanto", badge: "Thunder", badgeSprite: 3 },
   })[id];
 
 const ids = (sections: ReturnType<typeof buildFightSections>) =>
@@ -176,6 +176,7 @@ describe("buildFightSections", () => {
       [],
     ).flatMap((s) => s.rows);
     expect(rows.map((r) => r.badge)).toEqual(["Zephyr", null, null]);
+    expect(rows.map((r) => r.badgeSprite)).toEqual([9, null, null]);
   });
 
   test("attaches only trainer deaths for the fight itself", () => {

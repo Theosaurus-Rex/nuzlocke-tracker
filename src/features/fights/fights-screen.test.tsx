@@ -185,4 +185,38 @@ describe("FightsScreen", () => {
     expect(screen.queryByText(/Cap L/i)).not.toBeInTheDocument();
     expect(screen.queryByText(/· cap/)).not.toBeInTheDocument();
   });
+
+  it("shows a gym badge in colour once cleared and muted until then", async () => {
+    const adapter = createMemoryAdapter();
+    const { run } = await seed(adapter);
+    renderScreen(adapter, run.id);
+
+    const table = await findTable();
+    const cleared = rowFor(table, "Falkner").querySelector("img");
+    expect(cleared).toHaveAttribute("src", expect.stringMatching(/\/badges\/9\.png$/));
+    expect(cleared).toHaveAttribute("data-muted", "false");
+    expect(rowFor(table, "Bugsy").querySelector("img")).toHaveAttribute("data-muted", "true");
+  });
+
+  it("shows no badge image on an Elite Four row", async () => {
+    const adapter = createMemoryAdapter();
+    const { run } = await seed(adapter);
+    renderScreen(adapter, run.id);
+
+    const table = await findTable();
+    expect(rowFor(table, "Will").querySelector("img")).toBeNull();
+  });
+
+  it("shows the same muted states in the phone list", async () => {
+    const adapter = createMemoryAdapter();
+    const { run } = await seed(adapter);
+    renderScreen(adapter, run.id);
+
+    await findTable();
+    const list = within(screen.getByRole("group", { name: "Fights" }));
+    const item = (text: string) => list.getByText(text, { exact: false }).closest("li")!;
+    expect(item("Falkner").querySelector("img")).toHaveAttribute("data-muted", "false");
+    expect(item("Bugsy").querySelector("img")).toHaveAttribute("data-muted", "true");
+    expect(item("Will").querySelector("img")).toBeNull();
+  });
 });

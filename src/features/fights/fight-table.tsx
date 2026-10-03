@@ -1,6 +1,7 @@
 import type { ReactNode } from "react";
 import { cn } from "cn";
 
+import { BadgeSprite } from "@/components/badge-sprite";
 import { StatusChip } from "@/components/status-chip";
 import { Typography } from "@/components/typography";
 import type { FightSection } from "@/domain/fight-list";
@@ -36,7 +37,7 @@ export function FightTable({ sections, monsById }: FightListProps): ReactNode {
               </Typography>
             </th>
           </tr>
-          {section.rows.map(({ fight, badge, state, losses }) => {
+          {section.rows.map(({ fight, badge, badgeSprite, state, losses }) => {
             const lost = lossNames(losses, monsById);
             return (
               <tr
@@ -48,7 +49,12 @@ export function FightTable({ sections, monsById }: FightListProps): ReactNode {
                   state === "upcoming" && "text-muted-foreground",
                 )}
               >
-                <td className="px-3 py-2 font-medium">{fightLabel(fight.name, badge)}</td>
+                <td className="px-3 py-2 font-medium">
+                  <span className="flex items-center gap-2">
+                    <BadgeSprite sprite={badgeSprite} size={28} muted={state !== "cleared"} />
+                    {fightLabel(fight.name, badge)}
+                  </span>
+                </td>
                 <td className="px-3 py-2">
                   <Typography as="span" variant="number">
                     {capLabel(fight.levelCap)}

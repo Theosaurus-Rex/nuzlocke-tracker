@@ -1,6 +1,7 @@
 import type { ReactNode } from "react";
 import { cn } from "cn";
 
+import { BadgeSprite } from "@/components/badge-sprite";
 import { StatusChip } from "@/components/status-chip";
 import { Typography } from "@/components/typography";
 
@@ -18,7 +19,7 @@ export function FightCardList({ sections, monsById }: FightListProps): ReactNode
             </Typography>
           </div>
           <ul className="m-0 list-none p-0">
-            {section.rows.map(({ fight, badge, state, losses }) => {
+            {section.rows.map(({ fight, badge, badgeSprite, state, losses }) => {
               const lost = lossNames(losses, monsById);
               return (
                 <li
@@ -30,6 +31,7 @@ export function FightCardList({ sections, monsById }: FightListProps): ReactNode
                     state === "upcoming" && "text-muted-foreground",
                   )}
                 >
+                  <BadgeSprite sprite={badgeSprite} size={32} muted={state !== "cleared"} />
                   <div className="min-w-0 flex-1">
                     <Typography
                       as="p"

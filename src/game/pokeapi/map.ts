@@ -5,6 +5,11 @@ import type { IndexEntry, Move, PastMoveValue, PastTypes, Species } from "./mode
 import { toNameForm } from "./resolve";
 
 const ITEM_SPRITE_BASE = "https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/items";
+const BADGE_SPRITE_BASE = "https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/badges";
+
+export function badgeSpriteUrl(sprite: number): string {
+  return `${BADGE_SPRITE_BASE}/${sprite}.png`;
+}
 
 export function itemSpriteUrl(name: string): string {
   return `${ITEM_SPRITE_BASE}/${toNameForm(name)}.png`;

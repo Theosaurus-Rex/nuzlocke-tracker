@@ -108,3 +108,19 @@ describe("heartgold spot-check: independently verified ace levels", () => {
     expect(ace).toBe(expectedAce);
   });
 });
+
+describe("heartgold badge sprites", () => {
+  test("the 16 badge fights use the sprite numbers 1 to 16 once each", () => {
+    const numbers = heartgold.fights
+      .filter((f) => f.grantsBadge)
+      .map((f) => f.badgeSprite)
+      .toSorted((a, b) => (a ?? 0) - (b ?? 0));
+    expect(numbers).toEqual(Array.from({ length: 16 }, (_, i) => i + 1));
+  });
+
+  test("fights without a badge have no sprite", () => {
+    for (const f of heartgold.fights.filter((f) => !f.grantsBadge)) {
+      expect(f.badgeSprite).toBeNull();
+    }
+  });
+});

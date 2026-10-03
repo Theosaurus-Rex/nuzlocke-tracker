@@ -256,6 +256,7 @@ function emitFightsModule(fights: BuiltFight[]): string {
     grantsBadge: ${f.grantsBadge},
     region: "johto",
     badge: null,
+    badgeSprite: null,
     levelCap: ${f.levelCap ?? "null"},
     roster: [
 ${roster}

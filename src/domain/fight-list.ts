@@ -3,6 +3,7 @@ import type { Death, Fight } from "@/domain/types";
 export interface FightMeta {
   region: string;
   badge: string | null;
+  badgeSprite: number | null;
 }
 export type FightLookup = (gameFightId: string) => FightMeta | undefined;
 export type FightState = "cleared" | "next" | "upcoming";
@@ -10,6 +11,7 @@ export type FightState = "cleared" | "next" | "upcoming";
 export interface FightRow {
   fight: Fight;
   badge: string | null;
+  badgeSprite: number | null;
   state: FightState;
   losses: Death[];
 }
@@ -54,6 +56,7 @@ export function buildFightSections(
     const row: FightRow = {
       fight,
       badge: meta?.badge ?? null,
+      badgeSprite: meta?.badgeSprite ?? null,
       state: fight.status === "cleared" ? "cleared" : fight.id === nextId ? "next" : "upcoming",
       losses: deaths.filter((d) => d.cause.type === "trainer" && d.cause.fightId === fight.id),
     };
