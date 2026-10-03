@@ -8,6 +8,8 @@ import { SpeciesSprite } from "@/components/species-sprite";
 import { SpeciesTypeBadge } from "@/components/species-type-badge";
 import { Surface } from "@/components/surface";
 import { Typography } from "@/components/typography";
+import { StatusChip } from "@/components/status-chip";
+import { isOverCap } from "@/domain/rules-summary";
 import type { Mon } from "@/domain/types";
 import { abilityDisplayName, itemDisplayName, speciesDisplayName } from "@/game/pokeapi/resolve";
 import { genderSymbol } from "@/lib/gender";
@@ -22,10 +24,17 @@ export interface PartyCardProps {
   mon: Mon;
   routeName: string | null;
   generation: number;
+  cap?: number | null;
   onEdit: () => void;
 }
 
-export function PartyCard({ mon, routeName, generation, onEdit }: PartyCardProps): ReactNode {
+export function PartyCard({
+  mon,
+  routeName,
+  generation,
+  cap = null,
+  onEdit,
+}: PartyCardProps): ReactNode {
   const species = speciesDisplayName(mon.speciesId);
   const title = monTitle(mon);
 
@@ -102,6 +111,12 @@ export function PartyCard({ mon, routeName, generation, onEdit }: PartyCardProps
       >
         <GripVerticalIcon aria-hidden="true" className="size-4" />
       </button>
+      {cap !== null && isOverCap(mon.level, cap) && (
+        <StatusChip
+          status="pending"
+          className="pointer-events-none absolute -bottom-3 left-3 uppercase"
+        >{`Over cap L${String(cap)}`}</StatusChip>
+      )}
     </Surface>
   );
 }

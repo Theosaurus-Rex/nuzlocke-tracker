@@ -34,13 +34,18 @@ function makeMon(overrides: Partial<Mon> = {}): Mon {
   };
 }
 
-function renderCard(mon: Mon, routeName: string | null = null, onEdit: () => void = vi.fn()) {
+function renderCard(
+  mon: Mon,
+  routeName: string | null = null,
+  onEdit: () => void = vi.fn(),
+  cap: number | null = null,
+) {
   stubPokeApi(defaultPokeApiRoutes);
   const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
   return render(
     <QueryClientProvider client={client}>
       <ul>
-        <PartyCard mon={mon} routeName={routeName} generation={4} onEdit={onEdit} />
+        <PartyCard mon={mon} routeName={routeName} generation={4} cap={cap} onEdit={onEdit} />
       </ul>
     </QueryClientProvider>,
   );
@@ -157,5 +162,24 @@ describe("PartyCard", () => {
 
     const empty = renderCard(makeMon());
     expect(empty.container.querySelector('img[src*="/items/"]')).toBeNull();
+  });
+
+  it("tags a mon above the cap", () => {
+    renderCard(makeMon({ level: 31 }), null, vi.fn(), 30);
+
+    expect(screen.getByText("Over cap L30")).toBeInTheDocument();
+  });
+
+  it("does not tag a mon at the cap, below it, or with no cap", () => {
+    const { unmount } = renderCard(makeMon({ level: 30 }), null, vi.fn(), 30);
+    expect(screen.queryByText(/over cap/i)).toBeNull();
+    unmount();
+
+    const below = renderCard(makeMon({ level: 12 }), null, vi.fn(), 30);
+    expect(screen.queryByText(/over cap/i)).toBeNull();
+    below.unmount();
+
+    renderCard(makeMon({ level: 99 }));
+    expect(screen.queryByText(/over cap/i)).toBeNull();
   });
 });

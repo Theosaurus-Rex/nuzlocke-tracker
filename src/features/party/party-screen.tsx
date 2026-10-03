@@ -20,11 +20,13 @@ import { Navigate, useParams } from "react-router";
 
 import { ScreenHeader } from "@/components/screen-header";
 import { Typography } from "@/components/typography";
+import { StatusChip } from "@/components/status-chip";
+import { currentLevelCap, isOverCap } from "@/domain/rules-summary";
 import { MAX_PARTY_SIZE } from "@/domain/transitions";
 import type { Mon } from "@/domain/types";
 import { GAMES } from "@/game/registry";
 import { useReorderParty } from "@/storage/mutations";
-import { useMons, useRoutes, useRun } from "@/storage/queries";
+import { useFights, useMons, useRoutes, useRun } from "@/storage/queries";
 
 import { useEditMonDialog } from "../encounters/use-edit-mon-dialog";
 import { monTitle } from "../encounters/mon-title";
@@ -94,6 +96,7 @@ export function PartyScreen(): ReactNode {
   const runQuery = useRun(runId ?? "");
   const routesQuery = useRoutes(runId ?? "");
   const monsQuery = useMons(runId);
+  const fightsQuery = useFights(runId ?? "");
   const { openEditor, dialog } = useEditMonDialog(
     runId ?? "",
     monsQuery.data ?? [],
@@ -117,6 +120,12 @@ export function PartyScreen(): ReactNode {
 
   const generation = GAMES[runQuery.data?.game ?? "heartgold"].generation;
   const party = orderedBy(partyMembers(monsQuery.data ?? []), override);
+  const cap = runQuery.data?.rules.levelCaps ? currentLevelCap(fightsQuery.data ?? []) : null;
+  const overCount = party.filter((mon) => isOverCap(mon.level, cap)).length;
+  const overCapChip =
+    overCount > 0 ? (
+      <StatusChip status="pending">{`${String(overCount)} over cap`}</StatusChip>
+    ) : null;
   const boxed = boxedMons(monsQuery.data ?? []);
   const freeSlots = Math.max(0, MAX_PARTY_SIZE - party.length);
   const routeNames = new Map((routesQuery.data ?? []).map((route) => [route.id, route.name]));
@@ -140,10 +149,27 @@ export function PartyScreen(): ReactNode {
 
   return (
     <div>
-      <ScreenHeader title="Party">
+      <ScreenHeader
+        title="Party"
+        actions={
+          <>
+            <div className="hidden items-center gap-3 md:flex">
+              {overCapChip}
+              {cap !== null && (
+                <Typography
+                  variant="body"
+                  className="border-[1.5px] border-border bg-card px-4 py-2"
+                >{`cap L${String(cap)}`}</Typography>
+              )}
+            </div>
+            <div className="md:hidden">{overCapChip}</div>
+          </>
+        }
+      >
         {!monsQuery.isPending && (
           <Typography variant="body" tone="muted">
             {party.length} of {MAX_PARTY_SIZE}
+            {cap !== null && <span className="md:hidden">{` · cap L${String(cap)}`}</span>}
           </Typography>
         )}
       </ScreenHeader>
@@ -164,6 +190,7 @@ export function PartyScreen(): ReactNode {
                     mon.caughtRouteId === null ? null : (routeNames.get(mon.caughtRouteId) ?? null)
                   }
                   generation={generation}
+                  cap={cap}
                   onEdit={() => openEditor(mon.id)}
                 />
               ))}

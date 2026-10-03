@@ -12,6 +12,10 @@ export function currentLevelCap(fights: readonly Fight[]): number | null {
   return next?.levelCap ?? null;
 }
 
+export function isOverCap(level: number, cap: number | null): boolean {
+  return cap !== null && level > cap;
+}
+
 export function ruleChips(rules: Rules, levelCap: number | null): RuleChip[] {
   const chips: RuleChip[] = [];
   const add = (on: boolean, label: string, tone: RuleChip["tone"] = "neutral"): void => {
