@@ -20,10 +20,22 @@ import {
   reorderParty,
   reviveMon,
   skipEncounter,
+  clearFight,
+  unclearFight,
   type CatchDetails,
   type MonAmendments,
 } from "@/domain/transitions";
-import type { Cause, Death, Encounter, GameId, Mon, Route, Rules, Run } from "@/domain/types";
+import type {
+  Cause,
+  Death,
+  Encounter,
+  Fight,
+  GameId,
+  Mon,
+  Route,
+  Rules,
+  Run,
+} from "@/domain/types";
 import { GAMES } from "@/game/registry";
 import { seedFights, seedRoutes } from "@/game/seed";
 
@@ -697,6 +709,120 @@ export function useLogDeath(): UseMutationResult<LogDeathResult, Error, LogDeath
     mutationFn: (input: LogDeathInput) => persistLogDeath(adapter, input),
     onSuccess: async (result) => {
       await invalidateRun(queryClient, result.mon.runId);
+    },
+  });
+}
+
+export interface FightLoss {
+  monId: string;
+  species: string;
+  level: number;
+  move: string | null;
+}
+
+export interface LogFightAttemptInput {
+  fightId: string;
+  won: boolean;
+  losses: FightLoss[];
+  at: string;
+}
+
+export interface LogFightAttemptResult {
+  fight: Fight;
+  deaths: Death[];
+}
+
+/** Checks the fight and every loss inside the transaction, so a bad loss undoes the earlier ones. */
+export async function persistLogFightAttempt(
+  adapter: StorageAdapter,
+  input: LogFightAttemptInput,
+): Promise<LogFightAttemptResult> {
+  return adapter.transaction(async (tx) => {
+    const fight = await tx.fights.get(input.fightId);
+    if (fight === undefined) {
+      throw new Error(`Fight ${input.fightId} no longer exists.`);
+    }
+    if (fight.status === "cleared") {
+      throw new Error(`Fight ${fight.id} is already cleared.`);
+    }
+
+    const runMons = await settleBoxSlots(tx, fight.runId);
+    const deaths: Death[] = [];
+
+    for (const loss of input.losses) {
+      const mon = runMons.find((candidate) => candidate.id === loss.monId);
+      if (mon === undefined) {
+        throw new Error(`Mon ${loss.monId} is not part of run ${fight.runId}.`);
+      }
+      const current = (await tx.mons.get(mon.id)) ?? mon;
+
+      const { mon: deadMon, death } = killMon({
+        mon: current,
+        deathId: crypto.randomUUID(),
+        details: {
+          level: current.level,
+          routeId: null,
+          cause: {
+            type: "trainer",
+            fightId: fight.id,
+            trainerName: null,
+            species: loss.species,
+            level: loss.level,
+            move: loss.move,
+          },
+          diedAt: input.at,
+          notes: null,
+        },
+      });
+      await tx.mons.put(deadMon);
+      deaths.push(await tx.deaths.put(death));
+    }
+
+    const saved = input.won
+      ? await tx.fights.put(clearFight({ fight, clearedAt: input.at }))
+      : fight;
+    return { fight: saved, deaths };
+  });
+}
+
+export function useLogFightAttempt(): UseMutationResult<
+  LogFightAttemptResult,
+  Error,
+  LogFightAttemptInput
+> {
+  const adapter = useStorage();
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: (input: LogFightAttemptInput) => persistLogFightAttempt(adapter, input),
+    onSuccess: async (result) => {
+      await invalidateRun(queryClient, result.fight.runId);
+    },
+  });
+}
+
+/** Leaves the deaths from the fight in place. */
+export async function persistUndoClearFight(
+  adapter: StorageAdapter,
+  fightId: string,
+): Promise<Fight> {
+  return adapter.transaction(async (tx) => {
+    const fight = await tx.fights.get(fightId);
+    if (fight === undefined) {
+      throw new Error(`Fight ${fightId} no longer exists.`);
+    }
+    return tx.fights.put(unclearFight({ fight }));
+  });
+}
+
+export function useUndoClearFight(): UseMutationResult<Fight, Error, string> {
+  const adapter = useStorage();
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: (fightId: string) => persistUndoClearFight(adapter, fightId),
+    onSuccess: async (fight) => {
+      await invalidateRun(queryClient, fight.runId);
     },
   });
 }

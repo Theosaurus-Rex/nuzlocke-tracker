@@ -292,6 +292,16 @@ export function clearFight({ fight, clearedAt }: { fight: Fight; clearedAt: stri
   return { ...fight, status: "cleared", clearedAt };
 }
 
+export function unclearFight({ fight }: { fight: Fight }): Fight {
+  if (fight.status !== "cleared") {
+    throw new Error(
+      `Cannot unclear fight ${fight.id}: status is '${fight.status}', not 'cleared'.`,
+    );
+  }
+
+  return { ...fight, status: "pending", clearedAt: null };
+}
+
 export interface EncounterResetPlan {
   encounterId: string;
   monId: string | null;

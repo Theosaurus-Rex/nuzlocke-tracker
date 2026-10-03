@@ -13,6 +13,7 @@ import {
   reorderParty,
   reviveMon,
   skipEncounter,
+  unclearFight,
   type CatchDetails,
   type KillDetails,
   type MonAmendments,
@@ -658,6 +659,19 @@ describe("clearFight", () => {
     expect(() => clearFight({ fight, clearedAt: "2026-09-17T02:00:00.000Z" })).toThrow(
       /not 'pending'/,
     );
+  });
+});
+
+describe("unclearFight", () => {
+  test("returns a cleared fight to pending and drops clearedAt", () => {
+    const fight = makeFight({ status: "cleared", clearedAt: "2026-09-17T02:00:00.000Z" });
+    const result = unclearFight({ fight });
+    expect(result.status).toBe("pending");
+    expect(result.clearedAt).toBeNull();
+  });
+
+  test("throws when the fight is still pending", () => {
+    expect(() => unclearFight({ fight: makeFight() })).toThrow(/not 'cleared'/);
   });
 });
 
