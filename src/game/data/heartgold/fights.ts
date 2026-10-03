@@ -15,6 +15,7 @@ export const fights: FightDef[] = [
     grantsBadge: false,
     region: "johto",
     badge: null,
+    badgeSprite: null,
     levelCap: null,
     roster: [
       { species: "cyndaquil", level: 5 },
@@ -30,6 +31,7 @@ export const fights: FightDef[] = [
     grantsBadge: true,
     region: "johto",
     badge: "Zephyr",
+    badgeSprite: 9,
     levelCap: 13,
     roster: [
       { species: "pidgey", level: 9 },
@@ -44,6 +46,7 @@ export const fights: FightDef[] = [
     grantsBadge: true,
     region: "johto",
     badge: "Hive",
+    badgeSprite: 10,
     levelCap: 17,
     roster: [
       { species: "scyther", level: 17 },
@@ -59,6 +62,7 @@ export const fights: FightDef[] = [
     grantsBadge: false,
     region: "johto",
     badge: null,
+    badgeSprite: null,
     levelCap: null,
     roster: [
       { species: "gastly", level: 14 },
@@ -76,6 +80,7 @@ export const fights: FightDef[] = [
     grantsBadge: true,
     region: "johto",
     badge: "Plain",
+    badgeSprite: 11,
     levelCap: 19,
     roster: [
       { species: "clefairy", level: 17 },
@@ -90,6 +95,7 @@ export const fights: FightDef[] = [
     grantsBadge: false,
     region: "johto",
     badge: null,
+    badgeSprite: null,
     levelCap: null,
     roster: [
       { species: "gastly", level: 20 },
@@ -108,6 +114,7 @@ export const fights: FightDef[] = [
     grantsBadge: true,
     region: "johto",
     badge: "Fog",
+    badgeSprite: 12,
     levelCap: 25,
     roster: [
       { species: "gastly", level: 21 },
@@ -124,6 +131,7 @@ export const fights: FightDef[] = [
     grantsBadge: true,
     region: "johto",
     badge: "Storm",
+    badgeSprite: 13,
     levelCap: 31,
     roster: [
       { species: "primeape", level: 29 },
@@ -138,6 +146,7 @@ export const fights: FightDef[] = [
     grantsBadge: true,
     region: "johto",
     badge: "Mineral",
+    badgeSprite: 14,
     levelCap: 35,
     roster: [
       { species: "magnemite", level: 30 },
@@ -153,6 +162,7 @@ export const fights: FightDef[] = [
     grantsBadge: true,
     region: "johto",
     badge: "Glacier",
+    badgeSprite: 15,
     levelCap: 34,
     roster: [
       { species: "seel", level: 30 },
@@ -168,6 +178,7 @@ export const fights: FightDef[] = [
     grantsBadge: false,
     region: "johto",
     badge: null,
+    badgeSprite: null,
     levelCap: null,
     roster: [
       { species: "golbat", level: 32 },
@@ -187,6 +198,7 @@ export const fights: FightDef[] = [
     grantsBadge: true,
     region: "johto",
     badge: "Rising",
+    badgeSprite: 16,
     levelCap: 41,
     roster: [
       { species: "gyarados", level: 38 },
@@ -203,6 +215,7 @@ export const fights: FightDef[] = [
     grantsBadge: false,
     region: "johto",
     badge: null,
+    badgeSprite: null,
     levelCap: null,
     roster: [
       { species: "sneasel", level: 36 },
@@ -223,6 +236,7 @@ export const fights: FightDef[] = [
     grantsBadge: false,
     region: "johto",
     badge: null,
+    badgeSprite: null,
     levelCap: 42,
     roster: [
       { species: "xatu", level: 40 },
@@ -240,6 +254,7 @@ export const fights: FightDef[] = [
     grantsBadge: false,
     region: "johto",
     badge: null,
+    badgeSprite: null,
     levelCap: 44,
     roster: [
       { species: "ariados", level: 40 },
@@ -257,6 +272,7 @@ export const fights: FightDef[] = [
     grantsBadge: false,
     region: "johto",
     badge: null,
+    badgeSprite: null,
     levelCap: 46,
     roster: [
       { species: "hitmontop", level: 42 },
@@ -274,6 +290,7 @@ export const fights: FightDef[] = [
     grantsBadge: false,
     region: "johto",
     badge: null,
+    badgeSprite: null,
     levelCap: 47,
     roster: [
       { species: "umbreon", level: 42 },
@@ -291,6 +308,7 @@ export const fights: FightDef[] = [
     grantsBadge: false,
     region: "johto",
     badge: null,
+    badgeSprite: null,
     levelCap: 50,
     roster: [
       { species: "gyarados", level: 46 },
@@ -309,6 +327,7 @@ export const fights: FightDef[] = [
     grantsBadge: true,
     region: "kanto",
     badge: "Thunder",
+    badgeSprite: 3,
     levelCap: 53,
     roster: [
       { species: "raichu", level: 51 },
@@ -326,6 +345,7 @@ export const fights: FightDef[] = [
     grantsBadge: true,
     region: "kanto",
     badge: "Marsh",
+    badgeSprite: 6,
     levelCap: 55,
     roster: [
       { species: "espeon", level: 53 },
@@ -341,6 +361,7 @@ export const fights: FightDef[] = [
     grantsBadge: true,
     region: "kanto",
     badge: "Rainbow",
+    badgeSprite: 4,
     levelCap: 56,
     roster: [
       { species: "jumpluff", level: 51 },
@@ -357,6 +378,7 @@ export const fights: FightDef[] = [
     grantsBadge: true,
     region: "kanto",
     badge: "Soul",
+    badgeSprite: 5,
     levelCap: 50,
     roster: [
       { species: "crobat", level: 47 },
@@ -374,6 +396,7 @@ export const fights: FightDef[] = [
     grantsBadge: true,
     region: "kanto",
     badge: "Cascade",
+    badgeSprite: 2,
     levelCap: 54,
     roster: [
       { species: "golduck", level: 49 },
@@ -393,6 +416,7 @@ export const fights: FightDef[] = [
     grantsBadge: true,
     region: "kanto",
     badge: "Boulder",
+    badgeSprite: 1,
     levelCap: 54,
     roster: [
       { species: "graveler", level: 51 },
@@ -410,6 +434,7 @@ export const fights: FightDef[] = [
     grantsBadge: false,
     region: "kanto",
     badge: null,
+    badgeSprite: null,
     levelCap: null,
     roster: [
       { species: "sneasel", level: 46 },
@@ -430,6 +455,7 @@ export const fights: FightDef[] = [
     grantsBadge: true,
     region: "kanto",
     badge: "Volcano",
+    badgeSprite: 7,
     levelCap: 59,
     roster: [
       { species: "magcargo", level: 54 },
@@ -445,6 +471,7 @@ export const fights: FightDef[] = [
     grantsBadge: true,
     region: "kanto",
     badge: "Earth",
+    badgeSprite: 8,
     levelCap: 60,
     roster: [
       { species: "exeggutor", level: 55 },
@@ -463,6 +490,7 @@ export const fights: FightDef[] = [
     grantsBadge: false,
     region: "kanto",
     badge: null,
+    badgeSprite: null,
     levelCap: null,
     roster: [
       { species: "pikachu", level: 88 },

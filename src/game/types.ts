@@ -25,6 +25,8 @@ export interface FightDef {
   region: Region;
   /** The badge name for a fight that grants one. */
   badge: string | null;
+  /** Number of the badge image in PokéAPI's sprite set. */
+  badgeSprite: number | null;
   /**
    * The ace's level for any fight that grants a badge, plus Elite Four and Champion fights.
    * `null` for rivals: rivals are worth tracking, but their caps are debatable, so none is

@@ -9,6 +9,7 @@ import {
 } from "@/test/pokeapi-fixtures";
 
 import {
+  badgeSpriteUrl,
   evolutionLine,
   nextStages,
   toMove,
@@ -178,5 +179,13 @@ describe("evolutionLine", () => {
       "vileplume",
       "bellossom",
     ]);
+  });
+});
+
+describe("badgeSpriteUrl", () => {
+  it("points at the badge image by number", () => {
+    expect(badgeSpriteUrl(16)).toBe(
+      "https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/badges/16.png",
+    );
   });
 });
