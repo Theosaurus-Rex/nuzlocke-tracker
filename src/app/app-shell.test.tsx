@@ -779,6 +779,21 @@ describe("Rules summary", () => {
     });
   });
 
+  it("counts earned badges against the total beside Gyms & E4", async () => {
+    const adapter = createMemoryAdapter();
+    const run = await adapter.runs.put(makeRunDraft());
+    await adapter.fights.put(makeFightDraft(run.id, { order: 1, status: "cleared" }));
+    await adapter.fights.put(makeFightDraft(run.id, { order: 2 }));
+    await adapter.fights.put(makeFightDraft(run.id, { order: 3, grantsBadge: false }));
+
+    renderAt(`/runs/${run.id}/routes`, { adapter });
+
+    const sidebar = screen.getByRole("navigation", { name: "Sidebar navigation" });
+    await waitFor(() => {
+      expect(countersIn(sidebar)["Gyms & E4"]).toBe("1/2");
+    });
+  });
+
   it("shows no rules without a current run", async () => {
     const adapter = createMemoryAdapter();
     await adapter.runs.put(makeRunDraft({ rules: { ...RULES_FIXTURE, dupesClause: true } }));

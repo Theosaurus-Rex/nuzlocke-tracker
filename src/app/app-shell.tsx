@@ -9,6 +9,7 @@ import { cn } from "cn";
 
 import { buttonVariants } from "@/components/ui/button";
 import { Typography } from "@/components/typography";
+import { badgeCount } from "@/domain/fight-list";
 import { summariseRun, type RunSummary } from "@/domain/derive";
 import { currentLevelCap } from "@/domain/rules-summary";
 import { useEncounters, useFights, useMons, useRoutes, useRuns } from "@/storage/queries";
@@ -18,7 +19,7 @@ import { RulesSummary } from "./rules-summary";
 import { RunSwitcher } from "./run-switcher";
 import { useCurrentRunId } from "./use-current-run-id";
 
-/** Not every nav row has a live count: `Fights` has none in `RunSummary`, and the two global
+/** Not every nav row has a live count: `Gyms & E4` is counted from the fights, not `RunSummary`, and the two global
  * rows (Runs, Settings) never do. */
 const NAV_COUNTER_KEYS: Partial<Record<string, keyof RunSummary>> = {
   Routes: "routesCovered",
@@ -34,7 +35,13 @@ function counterFor(
   item: NavItem,
   summary: RunSummary | undefined,
   routeTotal: number | undefined,
+  badges: { earned: number; total: number } | undefined,
 ): string | undefined {
+  if (item.label === "Gyms & E4") {
+    return badges !== undefined && badges.total > 0
+      ? `${String(badges.earned)}/${String(badges.total)}`
+      : undefined;
+  }
   const key = NAV_COUNTER_KEYS[item.label];
   if (key === undefined || summary === undefined) {
     return undefined;
@@ -60,6 +67,7 @@ export function AppShell(): ReactNode {
   const fightsQuery = useFights(runId ?? "");
   const currentRun = runs.find((run) => run.id === runId);
   const levelCap = currentLevelCap(fightsQuery.data ?? []);
+  const badges = fightsQuery.data === undefined ? undefined : badgeCount(fightsQuery.data);
   const summary =
     runId !== undefined && encountersQuery.data !== undefined && monsQuery.data !== undefined
       ? summariseRun({ encounters: encountersQuery.data, mons: monsQuery.data })
@@ -84,7 +92,7 @@ export function AppShell(): ReactNode {
           </div>
         )}
         {navItems.map((item) => {
-          const counter = counterFor(item, summary, routesQuery.data?.length);
+          const counter = counterFor(item, summary, routesQuery.data?.length, badges);
           return (
             <NavLink
               key={item.to}

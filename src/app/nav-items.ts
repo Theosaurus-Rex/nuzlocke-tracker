@@ -24,7 +24,7 @@ const RUN_SUB_SCREENS: readonly { slug: string; label: string }[] = [
   { slug: "party", label: "Party" },
   { slug: "boxes", label: "Boxes" },
   { slug: "graveyard", label: "Graveyard" },
-  { slug: "fights", label: "Fights" },
+  { slug: "fights", label: "Gyms & E4" },
 ];
 
 export function isRunSubScreenSlug(value: string): boolean {
