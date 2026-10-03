@@ -9,11 +9,13 @@ import { cn } from "@/lib/utils";
 export interface EncounterDialogHeaderProps {
   title: string;
   tone?: "flag" | "alert";
+  tag?: string | null;
 }
 
 export function EncounterDialogHeader({
   title,
   tone = "flag",
+  tag = "encounter",
 }: EncounterDialogHeaderProps): ReactNode {
   const alert = tone === "alert";
 
@@ -28,9 +30,9 @@ export function EncounterDialogHeader({
         <DialogTitle render={<Typography variant="title" as="h2" className="truncate" />}>
           {title}
         </DialogTitle>
-        {!alert && (
+        {!alert && tag !== null && (
           <Typography as="p" variant="caption" tone="muted" aria-hidden="true" className="shrink-0">
-            &middot; encounter
+            &middot; {tag}
           </Typography>
         )}
       </div>

@@ -22,12 +22,12 @@ export function FightCardList({ sections, monsById, onLog }: FightListProps): Re
           <ul className="m-0 list-none p-0">
             {section.rows.map(({ fight, badge, badgeSprite, state, losses }) => {
               const lost = lossNames(losses, monsById);
-              return (
+              const renderRow = (undoButton: ReactNode, confirm: ReactNode): ReactNode => (
                 <li
                   key={fight.id}
                   aria-current={state === "next" ? "step" : undefined}
                   className={cn(
-                    "flex items-center justify-between gap-3 border-b border-muted p-3",
+                    "flex flex-wrap items-center justify-between gap-3 border-b border-muted p-3",
                     state === "next" && "bg-flag-tint",
                     state === "upcoming" && "text-muted-foreground",
                   )}
@@ -56,14 +56,22 @@ export function FightCardList({ sections, monsById, onLog }: FightListProps): Re
                       <span className="sr-only">Cleared</span>
                     </StatusChip>
                   )}
-                  {state === "cleared" && <UndoClear fightId={fight.id} fightName={fight.name} />}
+                  {undoButton}
                   {state === "next" && (
                     <LogAttemptButton
                       fightName={fight.name}
                       onClick={() => onLog(fight, fightLabel(fight.name, badge))}
                     />
                   )}
+                  {confirm}
                 </li>
+              );
+              return state === "cleared" ? (
+                <UndoClear key={fight.id} fightId={fight.id} fightName={fight.name}>
+                  {renderRow}
+                </UndoClear>
+              ) : (
+                renderRow(null, null)
               );
             })}
           </ul>

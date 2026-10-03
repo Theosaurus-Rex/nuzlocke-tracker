@@ -33,29 +33,28 @@ export function LogAttemptButton({
 export function UndoClear({
   fightId,
   fightName,
+  children,
 }: {
   fightId: string;
   fightName: string;
+  children: (button: ReactNode, confirm: ReactNode) => ReactNode;
 }): ReactNode {
   const undo = useUndoClearFight();
   const [confirming, setConfirming] = useState(false);
 
-  if (!confirming) {
-    return (
-      <Button
-        type="button"
-        size="sm"
-        variant="ghost"
-        aria-label={`Undo clear of ${fightName}`}
-        onClick={() => setConfirming(true)}
-      >
-        Undo
-      </Button>
-    );
-  }
-
-  return (
-    <span className="flex flex-wrap items-center gap-2">
+  const button = (
+    <Button
+      type="button"
+      size="sm"
+      variant="ghost"
+      aria-label={`Undo clear of ${fightName}`}
+      onClick={() => setConfirming(true)}
+    >
+      Undo
+    </Button>
+  );
+  const confirm = confirming ? (
+    <span className="flex w-full flex-wrap items-center gap-2">
       <Typography as="span" variant="body">
         Mark {fightName} as not cleared?
       </Typography>
@@ -83,5 +82,7 @@ export function UndoClear({
         </Typography>
       )}
     </span>
-  );
+  ) : null;
+
+  return children(confirming ? null : button, confirm);
 }

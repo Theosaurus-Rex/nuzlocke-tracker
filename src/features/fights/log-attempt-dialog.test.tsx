@@ -100,6 +100,17 @@ beforeEach(() => {
 });
 
 describe("LogAttemptDialog", () => {
+  it("titles the dialog with the attempt only", async () => {
+    const user = userEvent.setup();
+    const adapter = createMemoryAdapter();
+    const { run } = await seed(adapter);
+    renderScreen(adapter, run.id);
+
+    const dialog = await openDialog(user);
+    expect(within(dialog).getByRole("heading")).toHaveTextContent(/^Attempt: Bugsy · Hive$/);
+    expect(within(dialog).queryByText(/encounter/)).not.toBeInTheDocument();
+  });
+
   it("clears the fight when won with no losses", async () => {
     const user = userEvent.setup();
     const adapter = createMemoryAdapter();

@@ -61,7 +61,7 @@ export function LogAttemptDialog({
           "sm:top-1/2 sm:left-1/2 sm:h-auto sm:max-h-[90vh] sm:w-full sm:max-w-2xl sm:-translate-x-1/2 sm:-translate-y-1/2 sm:rounded-xl",
         )}
       >
-        <EncounterDialogHeader title={`Attempt: ${label}`} />
+        <EncounterDialogHeader title={`Attempt: ${label}`} tag={null} />
         <LogAttemptForm
           fightId={fightId}
           party={party}
