@@ -6,6 +6,7 @@ import { useEffect } from "react";
 import { useMutation, useQueryClient, type UseMutationResult } from "@tanstack/react-query";
 
 import { boxLayout, moveBoxedMon } from "@/domain/box-slots";
+import { canDeleteFight, orderAfterLast, orderBefore, respaceFights } from "@/domain/custom-fights";
 import { DEFAULT_RULES } from "@/domain/rules";
 import { canDeleteRoute, nextRouteOrder } from "@/domain/routes";
 import {
@@ -441,6 +442,96 @@ export function useDeleteCustomRoute(): UseMutationResult<void, Error, DeleteCus
     mutationFn: (input: DeleteCustomRouteInput) => persistDeleteCustomRoute(adapter, input),
     onSuccess: async (_result, input) => {
       await invalidateRun(queryClient, input.route.runId);
+    },
+  });
+}
+
+export interface AddCustomFightInput {
+  runId: string;
+  name: string;
+  levelCap: number | null;
+  /** The pending fight the new one goes before. Null puts it after every existing fight. */
+  beforeFightId: string | null;
+}
+
+export async function persistAddCustomFight(
+  adapter: StorageAdapter,
+  input: AddCustomFightInput,
+): Promise<Fight> {
+  return adapter.transaction(async (tx) => {
+    let fights = await tx.fights.where("runId", input.runId);
+    let order: number | null;
+
+    if (input.beforeFightId === null) {
+      order = orderAfterLast(fights);
+    } else {
+      const target = fights.find((fight) => fight.id === input.beforeFightId);
+      if (target?.status !== "pending") {
+        throw new Error(`Fight ${input.beforeFightId} is not a pending fight in this run.`);
+      }
+      order = orderBefore(fights, input.beforeFightId);
+      if (order === null) {
+        fights = await tx.fights.putMany(respaceFights(fights));
+        order = orderBefore(fights, input.beforeFightId);
+      }
+    }
+
+    return tx.fights.put({
+      runId: input.runId,
+      gameFightId: null,
+      name: input.name.trim(),
+      kind: "custom",
+      order: order!,
+      grantsBadge: false,
+      levelCap: input.levelCap,
+      status: "pending",
+      clearedAt: null,
+    });
+  });
+}
+
+export function useAddCustomFight(): UseMutationResult<Fight, Error, AddCustomFightInput> {
+  const adapter = useStorage();
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: (input: AddCustomFightInput) => persistAddCustomFight(adapter, input),
+    onSuccess: async (fight) => {
+      await invalidateRun(queryClient, fight.runId);
+    },
+  });
+}
+
+export interface DeleteCustomFightInput {
+  fight: Fight;
+}
+
+export async function persistDeleteCustomFight(
+  adapter: StorageAdapter,
+  input: DeleteCustomFightInput,
+): Promise<void> {
+  await adapter.transaction(async (tx) => {
+    const current = await tx.fights.get(input.fight.id);
+    const deaths = await tx.deathsByFight(input.fight.id);
+
+    if (current === undefined || !canDeleteFight(current, deaths)) {
+      throw new Error(
+        `Cannot delete fight ${input.fight.id}: only a pending custom fight with no losses can go.`,
+      );
+    }
+
+    await tx.fights.delete(current.id);
+  });
+}
+
+export function useDeleteCustomFight(): UseMutationResult<void, Error, DeleteCustomFightInput> {
+  const adapter = useStorage();
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: (input: DeleteCustomFightInput) => persistDeleteCustomFight(adapter, input),
+    onSuccess: async (_result, input) => {
+      await invalidateRun(queryClient, input.fight.runId);
     },
   });
 }
