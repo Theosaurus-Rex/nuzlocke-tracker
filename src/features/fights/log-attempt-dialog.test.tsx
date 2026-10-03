@@ -31,7 +31,7 @@ function fightDraft(
   };
 }
 
-async function seed(adapter: StorageAdapter, gameFightId: string | null = "gym-bugsy") {
+async function seed(adapter: StorageAdapter) {
   const run = await adapter.runs.put({
     name: "Test Run",
     game: "heartgold",
@@ -40,7 +40,7 @@ async function seed(adapter: StorageAdapter, gameFightId: string | null = "gym-b
     finishedAt: null,
   });
   const bugsy = await adapter.fights.put(
-    fightDraft(run.id, { gameFightId, name: "Bugsy", order: 1, levelCap: 17 }),
+    fightDraft(run.id, { gameFightId: "gym-bugsy", name: "Bugsy", order: 1, levelCap: 17 }),
   );
   await adapter.fights.put(
     fightDraft(run.id, { gameFightId: "gym-whitney", name: "Whitney", order: 2, levelCap: 20 }),
@@ -136,8 +136,8 @@ describe("LogAttemptDialog", () => {
 
     const dialog = await openDialog(user);
     await user.click(within(dialog).getByRole("checkbox", { name: /Rocky/ }));
-    await user.click(within(dialog).getByRole("combobox", { name: /Killed by/ }));
-    await user.click(await screen.findByRole("option", { name: "Kakuna · L15" }));
+    await user.type(within(dialog).getByLabelText("Species"), "Pidgey");
+    await user.type(within(dialog).getByLabelText("Level"), "15");
     await user.click(within(dialog).getByRole("button", { name: "Save attempt" }));
 
     await waitFor(() => {
@@ -148,7 +148,7 @@ describe("LogAttemptDialog", () => {
     expect(within(row).getByText("Cleared")).toBeInTheDocument();
     expect((await adapter.mons.get(mon.id))?.status).toBe("dead");
     const [death] = await adapter.deathsByFight(bugsy.id);
-    expect(death?.cause).toMatchObject({ species: "kakuna", level: 15, move: null });
+    expect(death?.cause).toMatchObject({ species: "pidgey", level: 15, move: null });
   });
 
   it("keeps the fight next when lost, and still kills the mon", async () => {
@@ -160,8 +160,8 @@ describe("LogAttemptDialog", () => {
     const dialog = await openDialog(user);
     await user.click(within(dialog).getByRole("radio", { name: "Lost" }));
     await user.click(within(dialog).getByRole("checkbox", { name: /Rocky/ }));
-    await user.click(within(dialog).getByRole("combobox", { name: /Killed by/ }));
-    await user.click(await screen.findByRole("option", { name: "Scyther · L17" }));
+    await user.type(within(dialog).getByLabelText("Species"), "Geodude");
+    await user.type(within(dialog).getByLabelText("Level"), "17");
     await user.click(within(dialog).getByRole("button", { name: "Save attempt" }));
 
     await waitFor(() => {
@@ -172,7 +172,26 @@ describe("LogAttemptDialog", () => {
     expect((await adapter.mons.get(mon.id))?.status).toBe("dead");
   });
 
-  it("blocks saving a ticked mon with no killer", async () => {
+  it("accepts a species that is not on the gym's team", async () => {
+    const user = userEvent.setup();
+    const adapter = createMemoryAdapter();
+    const { run, bugsy } = await seed(adapter);
+    renderScreen(adapter, run.id);
+
+    const dialog = await openDialog(user);
+    await user.click(within(dialog).getByRole("checkbox", { name: /Rocky/ }));
+    await user.type(within(dialog).getByLabelText("Species"), "Gyarados");
+    await user.type(within(dialog).getByLabelText("Level"), "30");
+    await user.click(within(dialog).getByRole("button", { name: "Save attempt" }));
+
+    await waitFor(() => {
+      expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
+    });
+    const [death] = await adapter.deathsByFight(bugsy.id);
+    expect(death?.cause).toMatchObject({ species: "gyarados", level: 30 });
+  });
+
+  it("blocks saving a ticked mon with no species", async () => {
     const user = userEvent.setup();
     const adapter = createMemoryAdapter();
     const { run, mon } = await seed(adapter);
@@ -180,21 +199,27 @@ describe("LogAttemptDialog", () => {
 
     const dialog = await openDialog(user);
     await user.click(within(dialog).getByRole("checkbox", { name: /Rocky/ }));
+    await user.type(within(dialog).getByLabelText("Level"), "15");
     await user.click(within(dialog).getByRole("button", { name: "Save attempt" }));
 
-    expect(await within(dialog).findByText("Choose what killed it.")).toBeInTheDocument();
+    expect(await within(dialog).findByText("Choose a species from the list.")).toBeInTheDocument();
     expect(screen.getByRole("dialog")).toBeInTheDocument();
     expect((await adapter.mons.get(mon.id))?.status).toBe("party");
   });
 
-  it("disables losses when the fight has no team data", async () => {
+  it("blocks saving a ticked mon with a level outside 1 to 100", async () => {
     const user = userEvent.setup();
     const adapter = createMemoryAdapter();
-    const { run } = await seed(adapter, null);
+    const { run, mon } = await seed(adapter);
     renderScreen(adapter, run.id);
 
     const dialog = await openDialog(user);
-    expect(within(dialog).getByText(/no team data/)).toBeInTheDocument();
-    expect(within(dialog).getByRole("checkbox", { name: /Rocky/ })).toBeDisabled();
+    await user.click(within(dialog).getByRole("checkbox", { name: /Rocky/ }));
+    await user.type(within(dialog).getByLabelText("Species"), "Pidgey");
+    await user.type(within(dialog).getByLabelText("Level"), "101");
+    await user.click(within(dialog).getByRole("button", { name: "Save attempt" }));
+
+    expect(await within(dialog).findByText("Enter a level from 1 to 100.")).toBeInTheDocument();
+    expect((await adapter.mons.get(mon.id))?.status).toBe("party");
   });
 });

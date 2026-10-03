@@ -5,31 +5,20 @@ import { SquareCheckbox } from "@/components/square-checkbox";
 import { Typography } from "@/components/typography";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent } from "@/components/ui/dialog";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
+import { validateDeath, type DeathField } from "@/domain/death-validation";
 import type { Mon } from "@/domain/types";
 import { EncounterDialogHeader } from "@/features/encounters/encounter-dialog-header";
 import { monTitle } from "@/features/encounters/mon-title";
-import { MovePicker } from "@/features/encounters/move-picker";
-import type { BossMon } from "@/game/types";
-import { speciesDisplayName } from "@/game/pokeapi/resolve";
+import { AttackerFields } from "@/features/graveyard/attacker-fields";
+import { GAMES } from "@/game/registry";
 import { cn } from "@/lib/utils";
 import { useLogFightAttempt } from "@/storage/mutations";
-import { useMons } from "@/storage/queries";
+import { useMons, useRun } from "@/storage/queries";
 
 const RESULTS = [
   { won: true, label: "Won" },
   { won: false, label: "Lost" },
 ];
-
-function rosterLabel(boss: BossMon): string {
-  return `${speciesDisplayName(boss.species)} · L${String(boss.level)}`;
-}
 
 export interface LogAttemptDialogProps {
   open: boolean;
@@ -37,7 +26,6 @@ export interface LogAttemptDialogProps {
   runId: string;
   fightId: string;
   label: string;
-  roster: readonly BossMon[] | null;
 }
 
 export function LogAttemptDialog({
@@ -46,8 +34,8 @@ export function LogAttemptDialog({
   runId,
   fightId,
   label,
-  roster,
 }: LogAttemptDialogProps): ReactNode {
+  const generation = GAMES[useRun(runId).data?.game ?? "heartgold"].generation;
   const party = (useMons(runId).data ?? [])
     .filter((mon) => mon.status === "party")
     .sort((a, b) => (a.partySlot ?? 0) - (b.partySlot ?? 0));
@@ -65,7 +53,7 @@ export function LogAttemptDialog({
         <LogAttemptForm
           fightId={fightId}
           party={party}
-          roster={roster}
+          generation={generation}
           onDone={() => onOpenChange(false)}
         />
       </DialogContent>
@@ -73,24 +61,45 @@ export function LogAttemptDialog({
   );
 }
 
+interface LossInput {
+  speciesId: string;
+  levelText: string;
+  move: string;
+}
+
+const BLANK_LOSS: LossInput = { speciesId: "", levelText: "", move: "" };
+
+function toDeathValues(input: LossInput) {
+  return {
+    type: "trainer" as const,
+    speciesId: input.speciesId,
+    level: Number(input.levelText),
+    move: input.move,
+    trainerName: "",
+    status: "poison" as const,
+    detail: "",
+  };
+}
+
 interface LogAttemptFormProps {
   fightId: string;
   party: readonly Mon[];
-  roster: readonly BossMon[] | null;
+  generation: number;
   onDone: () => void;
 }
 
-function LogAttemptForm({ fightId, party, roster, onDone }: LogAttemptFormProps): ReactNode {
+function LogAttemptForm({ fightId, party, generation, onDone }: LogAttemptFormProps): ReactNode {
   const logAttempt = useLogFightAttempt();
   const [won, setWon] = useState(true);
   const [ticked, setTicked] = useState<ReadonlySet<string>>(new Set());
-  const [killers, setKillers] = useState<Record<string, string>>({});
-  const [moves, setMoves] = useState<Record<string, string>>({});
+  const [killers, setKillers] = useState<Record<string, LossInput>>({});
   const [submitted, setSubmitted] = useState(false);
 
-  const team = roster ?? [];
-  const items = team.map((boss, index) => ({ value: String(index), label: rosterLabel(boss) }));
-  const missingKiller = (monId: string): boolean => ticked.has(monId) && !killers[monId];
+  const inputFor = (monId: string): LossInput => killers[monId] ?? BLANK_LOSS;
+  const errorsFor = (monId: string): Partial<Record<DeathField, string>> =>
+    ticked.has(monId) ? validateDeath(toDeathValues(inputFor(monId))) : {};
+  const update = (monId: string, patch: Partial<LossInput>): void =>
+    setKillers({ ...killers, [monId]: { ...inputFor(monId), ...patch } });
 
   function toggle(monId: string): void {
     const next = new Set(ticked);
@@ -102,21 +111,18 @@ function LogAttemptForm({ fightId, party, roster, onDone }: LogAttemptFormProps)
   function handleSubmit(event: FormEvent<HTMLFormElement>): void {
     event.preventDefault();
     setSubmitted(true);
-    if (party.some((mon) => missingKiller(mon.id))) return;
+    if (party.some((mon) => Object.keys(errorsFor(mon.id)).length > 0)) return;
 
     const losses = party
       .filter((mon) => ticked.has(mon.id))
-      .flatMap((mon) => {
-        const boss = team[Number(killers[mon.id])];
-        if (boss === undefined) return [];
-        return [
-          {
-            monId: mon.id,
-            species: boss.species,
-            level: boss.level,
-            move: moves[mon.id] === "" ? null : (moves[mon.id] ?? null),
-          },
-        ];
+      .map((mon) => {
+        const input = inputFor(mon.id);
+        return {
+          monId: mon.id,
+          species: input.speciesId,
+          level: Number(input.levelText),
+          move: input.move === "" ? null : input.move,
+        };
       });
     logAttempt
       .mutateAsync({ fightId, won, losses, at: new Date().toISOString() })
@@ -155,12 +161,7 @@ function LogAttemptForm({ fightId, party, roster, onDone }: LogAttemptFormProps)
           <Typography as="span" variant="eyebrow" id="log-attempt-losses" className="mb-1 block">
             Losses
           </Typography>
-          {roster === null && (
-            <Typography as="p" variant="body" tone="muted" className="mb-2">
-              This fight has no team data, so losses cannot be logged.
-            </Typography>
-          )}
-          {party.length === 0 && roster !== null && (
+          {party.length === 0 && (
             <Typography as="p" variant="body" tone="muted">
               No Pokémon in the party.
             </Typography>
@@ -168,14 +169,13 @@ function LogAttemptForm({ fightId, party, roster, onDone }: LogAttemptFormProps)
           <ul className="m-0 list-none space-y-2 p-0">
             {party.map((mon) => {
               const checked = ticked.has(mon.id);
-              const killerError = submitted && missingKiller(mon.id);
+              const input = inputFor(mon.id);
               return (
                 <li key={mon.id} className="border-[1.5px] border-border p-3">
                   <label className="flex cursor-pointer items-center gap-3">
                     <SquareCheckbox
                       id={`log-attempt-mon-${mon.id}`}
                       checked={checked}
-                      disabled={roster === null}
                       onChange={() => toggle(mon.id)}
                     />
                     <SpeciesSprite speciesId={mon.speciesId} shiny={mon.shiny} size={40} />
@@ -185,60 +185,19 @@ function LogAttemptForm({ fightId, party, roster, onDone }: LogAttemptFormProps)
                     <div
                       role="group"
                       aria-label={`Loss details for ${monTitle(mon)}`}
-                      className="mt-3 grid gap-3 sm:grid-cols-2"
+                      className="mt-3"
                     >
-                      <div>
-                        <Typography
-                          as="label"
-                          variant="caption"
-                          tone="muted"
-                          htmlFor={`log-attempt-killer-${mon.id}`}
-                          className="mb-1 block"
-                        >
-                          Killed by *
-                        </Typography>
-                        <Select
-                          items={items}
-                          value={killers[mon.id] ?? null}
-                          onValueChange={(next) => setKillers({ ...killers, [mon.id]: next ?? "" })}
-                        >
-                          <SelectTrigger
-                            id={`log-attempt-killer-${mon.id}`}
-                            className="w-full"
-                            aria-invalid={killerError}
-                          >
-                            <SelectValue placeholder="Choose" />
-                          </SelectTrigger>
-                          <SelectContent alignItemWithTrigger={false}>
-                            {items.map((item) => (
-                              <SelectItem key={item.value} value={item.value}>
-                                {item.label}
-                              </SelectItem>
-                            ))}
-                          </SelectContent>
-                        </Select>
-                        {killerError && (
-                          <Typography as="p" variant="body" tone="alert" className="mt-1">
-                            Choose what killed it.
-                          </Typography>
-                        )}
-                      </div>
-                      <div>
-                        <Typography
-                          as="label"
-                          variant="caption"
-                          tone="muted"
-                          htmlFor={`log-attempt-move-${mon.id}`}
-                          className="mb-1 block"
-                        >
-                          Move (optional)
-                        </Typography>
-                        <MovePicker
-                          id={`log-attempt-move-${mon.id}`}
-                          value={moves[mon.id] ?? ""}
-                          onChange={(next) => setMoves({ ...moves, [mon.id]: next })}
-                        />
-                      </div>
+                      <AttackerFields
+                        idPrefix={`log-attempt-${mon.id}`}
+                        generation={generation}
+                        speciesId={input.speciesId}
+                        levelText={input.levelText}
+                        move={input.move}
+                        errors={submitted ? errorsFor(mon.id) : {}}
+                        onSpeciesChange={(speciesId) => update(mon.id, { speciesId })}
+                        onLevelChange={(levelText) => update(mon.id, { levelText })}
+                        onMoveChange={(move) => update(mon.id, { move })}
+                      />
                     </div>
                   )}
                 </li>

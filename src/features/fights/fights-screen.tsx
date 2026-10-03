@@ -76,7 +76,6 @@ export function FightsScreen(): ReactNode {
           runId={runId}
           fightId={logging.fight.id}
           label={logging.label}
-          roster={defs.get(logging.fight.gameFightId ?? "")?.roster ?? null}
         />
       )}
     </div>
