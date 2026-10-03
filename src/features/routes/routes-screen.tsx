@@ -104,6 +104,7 @@ export function RoutesScreen(): ReactNode {
   const [name, setName] = useState("");
   const [submitted, setSubmitted] = useState(false);
   const [logRoute, setLogRoute] = useState<Route | null>(null);
+  const [shinyRoute, setShinyRoute] = useState<Route | null>(null);
   const [editTarget, setEditTarget] = useState<{ route: Route; mon: Mon } | null>(null);
   const [resetTarget, setResetTarget] = useState<RouteRow | null>(null);
   const [addOpen, setAddOpen] = useState(false);
@@ -168,6 +169,7 @@ export function RoutesScreen(): ReactNode {
   const trimmedSearch = search.trim();
   // Falls back to HeartGold's generation, the only game seeded today, while the run itself is
   // still loading rather than the table's rows.
+  const shinyClause = runQuery.data?.rules.shinyClause === true;
   const generation = GAMES[runQuery.data?.game ?? "heartgold"].generation;
 
   return (
@@ -284,6 +286,7 @@ export function RoutesScreen(): ReactNode {
               onLogEncounter={setLogRoute}
               onEditMon={handleEditMon}
               onResetEncounter={setResetTarget}
+              onShinyBonus={shinyClause ? setShinyRoute : undefined}
             />
           </div>
           <div className="md:hidden">
@@ -296,6 +299,7 @@ export function RoutesScreen(): ReactNode {
               onLogEncounter={setLogRoute}
               onEditMon={handleEditMon}
               onResetEncounter={setResetTarget}
+              onShinyBonus={shinyClause ? setShinyRoute : undefined}
             />
           </div>
         </>
@@ -311,6 +315,23 @@ export function RoutesScreen(): ReactNode {
           }}
           runId={activeRunId}
           route={logRoute}
+          rules={runQuery.data?.rules ?? DEFAULT_RULES}
+          mons={mons}
+          existingEncounters={encounters}
+        />
+      )}
+
+      {shinyRoute && (
+        <LogEncounterDialog
+          open
+          mode="shiny-bonus"
+          onOpenChange={(nextOpen) => {
+            if (!nextOpen) {
+              setShinyRoute(null);
+            }
+          }}
+          runId={activeRunId}
+          route={shinyRoute}
           rules={runQuery.data?.rules ?? DEFAULT_RULES}
           mons={mons}
           existingEncounters={encounters}

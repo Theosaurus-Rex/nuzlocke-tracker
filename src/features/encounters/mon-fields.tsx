@@ -96,10 +96,11 @@ export interface ShinyFieldProps {
   id: string;
   value: boolean;
   onChange: (value: boolean) => void;
+  locked?: boolean;
 }
 
 /** A square toggle button rather than a checkbox, matching the star drawn in the frames. */
-export function ShinyField({ id, value, onChange }: ShinyFieldProps): ReactNode {
+export function ShinyField({ id, value, onChange, locked = false }: ShinyFieldProps): ReactNode {
   return (
     <div className="flex items-center gap-2">
       <Typography as="label" variant="eyebrow" tone="ink" htmlFor={id}>
@@ -109,10 +110,12 @@ export function ShinyField({ id, value, onChange }: ShinyFieldProps): ReactNode 
         id={id}
         type="button"
         aria-pressed={value}
+        disabled={locked}
         onClick={() => onChange(!value)}
         className={cn(
           "flex size-8 items-center justify-center border-[1.5px] border-border bg-background",
           value && "bg-flag",
+          locked && "cursor-not-allowed",
         )}
       >
         <StarIcon aria-hidden="true" className={cn("size-4", value && "fill-current")} />

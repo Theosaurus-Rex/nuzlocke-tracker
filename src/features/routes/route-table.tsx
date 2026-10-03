@@ -18,6 +18,7 @@ import {
   RowSprite,
 } from "./route-presentation";
 import { RowEndAction } from "./row-end-action";
+import { ShinyBonusButton } from "./shiny-bonus-button";
 
 function StatusCell({ row, onLogEncounter }: { row: RouteRow; onLogEncounter: () => void }) {
   const chip = chipForRouteRow(row);
@@ -81,6 +82,7 @@ export interface RouteTableProps {
   onLogEncounter: (route: Route) => void;
   onEditMon: (route: Route, mon: Mon) => void;
   onResetEncounter: (row: RouteRow) => void;
+  onShinyBonus?: (route: Route) => void;
 }
 
 export function RouteTable({
@@ -92,6 +94,7 @@ export function RouteTable({
   onLogEncounter,
   onEditMon,
   onResetEncounter,
+  onShinyBonus,
 }: RouteTableProps) {
   function handleRowTap(routeRow: RouteRow): void {
     const action = rowTapAction(routeRow);
@@ -180,13 +183,16 @@ export function RouteTable({
         const removable = canDeleteRoute(routeRow.route, encounters);
 
         return (
-          <RowEndAction
-            row={routeRow}
-            removable={removable}
-            deletePending={deletePending}
-            onReset={onResetEncounter}
-            onDelete={onDelete}
-          />
+          <div className="flex items-center justify-end gap-1">
+            <ShinyBonusButton row={routeRow} onShinyBonus={onShinyBonus} />
+            <RowEndAction
+              row={routeRow}
+              removable={removable}
+              deletePending={deletePending}
+              onReset={onResetEncounter}
+              onDelete={onDelete}
+            />
+          </div>
         );
       },
     }),

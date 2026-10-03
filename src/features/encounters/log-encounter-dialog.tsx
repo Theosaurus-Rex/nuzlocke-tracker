@@ -12,7 +12,7 @@ import type { Encounter, Gender, Mon, Route, Rules } from "@/domain/types";
 import { useEvolutionLine } from "@/game/pokeapi/queries";
 import { speciesDisplayName } from "@/game/pokeapi/resolve";
 import { GAMES } from "@/game/registry";
-import { useLogEncounter } from "@/storage/mutations";
+import { useCatchShinyBonus, useLogEncounter } from "@/storage/mutations";
 import { useRun } from "@/storage/queries";
 import { cn } from "@/lib/utils";
 
@@ -61,6 +61,7 @@ function levelFromText(text: string): number {
 }
 
 export interface LogEncounterDialogProps {
+  mode?: "encounter" | "shiny-bonus";
   open: boolean;
   onOpenChange: (open: boolean) => void;
   runId: string;
@@ -78,6 +79,7 @@ export function LogEncounterDialog({
   rules,
   mons,
   existingEncounters,
+  mode = "encounter",
 }: LogEncounterDialogProps): ReactNode {
   const runQuery = useRun(runId);
   // Falls back to HeartGold's generation, the only game seeded today, while the run is loading.
@@ -92,7 +94,9 @@ export function LogEncounterDialog({
           "sm:top-1/2 sm:left-1/2 sm:h-auto sm:max-h-[90vh] sm:w-full sm:max-w-lg sm:-translate-x-1/2 sm:-translate-y-1/2 sm:rounded-xl",
         )}
       >
-        <EncounterDialogHeader title={route.name} />
+        <EncounterDialogHeader
+          title={mode === "shiny-bonus" ? `Shiny: ${route.name}` : route.name}
+        />
         <LogEncounterForm
           runId={runId}
           routeId={route.id}
@@ -100,6 +104,7 @@ export function LogEncounterDialog({
           mons={mons}
           existingEncounters={existingEncounters}
           generation={generation}
+          mode={mode}
           onDone={() => onOpenChange(false)}
         />
       </DialogContent>
@@ -114,6 +119,7 @@ interface LogEncounterFormProps {
   mons: readonly Mon[];
   existingEncounters: readonly Encounter[];
   generation: number;
+  mode: "encounter" | "shiny-bonus";
   onDone: () => void;
 }
 
@@ -124,9 +130,13 @@ function LogEncounterForm({
   mons,
   existingEncounters,
   generation,
+  mode,
   onDone,
 }: LogEncounterFormProps): ReactNode {
   const logEncounter = useLogEncounter();
+  const catchShinyBonus = useCatchShinyBonus();
+  const shinyBonus = mode === "shiny-bonus";
+  const saveMutation = shinyBonus ? catchShinyBonus : logEncounter;
 
   const [outcome, setOutcome] = useState<Outcome>("caught");
   const [speciesId, setSpeciesId] = useState("");
@@ -139,15 +149,17 @@ function LogEncounterForm({
   const [ability, setAbility] = useState("");
   const [heldItem, setHeldItem] = useState("");
   const [moves, setMoves] = useState<string[]>([]);
-  const [shiny, setShiny] = useState(false);
+  const [shiny, setShiny] = useState(shinyBonus);
   const [placement, setPlacement] = useState<"party" | "box">(
     countByMonStatus(mons).party < 6 ? "party" : "box",
   );
   const [submitted, setSubmitted] = useState(false);
 
-  const evolutionLine = useEvolutionLine(rules.dupesClause && speciesId !== "" ? speciesId : null);
+  const evolutionLine = useEvolutionLine(
+    rules.dupesClause && !shinyBonus && speciesId !== "" ? speciesId : null,
+  );
   const dupe =
-    rules.dupesClause && speciesId !== ""
+    rules.dupesClause && !shinyBonus && speciesId !== ""
       ? findDupe({ line: evolutionLine ?? [speciesId], mons })
       : undefined;
 
@@ -189,6 +201,11 @@ function LogEncounterForm({
       return;
     }
 
+    if (shinyBonus) {
+      catchShinyBonus.mutate({ runId, routeId, details }, { onSuccess: onDone });
+      return;
+    }
+
     logEncounter.mutate(
       {
         runId,
@@ -206,36 +223,45 @@ function LogEncounterForm({
     <form className="flex min-h-0 flex-1 flex-col" onSubmit={handleSubmit} noValidate>
       <div className="flex-1 space-y-4 overflow-y-auto p-4">
         <div className="flex items-center justify-between gap-2">
-          <div
-            role="radiogroup"
-            aria-label="Outcome"
-            className="inline-flex border-[1.5px] border-border"
-          >
-            {OUTCOMES.map((option, index) => {
-              const active = outcome === option.value;
-              return (
-                <button
-                  key={option.value}
-                  type="button"
-                  role="radio"
-                  aria-checked={active}
-                  onClick={() => setOutcome(option.value)}
-                  className={cn(
-                    "px-4 py-2 text-sm font-medium",
-                    index > 0 && "border-l-[1.5px] border-border",
-                    active
-                      ? "bg-primary text-primary-foreground shadow-block"
-                      : "bg-background text-foreground hover:bg-muted",
-                  )}
-                >
-                  {option.label}
-                </button>
-              );
-            })}
-          </div>
+          {shinyBonus ? (
+            <span />
+          ) : (
+            <div
+              role="radiogroup"
+              aria-label="Outcome"
+              className="inline-flex border-[1.5px] border-border"
+            >
+              {OUTCOMES.map((option, index) => {
+                const active = outcome === option.value;
+                return (
+                  <button
+                    key={option.value}
+                    type="button"
+                    role="radio"
+                    aria-checked={active}
+                    onClick={() => setOutcome(option.value)}
+                    className={cn(
+                      "px-4 py-2 text-sm font-medium",
+                      index > 0 && "border-l-[1.5px] border-border",
+                      active
+                        ? "bg-primary text-primary-foreground shadow-block"
+                        : "bg-background text-foreground hover:bg-muted",
+                    )}
+                  >
+                    {option.label}
+                  </button>
+                );
+              })}
+            </div>
+          )}
 
           {outcome === "caught" && (
-            <ShinyField id="log-encounter-shiny" value={shiny} onChange={setShiny} />
+            <ShinyField
+              id="log-encounter-shiny"
+              value={shiny}
+              onChange={setShiny}
+              locked={shinyBonus}
+            />
           )}
         </div>
 
@@ -387,10 +413,10 @@ function LogEncounterForm({
           </div>
         )}
 
-        {logEncounter.isError && (
+        {saveMutation.isError && (
           <Typography as="p" role="alert" variant="body" tone="alert">
             Could not log the encounter:{" "}
-            {logEncounter.error instanceof Error ? logEncounter.error.message : "Unknown error"}.
+            {saveMutation.error instanceof Error ? saveMutation.error.message : "Unknown error"}.
             Nothing was saved.
           </Typography>
         )}
@@ -407,8 +433,8 @@ function LogEncounterForm({
           <Button type="button" variant="outline" onClick={onDone}>
             Cancel
           </Button>
-          <Button type="submit" disabled={logEncounter.isPending}>
-            {logEncounter.isPending ? "Saving…" : "Save encounter"}
+          <Button type="submit" disabled={saveMutation.isPending}>
+            {saveMutation.isPending ? "Saving…" : "Save encounter"}
           </Button>
         </div>
       </div>

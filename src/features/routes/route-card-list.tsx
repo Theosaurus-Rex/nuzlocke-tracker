@@ -19,6 +19,7 @@ import {
   STATUS_LABEL,
 } from "./route-presentation";
 import { RowEndAction } from "./row-end-action";
+import { ShinyBonusButton } from "./shiny-bonus-button";
 
 function RouteCardSubtitle({ row }: { row: RouteRow }): ReactNode {
   if (row.encounter === null) {
@@ -98,6 +99,7 @@ export interface RouteCardListProps {
   onLogEncounter: (route: Route) => void;
   onEditMon: (route: Route, mon: Mon) => void;
   onResetEncounter: (row: RouteRow) => void;
+  onShinyBonus?: (route: Route) => void;
 }
 
 export function RouteCardList({
@@ -109,6 +111,7 @@ export function RouteCardList({
   onLogEncounter,
   onEditMon,
   onResetEncounter,
+  onShinyBonus,
 }: RouteCardListProps): ReactNode {
   return (
     <ul className="m-0 flex list-none flex-col border-[1.5px] border-border bg-card p-0">
@@ -167,14 +170,16 @@ export function RouteCardList({
               generation={generation}
               onLog={() => onLogEncounter(row.route)}
             />
-            <RowEndAction
-              row={row}
-              removable={removable}
-              deletePending={deletePending}
-              onReset={onResetEncounter}
-              onDelete={onDelete}
-              className="shrink-0"
-            />
+            <div className="flex shrink-0 items-center gap-1">
+              <ShinyBonusButton row={row} onShinyBonus={onShinyBonus} />
+              <RowEndAction
+                row={row}
+                removable={removable}
+                deletePending={deletePending}
+                onReset={onResetEncounter}
+                onDelete={onDelete}
+              />
+            </div>
           </li>
         );
       })}
