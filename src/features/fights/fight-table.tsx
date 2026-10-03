@@ -4,19 +4,21 @@ import { cn } from "cn";
 import { BadgeSprite } from "@/components/badge-sprite";
 import { StatusChip } from "@/components/status-chip";
 import { Typography } from "@/components/typography";
+import { canDeleteFight } from "@/domain/custom-fights";
 import type { FightSection } from "@/domain/fight-list";
-import type { Fight, Mon } from "@/domain/types";
+import type { Death, Fight, Mon } from "@/domain/types";
 
-import { LogAttemptButton, UndoClear } from "./fight-actions";
+import { DeleteFightButton, LogAttemptButton, UndoClear } from "./fight-actions";
 import { capLabel, fightLabel, lossNames } from "./loss-names";
 
 export interface FightListProps {
   sections: FightSection[];
   monsById: ReadonlyMap<string, Mon>;
   onLog: (fight: Fight, label: string) => void;
+  deaths: readonly Death[];
 }
 
-export function FightTable({ sections, monsById, onLog }: FightListProps): ReactNode {
+export function FightTable({ sections, monsById, onLog, deaths }: FightListProps): ReactNode {
   return (
     <table aria-label="Fights" className="w-full border-collapse bg-background text-left text-sm">
       <thead>
@@ -78,12 +80,15 @@ export function FightTable({ sections, monsById, onLog }: FightListProps): React
                         {undoButton}
                       </span>
                     )}
-                    {state === "next" && (
-                      <LogAttemptButton
-                        fightName={fight.name}
-                        onClick={() => onLog(fight, fightLabel(fight.name, badge))}
-                      />
-                    )}
+                    <span className="flex flex-wrap items-center gap-2">
+                      {state === "next" && (
+                        <LogAttemptButton
+                          fightName={fight.name}
+                          onClick={() => onLog(fight, fightLabel(fight.name, badge))}
+                        />
+                      )}
+                      {canDeleteFight(fight, deaths) && <DeleteFightButton fight={fight} />}
+                    </span>
                   </td>
                 </tr>
                 {confirm !== null && (

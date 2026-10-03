@@ -5,7 +5,8 @@ import { CHIP_SHAPE } from "@/components/chip";
 import { statusChipFill } from "@/components/status-chip";
 import { Typography } from "@/components/typography";
 import { Button } from "@/components/ui/button";
-import { useUndoClearFight } from "@/storage/mutations";
+import { useDeleteCustomFight, useUndoClearFight } from "@/storage/mutations";
+import type { Fight } from "@/domain/types";
 
 export function LogAttemptButton({
   fightName,
@@ -85,4 +86,21 @@ export function UndoClear({
   ) : null;
 
   return children(confirming ? null : button, confirm);
+}
+
+export function DeleteFightButton({ fight }: { fight: Fight }): ReactNode {
+  const deleteFight = useDeleteCustomFight();
+
+  return (
+    <Button
+      type="button"
+      size="sm"
+      variant="ghost"
+      aria-label={`Delete ${fight.name}`}
+      disabled={deleteFight.isPending}
+      onClick={() => deleteFight.mutate({ fight })}
+    >
+      Delete
+    </Button>
+  );
 }

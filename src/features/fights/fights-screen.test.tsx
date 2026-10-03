@@ -247,4 +247,171 @@ describe("FightsScreen", () => {
     });
     expect(rowFor(table, "Falkner")).toHaveAttribute("aria-current", "step");
   });
+
+  describe("custom fights", () => {
+    const isBefore = (first: HTMLElement, second: HTMLElement) =>
+      Boolean(first.compareDocumentPosition(second) & Node.DOCUMENT_POSITION_FOLLOWING);
+
+    async function openDialog(user: ReturnType<typeof userEvent.setup>) {
+      await user.click(await screen.findByRole("button", { name: "Add fight" }));
+      return screen.findByRole("dialog");
+    }
+
+    it("adds a fight before the next fight by default", async () => {
+      const user = userEvent.setup();
+      const adapter = createMemoryAdapter();
+      const { run } = await seed(adapter);
+      renderScreen(adapter, run.id);
+
+      const dialog = within(await openDialog(user));
+      expect(dialog.getByRole("combobox", { name: "Comes before" })).toHaveTextContent("Bugsy");
+      await user.type(dialog.getByRole("textbox", { name: "Name" }), "Rematch");
+      await user.click(dialog.getByRole("button", { name: "Add fight" }));
+
+      const table = await findTable();
+      await waitFor(() => {
+        expect(table.getByText("Rematch")).toBeInTheDocument();
+      });
+      expect(isBefore(rowFor(table, "Falkner"), rowFor(table, "Rematch"))).toBe(true);
+      expect(isBefore(rowFor(table, "Rematch"), rowFor(table, "Bugsy"))).toBe(true);
+      expect(rowFor(table, "Rematch")).toHaveAttribute("aria-current", "step");
+    });
+
+    it("lets the fight go before a later fight", async () => {
+      const user = userEvent.setup();
+      const adapter = createMemoryAdapter();
+      const { run } = await seed(adapter);
+      renderScreen(adapter, run.id);
+
+      const dialog = within(await openDialog(user));
+      await user.type(dialog.getByRole("textbox", { name: "Name" }), "Rematch");
+      await user.click(dialog.getByRole("combobox", { name: "Comes before" }));
+      await user.click(await screen.findByRole("option", { name: "Will" }));
+      await user.click(dialog.getByRole("button", { name: "Add fight" }));
+
+      const table = await findTable();
+      await waitFor(() => {
+        expect(table.getByText("Rematch")).toBeInTheDocument();
+      });
+      expect(isBefore(rowFor(table, "Bugsy"), rowFor(table, "Rematch"))).toBe(true);
+      expect(isBefore(rowFor(table, "Rematch"), rowFor(table, "Will"))).toBe(true);
+      expect(rowFor(table, "Bugsy")).toHaveAttribute("aria-current", "step");
+    });
+
+    it("changes the header cap when the new fight is next and has a cap", async () => {
+      const user = userEvent.setup();
+      const adapter = createMemoryAdapter();
+      const { run } = await seed(adapter);
+      renderScreen(adapter, run.id);
+
+      expect(await screen.findByText("Cap L17")).toBeInTheDocument();
+      const dialog = within(await openDialog(user));
+      await user.type(dialog.getByRole("textbox", { name: "Name" }), "Rematch");
+      await user.type(dialog.getByRole("textbox", { name: "Level cap (optional)" }), "15");
+      await user.click(dialog.getByRole("button", { name: "Add fight" }));
+
+      expect(await screen.findByText("Cap L15")).toBeInTheDocument();
+    });
+
+    it("requires a name", async () => {
+      const user = userEvent.setup();
+      const adapter = createMemoryAdapter();
+      const { run } = await seed(adapter);
+      renderScreen(adapter, run.id);
+
+      const dialog = within(await openDialog(user));
+      await user.type(dialog.getByRole("textbox", { name: "Name" }), "   ");
+      await user.click(dialog.getByRole("button", { name: "Add fight" }));
+
+      expect(dialog.getByText("Fight name is required.")).toBeInTheDocument();
+      expect(await adapter.fights.where("runId", run.id)).toHaveLength(3);
+    });
+
+    it.each(["0", "101", "1.5", "abc"])("refuses a level cap of %s", async (cap) => {
+      const user = userEvent.setup();
+      const adapter = createMemoryAdapter();
+      const { run } = await seed(adapter);
+      renderScreen(adapter, run.id);
+
+      const dialog = within(await openDialog(user));
+      await user.type(dialog.getByRole("textbox", { name: "Name" }), "Rematch");
+      await user.type(dialog.getByRole("textbox", { name: "Level cap (optional)" }), cap);
+      await user.click(dialog.getByRole("button", { name: "Add fight" }));
+
+      expect(dialog.getByText(/Level cap must be a whole number/)).toBeInTheDocument();
+      expect(await adapter.fights.where("runId", run.id)).toHaveLength(3);
+    });
+
+    it("hides Comes before and adds at the end when every fight is cleared", async () => {
+      const user = userEvent.setup();
+      const adapter = createMemoryAdapter();
+      const { run } = await seed(adapter);
+      for (const fight of await adapter.fights.where("runId", run.id)) {
+        await adapter.fights.put({
+          ...fight,
+          status: "cleared",
+          clearedAt: "2020-01-01T00:00:00.000Z",
+        });
+      }
+      renderScreen(adapter, run.id);
+
+      const dialog = within(await openDialog(user));
+      expect(dialog.queryByRole("combobox", { name: "Comes before" })).not.toBeInTheDocument();
+      await user.type(dialog.getByRole("textbox", { name: "Name" }), "Epilogue");
+      await user.click(dialog.getByRole("button", { name: "Add fight" }));
+
+      const table = await findTable();
+      await waitFor(() => {
+        expect(rowFor(table, "Epilogue")).toBeInTheDocument();
+      });
+      const last = (await adapter.fights.where("runId", run.id)).sort(
+        (a, b) => b.order - a.order,
+      )[0];
+      expect(last?.name).toBe("Epilogue");
+    });
+
+    it("offers Delete only on a pending custom fight and removes it", async () => {
+      const user = userEvent.setup();
+      const adapter = createMemoryAdapter();
+      const { run } = await seed(adapter);
+      await adapter.fights.put(
+        fightDraft(run.id, { name: "Rematch", kind: "custom", order: 4, grantsBadge: false }),
+      );
+      await adapter.fights.put(
+        fightDraft(run.id, {
+          name: "Old",
+          kind: "custom",
+          order: 0,
+          grantsBadge: false,
+          status: "cleared",
+          clearedAt: "2020-01-01T00:00:00.000Z",
+        }),
+      );
+      renderScreen(adapter, run.id);
+
+      const table = await findTable();
+      expect(table.getAllByRole("button", { name: /^Delete / })).toHaveLength(1);
+      await user.click(table.getByRole("button", { name: "Delete Rematch" }));
+
+      await waitFor(() => {
+        expect(table.queryByText("Rematch")).not.toBeInTheDocument();
+      });
+      expect(table.queryByRole("button", { name: /^Delete / })).not.toBeInTheDocument();
+    });
+
+    it("lets a custom fight be logged", async () => {
+      const user = userEvent.setup();
+      const adapter = createMemoryAdapter();
+      const { run } = await seed(adapter);
+      await adapter.fights.put(
+        fightDraft(run.id, { name: "Rematch", kind: "custom", order: 0, grantsBadge: false }),
+      );
+      renderScreen(adapter, run.id);
+
+      const table = await findTable();
+      await user.click(table.getByRole("button", { name: "Log attempt at Rematch" }));
+
+      expect(await screen.findByRole("dialog")).toHaveTextContent("Attempt: Rematch");
+    });
+  });
 });
