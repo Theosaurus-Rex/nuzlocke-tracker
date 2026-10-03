@@ -35,7 +35,6 @@ export type Gender = "male" | "female" | "genderless";
 
 export interface Rules {
   dupesClause: boolean;
-  speciesClause: boolean;
   shinyClause: boolean;
   nicknamesRequired: boolean;
   levelCaps: boolean;

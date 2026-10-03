@@ -6,7 +6,7 @@ import Dexie from "dexie";
 import type { Table, Transaction, IndexableType } from "dexie";
 
 import type { Draft, Timestamped, Run, Route, Encounter, Mon, Death, Fight } from "@/domain/types";
-import { SCHEMA_VERSION } from "@/domain/schema";
+import { SCHEMA_VERSION, foldSpeciesClause } from "@/domain/schema";
 import type { ExportBundle } from "@/domain/schema";
 
 import type {
@@ -56,6 +56,14 @@ class NuzlockeDexie extends Dexie {
       }
       const raw = mon as unknown as Record<string, unknown>;
       return "shiny" in raw ? mon : ({ ...raw, shiny: false } as Mon);
+    });
+
+    // Runs saved before the species clause was folded into dupes still carry `speciesClause`.
+    this.runs.hook("reading", (run: Run) => {
+      if (!run?.rules || !("speciesClause" in run.rules)) {
+        return run;
+      }
+      return { ...run, rules: foldSpeciesClause(run.rules) };
     });
   }
 }

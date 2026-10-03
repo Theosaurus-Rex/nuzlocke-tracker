@@ -32,7 +32,6 @@ const FIRST_GAME_ID: GameId = GAME_OPTIONS[0]?.id ?? "heartgold";
 
 const CLAUSE_LABELS: Record<ClauseField, string> = {
   dupesClause: "Dupes clause",
-  speciesClause: "Species clause",
   shinyClause: "Shiny clause",
   nicknamesRequired: "Nicknames required",
   levelCaps: "Level caps by badge",

@@ -65,7 +65,6 @@ function shells() {
 
 const RULES_FIXTURE: Rules = {
   dupesClause: false,
-  speciesClause: false,
   shinyClause: false,
   nicknamesRequired: false,
   levelCaps: false,
