@@ -12,6 +12,8 @@ export interface BossMon {
   level: number;
 }
 
+export type Region = "johto" | "kanto";
+
 export interface FightDef {
   /** Stable, game-scoped id, e.g. "gym-falkner". */
   id: string;
@@ -20,6 +22,9 @@ export interface FightDef {
   /** Traversal order among this game's fights. Unique, not necessarily contiguous with routes. */
   order: number;
   grantsBadge: boolean;
+  region: Region;
+  /** The badge name for a fight that grants one. */
+  badge: string | null;
   /**
    * The ace's level for any fight that grants a badge, plus Elite Four and Champion fights.
    * `null` for rivals: rivals are worth tracking, but their caps are debatable, so none is
@@ -35,7 +40,7 @@ export interface RouteDef {
   name: string;
   /** Traversal order among this game's routes. Unique and contiguous. */
   order: number;
-  region: "johto" | "kanto";
+  region: Region;
 }
 
 export interface GameData {

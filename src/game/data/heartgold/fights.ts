@@ -13,6 +13,8 @@ export const fights: FightDef[] = [
     kind: "rival",
     order: 1,
     grantsBadge: false,
+    region: "johto",
+    badge: null,
     levelCap: null,
     roster: [
       { species: "cyndaquil", level: 5 },
@@ -26,6 +28,8 @@ export const fights: FightDef[] = [
     kind: "gym",
     order: 2,
     grantsBadge: true,
+    region: "johto",
+    badge: "Zephyr",
     levelCap: 13,
     roster: [
       { species: "pidgey", level: 9 },
@@ -38,6 +42,8 @@ export const fights: FightDef[] = [
     kind: "gym",
     order: 3,
     grantsBadge: true,
+    region: "johto",
+    badge: "Hive",
     levelCap: 17,
     roster: [
       { species: "scyther", level: 17 },
@@ -51,6 +57,8 @@ export const fights: FightDef[] = [
     kind: "rival",
     order: 4,
     grantsBadge: false,
+    region: "johto",
+    badge: null,
     levelCap: null,
     roster: [
       { species: "gastly", level: 14 },
@@ -66,6 +74,8 @@ export const fights: FightDef[] = [
     kind: "gym",
     order: 5,
     grantsBadge: true,
+    region: "johto",
+    badge: "Plain",
     levelCap: 19,
     roster: [
       { species: "clefairy", level: 17 },
@@ -78,6 +88,8 @@ export const fights: FightDef[] = [
     kind: "rival",
     order: 6,
     grantsBadge: false,
+    region: "johto",
+    badge: null,
     levelCap: null,
     roster: [
       { species: "gastly", level: 20 },
@@ -94,6 +106,8 @@ export const fights: FightDef[] = [
     kind: "gym",
     order: 7,
     grantsBadge: true,
+    region: "johto",
+    badge: "Fog",
     levelCap: 25,
     roster: [
       { species: "gastly", level: 21 },
@@ -108,6 +122,8 @@ export const fights: FightDef[] = [
     kind: "gym",
     order: 8,
     grantsBadge: true,
+    region: "johto",
+    badge: "Storm",
     levelCap: 31,
     roster: [
       { species: "primeape", level: 29 },
@@ -120,6 +136,8 @@ export const fights: FightDef[] = [
     kind: "gym",
     order: 9,
     grantsBadge: true,
+    region: "johto",
+    badge: "Mineral",
     levelCap: 35,
     roster: [
       { species: "magnemite", level: 30 },
@@ -133,6 +151,8 @@ export const fights: FightDef[] = [
     kind: "gym",
     order: 10,
     grantsBadge: true,
+    region: "johto",
+    badge: "Glacier",
     levelCap: 34,
     roster: [
       { species: "seel", level: 30 },
@@ -146,6 +166,8 @@ export const fights: FightDef[] = [
     kind: "rival",
     order: 11,
     grantsBadge: false,
+    region: "johto",
+    badge: null,
     levelCap: null,
     roster: [
       { species: "golbat", level: 32 },
@@ -163,6 +185,8 @@ export const fights: FightDef[] = [
     kind: "gym",
     order: 12,
     grantsBadge: true,
+    region: "johto",
+    badge: "Rising",
     levelCap: 41,
     roster: [
       { species: "gyarados", level: 38 },
@@ -177,6 +201,8 @@ export const fights: FightDef[] = [
     kind: "rival",
     order: 13,
     grantsBadge: false,
+    region: "johto",
+    badge: null,
     levelCap: null,
     roster: [
       { species: "sneasel", level: 36 },
@@ -195,6 +221,8 @@ export const fights: FightDef[] = [
     kind: "elite_four",
     order: 14,
     grantsBadge: false,
+    region: "johto",
+    badge: null,
     levelCap: 42,
     roster: [
       { species: "xatu", level: 40 },
@@ -210,6 +238,8 @@ export const fights: FightDef[] = [
     kind: "elite_four",
     order: 15,
     grantsBadge: false,
+    region: "johto",
+    badge: null,
     levelCap: 44,
     roster: [
       { species: "ariados", level: 40 },
@@ -225,6 +255,8 @@ export const fights: FightDef[] = [
     kind: "elite_four",
     order: 16,
     grantsBadge: false,
+    region: "johto",
+    badge: null,
     levelCap: 46,
     roster: [
       { species: "hitmontop", level: 42 },
@@ -240,6 +272,8 @@ export const fights: FightDef[] = [
     kind: "elite_four",
     order: 17,
     grantsBadge: false,
+    region: "johto",
+    badge: null,
     levelCap: 47,
     roster: [
       { species: "umbreon", level: 42 },
@@ -255,6 +289,8 @@ export const fights: FightDef[] = [
     kind: "champion",
     order: 18,
     grantsBadge: false,
+    region: "johto",
+    badge: null,
     levelCap: 50,
     roster: [
       { species: "gyarados", level: 46 },
@@ -271,6 +307,8 @@ export const fights: FightDef[] = [
     kind: "gym",
     order: 19,
     grantsBadge: true,
+    region: "kanto",
+    badge: "Thunder",
     levelCap: 53,
     roster: [
       { species: "raichu", level: 51 },
@@ -286,6 +324,8 @@ export const fights: FightDef[] = [
     kind: "gym",
     order: 20,
     grantsBadge: true,
+    region: "kanto",
+    badge: "Marsh",
     levelCap: 55,
     roster: [
       { species: "espeon", level: 53 },
@@ -299,6 +339,8 @@ export const fights: FightDef[] = [
     kind: "gym",
     order: 21,
     grantsBadge: true,
+    region: "kanto",
+    badge: "Rainbow",
     levelCap: 56,
     roster: [
       { species: "jumpluff", level: 51 },
@@ -313,6 +355,8 @@ export const fights: FightDef[] = [
     kind: "gym",
     order: 22,
     grantsBadge: true,
+    region: "kanto",
+    badge: "Soul",
     levelCap: 50,
     roster: [
       { species: "crobat", level: 47 },
@@ -328,6 +372,8 @@ export const fights: FightDef[] = [
     kind: "gym",
     order: 23,
     grantsBadge: true,
+    region: "kanto",
+    badge: "Cascade",
     levelCap: 54,
     roster: [
       { species: "golduck", level: 49 },
@@ -345,6 +391,8 @@ export const fights: FightDef[] = [
     kind: "gym",
     order: 24,
     grantsBadge: true,
+    region: "kanto",
+    badge: "Boulder",
     levelCap: 54,
     roster: [
       { species: "graveler", level: 51 },
@@ -360,6 +408,8 @@ export const fights: FightDef[] = [
     kind: "rival",
     order: 25,
     grantsBadge: false,
+    region: "kanto",
+    badge: null,
     levelCap: null,
     roster: [
       { species: "sneasel", level: 46 },
@@ -378,6 +428,8 @@ export const fights: FightDef[] = [
     kind: "gym",
     order: 26,
     grantsBadge: true,
+    region: "kanto",
+    badge: "Volcano",
     levelCap: 59,
     roster: [
       { species: "magcargo", level: 54 },
@@ -391,6 +443,8 @@ export const fights: FightDef[] = [
     kind: "gym",
     order: 27,
     grantsBadge: true,
+    region: "kanto",
+    badge: "Earth",
     levelCap: 60,
     roster: [
       { species: "exeggutor", level: 55 },
@@ -407,6 +461,8 @@ export const fights: FightDef[] = [
     kind: "rival",
     order: 28,
     grantsBadge: false,
+    region: "kanto",
+    badge: null,
     levelCap: null,
     roster: [
       { species: "pikachu", level: 88 },
