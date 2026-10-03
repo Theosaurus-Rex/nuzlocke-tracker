@@ -4,24 +4,29 @@
  * double-logging an encounter.
  */
 
+import "fake-indexeddb/auto";
+
 import type { ReactNode } from "react";
 
 import { onlineManager, QueryClientProvider } from "@tanstack/react-query";
 import { renderHook, waitFor } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
+import { DEFAULT_RULES } from "@/domain/rules";
 import type { CatchDetails, MonAmendments } from "@/domain/transitions";
 import type { Death, Encounter, Fight, Mon, Route, Run } from "@/domain/types";
 import { heartgold } from "@/game/data/heartgold";
 import { createQueryClient } from "@/lib/query-client";
 
 import type { StorageAdapter } from "./adapter";
+import { createDexieAdapter } from "./dexie-adapter";
 import { createMemoryAdapter } from "./memory-adapter";
 import {
   useAddCustomRoute,
   useAmendMon,
   useCreateRun,
   useDeleteCustomRoute,
+  persistSeedMissingFights,
   useLogEncounter,
   useResetEncounter,
 } from "./mutations";
@@ -157,6 +162,85 @@ describe("useCreateRun route seeding", () => {
     ).rejects.toThrow("simulated route write failure");
 
     expect(await adapter.runs.getAll()).toEqual([]);
+  });
+});
+
+describe("fight seeding", () => {
+  it("seeds one pending fight per game fight when a run is created", async () => {
+    const adapter = createMemoryAdapter();
+    await adapter.init();
+
+    const { run } = await createSeededRun(adapter);
+
+    const fights = await adapter.fights.where("runId", run.id);
+    expect(fights).toHaveLength(heartgold.fights.length);
+    expect(fights.every((fight) => fight.status === "pending")).toBe(true);
+  });
+
+  it("backfills a run that has no fights", async () => {
+    const adapter = createMemoryAdapter();
+    await adapter.init();
+    const run = await adapter.runs.put({
+      name: "Old run",
+      game: "heartgold",
+      status: "active",
+      rules: DEFAULT_RULES,
+      finishedAt: null,
+    });
+
+    expect(await persistSeedMissingFights(adapter)).toEqual([run.id]);
+
+    expect(await adapter.fights.where("runId", run.id)).toHaveLength(heartgold.fights.length);
+  });
+
+  it("leaves a run that already has fights untouched", async () => {
+    const adapter = createMemoryAdapter();
+    await adapter.init();
+    const { run } = await createSeededRun(adapter);
+    const [first] = await adapter.fights.where("runId", run.id);
+    await adapter.fights.delete(first!.id);
+    const before = await adapter.fights.where("runId", run.id);
+
+    expect(await persistSeedMissingFights(adapter)).toEqual([]);
+
+    expect(await adapter.fights.where("runId", run.id)).toEqual(before);
+  });
+
+  it("does not duplicate fights when called twice", async () => {
+    const adapter = createMemoryAdapter();
+    await adapter.init();
+    const run = await adapter.runs.put({
+      name: "Old run",
+      game: "heartgold",
+      status: "active",
+      rules: DEFAULT_RULES,
+      finishedAt: null,
+    });
+
+    await persistSeedMissingFights(adapter);
+    await persistSeedMissingFights(adapter);
+
+    expect(await adapter.fights.where("runId", run.id)).toHaveLength(heartgold.fights.length);
+  });
+});
+
+describe("fight backfill on Dexie", () => {
+  it("does not duplicate fights when two calls overlap", async () => {
+    const name = `nuzlocke-tracker-backfill-${Date.now()}`;
+    const adapter = createDexieAdapter(name);
+    await adapter.init();
+    const run = await adapter.runs.put({
+      name: "Old run",
+      game: "heartgold",
+      status: "active",
+      rules: DEFAULT_RULES,
+      finishedAt: null,
+    });
+
+    await Promise.all([persistSeedMissingFights(adapter), persistSeedMissingFights(adapter)]);
+
+    expect(await adapter.fights.where("runId", run.id)).toHaveLength(heartgold.fights.length);
+    indexedDB.deleteDatabase(name);
   });
 });
 

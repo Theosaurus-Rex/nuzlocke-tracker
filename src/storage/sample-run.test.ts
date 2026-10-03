@@ -94,6 +94,23 @@ describe("loadSampleRun", () => {
     expect(encounters.some((e) => e.routeId === custom?.id)).toBe(true);
   });
 
+  it("clears the first two badge fights and links a death to one", async () => {
+    const adapter = await freshAdapter();
+    const run = await loadSampleRun(adapter);
+
+    const fights = await adapter.fights.where("runId", run.id);
+    const cleared = fights.filter((fight) => fight.status === "cleared");
+    expect(cleared.map((fight) => fight.name).sort()).toEqual(["Bugsy", "Falkner"]);
+    expect(cleared.every((fight) => fight.clearedAt !== null)).toBe(true);
+    const bugsy = fights.find((fight) => fight.name === "Bugsy");
+    const deaths = await adapter.deaths.getAll();
+    const linked = deaths.filter(
+      (d) => d.cause.type === "trainer" && d.cause.fightId === bugsy?.id,
+    );
+    expect(linked).toHaveLength(1);
+    expect(linked[0]?.cause).toMatchObject({ trainerName: null });
+  });
+
   it("makes a separate run each time and leaves an earlier run alone", async () => {
     const adapter = await freshAdapter();
     const first = await loadSampleRun(adapter);

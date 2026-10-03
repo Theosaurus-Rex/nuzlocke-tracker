@@ -19,6 +19,8 @@ export interface FightSection {
   rows: FightRow[];
 }
 
+export const FIGHT_ORDER_STEP = 100;
+
 const LEAGUE_LABEL = "Elite Four";
 
 function regionLabel(region: string): string {

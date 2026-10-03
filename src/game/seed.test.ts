@@ -1,8 +1,10 @@
 import { describe, expect, test } from "vitest";
 
+import { FIGHT_ORDER_STEP } from "@/domain/fight-list";
 import { ROUTE_ORDER_STEP } from "@/domain/routes";
 
-import { seedRoutes } from "@/game/seed";
+import { seedFights, seedRoutes } from "@/game/seed";
+import { heartgold } from "@/game/data/heartgold";
 import type { GameData, RouteDef } from "@/game/types";
 
 function makeGame(routes: RouteDef[]): GameData {
@@ -51,5 +53,29 @@ describe("seedRoutes", () => {
     const orders = seedRoutes("run-1", game).map((draft) => draft.order);
 
     expect(orders).toEqual([1 * ROUTE_ORDER_STEP, 2 * ROUTE_ORDER_STEP, 5 * ROUTE_ORDER_STEP]);
+  });
+});
+
+describe("seedFights", () => {
+  test("maps every game fight to a pending row for the run", () => {
+    const drafts = seedFights("run-1", heartgold);
+
+    expect(drafts).toHaveLength(heartgold.fights.length);
+    expect(drafts.every((d) => d.runId === "run-1" && d.status === "pending")).toBe(true);
+    expect(drafts.every((d) => d.clearedAt === null)).toBe(true);
+    expect(drafts.map((d) => d.gameFightId)).toEqual(heartgold.fights.map((f) => f.id));
+  });
+
+  test("carries name, kind, badge flag and level cap, with order spaced by the step", () => {
+    const [def] = heartgold.fights;
+    const [draft] = seedFights("run-1", heartgold);
+
+    expect(draft).toMatchObject({
+      name: def?.name,
+      kind: def?.kind,
+      grantsBadge: def?.grantsBadge,
+      levelCap: def?.levelCap,
+      order: (def?.order ?? 0) * FIGHT_ORDER_STEP,
+    });
   });
 });
