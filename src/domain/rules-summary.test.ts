@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 
 import { DEFAULT_RULES } from "./rules";
-import { currentLevelCap, ruleChips } from "./rules-summary";
+import { currentLevelCap, isOverCap, ruleChips } from "./rules-summary";
 import type { Fight } from "./types";
 
 function fight(overrides: Partial<Fight>): Fight {
@@ -59,6 +59,24 @@ describe("currentLevelCap", () => {
 
   it("is null with no fights", () => {
     expect(currentLevelCap([])).toBeNull();
+  });
+});
+
+describe("isOverCap", () => {
+  it("is false below the cap", () => {
+    expect(isOverCap(29, 30)).toBe(false);
+  });
+
+  it("is false exactly at the cap", () => {
+    expect(isOverCap(30, 30)).toBe(false);
+  });
+
+  it("is true above the cap", () => {
+    expect(isOverCap(31, 30)).toBe(true);
+  });
+
+  it("is false when there is no cap", () => {
+    expect(isOverCap(100, null)).toBe(false);
   });
 });
 

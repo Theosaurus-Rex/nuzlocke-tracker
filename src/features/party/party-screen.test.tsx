@@ -5,7 +5,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { MemoryRouter, Route, Routes } from "react-router";
 
 import { DEFAULT_RULES } from "@/domain/rules";
-import type { Mon } from "@/domain/types";
+import type { Fight, Mon } from "@/domain/types";
 import type { StorageAdapter } from "@/storage/adapter";
 import { createMemoryAdapter } from "@/storage/memory-adapter";
 import { StorageProvider } from "@/storage/storage-context";
@@ -38,14 +38,41 @@ function makeMonDraft(runId: string, overrides: Partial<Mon> = {}): MonDraft {
   };
 }
 
-async function seedRun(adapter: StorageAdapter) {
+async function seedRun(adapter: StorageAdapter, rules = DEFAULT_RULES) {
   return adapter.runs.put({
     name: "Test Run",
     game: "heartgold",
     status: "active",
-    rules: DEFAULT_RULES,
+    rules,
     finishedAt: null,
   });
+}
+
+async function seedFight(adapter: StorageAdapter, runId: string, overrides: Partial<Fight>) {
+  return adapter.fights.put({
+    runId,
+    gameFightId: null,
+    name: "Falkner",
+    kind: "gym",
+    order: 1,
+    grantsBadge: true,
+    levelCap: 13,
+    status: "pending",
+    clearedAt: null,
+    ...overrides,
+  });
+}
+
+async function seedCapRun(adapter: StorageAdapter, levels: number[], rules = DEFAULT_RULES) {
+  const run = await seedRun(adapter, rules);
+  const falkner = await seedFight(adapter, run.id, { order: 1, levelCap: 13 });
+  await seedFight(adapter, run.id, { name: "Bugsy", order: 2, levelCap: 19 });
+  for (const [index, level] of levels.entries()) {
+    await adapter.mons.put(
+      makeMonDraft(run.id, { nickname: `Mon${String(level)}`, level, partySlot: index }),
+    );
+  }
+  return { run, falkner };
 }
 
 function renderScreen(adapter: StorageAdapter, runId: string) {
@@ -506,5 +533,82 @@ describe("PartyScreen", () => {
       "Could not save the new order. Nothing was changed.",
     );
     expect(await cardHeadings()).toEqual(["“First”", "“Second”"]);
+  });
+
+  describe("level cap warnings", () => {
+    const capRules = { ...DEFAULT_RULES, levelCaps: true };
+
+    it("shows the count and the cap when one party mon is over", async () => {
+      const adapter = createMemoryAdapter();
+      const { run, falkner } = await seedCapRun(adapter, [20, 19, 10], capRules);
+      await adapter.fights.put({ ...falkner, status: "cleared" });
+      renderScreen(adapter, run.id);
+
+      expect((await screen.findAllByText("1 over cap")).length).toBeGreaterThan(0);
+      expect(screen.getByText("cap L19")).toBeInTheDocument();
+    });
+
+    it("tags only the over mon's card, not one exactly at the cap", async () => {
+      const adapter = createMemoryAdapter();
+      const { run, falkner } = await seedCapRun(adapter, [20, 19, 10], capRules);
+      await adapter.fights.put({ ...falkner, status: "cleared" });
+      renderScreen(adapter, run.id);
+
+      const tags = await screen.findAllByText("Over cap L19");
+      expect(tags).toHaveLength(1);
+      expect(tags[0]?.closest("li")).toHaveTextContent("Mon20");
+    });
+
+    it("shows the cap but no chip when nothing is over", async () => {
+      const adapter = createMemoryAdapter();
+      const { run, falkner } = await seedCapRun(adapter, [19, 10], capRules);
+      await adapter.fights.put({ ...falkner, status: "cleared" });
+      renderScreen(adapter, run.id);
+
+      expect(await screen.findByText("cap L19")).toBeInTheDocument();
+      expect(screen.queryByText(/over cap/i)).toBeNull();
+    });
+
+    it("shows nothing cap-related when the rule is off", async () => {
+      const adapter = createMemoryAdapter();
+      const { run } = await seedCapRun(adapter, [50], { ...DEFAULT_RULES, levelCaps: false });
+      renderScreen(adapter, run.id);
+
+      await screen.findByText("“Mon50”");
+      expect(screen.queryByText(/cap L/i)).toBeNull();
+      expect(screen.queryByText(/over cap/i)).toBeNull();
+    });
+
+    it("raises the cap once a fight is cleared", async () => {
+      const adapter = createMemoryAdapter();
+      const { run } = await seedCapRun(adapter, [15], capRules);
+      renderScreen(adapter, run.id);
+
+      expect(await screen.findByText("cap L13")).toBeInTheDocument();
+      expect(screen.getAllByText("Over cap L13")).toHaveLength(1);
+    });
+
+    it("moves the cap to the next fight after a clear, so the mon is no longer over", async () => {
+      const adapter = createMemoryAdapter();
+      const { run, falkner } = await seedCapRun(adapter, [15], capRules);
+      await adapter.fights.put({ ...falkner, status: "cleared" });
+      renderScreen(adapter, run.id);
+
+      expect(await screen.findByText("cap L19")).toBeInTheDocument();
+      expect(screen.queryByText(/over cap/i)).toBeNull();
+    });
+
+    it("does not count boxed mons", async () => {
+      const adapter = createMemoryAdapter();
+      const { run, falkner } = await seedCapRun(adapter, [10], capRules);
+      await adapter.fights.put({ ...falkner, status: "cleared" });
+      await adapter.mons.put(
+        makeMonDraft(run.id, { level: 50, status: "box", partySlot: null, boxOrder: 0 }),
+      );
+      renderScreen(adapter, run.id);
+
+      expect(await screen.findByText("cap L19")).toBeInTheDocument();
+      expect(screen.queryByText(/over cap/i)).toBeNull();
+    });
   });
 });
