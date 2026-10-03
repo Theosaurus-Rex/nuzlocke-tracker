@@ -4,6 +4,7 @@ import { Typography } from "@/components/typography";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
+import { LevelInput } from "@/components/level-input";
 import {
   Select,
   SelectContent,
@@ -139,12 +140,11 @@ function AddFightForm({ runId, pending, onDone }: AddFightFormProps): ReactNode 
           <Typography as="label" variant="eyebrow" htmlFor="add-fight-cap" className="mb-1 block">
             Level cap (optional)
           </Typography>
-          <Input
+          <LevelInput
             id="add-fight-cap"
-            inputMode="numeric"
             className="font-mono"
             value={capText}
-            onChange={(event) => setCapText(event.target.value)}
+            onValueChange={setCapText}
             aria-invalid={capError !== null}
             aria-describedby={capError === null ? undefined : "add-fight-cap-error"}
           />

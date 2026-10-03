@@ -165,6 +165,19 @@ describe("LogDeathDialog", () => {
     expect((await adapter.mons.getAll()).filter((m) => m.status === "dead")).toHaveLength(1);
   });
 
+  it("keeps only digits typed into the killed-by level", async () => {
+    const user = userEvent.setup();
+    const adapter = createMemoryAdapter();
+    const run = await seed(adapter, TWO_LIVING);
+    renderScreen(adapter, run.id);
+    const dialog = await openDialog(user);
+
+    const level = within(dialog).getByLabelText("Level");
+    await user.type(level, "2a5");
+
+    expect(level).toHaveValue("25");
+  });
+
   it("saves a trainer death, closes, and shows the new card", async () => {
     const user = userEvent.setup();
     const adapter = createMemoryAdapter();

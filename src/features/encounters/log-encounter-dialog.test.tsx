@@ -476,6 +476,19 @@ describe("LogEncounterDialog", () => {
     expect(level).toHaveValue("25");
   });
 
+  it("keeps only digits typed into both level fields", async () => {
+    const user = userEvent.setup();
+    renderDialog({});
+
+    const levelCaught = screen.getByLabelText("Level caught");
+    const level = screen.getByLabelText("Current level");
+    await user.type(levelCaught, "2a5");
+    await user.type(level, "-1e");
+
+    expect(levelCaught).toHaveValue("25");
+    expect(level).toHaveValue("251");
+  });
+
   it("defaults placement to box when the party already has six mons", () => {
     const fullParty = Array.from({ length: 6 }, (_, index) =>
       makeMon({ id: `mon-${index}`, status: "party", partySlot: index }),

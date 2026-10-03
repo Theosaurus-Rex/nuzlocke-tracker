@@ -3,7 +3,7 @@ import { useState, type FormEvent, type ReactNode } from "react";
 import { Typography } from "@/components/typography";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent } from "@/components/ui/dialog";
-import { Input } from "@/components/ui/input";
+import { LevelInput } from "@/components/level-input";
 import { countByMonStatus } from "@/domain/derive";
 import { findDupe } from "@/domain/dupes";
 import { validateEncounter, type EncounterField } from "@/domain/encounter-validation";
@@ -322,12 +322,11 @@ function LogEncounterForm({
               >
                 Level caught
               </Typography>
-              <Input
+              <LevelInput
                 id="log-encounter-level-caught"
-                inputMode="numeric"
                 className="font-mono"
                 value={levelCaughtText}
-                onChange={(event) => handleLevelCaughtChange(event.target.value)}
+                onValueChange={handleLevelCaughtChange}
                 aria-invalid={errors.levelCaught !== undefined}
                 aria-describedby={
                   errors.levelCaught ? "log-encounter-level-caught-error" : undefined
@@ -355,12 +354,11 @@ function LogEncounterForm({
               >
                 Current level
               </Typography>
-              <Input
+              <LevelInput
                 id="log-encounter-level"
-                inputMode="numeric"
                 className="font-mono"
                 value={levelText}
-                onChange={(event) => handleLevelChange(event.target.value)}
+                onValueChange={handleLevelChange}
                 aria-invalid={errors.level !== undefined}
                 aria-describedby={errors.level ? "log-encounter-level-error" : undefined}
               />
