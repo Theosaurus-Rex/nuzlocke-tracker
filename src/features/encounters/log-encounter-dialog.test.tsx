@@ -20,7 +20,11 @@ import type { StorageAdapter } from "@/storage/adapter";
 import { createMemoryAdapter } from "@/storage/memory-adapter";
 import { StorageProvider } from "@/storage/storage-context";
 import { defaultPokeApiRoutes, STUB_PENDING, stubPokeApi, stubStatus } from "@/test/pokeapi-fetch";
-import { moveIndexFixture, speciesIndexFixture } from "@/test/pokeapi-fixtures";
+import {
+  evolutionSpeciesIndexRefs,
+  moveIndexFixture,
+  speciesIndexFixture,
+} from "@/test/pokeapi-fixtures";
 
 import { LogEncounterDialog } from "./log-encounter-dialog";
 
@@ -30,6 +34,7 @@ const EXTENDED_SPECIES_INDEX: RawIndex = {
   results: [
     ...speciesIndexFixture.results,
     { name: "chikorita", url: `${POKEAPI_BASE}/pokemon/152/` },
+    ...evolutionSpeciesIndexRefs,
   ],
 };
 
@@ -136,6 +141,99 @@ async function fillMinimalCatch(user: ReturnType<typeof userEvent.setup>): Promi
   await user.type(screen.getByLabelText("Species"), "Chikorita");
   await user.type(screen.getByLabelText("Level caught"), "6");
 }
+
+describe("LogEncounterDialog dupes clause", () => {
+  const owned = makeMon({
+    speciesId: "vileplume",
+    speciesIdCaught: "oddish",
+    nickname: "Petal",
+    status: "dead",
+    partySlot: null,
+  });
+  const ON = { ...DEFAULT_RULES, dupesClause: true };
+
+  it("warns when the species shares a line with an owned mon", async () => {
+    const user = userEvent.setup();
+    renderDialog({ rules: ON, mons: [owned] });
+
+    await user.type(screen.getByLabelText("Species"), "Gloom");
+
+    expect(await screen.findByRole("status")).toHaveTextContent(
+      "Dupes clause: you already have “Petal”, a Vileplume. This encounter doesn't count, so you can skip it and keep looking.",
+    );
+  });
+
+  it("warns for a skipped encounter without a nickname", async () => {
+    const user = userEvent.setup();
+    renderDialog({
+      rules: ON,
+      mons: [makeMon({ speciesId: "geodude", speciesIdCaught: "geodude" })],
+    });
+
+    await user.click(screen.getByRole("radio", { name: "Skipped" }));
+    await user.type(screen.getByLabelText("Species (optional)"), "Geodude");
+
+    expect(await screen.findByRole("status")).toHaveTextContent(
+      "Dupes clause: you already have a Geodude. This encounter doesn't count",
+    );
+  });
+
+  it("catches an exact dupe when the evolution line cannot load", async () => {
+    stubPokeApi({
+      ...defaultPokeApiRoutes,
+      "/pokemon?limit=100000": EXTENDED_SPECIES_INDEX,
+      "/pokemon-species/43": stubStatus(500),
+    });
+    const user = userEvent.setup();
+    renderDialog({
+      rules: ON,
+      mons: [makeMon({ speciesId: "oddish", speciesIdCaught: "oddish" })],
+    });
+
+    await user.type(screen.getByLabelText("Species"), "Oddish");
+
+    expect(await screen.findByRole("status")).toHaveTextContent("an Oddish");
+  });
+
+  it("stays quiet when the clause is off", async () => {
+    const user = userEvent.setup();
+    renderDialog({
+      rules: { ...ON, dupesClause: false },
+      mons: [makeMon({ speciesId: "oddish", speciesIdCaught: "oddish" })],
+    });
+
+    await user.type(screen.getByLabelText("Species"), "Oddish");
+    await screen.findByRole("combobox", { name: "Species" });
+
+    expect(screen.queryByRole("status")).not.toBeInTheDocument();
+  });
+
+  it("stays quiet for an unrelated species", async () => {
+    const user = userEvent.setup();
+    renderDialog({ rules: ON, mons: [owned] });
+
+    await user.type(screen.getByLabelText("Species"), "Chikorita");
+    await screen.findByRole("combobox", { name: "Species" });
+
+    expect(screen.queryByRole("status")).not.toBeInTheDocument();
+  });
+
+  it("still saves while the notice shows", async () => {
+    const user = userEvent.setup();
+    const { adapter, onOpenChange } = renderDialog({ rules: ON, mons: [owned] });
+
+    await user.type(screen.getByLabelText("Species"), "Gloom");
+    await screen.findByRole("status");
+    await user.type(screen.getByLabelText("Level caught"), "6");
+    await user.click(screen.getByRole("button", { name: "Save encounter" }));
+
+    await waitFor(() => {
+      expect(onOpenChange).toHaveBeenCalledWith(false);
+    });
+    const [encounter] = await adapter.encounters.where("runId", "run-1");
+    expect(encounter?.speciesId).toBe("gloom");
+  });
+});
 
 describe("LogEncounterDialog", () => {
   it("shows the route name as the dialog title", () => {

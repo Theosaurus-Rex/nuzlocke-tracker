@@ -153,6 +153,16 @@ export function nextStages(chain: RawEvolutionChain, speciesId: number): number[
   return link === undefined ? [] : link.evolves_to.map((child) => idFromUrl(child.species.url));
 }
 
+export function evolutionLine(chain: RawEvolutionChain): string[] {
+  const names: string[] = [];
+  const walk = (link: RawChainLink): void => {
+    names.push(link.species.name);
+    link.evolves_to.forEach(walk);
+  };
+  walk(chain.chain);
+  return names;
+}
+
 export function toMove(raw: RawMove): Move {
   const pastValues: PastMoveValue[] = raw.past_values
     .flatMap((entry) => {
