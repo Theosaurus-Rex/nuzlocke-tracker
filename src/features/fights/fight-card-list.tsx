@@ -5,11 +5,12 @@ import { BadgeSprite } from "@/components/badge-sprite";
 import { StatusChip } from "@/components/status-chip";
 import { Typography } from "@/components/typography";
 
-import { LogAttemptButton, UndoClear } from "./fight-actions";
+import { canDeleteFight } from "@/domain/custom-fights";
+import { DeleteFightButton, LogAttemptButton, UndoClear } from "./fight-actions";
 import type { FightListProps } from "./fight-table";
 import { capLabel, fightLabel, lossNames } from "./loss-names";
 
-export function FightCardList({ sections, monsById, onLog }: FightListProps): ReactNode {
+export function FightCardList({ sections, monsById, onLog, deaths }: FightListProps): ReactNode {
   return (
     <div aria-label="Fights" role="group" className="border-b-[1.5px] border-border bg-card">
       {sections.map((section) => (
@@ -63,6 +64,7 @@ export function FightCardList({ sections, monsById, onLog }: FightListProps): Re
                       onClick={() => onLog(fight, fightLabel(fight.name, badge))}
                     />
                   )}
+                  {canDeleteFight(fight, deaths) && <DeleteFightButton fight={fight} />}
                   {confirm}
                 </li>
               );

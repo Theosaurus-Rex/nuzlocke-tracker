@@ -21,3 +21,20 @@ export function fightLabel(name: string, badge: string | null): string {
 export function capLabel(levelCap: number | null): string {
   return levelCap === null ? "—" : `L${String(levelCap)}`;
 }
+
+export function numberedFightLabels(
+  fights: readonly { id: string; name: string; badge: string | null }[],
+): Map<string, string> {
+  const totals = new Map<string, number>();
+  for (const { name } of fights) totals.set(name, (totals.get(name) ?? 0) + 1);
+
+  const seen = new Map<string, number>();
+  return new Map(
+    fights.map(({ id, name, badge }) => {
+      const occurrence = (seen.get(name) ?? 0) + 1;
+      seen.set(name, occurrence);
+      const numbered = (totals.get(name) ?? 0) > 1 ? `${name} (${String(occurrence)})` : name;
+      return [id, fightLabel(numbered, badge)];
+    }),
+  );
+}

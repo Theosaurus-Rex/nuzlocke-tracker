@@ -4,14 +4,17 @@ import { Navigate, useParams } from "react-router";
 import { ScreenHeader } from "@/components/screen-header";
 import { StatusChip } from "@/components/status-chip";
 import { Typography } from "@/components/typography";
+import { Button } from "@/components/ui/button";
 import { badgeCount, buildFightSections } from "@/domain/fight-list";
 import type { Fight } from "@/domain/types";
 import { currentLevelCap } from "@/domain/rules-summary";
 import { GAMES } from "@/game/registry";
 import { useDeaths, useFights, useMons, useRun } from "@/storage/queries";
 
+import { AddFightDialog } from "./add-fight-dialog";
 import { FightCardList } from "./fight-card-list";
 import { FightTable } from "./fight-table";
+import { numberedFightLabels } from "./loss-names";
 import { LogAttemptDialog } from "./log-attempt-dialog";
 
 export function FightsScreen(): ReactNode {
@@ -20,6 +23,7 @@ export function FightsScreen(): ReactNode {
   const fightsQuery = useFights(runId ?? "");
   const deathsQuery = useDeaths(runId ?? "");
   const monsQuery = useMons(runId);
+  const [adding, setAdding] = useState(false);
   const [logging, setLogging] = useState<{ fight: Fight; label: string } | null>(null);
 
   if (!runId) {
@@ -29,12 +33,20 @@ export function FightsScreen(): ReactNode {
   const run = runQuery.data;
   const fights = fightsQuery.data ?? [];
   const loaded = run !== undefined && !fightsQuery.isPending && !deathsQuery.isPending;
+  const deaths = deathsQuery.data ?? [];
   const defs = new Map(GAMES[run?.game ?? "heartgold"].fights.map((def) => [def.id, def]));
-  const sections = buildFightSections(fights, (id) => defs.get(id), deathsQuery.data ?? []);
+  const sections = buildFightSections(fights, (id) => defs.get(id), deaths);
   const monsById = new Map((monsQuery.data ?? []).map((mon) => [mon.id, mon]));
   const { earned, total } = badgeCount(fights);
   const cap = run?.rules.levelCaps ? currentLevelCap(fights) : null;
   const onLog = (fight: Fight, label: string): void => setLogging({ fight, label });
+  const allRows = sections.flatMap((section) => section.rows);
+  const labels = numberedFightLabels(
+    allRows.map((row) => ({ id: row.fight.id, name: row.fight.name, badge: row.badge })),
+  );
+  const pending = allRows
+    .filter((row) => row.state !== "cleared")
+    .map((row) => ({ id: row.fight.id, label: labels.get(row.fight.id) ?? row.fight.name }));
   const badges = `${String(earned)} of ${String(total)} badges`;
 
   return (
@@ -42,9 +54,24 @@ export function FightsScreen(): ReactNode {
       <ScreenHeader
         title="Gyms & Elite Four"
         actions={
-          <div className="hidden items-center gap-2 md:flex">
-            <StatusChip status="caught">{badges}</StatusChip>
-            {cap !== null && <StatusChip status="pending">{`Cap L${String(cap)}`}</StatusChip>}
+          <div className="flex items-center gap-2">
+            <div className="hidden items-center gap-2 md:flex">
+              <StatusChip status="caught">{badges}</StatusChip>
+              {cap !== null && <StatusChip status="pending">{`Cap L${String(cap)}`}</StatusChip>}
+            </div>
+            <Button
+              type="button"
+              variant="outline"
+              aria-label="Add fight"
+              disabled={!loaded}
+              onClick={() => setAdding(true)}
+              className="size-10 shadow-none md:h-10 md:w-auto md:px-4"
+            >
+              <span aria-hidden="true">+</span>
+              <span aria-hidden="true" className="hidden md:inline">
+                Add fight
+              </span>
+            </Button>
           </div>
         }
       >
@@ -60,12 +87,22 @@ export function FightsScreen(): ReactNode {
       {loaded && sections.length > 0 && (
         <>
           <div className="hidden md:block">
-            <FightTable sections={sections} monsById={monsById} onLog={onLog} />
+            <FightTable sections={sections} monsById={monsById} onLog={onLog} deaths={deaths} />
           </div>
           <div className="md:hidden">
-            <FightCardList sections={sections} monsById={monsById} onLog={onLog} />
+            <FightCardList sections={sections} monsById={monsById} onLog={onLog} deaths={deaths} />
           </div>
         </>
+      )}
+      {adding && (
+        <AddFightDialog
+          open
+          onOpenChange={(open) => {
+            if (!open) setAdding(false);
+          }}
+          runId={runId}
+          pending={pending}
+        />
       )}
       {logging !== null && (
         <LogAttemptDialog
