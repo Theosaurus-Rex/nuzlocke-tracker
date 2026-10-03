@@ -1,20 +1,22 @@
-import type { ReactNode } from "react";
+import { Fragment, type ReactNode } from "react";
 import { cn } from "cn";
 
 import { BadgeSprite } from "@/components/badge-sprite";
 import { StatusChip } from "@/components/status-chip";
 import { Typography } from "@/components/typography";
 import type { FightSection } from "@/domain/fight-list";
-import type { Mon } from "@/domain/types";
+import type { Fight, Mon } from "@/domain/types";
 
+import { LogAttemptButton, UndoClear } from "./fight-actions";
 import { capLabel, fightLabel, lossNames } from "./loss-names";
 
 export interface FightListProps {
   sections: FightSection[];
   monsById: ReadonlyMap<string, Mon>;
+  onLog: (fight: Fight, label: string) => void;
 }
 
-export function FightTable({ sections, monsById }: FightListProps): ReactNode {
+export function FightTable({ sections, monsById, onLog }: FightListProps): ReactNode {
   return (
     <table aria-label="Fights" className="w-full border-collapse bg-background text-left text-sm">
       <thead>
@@ -39,40 +41,66 @@ export function FightTable({ sections, monsById }: FightListProps): ReactNode {
           </tr>
           {section.rows.map(({ fight, badge, badgeSprite, state, losses }) => {
             const lost = lossNames(losses, monsById);
-            return (
-              <tr
-                key={fight.id}
-                aria-current={state === "next" ? "step" : undefined}
-                className={cn(
-                  "border-b border-muted",
-                  state === "next" && "bg-flag-tint",
-                  state === "upcoming" && "text-muted-foreground",
-                )}
-              >
-                <td className="px-3 py-2 font-medium">
-                  <span className="flex items-center gap-2">
-                    <BadgeSprite sprite={badgeSprite} size={28} muted={state !== "cleared"} />
-                    {fightLabel(fight.name, badge)}
-                  </span>
-                </td>
-                <td className="px-3 py-2">
-                  <Typography as="span" variant="number">
-                    {capLabel(fight.levelCap)}
-                  </Typography>
-                </td>
-                <td className="px-3 py-2">
-                  {lost.length > 0 ? (
-                    <Typography as="span" variant="body" tone="alert">
-                      {lost.join(", ")}
-                    </Typography>
-                  ) : (
-                    "—"
+            const renderRow = (undoButton: ReactNode, confirm: ReactNode): ReactNode => (
+              <Fragment key={fight.id}>
+                <tr
+                  aria-current={state === "next" ? "step" : undefined}
+                  className={cn(
+                    "border-b border-muted",
+                    state === "next" && "bg-flag-tint",
+                    state === "upcoming" && "text-muted-foreground",
                   )}
-                </td>
-                <td className="px-3 py-2">
-                  {state === "cleared" && <StatusChip status="cleared">Cleared</StatusChip>}
-                </td>
-              </tr>
+                >
+                  <td className="px-3 py-2 font-medium">
+                    <span className="flex items-center gap-2">
+                      <BadgeSprite sprite={badgeSprite} size={28} muted={state !== "cleared"} />
+                      {fightLabel(fight.name, badge)}
+                    </span>
+                  </td>
+                  <td className="px-3 py-2">
+                    <Typography as="span" variant="number">
+                      {capLabel(fight.levelCap)}
+                    </Typography>
+                  </td>
+                  <td className="px-3 py-2">
+                    {lost.length > 0 ? (
+                      <Typography as="span" variant="body" tone="alert">
+                        {lost.join(", ")}
+                      </Typography>
+                    ) : (
+                      "—"
+                    )}
+                  </td>
+                  <td className="px-3 py-2">
+                    {state === "cleared" && (
+                      <span className="flex flex-wrap items-center gap-2">
+                        <StatusChip status="cleared">Cleared</StatusChip>
+                        {undoButton}
+                      </span>
+                    )}
+                    {state === "next" && (
+                      <LogAttemptButton
+                        fightName={fight.name}
+                        onClick={() => onLog(fight, fightLabel(fight.name, badge))}
+                      />
+                    )}
+                  </td>
+                </tr>
+                {confirm !== null && (
+                  <tr className="border-b border-muted">
+                    <td colSpan={4} className="px-3 py-2">
+                      {confirm}
+                    </td>
+                  </tr>
+                )}
+              </Fragment>
+            );
+            return state === "cleared" ? (
+              <UndoClear key={fight.id} fightId={fight.id} fightName={fight.name}>
+                {renderRow}
+              </UndoClear>
+            ) : (
+              renderRow(null, null)
             );
           })}
         </tbody>

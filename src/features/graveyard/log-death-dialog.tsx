@@ -27,9 +27,7 @@ import { MAX_PARTY_SIZE } from "@/domain/transitions";
 import type { Death, Mon, Route, StatusCause } from "@/domain/types";
 import { EncounterDialogHeader } from "@/features/encounters/encounter-dialog-header";
 import { monTitle } from "@/features/encounters/mon-title";
-import { MovePicker } from "@/features/encounters/move-picker";
 import { PlacementField, type Placement } from "@/features/encounters/placement-field";
-import { SpeciesPicker } from "@/features/encounters/species-picker";
 import { speciesDisplayName } from "@/game/pokeapi/resolve";
 import { GAMES } from "@/game/registry";
 import { genderSymbol } from "@/lib/gender";
@@ -38,6 +36,7 @@ import { cn } from "@/lib/utils";
 import { useEditDeath, useLogDeath, useUndoDeath } from "@/storage/mutations";
 import { useMons, useRoutes, useRun } from "@/storage/queries";
 
+import { AttackerFields } from "./attacker-fields";
 import { titleCase } from "./cause-text";
 
 const UNKNOWN_ROUTE = "unknown";
@@ -269,68 +268,17 @@ function LogDeathForm({
             <Typography as="span" variant="eyebrow" id="log-death-lost-to" className="mb-1 block">
               Lost to *
             </Typography>
-            <div className="flex items-start gap-3 border-[1.5px] border-border p-3">
-              <SpeciesSprite
-                speciesId={speciesId === "" ? null : speciesId}
-                shiny={false}
-                size={48}
-              />
-              <div className="grid min-w-0 flex-1 gap-3 sm:grid-cols-[1fr_5rem_1fr]">
-                <div>
-                  <Typography
-                    as="label"
-                    variant="caption"
-                    tone="muted"
-                    htmlFor="log-death-species"
-                    className="mb-1 block"
-                  >
-                    Species
-                  </Typography>
-                  <SpeciesPicker
-                    id="log-death-species"
-                    value={speciesId}
-                    onChange={setSpeciesId}
-                    generation={generation}
-                    aria-invalid={errors.speciesId !== undefined}
-                    aria-describedby={errors.speciesId ? "log-death-species-error" : undefined}
-                  />
-                  <FieldError id="log-death-species-error" message={errors.speciesId} />
-                </div>
-                <div>
-                  <Typography
-                    as="label"
-                    variant="caption"
-                    tone="muted"
-                    htmlFor="log-death-level"
-                    className="mb-1 block"
-                  >
-                    Level
-                  </Typography>
-                  <Input
-                    id="log-death-level"
-                    inputMode="numeric"
-                    className="font-mono"
-                    value={levelText}
-                    onChange={(event) => setLevelText(event.target.value)}
-                    aria-invalid={errors.level !== undefined}
-                    aria-describedby={errors.level ? "log-death-level-error" : undefined}
-                  />
-                  <FieldError id="log-death-level-error" message={errors.level} />
-                </div>
-                <div>
-                  <Typography
-                    as="label"
-                    variant="caption"
-                    tone="muted"
-                    htmlFor="log-death-move"
-                    className="mb-1 block"
-                  >
-                    Move (optional)
-                  </Typography>
-                  <MovePicker id="log-death-move" value={move} onChange={setMove} />
-                </div>
-              </div>
-            </div>
+            <AttackerFields
+              idPrefix="log-death"
+              generation={generation}
+              speciesId={speciesId}
+              levelText={levelText}
+              move={move}
+              errors={errors}
+              onSpeciesChange={setSpeciesId}
+              onLevelChange={setLevelText}
+              onMoveChange={setMove}
+            />
           </div>
         ) : (
           <div>
