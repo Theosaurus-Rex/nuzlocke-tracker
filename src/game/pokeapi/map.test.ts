@@ -8,7 +8,15 @@ import {
   speciesIndexFixture,
 } from "@/test/pokeapi-fixtures";
 
-import { nextStages, toMove, toMoveIndex, toSpecies, toSpeciesIndex, type RawMove } from "./map";
+import {
+  evolutionLine,
+  nextStages,
+  toMove,
+  toMoveIndex,
+  toSpecies,
+  toSpeciesIndex,
+  type RawMove,
+} from "./map";
 
 describe("toSpeciesIndex", () => {
   it("keeps default forms only, in dex order, with ids from the url", () => {
@@ -151,5 +159,24 @@ describe("nextStages", () => {
 
   it("does not return stages beyond the next one", () => {
     expect(nextStages(branch, 43)).toEqual([44]);
+  });
+});
+
+describe("evolutionLine", () => {
+  it("returns every stage of a linear chain", () => {
+    expect(evolutionLine(evolutionChainFixtures["29"]!)).toEqual([
+      "bellsprout",
+      "weepinbell",
+      "victreebel",
+    ]);
+  });
+
+  it("returns every branch, including stages past the first", () => {
+    expect(evolutionLine(evolutionChainFixtures["18"]!)).toEqual([
+      "oddish",
+      "gloom",
+      "vileplume",
+      "bellossom",
+    ]);
   });
 });

@@ -10,9 +10,11 @@ import { cn } from "cn";
 import { buttonVariants } from "@/components/ui/button";
 import { Typography } from "@/components/typography";
 import { summariseRun, type RunSummary } from "@/domain/derive";
-import { useEncounters, useMons, useRoutes, useRuns } from "@/storage/queries";
+import { currentLevelCap } from "@/domain/rules-summary";
+import { useEncounters, useFights, useMons, useRoutes, useRuns } from "@/storage/queries";
 
 import { navItemsFor, subScreenFromPath, type NavItem } from "./nav-items";
+import { RulesSummary } from "./rules-summary";
 import { RunSwitcher } from "./run-switcher";
 import { useCurrentRunId } from "./use-current-run-id";
 
@@ -55,6 +57,9 @@ export function AppShell(): ReactNode {
   const encountersQuery = useEncounters(runId);
   const monsQuery = useMons(runId);
   const routesQuery = useRoutes(runId ?? "");
+  const fightsQuery = useFights(runId ?? "");
+  const currentRun = runs.find((run) => run.id === runId);
+  const levelCap = currentLevelCap(fightsQuery.data ?? []);
   const summary =
     runId !== undefined && encountersQuery.data !== undefined && monsQuery.data !== undefined
       ? summariseRun({ encounters: encountersQuery.data, mons: monsQuery.data })
@@ -107,6 +112,9 @@ export function AppShell(): ReactNode {
             </NavLink>
           );
         })}
+        {currentRun !== undefined && (
+          <RulesSummary rules={currentRun.rules} levelCap={levelCap} className="mt-4" />
+        )}
         {/* Pinned below the nav rows, not part of them. `runId` gates Settings because the
             global nav already carries it as a row, and two links with one name is a trap for
             anyone navigating by voice or screen reader. */}
@@ -128,6 +136,9 @@ export function AppShell(): ReactNode {
         {runId !== undefined && (
           <div className="border-b-[1.5px] border-border p-2 md:hidden">
             <RunSwitcher runs={runs} activeRunId={runId} onSwitch={handleSwitchRun} />
+            {currentRun !== undefined && (
+              <RulesSummary rules={currentRun.rules} levelCap={levelCap} className="mt-2" />
+            )}
           </div>
         )}
         <Outlet />

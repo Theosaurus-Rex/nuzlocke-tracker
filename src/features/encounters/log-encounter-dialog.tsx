@@ -5,15 +5,19 @@ import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { countByMonStatus } from "@/domain/derive";
+import { findDupe } from "@/domain/dupes";
 import { validateEncounter, type EncounterField } from "@/domain/encounter-validation";
 import type { CatchDetails } from "@/domain/transitions";
 import type { Encounter, Gender, Mon, Route, Rules } from "@/domain/types";
+import { useEvolutionLine } from "@/game/pokeapi/queries";
+import { speciesDisplayName } from "@/game/pokeapi/resolve";
 import { GAMES } from "@/game/registry";
 import { useLogEncounter } from "@/storage/mutations";
 import { useRun } from "@/storage/queries";
 import { cn } from "@/lib/utils";
 
 import { EncounterDialogHeader } from "./encounter-dialog-header";
+import { monTitle } from "./mon-title";
 import {
   AbilityField,
   GenderField,
@@ -33,6 +37,24 @@ const OUTCOMES: { value: Outcome; label: string }[] = [
   { value: "missed", label: "Missed" },
   { value: "skipped", label: "Skipped" },
 ];
+
+function DupeNotice({ mon }: { mon: Mon }): ReactNode {
+  const species = speciesDisplayName(mon.speciesId);
+  const article = /^[aeiou]/i.test(species) ? "an" : "a";
+  const owned =
+    mon.nickname !== null ? `${monTitle(mon)}, ${article} ${species}` : `${article} ${species}`;
+  return (
+    <Typography
+      as="p"
+      role="status"
+      variant="body"
+      className="mt-1 border-[1.5px] border-border bg-muted px-2.5 py-1.5"
+    >
+      Dupes clause: you already have {owned}. This encounter doesn't count, so you can skip it and
+      keep looking.
+    </Typography>
+  );
+}
 
 function levelFromText(text: string): number {
   return Number(text);
@@ -122,6 +144,12 @@ function LogEncounterForm({
     countByMonStatus(mons).party < 6 ? "party" : "box",
   );
   const [submitted, setSubmitted] = useState(false);
+
+  const evolutionLine = useEvolutionLine(rules.dupesClause && speciesId !== "" ? speciesId : null);
+  const dupe =
+    rules.dupesClause && speciesId !== ""
+      ? findDupe({ line: evolutionLine ?? [speciesId], mons })
+      : undefined;
 
   const details: CatchDetails = {
     speciesId,
@@ -240,6 +268,7 @@ function LogEncounterForm({
                 {errors.speciesId}
               </Typography>
             )}
+            {dupe && <DupeNotice mon={dupe} />}
           </div>
         ) : (
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
@@ -271,6 +300,7 @@ function LogEncounterForm({
                   {errors.speciesId}
                 </Typography>
               )}
+              {dupe && <DupeNotice mon={dupe} />}
             </div>
 
             <NicknameField

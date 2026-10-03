@@ -2,6 +2,7 @@ import { useQueries, useQuery, type QueryClient } from "@tanstack/react-query";
 
 import { fetchJson, PokeApiError } from "./client";
 import {
+  evolutionLine,
   idFromUrl,
   nextStages,
   toAbilityIndex,
@@ -108,6 +109,30 @@ export interface NextEvolutions {
   isFetching: boolean;
   isError: boolean;
   refetch: () => unknown;
+}
+
+export function useEvolutionLine(speciesName: string | null): string[] | undefined {
+  const index = useSpeciesIndex();
+  const entries = index.data;
+  const id =
+    entries === undefined || speciesName === null
+      ? null
+      : (findByName(entries, speciesName, speciesDisplayName)?.id ?? null);
+
+  const line = useQuery({
+    queryKey: ["pokeapi", "evolution-line", id],
+    queryFn: async () => {
+      const species = await fetchJson<RawPokemonSpecies>(`/pokemon-species/${String(id)}`);
+      if (species.evolution_chain === null) return [species.name];
+      const chainId = idFromUrl(species.evolution_chain.url);
+      return evolutionLine(
+        await fetchJson<RawEvolutionChain>(`/evolution-chain/${String(chainId)}`),
+      );
+    },
+    enabled: id !== null,
+  });
+
+  return line.data;
 }
 
 export function useNextEvolutions(speciesName: string | null): NextEvolutions {
