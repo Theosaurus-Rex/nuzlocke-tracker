@@ -5,6 +5,8 @@
 
 export interface NavItem {
   label: string;
+  /** Shown in the mobile tab bar instead of `label`, which stays the accessible name. */
+  shortLabel?: string;
   to: string;
   /** Forwarded to `NavLink`'s `end` prop so "/" isn't marked active for every route that also
    * starts with "/". */
@@ -19,12 +21,12 @@ const GLOBAL_NAV_ITEMS: NavItem[] = [
 /** The sub-screen `/runs/:runId` redirects to, and the fallback when a path names none. */
 export const DEFAULT_RUN_SUB_SCREEN = "routes";
 
-const RUN_SUB_SCREENS: readonly { slug: string; label: string }[] = [
+const RUN_SUB_SCREENS: readonly { slug: string; label: string; shortLabel?: string }[] = [
   { slug: DEFAULT_RUN_SUB_SCREEN, label: "Routes" },
   { slug: "party", label: "Party" },
   { slug: "boxes", label: "Boxes" },
-  { slug: "graveyard", label: "Graveyard" },
-  { slug: "fights", label: "Fights" },
+  { slug: "graveyard", label: "Graveyard", shortLabel: "Dead" },
+  { slug: "fights", label: "Gyms & E4", shortLabel: "Gyms" },
 ];
 
 export function isRunSubScreenSlug(value: string): boolean {
@@ -47,7 +49,11 @@ export function subScreenFromPath(pathname: string): string {
 function runNavItems(runId: string): NavItem[] {
   return [
     { label: "Runs", to: "/", end: true },
-    ...RUN_SUB_SCREENS.map(({ slug, label }) => ({ label, to: `/runs/${runId}/${slug}` })),
+    ...RUN_SUB_SCREENS.map(({ slug, label, shortLabel }) => ({
+      label,
+      shortLabel,
+      to: `/runs/${runId}/${slug}`,
+    })),
   ];
 }
 

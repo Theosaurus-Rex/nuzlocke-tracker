@@ -178,7 +178,8 @@ node scripts/slice-wireframes.ts --force
 layer, the game data's invariants, and the app shell's routing.
 
 In dev builds, Settings has a Developer section with a "Load sample run" button. It adds a
-run with a gapped party, a full box, deaths and open routes, so screens can be checked by hand.
+run with a gapped party, a full box, deaths, open routes, every fight cleared up to Bugsy and a death
+at him, so screens can be checked by hand.
 The section is compiled out of production builds.
 
 Two conventions worth keeping:

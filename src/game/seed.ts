@@ -1,9 +1,10 @@
 /**
- * Builds the draft rows to seed a new run's routes from its game data.
+ * Builds the draft rows to seed a new run's routes and fights from its game data.
  */
 
+import { FIGHT_ORDER_STEP } from "@/domain/fight-list";
 import { ROUTE_ORDER_STEP } from "@/domain/routes";
-import type { Draft, Route } from "@/domain/types";
+import type { Draft, Fight, Route } from "@/domain/types";
 
 import type { GameData } from "./types";
 
@@ -18,5 +19,19 @@ export function seedRoutes(runId: string, game: GameData): Draft<Route>[] {
     order: def.order * ROUTE_ORDER_STEP,
     isCustom: false,
     gameRouteId: def.id,
+  }));
+}
+
+export function seedFights(runId: string, game: GameData): Draft<Fight>[] {
+  return game.fights.map((def) => ({
+    runId,
+    gameFightId: def.id,
+    name: def.name,
+    kind: def.kind,
+    order: def.order * FIGHT_ORDER_STEP,
+    grantsBadge: def.grantsBadge,
+    levelCap: def.levelCap,
+    status: "pending",
+    clearedAt: null,
   }));
 }

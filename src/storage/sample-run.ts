@@ -5,7 +5,7 @@ import { useMutation, useQueryClient, type UseMutationResult } from "@tanstack/r
 import { DEFAULT_RULES } from "@/domain/rules";
 import { compareRoutes } from "@/domain/routes";
 import { catchEncounter, killMon, missEncounter, skipEncounter } from "@/domain/transitions";
-import type { Cause, Gender, Mon, Run } from "@/domain/types";
+import type { Cause, Fight, Gender, Mon, Run } from "@/domain/types";
 
 import type { StorageAdapter } from "./adapter";
 import { persistAddCustomRoute, persistCreateRun } from "./mutations";
@@ -15,7 +15,11 @@ import { useStorage } from "./storage-context";
 interface DeathPlan {
   cause: Cause;
   diedAt: string;
+  fightGameId?: string;
 }
+
+const LAST_CLEARED_FIGHT_GAME_ID = "gym-bugsy";
+const CLEARED_AT = "2026-09-01T11:00:00.000Z";
 
 interface MonPlan {
   species: string;
@@ -70,12 +74,13 @@ const PLANS: Plan[] = [
         cause: {
           type: "trainer",
           fightId: null,
-          trainerName: "Youngster Joey",
-          species: "rattata",
-          level: 4,
-          move: "tackle",
+          trainerName: null,
+          species: "scyther",
+          level: 17,
+          move: "fury-cutter",
         },
         diedAt: "2026-09-01T12:00:00.000Z",
+        fightGameId: "gym-bugsy",
       },
     },
   },
@@ -420,6 +425,19 @@ async function resolveEncounter(
   return tx.mons.put({ ...mon, boxOrder: plan.boxOrder ?? null });
 }
 
+function fightCause(death: DeathPlan, fights: readonly Fight[]): Cause {
+  if (death.fightGameId === undefined || death.cause.type !== "trainer") {
+    return death.cause;
+  }
+  const fight = fights.find((f) => f.gameFightId === death.fightGameId);
+  if (fight === undefined) {
+    throw new Error(
+      `Sample run refers to fight ${death.fightGameId}, which the game does not have.`,
+    );
+  }
+  return { ...death.cause, fightId: fight.id, trainerName: null };
+}
+
 export async function loadSampleRun(adapter: StorageAdapter): Promise<Run> {
   return adapter.transaction(async (tx) => {
     const run = await persistCreateRun(tx, {
@@ -428,6 +446,16 @@ export async function loadSampleRun(adapter: StorageAdapter): Promise<Run> {
       rules: DEFAULT_RULES,
     });
     const routes = (await tx.routes.where("runId", run.id)).sort(compareRoutes);
+
+    const fights = (await tx.fights.where("runId", run.id)).sort((a, b) => a.order - b.order);
+    const lastCleared = fights.find((fight) => fight.gameFightId === LAST_CLEARED_FIGHT_GAME_ID);
+    if (lastCleared === undefined) {
+      throw new Error(`Sample run needs fight ${LAST_CLEARED_FIGHT_GAME_ID}.`);
+    }
+    const cleared = fights.filter((fight) => fight.order <= lastCleared.order);
+    for (const fight of cleared) {
+      await tx.fights.put({ ...fight, status: "cleared", clearedAt: CLEARED_AT });
+    }
 
     const mons: Mon[] = [];
     const doomed: { mon: Mon; death: DeathPlan }[] = [];
@@ -455,13 +483,14 @@ export async function loadSampleRun(adapter: StorageAdapter): Promise<Run> {
 
     // Deaths come last so the party slot they free stays a gap while the party is being built.
     for (const { mon, death } of doomed) {
+      const cause = fightCause(death, fights);
       const killed = killMon({
         mon,
         deathId: crypto.randomUUID(),
         details: {
           level: mon.level,
           routeId: mon.caughtRouteId,
-          cause: death.cause,
+          cause,
           diedAt: death.diedAt,
           notes: null,
         },

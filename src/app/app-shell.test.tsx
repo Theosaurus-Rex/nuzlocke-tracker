@@ -180,6 +180,18 @@ describe("AppShell navigation", () => {
     expect(linksIn(tabBar)).toEqual(expected);
   });
 
+  it("shows short labels in the tab bar only, keeping the full name on the link", () => {
+    renderAt("/runs/run-123/party");
+
+    const { sidebar, tabBar } = shells();
+    const dead = within(tabBar).getByRole("link", { name: "Graveyard" });
+    const gyms = within(tabBar).getByRole("link", { name: "Gyms & E4" });
+    expect(within(dead).getByText("Dead")).toBeInTheDocument();
+    expect(within(gyms).getByText("Gyms")).toBeInTheDocument();
+    expect(within(sidebar).queryByText("Dead")).not.toBeInTheDocument();
+    expect(within(sidebar).queryByText("Gyms")).not.toBeInTheDocument();
+  });
+
   it("renders the run's screens plus a way back to the run list, in both shells", () => {
     renderAt("/runs/run-123/party");
 
@@ -776,6 +788,21 @@ describe("Rules summary", () => {
           .getAllByRole("listitem")
           .map((item) => item.textContent),
       ).toEqual(["Dupes", "Cap L18"]);
+    });
+  });
+
+  it("counts earned badges against the total beside Gyms & E4", async () => {
+    const adapter = createMemoryAdapter();
+    const run = await adapter.runs.put(makeRunDraft());
+    await adapter.fights.put(makeFightDraft(run.id, { order: 1, status: "cleared" }));
+    await adapter.fights.put(makeFightDraft(run.id, { order: 2 }));
+    await adapter.fights.put(makeFightDraft(run.id, { order: 3, grantsBadge: false }));
+
+    renderAt(`/runs/${run.id}/routes`, { adapter });
+
+    const sidebar = screen.getByRole("navigation", { name: "Sidebar navigation" });
+    await waitFor(() => {
+      expect(countersIn(sidebar)["Gyms & E4"]).toBe("1/2");
     });
   });
 

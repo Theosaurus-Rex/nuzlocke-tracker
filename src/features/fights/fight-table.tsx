@@ -1,0 +1,76 @@
+import type { ReactNode } from "react";
+import { cn } from "cn";
+
+import { StatusChip } from "@/components/status-chip";
+import { Typography } from "@/components/typography";
+import type { FightSection } from "@/domain/fight-list";
+import type { Mon } from "@/domain/types";
+
+import { capLabel, fightLabel, lossNames } from "./loss-names";
+
+export interface FightListProps {
+  sections: FightSection[];
+  monsById: ReadonlyMap<string, Mon>;
+}
+
+export function FightTable({ sections, monsById }: FightListProps): ReactNode {
+  return (
+    <table aria-label="Fights" className="w-full border-collapse bg-background text-left text-sm">
+      <thead>
+        <tr className="border-y-[1.5px] border-border bg-muted">
+          {["Fight", "Cap", "Losses", "Status"].map((heading) => (
+            <th key={heading} className="px-3 py-2">
+              <Typography as="span" variant="eyebrow" tone="ink">
+                {heading}
+              </Typography>
+            </th>
+          ))}
+        </tr>
+      </thead>
+      {sections.map((section) => (
+        <tbody key={section.label}>
+          <tr className="border-y-[1.5px] border-border bg-muted">
+            <th colSpan={4} scope="colgroup" className="px-3 py-2 text-left">
+              <Typography as="span" variant="eyebrow" tone="ink">
+                {section.label}
+              </Typography>
+            </th>
+          </tr>
+          {section.rows.map(({ fight, badge, state, losses }) => {
+            const lost = lossNames(losses, monsById);
+            return (
+              <tr
+                key={fight.id}
+                aria-current={state === "next" ? "step" : undefined}
+                className={cn(
+                  "border-b border-muted",
+                  state === "next" && "bg-flag-tint",
+                  state === "upcoming" && "text-muted-foreground",
+                )}
+              >
+                <td className="px-3 py-2 font-medium">{fightLabel(fight.name, badge)}</td>
+                <td className="px-3 py-2">
+                  <Typography as="span" variant="number">
+                    {capLabel(fight.levelCap)}
+                  </Typography>
+                </td>
+                <td className="px-3 py-2">
+                  {lost.length > 0 ? (
+                    <Typography as="span" variant="body" tone="alert">
+                      {lost.join(", ")}
+                    </Typography>
+                  ) : (
+                    "—"
+                  )}
+                </td>
+                <td className="px-3 py-2">
+                  {state === "cleared" && <StatusChip status="cleared">Cleared</StatusChip>}
+                </td>
+              </tr>
+            );
+          })}
+        </tbody>
+      ))}
+    </table>
+  );
+}
