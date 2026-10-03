@@ -3,6 +3,7 @@ import { describe, expect, test } from "vitest";
 import {
   amendMon,
   catchEncounter,
+  catchShinyBonus,
   clearFight,
   evolveMon,
   killMon,
@@ -324,6 +325,65 @@ describe("catchEncounter", () => {
     expect(error).toBeInstanceOf(Error);
     expect((error as Error).message).toContain("20");
     expect((error as Error).message).toContain("19");
+  });
+});
+
+describe("catchShinyBonus", () => {
+  const bonus = (overrides: Partial<Parameters<typeof catchShinyBonus>[0]> = {}) =>
+    catchShinyBonus({
+      runId: "run-1",
+      routeId: "route-42",
+      party: [],
+      box: [],
+      monId: "mon-1",
+      details: catchDetails,
+      ...overrides,
+    });
+
+  test("builds a shiny mon with no encounter, tied to the route", () => {
+    expect(bonus()).toMatchObject({
+      id: "mon-1",
+      runId: "run-1",
+      encounterId: null,
+      caughtRouteId: "route-42",
+      shiny: true,
+      speciesId: "chikorita",
+      status: "party",
+      partySlot: 0,
+    });
+  });
+
+  test("forces shiny even when the details say otherwise", () => {
+    expect(bonus({ details: { ...catchDetails, shiny: false } }).shiny).toBe(true);
+  });
+
+  test("takes the lowest free slot when the party has a gap", () => {
+    const mon = bonus({ party: partyInSlots([0, 2]) });
+
+    expect(mon.partySlot).toBe(1);
+  });
+
+  test("overflows to the box when the party is full", () => {
+    const mon = bonus({ party: partyInSlots([0, 1, 2, 3, 4, 5]) });
+
+    expect(mon.status).toBe("box");
+    expect(mon.partySlot).toBeNull();
+  });
+
+  test("placement 'box' boxes it with the party having room", () => {
+    const mon = bonus({ details: { ...catchDetails, placement: "box" } });
+
+    expect(mon.status).toBe("box");
+    expect(mon.partySlot).toBeNull();
+  });
+
+  test("refuses more than 4 moves and a current level below the level caught", () => {
+    const moves = ["a", "b", "c", "d", "e"];
+
+    expect(() => bonus({ details: { ...catchDetails, moves } })).toThrow(/4 moves/);
+    expect(() => bonus({ details: { ...catchDetails, levelCaught: 9, level: 5 } })).toThrow(
+      /cannot be below/,
+    );
   });
 });
 
