@@ -136,6 +136,7 @@ describe("Shiny bonus dialog", () => {
     await openShinyDialog(user, "Route 1");
 
     expect(await screen.findByRole("heading", { name: "Shiny: Route 1" })).toBeInTheDocument();
+    expect(screen.queryByText(/encounter$/)).not.toBeInTheDocument();
     expect(screen.queryByRole("radiogroup", { name: "Outcome" })).not.toBeInTheDocument();
     const shiny = screen.getByRole("button", { name: "Shiny" });
     expect(shiny).toBeDisabled();
@@ -150,7 +151,7 @@ describe("Shiny bonus dialog", () => {
     await openShinyDialog(user, "Route 1");
     await user.type(await screen.findByLabelText("Species"), "Chikorita");
     await user.type(screen.getByLabelText("Level caught"), "6");
-    await user.click(screen.getByRole("button", { name: "Save encounter" }));
+    await user.click(screen.getByRole("button", { name: "Save shiny" }));
 
     await waitFor(async () => {
       expect(await adapter.mons.getAll()).toHaveLength(1);
@@ -209,7 +210,7 @@ describe("Shiny bonus dialog", () => {
     await openShinyDialog(user, "Route 1");
     await user.type(await screen.findByLabelText("Species"), "Chikorita");
     await user.type(screen.getByLabelText("Level caught"), "6");
-    await user.click(screen.getByRole("button", { name: "Save encounter" }));
+    await user.click(screen.getByRole("button", { name: "Save shiny" }));
 
     expect(await screen.findByText(/requires a nickname/i)).toBeInTheDocument();
     expect(await adapter.mons.getAll()).toEqual([]);

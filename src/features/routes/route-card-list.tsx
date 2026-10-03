@@ -164,6 +164,11 @@ export function RouteCardList({
                 )}
               </div>
               <RouteCardSubtitle row={row} />
+              <ShinyBonusButton
+                row={row}
+                onShinyBonus={onShinyBonus}
+                className="-ml-2 h-6 px-2 text-xs"
+              />
             </div>
             <RouteCardBadges
               row={row}
@@ -171,7 +176,6 @@ export function RouteCardList({
               onLog={() => onLogEncounter(row.route)}
             />
             <div className="flex shrink-0 items-center gap-1">
-              <ShinyBonusButton row={row} onShinyBonus={onShinyBonus} />
               <RowEndAction
                 row={row}
                 removable={removable}
