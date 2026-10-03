@@ -300,7 +300,10 @@ decision below.
 committed. The host repo is CC0, but the images are copyright The Pokémon Company. The app uses
 the still standard sprite, and the Gen 7 and 8 box icons on the routes screens. Past #650 those are
 Smogon's community sprites, which PokéAPI serves with Smogon's permission. Do not load them from
-Smogon's own server. See `docs/superpowers/specs/2026-09-28-pokemon-sprites-design.md`.
+Smogon's own server. Held item sprites and gym badges come from the same host. Badge files are
+numbered rather than named, so each gym's number is hand-entered in its game data, and the
+HeartGold numbers were checked by eye. PokéAPI has no trainer sprites, and finding a source is
+PER-114. See `docs/superpowers/specs/2026-09-28-pokemon-sprites-design.md`.
 
 **Game data is ours once seeded — decided 2026-09-18.** This now covers `nuzlocke.data` only.
 A generator (`scripts/extract-*.ts`) is a one-shot bootstrapper: run it to seed a new game, or a
