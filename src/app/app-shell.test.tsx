@@ -10,7 +10,7 @@ import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
 import { summariseRun } from "@/domain/derive";
-import type { Encounter, Mon, Route, Run, Rules } from "@/domain/types";
+import type { Encounter, Fight, Mon, Route, Run, Rules } from "@/domain/types";
 import { createQueryClient } from "@/lib/query-client";
 import { createMemoryAdapter } from "@/storage/memory-adapter";
 import { invalidateRun } from "@/storage/queries";
@@ -736,5 +736,57 @@ describe("Offline", () => {
     await waitFor(() => {
       expect(countersIn(sidebar)).toEqual({ Routes: "0", Party: "1", Boxes: "0", Graveyard: "0" });
     });
+  });
+});
+
+describe("Rules summary", () => {
+  function makeFightDraft(
+    runId: string,
+    overrides: Partial<Fight> = {},
+  ): Omit<Fight, "id" | "createdAt" | "updatedAt"> {
+    return {
+      runId,
+      gameFightId: null,
+      name: "Falkner",
+      kind: "gym",
+      order: 1,
+      grantsBadge: true,
+      levelCap: 13,
+      status: "pending",
+      clearedAt: null,
+      ...overrides,
+    };
+  }
+
+  it("shows chips for the run's active rules and a cap from the first uncleared fight", async () => {
+    const adapter = createMemoryAdapter();
+    const run = await adapter.runs.put(
+      makeRunDraft({ rules: { ...RULES_FIXTURE, dupesClause: true, levelCaps: true } }),
+    );
+    await adapter.fights.put(makeFightDraft(run.id, { order: 1, levelCap: 13, status: "cleared" }));
+    await adapter.fights.put(makeFightDraft(run.id, { order: 2, levelCap: 18 }));
+
+    renderAt(`/runs/${run.id}/routes`, { adapter });
+
+    const sidebar = screen.getByRole("navigation", { name: "Sidebar navigation" });
+    const list = await within(sidebar).findByRole("list", { name: "Active rules" });
+    await waitFor(() => {
+      expect(
+        within(list)
+          .getAllByRole("listitem")
+          .map((item) => item.textContent),
+      ).toEqual(["Dupes", "Cap L18"]);
+    });
+  });
+
+  it("shows no rules without a current run", async () => {
+    const adapter = createMemoryAdapter();
+    await adapter.runs.put(makeRunDraft({ rules: { ...RULES_FIXTURE, dupesClause: true } }));
+
+    renderAt("/", { adapter });
+
+    const sidebar = screen.getByRole("navigation", { name: "Sidebar navigation" });
+    await within(sidebar).findByRole("option", { name: "Test Run" });
+    expect(screen.queryByRole("list", { name: "Active rules" })).not.toBeInTheDocument();
   });
 });
