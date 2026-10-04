@@ -85,6 +85,9 @@ function RouteCardBadges({
       ) : (
         <StatusChip status={chip.status}>{chip.label}</StatusChip>
       )}
+      {row.route.isCustom && (
+        <span className={cn(CHIP_SHAPE, "text-muted-foreground")}>Custom</span>
+      )}
     </div>
   );
 }
@@ -160,9 +163,6 @@ export function RouteCardList({
                   >
                     {row.route.name}
                   </button>
-                )}
-                {row.route.isCustom && (
-                  <span className={cn(CHIP_SHAPE, "text-muted-foreground ml-2")}>Custom</span>
                 )}
               </div>
               <RouteCardSubtitle row={row} />
