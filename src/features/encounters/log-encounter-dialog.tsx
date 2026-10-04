@@ -3,6 +3,13 @@ import { useState, type FormEvent, type ReactNode } from "react";
 import { Typography } from "@/components/typography";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent } from "@/components/ui/dialog";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { LevelInput } from "@/components/level-input";
 import { countByMonStatus } from "@/domain/derive";
 import { findDupe } from "@/domain/dupes";
@@ -12,7 +19,7 @@ import type { Encounter, Gender, Mon, Route, Rules } from "@/domain/types";
 import { useEvolutionLine } from "@/game/pokeapi/queries";
 import { speciesDisplayName } from "@/game/pokeapi/resolve";
 import { GAMES } from "@/game/registry";
-import { useLogEncounter } from "@/storage/mutations";
+import { useCatchShinyBonus, useLogEncounter } from "@/storage/mutations";
 import { useRun } from "@/storage/queries";
 import { cn } from "@/lib/utils";
 
@@ -61,10 +68,12 @@ function levelFromText(text: string): number {
 }
 
 export interface LogEncounterDialogProps {
+  mode?: "encounter" | "shiny-bonus";
   open: boolean;
   onOpenChange: (open: boolean) => void;
   runId: string;
-  route: Route;
+  route?: Route;
+  routes?: readonly Route[];
   rules: Rules;
   mons: readonly Mon[];
   existingEncounters: readonly Encounter[];
@@ -75,9 +84,11 @@ export function LogEncounterDialog({
   onOpenChange,
   runId,
   route,
+  routes = [],
   rules,
   mons,
   existingEncounters,
+  mode = "encounter",
 }: LogEncounterDialogProps): ReactNode {
   const runQuery = useRun(runId);
   // Falls back to HeartGold's generation, the only game seeded today, while the run is loading.
@@ -92,14 +103,19 @@ export function LogEncounterDialog({
           "sm:top-1/2 sm:left-1/2 sm:h-auto sm:max-h-[90vh] sm:w-full sm:max-w-lg sm:-translate-x-1/2 sm:-translate-y-1/2 sm:rounded-xl",
         )}
       >
-        <EncounterDialogHeader title={route.name} />
+        <EncounterDialogHeader
+          title={mode === "shiny-bonus" ? "Add bonus shiny" : (route?.name ?? "")}
+          tag={mode === "shiny-bonus" ? null : undefined}
+        />
         <LogEncounterForm
           runId={runId}
-          routeId={route.id}
+          routeId={route?.id ?? ""}
+          routes={routes}
           rules={rules}
           mons={mons}
           existingEncounters={existingEncounters}
           generation={generation}
+          mode={mode}
           onDone={() => onOpenChange(false)}
         />
       </DialogContent>
@@ -110,23 +126,30 @@ export function LogEncounterDialog({
 interface LogEncounterFormProps {
   runId: string;
   routeId: string;
+  routes: readonly Route[];
   rules: Rules;
   mons: readonly Mon[];
   existingEncounters: readonly Encounter[];
   generation: number;
+  mode: "encounter" | "shiny-bonus";
   onDone: () => void;
 }
 
 function LogEncounterForm({
   runId,
   routeId,
+  routes,
   rules,
   mons,
   existingEncounters,
   generation,
+  mode,
   onDone,
 }: LogEncounterFormProps): ReactNode {
   const logEncounter = useLogEncounter();
+  const catchShinyBonus = useCatchShinyBonus();
+  const shinyBonus = mode === "shiny-bonus";
+  const saveMutation = shinyBonus ? catchShinyBonus : logEncounter;
 
   const [outcome, setOutcome] = useState<Outcome>("caught");
   const [speciesId, setSpeciesId] = useState("");
@@ -139,15 +162,19 @@ function LogEncounterForm({
   const [ability, setAbility] = useState("");
   const [heldItem, setHeldItem] = useState("");
   const [moves, setMoves] = useState<string[]>([]);
-  const [shiny, setShiny] = useState(false);
+  const [shiny, setShiny] = useState(shinyBonus);
   const [placement, setPlacement] = useState<"party" | "box">(
     countByMonStatus(mons).party < 6 ? "party" : "box",
   );
   const [submitted, setSubmitted] = useState(false);
+  const [routeChoice, setRouteChoice] = useState("");
+  const routeError = shinyBonus && submitted && routeChoice === "";
 
-  const evolutionLine = useEvolutionLine(rules.dupesClause && speciesId !== "" ? speciesId : null);
+  const evolutionLine = useEvolutionLine(
+    rules.dupesClause && !shinyBonus && speciesId !== "" ? speciesId : null,
+  );
   const dupe =
-    rules.dupesClause && speciesId !== ""
+    rules.dupesClause && !shinyBonus && speciesId !== ""
       ? findDupe({ line: evolutionLine ?? [speciesId], mons })
       : undefined;
 
@@ -185,7 +212,16 @@ function LogEncounterForm({
     event.preventDefault();
     setSubmitted(true);
 
+    if (shinyBonus && routeChoice === "") {
+      return;
+    }
+
     if (Object.keys(validateEncounter({ outcome, details, rules })).length > 0) {
+      return;
+    }
+
+    if (shinyBonus) {
+      catchShinyBonus.mutate({ runId, routeId: routeChoice, details }, { onSuccess: onDone });
       return;
     }
 
@@ -205,37 +241,90 @@ function LogEncounterForm({
   return (
     <form className="flex min-h-0 flex-1 flex-col" onSubmit={handleSubmit} noValidate>
       <div className="flex-1 space-y-4 overflow-y-auto p-4">
-        <div className="flex items-center justify-between gap-2">
-          <div
-            role="radiogroup"
-            aria-label="Outcome"
-            className="inline-flex border-[1.5px] border-border"
-          >
-            {OUTCOMES.map((option, index) => {
-              const active = outcome === option.value;
-              return (
-                <button
-                  key={option.value}
-                  type="button"
-                  role="radio"
-                  aria-checked={active}
-                  onClick={() => setOutcome(option.value)}
-                  className={cn(
-                    "px-4 py-2 text-sm font-medium",
-                    index > 0 && "border-l-[1.5px] border-border",
-                    active
-                      ? "bg-primary text-primary-foreground shadow-block"
-                      : "bg-background text-foreground hover:bg-muted",
-                  )}
-                >
-                  {option.label}
-                </button>
-              );
-            })}
+        {shinyBonus && (
+          <div>
+            <Typography
+              as="label"
+              variant="eyebrow"
+              htmlFor="log-encounter-route"
+              className="mb-1 block"
+            >
+              Route
+            </Typography>
+            <Select
+              items={routes.map((item) => ({ value: item.id, label: item.name }))}
+              value={routeChoice === "" ? null : routeChoice}
+              onValueChange={(next) => setRouteChoice(next ?? "")}
+            >
+              <SelectTrigger
+                id="log-encounter-route"
+                className="w-full"
+                aria-invalid={routeError}
+                aria-describedby={routeError ? "log-encounter-route-error" : undefined}
+              >
+                <SelectValue placeholder="Choose a route" />
+              </SelectTrigger>
+              <SelectContent alignItemWithTrigger={false}>
+                {routes.map((item) => (
+                  <SelectItem key={item.id} value={item.id}>
+                    {item.name}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+            {routeError && (
+              <Typography
+                as="p"
+                id="log-encounter-route-error"
+                variant="body"
+                tone="alert"
+                className="mt-1"
+              >
+                Choose the route it was caught on.
+              </Typography>
+            )}
           </div>
+        )}
+        <div className="flex items-center justify-between gap-2">
+          {shinyBonus ? (
+            <span />
+          ) : (
+            <div
+              role="radiogroup"
+              aria-label="Outcome"
+              className="inline-flex border-[1.5px] border-border"
+            >
+              {OUTCOMES.map((option, index) => {
+                const active = outcome === option.value;
+                return (
+                  <button
+                    key={option.value}
+                    type="button"
+                    role="radio"
+                    aria-checked={active}
+                    onClick={() => setOutcome(option.value)}
+                    className={cn(
+                      "px-4 py-2 text-sm font-medium",
+                      index > 0 && "border-l-[1.5px] border-border",
+                      active
+                        ? "bg-primary text-primary-foreground shadow-block"
+                        : "bg-background text-foreground hover:bg-muted",
+                    )}
+                  >
+                    {option.label}
+                  </button>
+                );
+              })}
+            </div>
+          )}
 
           {outcome === "caught" && (
-            <ShinyField id="log-encounter-shiny" value={shiny} onChange={setShiny} />
+            <ShinyField
+              id="log-encounter-shiny"
+              value={shiny}
+              onChange={setShiny}
+              locked={shinyBonus}
+            />
           )}
         </div>
 
@@ -387,10 +476,10 @@ function LogEncounterForm({
           </div>
         )}
 
-        {logEncounter.isError && (
+        {saveMutation.isError && (
           <Typography as="p" role="alert" variant="body" tone="alert">
             Could not log the encounter:{" "}
-            {logEncounter.error instanceof Error ? logEncounter.error.message : "Unknown error"}.
+            {saveMutation.error instanceof Error ? saveMutation.error.message : "Unknown error"}.
             Nothing was saved.
           </Typography>
         )}
@@ -407,8 +496,8 @@ function LogEncounterForm({
           <Button type="button" variant="outline" onClick={onDone}>
             Cancel
           </Button>
-          <Button type="submit" disabled={logEncounter.isPending}>
-            {logEncounter.isPending ? "Saving…" : "Save encounter"}
+          <Button type="submit" disabled={saveMutation.isPending}>
+            {saveMutation.isPending ? "Saving…" : shinyBonus ? "Add shiny" : "Save encounter"}
           </Button>
         </div>
       </div>

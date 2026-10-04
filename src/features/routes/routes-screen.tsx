@@ -104,6 +104,7 @@ export function RoutesScreen(): ReactNode {
   const [name, setName] = useState("");
   const [submitted, setSubmitted] = useState(false);
   const [logRoute, setLogRoute] = useState<Route | null>(null);
+  const [shinyOpen, setShinyOpen] = useState(false);
   const [editTarget, setEditTarget] = useState<{ route: Route; mon: Mon } | null>(null);
   const [resetTarget, setResetTarget] = useState<RouteRow | null>(null);
   const [addOpen, setAddOpen] = useState(false);
@@ -168,6 +169,7 @@ export function RoutesScreen(): ReactNode {
   const trimmedSearch = search.trim();
   // Falls back to HeartGold's generation, the only game seeded today, while the run itself is
   // still loading rather than the table's rows.
+  const shinyClause = runQuery.data?.rules.shinyClause === true;
   const generation = GAMES[runQuery.data?.game ?? "heartgold"].generation;
 
   return (
@@ -175,14 +177,30 @@ export function RoutesScreen(): ReactNode {
       <ScreenHeader
         title="Encounter routes"
         actions={
-          <Button
-            type="button"
-            aria-expanded={addOpen}
-            className="bg-flag text-foreground shadow-block hover:bg-flag/90"
-            onClick={() => setAddOpen((open) => !open)}
-          >
-            + Add route
-          </Button>
+          <div className="flex items-center gap-2">
+            {shinyClause && (
+              <Button
+                type="button"
+                variant="outline"
+                aria-label="Add bonus shiny"
+                onClick={() => setShinyOpen(true)}
+                className="size-10 shadow-none md:h-10 md:w-auto md:px-4"
+              >
+                <span aria-hidden="true">✦</span>
+                <span aria-hidden="true" className="hidden md:inline">
+                  Add bonus shiny
+                </span>
+              </Button>
+            )}
+            <Button
+              type="button"
+              aria-expanded={addOpen}
+              className="bg-flag text-foreground shadow-block hover:bg-flag/90"
+              onClick={() => setAddOpen((open) => !open)}
+            >
+              + Add route
+            </Button>
+          </div>
         }
       />
 
@@ -311,6 +329,23 @@ export function RoutesScreen(): ReactNode {
           }}
           runId={activeRunId}
           route={logRoute}
+          rules={runQuery.data?.rules ?? DEFAULT_RULES}
+          mons={mons}
+          existingEncounters={encounters}
+        />
+      )}
+
+      {shinyOpen && (
+        <LogEncounterDialog
+          open
+          mode="shiny-bonus"
+          onOpenChange={(nextOpen) => {
+            if (!nextOpen) {
+              setShinyOpen(false);
+            }
+          }}
+          runId={activeRunId}
+          routes={routes}
           rules={runQuery.data?.rules ?? DEFAULT_RULES}
           mons={mons}
           existingEncounters={encounters}
