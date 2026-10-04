@@ -69,7 +69,7 @@ function RouteCardBadges({
   const chip = chipForRouteRow(row);
 
   return (
-    <div className="flex shrink-0 items-center gap-1.5">
+    <div className="flex flex-wrap items-center gap-1.5">
       <SpeciesTypeBadge speciesId={rowSpeciesId(row)} generation={generation} />
       {canLogEncounter(row) ? (
         <button
@@ -84,6 +84,9 @@ function RouteCardBadges({
         </button>
       ) : (
         <StatusChip status={chip.status}>{chip.label}</StatusChip>
+      )}
+      {row.route.isCustom && (
+        <span className={cn(CHIP_SHAPE, "text-muted-foreground")}>Custom</span>
       )}
     </div>
   );
@@ -135,8 +138,13 @@ export function RouteCardList({
             )}
           >
             <RowSprite row={row} size={40} />
-            <div className="min-w-0 flex-1 break-words">
-              <div className="min-w-0 truncate">
+            <div className="min-w-0 flex-1">
+              <RouteCardBadges
+                row={row}
+                generation={generation}
+                onLog={() => onLogEncounter(row.route)}
+              />
+              <div className="mt-1 min-w-0 break-words">
                 {action.kind === "none" ? (
                   <Typography as="span" variant="title" tone={nameTone}>
                     {row.route.name}
@@ -156,17 +164,9 @@ export function RouteCardList({
                     {row.route.name}
                   </button>
                 )}
-                {row.route.isCustom && (
-                  <span className={cn(CHIP_SHAPE, "text-muted-foreground ml-2")}>Custom</span>
-                )}
               </div>
               <RouteCardSubtitle row={row} />
             </div>
-            <RouteCardBadges
-              row={row}
-              generation={generation}
-              onLog={() => onLogEncounter(row.route)}
-            />
             <RowEndAction
               row={row}
               removable={removable}
