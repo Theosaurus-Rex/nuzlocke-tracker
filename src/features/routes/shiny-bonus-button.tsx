@@ -28,13 +28,13 @@ export function ShinyBonusButton({
       size="sm"
       variant="ghost"
       className={cn(className)}
-      aria-label={`Log a shiny on ${row.route.name}`}
+      aria-label={`Add a bonus shiny on ${row.route.name}`}
       onClick={(event) => {
         event.stopPropagation();
         onShinyBonus(row.route);
       }}
     >
-      ✦ Shiny
+      ✦ Add bonus shiny
     </Button>
   );
 }

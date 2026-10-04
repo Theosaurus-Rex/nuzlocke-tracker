@@ -95,7 +95,7 @@ export function LogEncounterDialog({
         )}
       >
         <EncounterDialogHeader
-          title={mode === "shiny-bonus" ? `Shiny: ${route.name}` : route.name}
+          title={mode === "shiny-bonus" ? `Bonus shiny: ${route.name}` : route.name}
           tag={mode === "shiny-bonus" ? null : undefined}
         />
         <LogEncounterForm
@@ -435,7 +435,7 @@ function LogEncounterForm({
             Cancel
           </Button>
           <Button type="submit" disabled={saveMutation.isPending}>
-            {saveMutation.isPending ? "Saving…" : shinyBonus ? "Save shiny" : "Save encounter"}
+            {saveMutation.isPending ? "Saving…" : shinyBonus ? "Add shiny" : "Save encounter"}
           </Button>
         </div>
       </div>

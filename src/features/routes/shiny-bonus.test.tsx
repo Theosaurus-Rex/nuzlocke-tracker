@@ -86,7 +86,7 @@ async function listItem(name: string): Promise<HTMLElement> {
 
 async function openShinyDialog(user: ReturnType<typeof userEvent.setup>, routeName: string) {
   const item = await listItem(routeName);
-  await user.click(within(item).getByRole("button", { name: `Log a shiny on ${routeName}` }));
+  await user.click(within(item).getByRole("button", { name: `Add a bonus shiny on ${routeName}` }));
 }
 
 describe("Shiny button on the routes screen", () => {
@@ -98,12 +98,14 @@ describe("Shiny button on the routes screen", () => {
     const missed = await listItem("Route 2");
     const skipped = await listItem("Route 3");
 
-    expect(within(open).queryByRole("button", { name: /Log a shiny/ })).not.toBeInTheDocument();
     expect(
-      within(missed).getByRole("button", { name: "Log a shiny on Route 2" }),
+      within(open).queryByRole("button", { name: /Add a bonus shiny/ }),
+    ).not.toBeInTheDocument();
+    expect(
+      within(missed).getByRole("button", { name: "Add a bonus shiny on Route 2" }),
     ).toBeInTheDocument();
     expect(
-      within(skipped).getByRole("button", { name: "Log a shiny on Route 3" }),
+      within(skipped).getByRole("button", { name: "Add a bonus shiny on Route 3" }),
     ).toBeInTheDocument();
   });
 
@@ -113,7 +115,7 @@ describe("Shiny button on the routes screen", () => {
 
     await listItem("Route 1");
 
-    expect(screen.queryByRole("button", { name: /Log a shiny/ })).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: /Add a bonus shiny/ })).not.toBeInTheDocument();
   });
 
   it("is hidden on a route that has no encounter row yet", async () => {
@@ -123,7 +125,7 @@ describe("Shiny button on the routes screen", () => {
 
     await listItem(routes[0]!.name);
 
-    expect(screen.queryByRole("button", { name: /Log a shiny/ })).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: /Add a bonus shiny/ })).not.toBeInTheDocument();
   });
 });
 
@@ -135,7 +137,9 @@ describe("Shiny bonus dialog", () => {
 
     await openShinyDialog(user, "Route 1");
 
-    expect(await screen.findByRole("heading", { name: "Shiny: Route 1" })).toBeInTheDocument();
+    expect(
+      await screen.findByRole("heading", { name: "Bonus shiny: Route 1" }),
+    ).toBeInTheDocument();
     expect(screen.queryByText(/encounter$/)).not.toBeInTheDocument();
     expect(screen.queryByRole("radiogroup", { name: "Outcome" })).not.toBeInTheDocument();
     const shiny = screen.getByRole("button", { name: "Shiny" });
@@ -151,7 +155,7 @@ describe("Shiny bonus dialog", () => {
     await openShinyDialog(user, "Route 1");
     await user.type(await screen.findByLabelText("Species"), "Chikorita");
     await user.type(screen.getByLabelText("Level caught"), "6");
-    await user.click(screen.getByRole("button", { name: "Save shiny" }));
+    await user.click(screen.getByRole("button", { name: "Add shiny" }));
 
     await waitFor(async () => {
       expect(await adapter.mons.getAll()).toHaveLength(1);
@@ -166,7 +170,9 @@ describe("Shiny bonus dialog", () => {
     const [encounter] = await adapter.encounters.getAll();
     expect(encounter).toMatchObject({ status: "missed", speciesId: "pidgey", monId: null });
     await waitFor(() => {
-      expect(screen.queryByRole("heading", { name: "Shiny: Route 1" })).not.toBeInTheDocument();
+      expect(
+        screen.queryByRole("heading", { name: "Bonus shiny: Route 1" }),
+      ).not.toBeInTheDocument();
     });
     expect(within(await listItem("Route 1")).getByText(/pidgey/i)).toBeInTheDocument();
   });
@@ -210,7 +216,7 @@ describe("Shiny bonus dialog", () => {
     await openShinyDialog(user, "Route 1");
     await user.type(await screen.findByLabelText("Species"), "Chikorita");
     await user.type(screen.getByLabelText("Level caught"), "6");
-    await user.click(screen.getByRole("button", { name: "Save shiny" }));
+    await user.click(screen.getByRole("button", { name: "Add shiny" }));
 
     expect(await screen.findByText(/requires a nickname/i)).toBeInTheDocument();
     expect(await adapter.mons.getAll()).toEqual([]);
