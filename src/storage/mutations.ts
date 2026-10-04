@@ -12,6 +12,7 @@ import { canDeleteRoute, nextRouteOrder } from "@/domain/routes";
 import {
   amendMon,
   catchEncounter,
+  catchShinyBonus,
   evolveMon,
   killMon,
   missEncounter,
@@ -212,6 +213,57 @@ export function useLogEncounter(): UseMutationResult<LogEncounterResult, Error, 
     mutationFn: (input: LogEncounterInput) => persistLogEncounter(adapter, input),
     onSuccess: async (result) => {
       await invalidateRun(queryClient, result.encounter.runId);
+    },
+  });
+}
+
+export interface CatchShinyBonusInput {
+  runId: string;
+  routeId: string;
+  details: CatchDetails;
+}
+
+export async function persistCatchShinyBonus(
+  adapter: StorageAdapter,
+  input: CatchShinyBonusInput,
+): Promise<Mon> {
+  const monId = crypto.randomUUID();
+
+  return adapter.transaction(async (tx) => {
+    const run = await tx.runs.get(input.runId);
+    if (run === undefined) {
+      throw new Error(`Run ${input.runId} no longer exists.`);
+    }
+    if (!run.rules.shinyClause) {
+      throw new Error("The shiny clause is off for this run.");
+    }
+    const route = await tx.routes.get(input.routeId);
+    if (route?.runId !== input.runId) {
+      throw new Error(`Route ${input.routeId} does not belong to this run.`);
+    }
+
+    const runMons = await settleBoxSlots(tx, input.runId);
+    const draft = catchShinyBonus({
+      runId: input.runId,
+      routeId: input.routeId,
+      party: partyOf(runMons),
+      box: runMons,
+      monId,
+      details: input.details,
+    });
+
+    return tx.mons.put(draft);
+  });
+}
+
+export function useCatchShinyBonus(): UseMutationResult<Mon, Error, CatchShinyBonusInput> {
+  const adapter = useStorage();
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: (input: CatchShinyBonusInput) => persistCatchShinyBonus(adapter, input),
+    onSuccess: async (mon) => {
+      await invalidateRun(queryClient, mon.runId);
     },
   });
 }

@@ -67,6 +67,61 @@ export interface CatchDetails {
   shiny: boolean;
 }
 
+function assertCatchDetails(details: CatchDetails): void {
+  if (details.moves.length > MAX_MOVES) {
+    throw new Error(
+      `A mon cannot have more than ${MAX_MOVES} moves (got ${details.moves.length}).`,
+    );
+  }
+
+  if (details.level < details.levelCaught) {
+    throw new Error(
+      `A mon's current level (${details.level}) cannot be below the level it was caught at (${details.levelCaught}).`,
+    );
+  }
+}
+
+function buildCaughtMon({
+  runId,
+  encounterId,
+  routeId,
+  party,
+  box,
+  monId,
+  details,
+}: {
+  runId: string;
+  encounterId: string | null;
+  routeId: string;
+  party: readonly Mon[];
+  box: readonly Mon[];
+  monId: string;
+  details: CatchDetails;
+}): Draft<Mon> {
+  const slot = details.placement === "party" ? nextFreeSlot(party) : null;
+
+  return {
+    id: monId,
+    runId,
+    encounterId,
+    speciesId: details.speciesId,
+    speciesIdCaught: details.speciesId,
+    nickname: details.nickname,
+    gender: details.gender,
+    level: details.level,
+    levelCaught: details.levelCaught,
+    nature: details.nature,
+    ability: details.ability,
+    heldItem: details.heldItem,
+    moves: details.moves,
+    status: slot === null ? "box" : "party",
+    partySlot: slot,
+    boxOrder: slot === null ? nextFreeBoxSlot(box) : null,
+    caughtRouteId: routeId,
+    shiny: details.shiny,
+  };
+}
+
 export function catchEncounter({
   encounter,
   party,
@@ -81,18 +136,7 @@ export function catchEncounter({
   details: CatchDetails;
 }): { encounter: Encounter; mon: Draft<Mon> } {
   assertEncounterOpen(encounter);
-
-  if (details.moves.length > MAX_MOVES) {
-    throw new Error(
-      `A mon cannot have more than ${MAX_MOVES} moves (got ${details.moves.length}).`,
-    );
-  }
-
-  if (details.level < details.levelCaught) {
-    throw new Error(
-      `A mon's current level (${details.level}) cannot be below the level it was caught at (${details.levelCaught}).`,
-    );
-  }
+  assertCatchDetails(details);
 
   const updatedEncounter: Encounter = {
     ...encounter,
@@ -102,30 +146,46 @@ export function catchEncounter({
     monId,
   };
 
-  const slot = details.placement === "party" ? nextFreeSlot(party) : null;
-
-  const mon: Draft<Mon> = {
-    id: monId,
+  const mon = buildCaughtMon({
     runId: encounter.runId,
     encounterId: encounter.id,
-    speciesId: details.speciesId,
-    speciesIdCaught: details.speciesId,
-    nickname: details.nickname,
-    gender: details.gender,
-    level: details.level,
-    levelCaught: details.levelCaught,
-    nature: details.nature,
-    ability: details.ability,
-    heldItem: details.heldItem,
-    moves: details.moves,
-    status: slot === null ? "box" : "party",
-    partySlot: slot,
-    boxOrder: slot === null ? nextFreeBoxSlot(box) : null,
-    caughtRouteId: encounter.routeId,
-    shiny: details.shiny,
-  };
+    routeId: encounter.routeId,
+    party,
+    box,
+    monId,
+    details,
+  });
 
   return { encounter: updatedEncounter, mon };
+}
+
+/** A shiny caught on a route whose encounter is already used. It has no encounter of its own. */
+export function catchShinyBonus({
+  runId,
+  routeId,
+  party,
+  box,
+  monId,
+  details,
+}: {
+  runId: string;
+  routeId: string;
+  party: readonly Mon[];
+  box: readonly Mon[];
+  monId: string;
+  details: CatchDetails;
+}): Draft<Mon> {
+  assertCatchDetails(details);
+
+  return buildCaughtMon({
+    runId,
+    encounterId: null,
+    routeId,
+    party,
+    box,
+    monId,
+    details: { ...details, shiny: true },
+  });
 }
 
 export function missEncounter(encounter: Encounter): Encounter {
