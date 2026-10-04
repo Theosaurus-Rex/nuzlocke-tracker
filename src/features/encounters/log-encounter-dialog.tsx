@@ -3,6 +3,13 @@ import { useState, type FormEvent, type ReactNode } from "react";
 import { Typography } from "@/components/typography";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent } from "@/components/ui/dialog";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { LevelInput } from "@/components/level-input";
 import { countByMonStatus } from "@/domain/derive";
 import { findDupe } from "@/domain/dupes";
@@ -65,7 +72,8 @@ export interface LogEncounterDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   runId: string;
-  route: Route;
+  route?: Route;
+  routes?: readonly Route[];
   rules: Rules;
   mons: readonly Mon[];
   existingEncounters: readonly Encounter[];
@@ -76,6 +84,7 @@ export function LogEncounterDialog({
   onOpenChange,
   runId,
   route,
+  routes = [],
   rules,
   mons,
   existingEncounters,
@@ -95,12 +104,13 @@ export function LogEncounterDialog({
         )}
       >
         <EncounterDialogHeader
-          title={mode === "shiny-bonus" ? `Bonus shiny: ${route.name}` : route.name}
+          title={mode === "shiny-bonus" ? "Add bonus shiny" : (route?.name ?? "")}
           tag={mode === "shiny-bonus" ? null : undefined}
         />
         <LogEncounterForm
           runId={runId}
-          routeId={route.id}
+          routeId={route?.id ?? ""}
+          routes={routes}
           rules={rules}
           mons={mons}
           existingEncounters={existingEncounters}
@@ -116,6 +126,7 @@ export function LogEncounterDialog({
 interface LogEncounterFormProps {
   runId: string;
   routeId: string;
+  routes: readonly Route[];
   rules: Rules;
   mons: readonly Mon[];
   existingEncounters: readonly Encounter[];
@@ -127,6 +138,7 @@ interface LogEncounterFormProps {
 function LogEncounterForm({
   runId,
   routeId,
+  routes,
   rules,
   mons,
   existingEncounters,
@@ -155,6 +167,8 @@ function LogEncounterForm({
     countByMonStatus(mons).party < 6 ? "party" : "box",
   );
   const [submitted, setSubmitted] = useState(false);
+  const [routeChoice, setRouteChoice] = useState("");
+  const routeError = shinyBonus && submitted && routeChoice === "";
 
   const evolutionLine = useEvolutionLine(
     rules.dupesClause && !shinyBonus && speciesId !== "" ? speciesId : null,
@@ -198,12 +212,16 @@ function LogEncounterForm({
     event.preventDefault();
     setSubmitted(true);
 
+    if (shinyBonus && routeChoice === "") {
+      return;
+    }
+
     if (Object.keys(validateEncounter({ outcome, details, rules })).length > 0) {
       return;
     }
 
     if (shinyBonus) {
-      catchShinyBonus.mutate({ runId, routeId, details }, { onSuccess: onDone });
+      catchShinyBonus.mutate({ runId, routeId: routeChoice, details }, { onSuccess: onDone });
       return;
     }
 
@@ -223,6 +241,50 @@ function LogEncounterForm({
   return (
     <form className="flex min-h-0 flex-1 flex-col" onSubmit={handleSubmit} noValidate>
       <div className="flex-1 space-y-4 overflow-y-auto p-4">
+        {shinyBonus && (
+          <div>
+            <Typography
+              as="label"
+              variant="eyebrow"
+              htmlFor="log-encounter-route"
+              className="mb-1 block"
+            >
+              Route
+            </Typography>
+            <Select
+              items={routes.map((item) => ({ value: item.id, label: item.name }))}
+              value={routeChoice === "" ? null : routeChoice}
+              onValueChange={(next) => setRouteChoice(next ?? "")}
+            >
+              <SelectTrigger
+                id="log-encounter-route"
+                className="w-full"
+                aria-invalid={routeError}
+                aria-describedby={routeError ? "log-encounter-route-error" : undefined}
+              >
+                <SelectValue placeholder="Choose a route" />
+              </SelectTrigger>
+              <SelectContent alignItemWithTrigger={false}>
+                {routes.map((item) => (
+                  <SelectItem key={item.id} value={item.id}>
+                    {item.name}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+            {routeError && (
+              <Typography
+                as="p"
+                id="log-encounter-route-error"
+                variant="body"
+                tone="alert"
+                className="mt-1"
+              >
+                Choose the route it was caught on.
+              </Typography>
+            )}
+          </div>
+        )}
         <div className="flex items-center justify-between gap-2">
           {shinyBonus ? (
             <span />

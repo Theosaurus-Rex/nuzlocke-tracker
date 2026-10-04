@@ -84,29 +84,26 @@ async function listItem(name: string): Promise<HTMLElement> {
   return within(list).getByText(name).closest("li") as HTMLElement;
 }
 
-async function openShinyDialog(user: ReturnType<typeof userEvent.setup>, routeName: string) {
-  const item = await listItem(routeName);
-  await user.click(within(item).getByRole("button", { name: `Add a bonus shiny on ${routeName}` }));
+async function openShinyDialog(user: ReturnType<typeof userEvent.setup>) {
+  await user.click(await screen.findByRole("button", { name: "Add bonus shiny" }));
 }
 
-describe("Shiny button on the routes screen", () => {
-  it("shows only on used routes", async () => {
-    const { adapter, run } = await seed({ shinyClause: true }, ["open", "missed", "skipped"]);
+async function chooseRoute(user: ReturnType<typeof userEvent.setup>, name: string) {
+  await user.click(await screen.findByRole("combobox", { name: "Route" }));
+  await user.click(await screen.findByRole("option", { name }));
+}
+
+async function fillCatch(user: ReturnType<typeof userEvent.setup>) {
+  await user.type(await screen.findByLabelText("Species"), "Chikorita");
+  await user.type(screen.getByLabelText("Level caught"), "6");
+}
+
+describe("Add bonus shiny header button", () => {
+  it("shows when the shiny clause is on", async () => {
+    const { adapter, run } = await seed({ shinyClause: true }, ["missed"]);
     renderScreen(adapter, run.id);
 
-    const open = await listItem("Route 1");
-    const missed = await listItem("Route 2");
-    const skipped = await listItem("Route 3");
-
-    expect(
-      within(open).queryByRole("button", { name: /Add a bonus shiny/ }),
-    ).not.toBeInTheDocument();
-    expect(
-      within(missed).getByRole("button", { name: "Add a bonus shiny on Route 2" }),
-    ).toBeInTheDocument();
-    expect(
-      within(skipped).getByRole("button", { name: "Add a bonus shiny on Route 3" }),
-    ).toBeInTheDocument();
+    expect(await screen.findByRole("button", { name: "Add bonus shiny" })).toBeInTheDocument();
   });
 
   it("is hidden when the shiny clause is off", async () => {
@@ -115,46 +112,57 @@ describe("Shiny button on the routes screen", () => {
 
     await listItem("Route 1");
 
-    expect(screen.queryByRole("button", { name: /Add a bonus shiny/ })).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Add bonus shiny" })).not.toBeInTheDocument();
   });
 
-  it("is hidden on a route that has no encounter row yet", async () => {
-    const { adapter, run, routes } = await seed({ shinyClause: true }, ["missed"]);
-    await adapter.encounters.delete((await adapter.encounters.getAll())[0]!.id);
+  it("leaves no bonus shiny button on any route row", async () => {
+    const { adapter, run } = await seed({ shinyClause: true }, ["open", "missed", "skipped"]);
     renderScreen(adapter, run.id);
 
-    await listItem(routes[0]!.name);
+    await listItem("Route 1");
 
-    expect(screen.queryByRole("button", { name: /Add a bonus shiny/ })).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: /Add a bonus shiny on/ })).not.toBeInTheDocument();
   });
 });
 
-describe("Shiny bonus dialog", () => {
-  it("locks the Shiny box on and drops the outcome control", async () => {
+describe("Bonus shiny dialog", () => {
+  it("opens with its own title, a locked Shiny box and no outcome control", async () => {
     const user = userEvent.setup();
     const { adapter, run } = await seed({ shinyClause: true }, ["missed"]);
     renderScreen(adapter, run.id);
 
-    await openShinyDialog(user, "Route 1");
+    await openShinyDialog(user);
 
-    expect(
-      await screen.findByRole("heading", { name: "Bonus shiny: Route 1" }),
-    ).toBeInTheDocument();
-    expect(screen.queryByText(/encounter$/)).not.toBeInTheDocument();
+    expect(await screen.findByRole("heading", { name: "Add bonus shiny" })).toBeInTheDocument();
     expect(screen.queryByRole("radiogroup", { name: "Outcome" })).not.toBeInTheDocument();
     const shiny = screen.getByRole("button", { name: "Shiny" });
     expect(shiny).toBeDisabled();
     expect(shiny).toHaveAttribute("aria-pressed", "true");
   });
 
-  it("saves a shiny mon in the party and leaves the route's encounter as it was", async () => {
+  it("asks for a route and saves nothing without one", async () => {
     const user = userEvent.setup();
-    const { adapter, run, routes } = await seed({ shinyClause: true }, ["missed"]);
+    const { adapter, run } = await seed({ shinyClause: true }, ["missed"]);
     renderScreen(adapter, run.id);
 
-    await openShinyDialog(user, "Route 1");
-    await user.type(await screen.findByLabelText("Species"), "Chikorita");
-    await user.type(screen.getByLabelText("Level caught"), "6");
+    await openShinyDialog(user);
+    await fillCatch(user);
+    await user.click(screen.getByRole("button", { name: "Add shiny" }));
+
+    expect(await screen.findByText("Choose the route it was caught on.")).toBeInTheDocument();
+    expect(screen.queryByRole("alert")).not.toBeInTheDocument();
+    expect(await adapter.mons.getAll()).toEqual([]);
+  });
+
+  it("saves a shiny tied to the chosen route and leaves that route's encounter as it was", async () => {
+    const user = userEvent.setup();
+    const { adapter, run, routes } = await seed({ shinyClause: true }, ["missed", "caught"]);
+    renderScreen(adapter, run.id);
+
+    await openShinyDialog(user);
+    await chooseRoute(user, "Route 1");
+    await fillCatch(user);
+    await user.type(screen.getByLabelText(/^Nickname/), "Glint");
     await user.click(screen.getByRole("button", { name: "Add shiny" }));
 
     await waitFor(async () => {
@@ -166,15 +174,30 @@ describe("Shiny bonus dialog", () => {
       caughtRouteId: routes[0]!.id,
       shiny: true,
       status: "party",
+      nickname: "Glint",
     });
-    const [encounter] = await adapter.encounters.getAll();
+    const encounter = (await adapter.encounters.where("routeId", routes[0]!.id))[0];
     expect(encounter).toMatchObject({ status: "missed", speciesId: "pidgey", monId: null });
     await waitFor(() => {
-      expect(
-        screen.queryByRole("heading", { name: "Bonus shiny: Route 1" }),
-      ).not.toBeInTheDocument();
+      expect(screen.queryByRole("heading", { name: "Add bonus shiny" })).not.toBeInTheDocument();
     });
     expect(within(await listItem("Route 1")).getByText(/pidgey/i)).toBeInTheDocument();
+  });
+
+  it("lets a route with no encounter yet be chosen", async () => {
+    const user = userEvent.setup();
+    const { adapter, run, routes } = await seed({ shinyClause: true }, ["open"]);
+    renderScreen(adapter, run.id);
+
+    await openShinyDialog(user);
+    await chooseRoute(user, "Route 1");
+    await fillCatch(user);
+    await user.click(screen.getByRole("button", { name: "Add shiny" }));
+
+    await waitFor(async () => {
+      expect(await adapter.mons.getAll()).toHaveLength(1);
+    });
+    expect((await adapter.mons.getAll())[0]).toMatchObject({ caughtRouteId: routes[0]!.id });
   });
 
   it("shows no dupes notice for a line already owned", async () => {
@@ -201,7 +224,7 @@ describe("Shiny bonus dialog", () => {
     });
     renderScreen(adapter, run.id);
 
-    await openShinyDialog(user, "Route 1");
+    await openShinyDialog(user);
     await user.type(await screen.findByLabelText("Species"), "Geodude");
     await screen.findByRole("combobox", { name: "Species" });
 
@@ -213,9 +236,9 @@ describe("Shiny bonus dialog", () => {
     const { adapter, run } = await seed({ shinyClause: true, nicknamesRequired: true }, ["missed"]);
     renderScreen(adapter, run.id);
 
-    await openShinyDialog(user, "Route 1");
-    await user.type(await screen.findByLabelText("Species"), "Chikorita");
-    await user.type(screen.getByLabelText("Level caught"), "6");
+    await openShinyDialog(user);
+    await chooseRoute(user, "Route 1");
+    await fillCatch(user);
     await user.click(screen.getByRole("button", { name: "Add shiny" }));
 
     expect(await screen.findByText(/requires a nickname/i)).toBeInTheDocument();
