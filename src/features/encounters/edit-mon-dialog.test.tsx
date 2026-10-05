@@ -3,9 +3,6 @@
  * value, the read-only species and level-caught fields, and validation via `validateAmendment`.
  */
 
-import type { ReactNode } from "react";
-
-import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { describe, expect, it, vi } from "vitest";
@@ -14,76 +11,33 @@ import { DEFAULT_RULES } from "@/domain/rules";
 import type { Mon, Route, Rules } from "@/domain/types";
 import type { StorageAdapter } from "@/storage/adapter";
 import { createMemoryAdapter } from "@/storage/memory-adapter";
-import { StorageProvider } from "@/storage/storage-context";
+import { makeMon, makeRoute } from "@/test/factories";
 import { findMenuTrigger, stubPokeApiWithEvolutions } from "@/test/pokeapi-fetch";
+import { createWrapper } from "@/test/render";
 
 import { EditMonDialog } from "./edit-mon-dialog";
 
-const TIMESTAMP = "2026-09-17T00:00:00.000Z";
+const SPROUT_TOWER = { id: "route-1", name: "Sprout Tower" };
+
+const FILLED_MON = {
+  encounterId: "encounter-1",
+  speciesId: "bellsprout",
+  speciesIdCaught: "bellsprout",
+  nickname: "Sprig",
+  gender: "male",
+  level: 18,
+  levelCaught: 6,
+  nature: "Jolly",
+  ability: "Chlorophyll",
+  heldItem: "Miracle Seed",
+  moves: ["vine-whip", "growth"],
+  caughtRouteId: "route-1",
+} satisfies Partial<Mon>;
 
 const RANDOMISED_RULES: Rules = {
   ...DEFAULT_RULES,
   randomiser: { ...DEFAULT_RULES.randomiser, enabled: true, evolutions: true },
 };
-
-function makeRoute(overrides: Partial<Route> = {}): Route {
-  return {
-    id: "route-1",
-    runId: "run-1",
-    name: "Sprout Tower",
-    order: 100,
-    isCustom: false,
-    gameRouteId: "route-1",
-    createdAt: TIMESTAMP,
-    updatedAt: TIMESTAMP,
-    ...overrides,
-  };
-}
-
-function makeMon(overrides: Partial<Mon> = {}): Mon {
-  return {
-    id: "mon-1",
-    runId: "run-1",
-    encounterId: "encounter-1",
-    speciesId: "bellsprout",
-    speciesIdCaught: "bellsprout",
-    nickname: "Sprig",
-    gender: "male",
-    level: 18,
-    levelCaught: 6,
-    nature: "Jolly",
-    ability: "Chlorophyll",
-    heldItem: "Miracle Seed",
-    moves: ["vine-whip", "growth"],
-    status: "party",
-    partySlot: 0,
-    boxOrder: null,
-    caughtRouteId: "route-1",
-    shiny: false,
-    createdAt: TIMESTAMP,
-    updatedAt: TIMESTAMP,
-    ...overrides,
-  };
-}
-
-function createWrapper(
-  adapter: StorageAdapter,
-): ({ children }: { children: ReactNode }) => ReactNode {
-  const queryClient = new QueryClient({
-    defaultOptions: {
-      queries: { retry: false },
-      mutations: { retry: false },
-    },
-  });
-
-  return function Wrapper({ children }: { children: ReactNode }): ReactNode {
-    return (
-      <QueryClientProvider client={queryClient}>
-        <StorageProvider adapter={adapter}>{children}</StorageProvider>
-      </QueryClientProvider>
-    );
-  };
-}
 
 function renderDialog(overrides: {
   adapter?: StorageAdapter;
@@ -92,8 +46,8 @@ function renderDialog(overrides: {
   rules?: Rules;
 }) {
   const adapter = overrides.adapter ?? createMemoryAdapter();
-  const route = overrides.route === undefined ? makeRoute() : overrides.route;
-  const mon = overrides.mon ?? makeMon();
+  const route = overrides.route === undefined ? makeRoute(SPROUT_TOWER) : overrides.route;
+  const mon = overrides.mon ?? makeMon(FILLED_MON);
 
   const view = render(
     <EditMonDialog
@@ -111,20 +65,23 @@ function renderDialog(overrides: {
 
 describe("EditMonDialog", () => {
   it("shows the route name as the dialog title", () => {
-    renderDialog({ route: makeRoute({ name: "New Bark Town" }) });
+    renderDialog({ route: makeRoute({ ...SPROUT_TOWER, name: "New Bark Town" }) });
 
     expect(screen.getByRole("dialog", { name: "New Bark Town" })).toBeInTheDocument();
   });
 
   it("opens for a mon with no route, titled by the mon", () => {
-    renderDialog({ route: null, mon: makeMon({ caughtRouteId: null, nickname: "Sprig" }) });
+    renderDialog({
+      route: null,
+      mon: makeMon({ ...FILLED_MON, caughtRouteId: null, nickname: "Sprig" }),
+    });
 
     expect(screen.getByRole("dialog", { name: "“Sprig”" })).toBeInTheDocument();
     expect(screen.getByLabelText("Current level")).toHaveValue("18");
   });
 
   it("shows the mon's species type inline, resolved for the run's generation", async () => {
-    renderDialog({ mon: makeMon({ speciesId: "bellsprout" }) });
+    renderDialog({ mon: makeMon({ ...FILLED_MON, speciesId: "bellsprout" }) });
 
     expect(await screen.findByText("grass")).toBeInTheDocument();
   });
@@ -141,7 +98,7 @@ describe("EditMonDialog", () => {
   });
 
   it("pre-fills the moveset from the mon being edited", () => {
-    renderDialog({ mon: makeMon({ moves: ["vine-whip", "growth"] }) });
+    renderDialog({ mon: makeMon({ ...FILLED_MON, moves: ["vine-whip", "growth"] }) });
 
     expect(screen.getByText("Vine Whip")).toBeInTheDocument();
     expect(screen.getByText("Growth")).toBeInTheDocument();
@@ -150,7 +107,9 @@ describe("EditMonDialog", () => {
 
   it("saves changed moves onto the mon", async () => {
     const user = userEvent.setup();
-    const { adapter, mon } = renderDialog({ mon: makeMon({ moves: ["vine-whip", "growth"] }) });
+    const { adapter, mon } = renderDialog({
+      mon: makeMon({ ...FILLED_MON, moves: ["vine-whip", "growth"] }),
+    });
 
     await user.click(screen.getByRole("button", { name: "Remove Growth" }));
     await user.type(screen.getAllByPlaceholderText("+ move")[0]!, "Tackle");
@@ -164,7 +123,7 @@ describe("EditMonDialog", () => {
 
   it("shows species and level caught, read-only", async () => {
     const user = userEvent.setup();
-    renderDialog({ mon: makeMon({ speciesId: "bellsprout", levelCaught: 6 }) });
+    renderDialog({ mon: makeMon({ ...FILLED_MON, speciesId: "bellsprout", levelCaught: 6 }) });
 
     const species = screen.getByLabelText("Species");
     const levelCaught = screen.getByLabelText("Level caught");
@@ -266,7 +225,9 @@ describe("EditMonDialog", () => {
 
   it("opens an old typed ability as the matching selection and saves its PokéAPI name", async () => {
     const user = userEvent.setup();
-    const { adapter, mon } = renderDialog({ mon: makeMon({ ability: "Chlorophyll" }) });
+    const { adapter, mon } = renderDialog({
+      mon: makeMon({ ...FILLED_MON, ability: "Chlorophyll" }),
+    });
     await adapter.mons.put(mon);
 
     expect(screen.getByLabelText("Ability")).toHaveValue("Chlorophyll");
@@ -279,7 +240,9 @@ describe("EditMonDialog", () => {
 
   it("clears an old ability the list does not know when the dialog saves", async () => {
     const user = userEvent.setup();
-    const { adapter, mon } = renderDialog({ mon: makeMon({ ability: "Gooey Typo" }) });
+    const { adapter, mon } = renderDialog({
+      mon: makeMon({ ...FILLED_MON, ability: "Gooey Typo" }),
+    });
     await adapter.mons.put(mon);
 
     await waitFor(() => {
@@ -335,7 +298,9 @@ describe("EditMonDialog", () => {
 
   it("clears an old item the list does not know when the dialog saves", async () => {
     const user = userEvent.setup();
-    const { adapter, mon } = renderDialog({ mon: makeMon({ heldItem: "Gooey Typo" }) });
+    const { adapter, mon } = renderDialog({
+      mon: makeMon({ ...FILLED_MON, heldItem: "Gooey Typo" }),
+    });
     await adapter.mons.put(mon);
 
     await waitFor(() => {
@@ -365,7 +330,7 @@ describe("EditMonDialog", () => {
     const user = userEvent.setup();
     const adapter = createMemoryAdapter();
     const putSpy = vi.spyOn(adapter.mons, "put");
-    renderDialog({ adapter, mon: makeMon({ levelCaught: 6, level: 18 }) });
+    renderDialog({ adapter, mon: makeMon({ ...FILLED_MON, levelCaught: 6, level: 18 }) });
 
     const level = screen.getByLabelText("Current level");
     await user.clear(level);
@@ -396,7 +361,7 @@ describe("EditMonDialog", () => {
   it("accepts a blank nickname when the clause is off", async () => {
     const user = userEvent.setup();
     const { adapter, mon } = renderDialog({
-      mon: makeMon({ nickname: "Sprig" }),
+      mon: makeMon({ ...FILLED_MON, nickname: "Sprig" }),
       rules: { ...DEFAULT_RULES, nicknamesRequired: false },
     });
 
@@ -412,7 +377,9 @@ describe("EditMonDialog", () => {
 
   it("saves an edit to a dead mon and leaves it dead", async () => {
     const user = userEvent.setup();
-    const { adapter, mon } = renderDialog({ mon: makeMon({ status: "dead", partySlot: null }) });
+    const { adapter, mon } = renderDialog({
+      mon: makeMon({ ...FILLED_MON, status: "dead", partySlot: null }),
+    });
 
     const nickname = screen.getByLabelText("Nickname");
     await user.clear(nickname);
@@ -446,14 +413,14 @@ describe("EditMonDialog", () => {
   });
 
   it("pre-fills the shiny toggle from the mon being edited", () => {
-    renderDialog({ mon: makeMon({ shiny: true }) });
+    renderDialog({ mon: makeMon({ ...FILLED_MON, shiny: true }) });
 
     expect(screen.getByLabelText("Shiny")).toHaveAttribute("aria-pressed", "true");
   });
 
   it("toggles shiny and saves the new value", async () => {
     const user = userEvent.setup();
-    const { adapter, mon } = renderDialog({ mon: makeMon({ shiny: false }) });
+    const { adapter, mon } = renderDialog({ mon: makeMon({ ...FILLED_MON, shiny: false }) });
 
     const toggle = screen.getByLabelText("Shiny");
     expect(toggle).toHaveAttribute("aria-pressed", "false");
@@ -516,7 +483,7 @@ describe("EditMonDialog", () => {
     stubPokeApiWithEvolutions();
     const user = userEvent.setup();
     const adapter = createMemoryAdapter();
-    const mon = makeMon();
+    const mon = makeMon(FILLED_MON);
     await adapter.mons.put(mon);
     renderDialog({ adapter, mon });
 
@@ -533,7 +500,7 @@ describe("EditMonDialog", () => {
     const user = userEvent.setup();
     const adapter = createMemoryAdapter();
     const putSpy = vi.spyOn(adapter.mons, "put");
-    renderDialog({ adapter, mon: makeMon({ levelCaught: 6, level: 18 }) });
+    renderDialog({ adapter, mon: makeMon({ ...FILLED_MON, levelCaught: 6, level: 18 }) });
 
     await user.click(await findMenuTrigger());
     await user.click(await screen.findByRole("menuitem", { name: "Weepinbell" }));
@@ -733,7 +700,7 @@ describe("EditMonDialog", () => {
 describe("EditMonDialog placement", () => {
   async function seedParty(adapter: StorageAdapter, count: number): Promise<void> {
     for (let slot = 0; slot < count; slot++) {
-      await adapter.mons.put(makeMon({ id: `party-${slot}`, partySlot: slot }));
+      await adapter.mons.put(makeMon({ ...FILLED_MON, id: `party-${slot}`, partySlot: slot }));
     }
   }
 
@@ -742,11 +709,11 @@ describe("EditMonDialog placement", () => {
   }
 
   it("shows the mon's current placement", () => {
-    const boxed = renderDialog({ mon: makeMon({ status: "box", partySlot: null }) });
+    const boxed = renderDialog({ mon: makeMon({ ...FILLED_MON, status: "box", partySlot: null }) });
     expect(placement()).toHaveTextContent("Box");
     boxed.unmount();
 
-    renderDialog({ mon: makeMon({ status: "party" }) });
+    renderDialog({ mon: makeMon({ ...FILLED_MON, status: "party" }) });
     expect(placement()).toHaveTextContent("Party");
   });
 
@@ -754,7 +721,7 @@ describe("EditMonDialog placement", () => {
     const user = userEvent.setup();
     const adapter = createMemoryAdapter();
     await seedParty(adapter, 6);
-    renderDialog({ adapter, mon: makeMon({ status: "box", partySlot: null }) });
+    renderDialog({ adapter, mon: makeMon({ ...FILLED_MON, status: "box", partySlot: null }) });
 
     expect(await screen.findByText("Party is full")).toBeInTheDocument();
     await user.click(placement());
@@ -782,7 +749,7 @@ describe("EditMonDialog placement", () => {
   it("boxes the mon when Box is chosen and saved", async () => {
     const user = userEvent.setup();
     const adapter = createMemoryAdapter();
-    const mon = makeMon();
+    const mon = makeMon(FILLED_MON);
     await adapter.mons.put(mon);
     renderDialog({ adapter, mon });
 
@@ -798,7 +765,7 @@ describe("EditMonDialog placement", () => {
   });
 
   it("shows no placement control for a dead mon", () => {
-    renderDialog({ mon: makeMon({ status: "dead", partySlot: null }) });
+    renderDialog({ mon: makeMon({ ...FILLED_MON, status: "dead", partySlot: null }) });
 
     expect(placement()).toBeNull();
     expect(screen.queryByText("Placement")).not.toBeInTheDocument();

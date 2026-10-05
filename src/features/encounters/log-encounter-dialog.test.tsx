@@ -3,9 +3,6 @@
  * once in jsdom, so every screen-level query here is scoped to the table it queries.
  */
 
-import type { ReactNode } from "react";
-
-import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { beforeEach, describe, expect, it, vi } from "vitest";
@@ -18,17 +15,16 @@ import { POKEAPI_BASE } from "@/game/pokeapi/client";
 import type { RawIndex } from "@/game/pokeapi/map";
 import type { StorageAdapter } from "@/storage/adapter";
 import { createMemoryAdapter } from "@/storage/memory-adapter";
-import { StorageProvider } from "@/storage/storage-context";
+import { makeMon, makeRoute, makeRunDraft } from "@/test/factories";
 import { defaultPokeApiRoutes, STUB_PENDING, stubPokeApi, stubStatus } from "@/test/pokeapi-fetch";
 import {
   evolutionSpeciesIndexRefs,
   moveIndexFixture,
   speciesIndexFixture,
 } from "@/test/pokeapi-fixtures";
+import { createWrapper, renderWithProviders } from "@/test/render";
 
 import { LogEncounterDialog } from "./log-encounter-dialog";
-
-const TIMESTAMP = "2026-09-17T00:00:00.000Z";
 
 const EXTENDED_SPECIES_INDEX: RawIndex = {
   results: [
@@ -49,65 +45,6 @@ beforeEach(() => {
     "/move?limit=100000": EXTENDED_MOVE_INDEX,
   });
 });
-
-function makeRoute(overrides: Partial<Route> = {}): Route {
-  return {
-    id: "route-1",
-    runId: "run-1",
-    name: "Sprout Tower",
-    order: 100,
-    isCustom: false,
-    gameRouteId: "route-1",
-    createdAt: TIMESTAMP,
-    updatedAt: TIMESTAMP,
-    ...overrides,
-  };
-}
-
-function makeMon(overrides: Partial<Mon> = {}): Mon {
-  return {
-    id: "mon-1",
-    runId: "run-1",
-    encounterId: null,
-    speciesId: "chikorita",
-    speciesIdCaught: "chikorita",
-    nickname: null,
-    gender: null,
-    level: 5,
-    levelCaught: 5,
-    nature: null,
-    ability: null,
-    heldItem: null,
-    moves: [],
-    status: "party",
-    partySlot: 0,
-    boxOrder: null,
-    caughtRouteId: null,
-    shiny: false,
-    createdAt: TIMESTAMP,
-    updatedAt: TIMESTAMP,
-    ...overrides,
-  };
-}
-
-function createWrapper(
-  adapter: StorageAdapter,
-): ({ children }: { children: ReactNode }) => ReactNode {
-  const queryClient = new QueryClient({
-    defaultOptions: {
-      queries: { retry: false },
-      mutations: { retry: false },
-    },
-  });
-
-  return function Wrapper({ children }: { children: ReactNode }): ReactNode {
-    return (
-      <QueryClientProvider client={queryClient}>
-        <StorageProvider adapter={adapter}>{children}</StorageProvider>
-      </QueryClientProvider>
-    );
-  };
-}
 
 function renderDialog(overrides: {
   adapter?: StorageAdapter;
@@ -564,28 +501,14 @@ describe("LogEncounterDialog", () => {
   });
 });
 
-function makeRunDraft(rules: Rules) {
-  return {
-    name: "Test Run",
-    game: "heartgold" as const,
-    status: "active" as const,
-    rules,
-    finishedAt: null,
-  };
-}
-
 function renderRoutesScreen(adapter: StorageAdapter, runId: string) {
-  const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } });
-  return render(
-    <QueryClientProvider client={queryClient}>
-      <StorageProvider adapter={adapter}>
-        <MemoryRouter initialEntries={[`/runs/${runId}/routes`]}>
-          <Routes>
-            <RouterRoute path="/runs/:runId/routes" element={<RoutesScreen />} />
-          </Routes>
-        </MemoryRouter>
-      </StorageProvider>
-    </QueryClientProvider>,
+  return renderWithProviders(
+    <MemoryRouter initialEntries={[`/runs/${runId}/routes`]}>
+      <Routes>
+        <RouterRoute path="/runs/:runId/routes" element={<RoutesScreen />} />
+      </Routes>
+    </MemoryRouter>,
+    { adapter },
   );
 }
 
@@ -593,7 +516,7 @@ describe("logging an encounter from the routes screen", () => {
   it("opens the dialog from the table's log control, titled with the route name", async () => {
     const user = userEvent.setup();
     const adapter = createMemoryAdapter();
-    const run = await adapter.runs.put(makeRunDraft(DEFAULT_RULES));
+    const run = await adapter.runs.put(makeRunDraft({ rules: DEFAULT_RULES }));
     await adapter.routes.put({
       runId: run.id,
       name: "Route 29",
@@ -619,7 +542,7 @@ describe("logging an encounter from the routes screen", () => {
   ])("logs a %s encounter and updates the table row", async (outcomeLabel, expectedStatus) => {
     const user = userEvent.setup();
     const adapter = createMemoryAdapter();
-    const run = await adapter.runs.put(makeRunDraft(DEFAULT_RULES));
+    const run = await adapter.runs.put(makeRunDraft({ rules: DEFAULT_RULES }));
     await adapter.routes.put({
       runId: run.id,
       name: "Route 29",
@@ -656,7 +579,7 @@ describe("logging an encounter from the routes screen", () => {
   it("refuses a missed encounter with no species, and writes nothing", async () => {
     const user = userEvent.setup();
     const adapter = createMemoryAdapter();
-    const run = await adapter.runs.put(makeRunDraft(DEFAULT_RULES));
+    const run = await adapter.runs.put(makeRunDraft({ rules: DEFAULT_RULES }));
     await adapter.routes.put({
       runId: run.id,
       name: "Route 29",
@@ -680,7 +603,7 @@ describe("logging an encounter from the routes screen", () => {
   it("still allows a skipped encounter with no species", async () => {
     const user = userEvent.setup();
     const adapter = createMemoryAdapter();
-    const run = await adapter.runs.put(makeRunDraft(DEFAULT_RULES));
+    const run = await adapter.runs.put(makeRunDraft({ rules: DEFAULT_RULES }));
     await adapter.routes.put({
       runId: run.id,
       name: "Route 29",
