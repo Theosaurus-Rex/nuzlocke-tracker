@@ -5,34 +5,11 @@ import { describe, expect, it, vi } from "vitest";
 
 import type { Mon } from "@/domain/types";
 import { defaultPokeApiRoutes, stubPokeApi } from "@/test/pokeapi-fetch";
+import { makeMon } from "@/test/factories";
 
 import { BoxRowList } from "./box-row-list";
 
-function makeMon(overrides: Partial<Mon> = {}): Mon {
-  return {
-    id: "mon-1",
-    createdAt: "2026-09-27T00:00:00.000Z",
-    updatedAt: "2026-09-27T00:00:00.000Z",
-    runId: "run-1",
-    encounterId: null,
-    speciesId: "chikorita",
-    speciesIdCaught: "chikorita",
-    nickname: null,
-    gender: null,
-    level: 5,
-    levelCaught: 5,
-    nature: null,
-    ability: null,
-    heldItem: null,
-    moves: [],
-    status: "box",
-    partySlot: null,
-    boxOrder: 0,
-    caughtRouteId: null,
-    shiny: false,
-    ...overrides,
-  };
-}
+const CHIKORITA = { speciesId: "chikorita", speciesIdCaught: "chikorita" };
 
 function renderList(mons: Mon[], onEdit: (monId: string) => void = vi.fn()) {
   stubPokeApi(defaultPokeApiRoutes);
@@ -48,7 +25,10 @@ describe("BoxRowList", () => {
   it("has a button per row named for the mon that reports its id", async () => {
     const onEdit = vi.fn();
     renderList(
-      [makeMon({ id: "a", nickname: "Sprig" }), makeMon({ id: "b", nickname: null })],
+      [
+        makeMon({ ...CHIKORITA, id: "a", nickname: "Sprig" }),
+        makeMon({ ...CHIKORITA, id: "b", nickname: null }),
+      ],
       onEdit,
     );
 
@@ -58,7 +38,7 @@ describe("BoxRowList", () => {
   });
 
   it("renders one row per mon", () => {
-    renderList([makeMon({ id: "a" }), makeMon({ id: "b" })]);
+    renderList([makeMon({ ...CHIKORITA, id: "a" }), makeMon({ ...CHIKORITA, id: "b" })]);
 
     expect(screen.getAllByRole("listitem")).toHaveLength(2);
   });
@@ -66,6 +46,7 @@ describe("BoxRowList", () => {
   it("shows the nickname in quotes, then species, gender and level, then item and ability", () => {
     renderList([
       makeMon({
+        ...CHIKORITA,
         nickname: "Sprig",
         gender: "male",
         level: 12,
@@ -82,8 +63,8 @@ describe("BoxRowList", () => {
 
   it("shows an old typed ability and a PokéAPI name the same way", () => {
     renderList([
-      makeMon({ id: "a", ability: "Water Absorb" }),
-      makeMon({ id: "b", ability: "water-absorb" }),
+      makeMon({ ...CHIKORITA, id: "a", ability: "Water Absorb" }),
+      makeMon({ ...CHIKORITA, id: "b", ability: "water-absorb" }),
     ]);
 
     expect(screen.getAllByText("no item · Water Absorb")).toHaveLength(2);
@@ -91,15 +72,15 @@ describe("BoxRowList", () => {
 
   it("shows an old typed item and a PokéAPI name the same way", () => {
     renderList([
-      makeMon({ id: "a", heldItem: "Miracle Seed" }),
-      makeMon({ id: "b", heldItem: "miracle-seed" }),
+      makeMon({ ...CHIKORITA, id: "a", heldItem: "Miracle Seed" }),
+      makeMon({ ...CHIKORITA, id: "b", heldItem: "miracle-seed" }),
     ]);
 
     expect(screen.getAllByText("Miracle Seed")).toHaveLength(2);
   });
 
   it("falls back to the species name and drops missing parts", () => {
-    renderList([makeMon()]);
+    renderList([makeMon({ ...CHIKORITA, level: 5 })]);
 
     const row = screen.getByRole("listitem");
     expect(within(row).getAllByText("Chikorita")).toHaveLength(1);
@@ -108,7 +89,10 @@ describe("BoxRowList", () => {
   });
 
   it("shows the held item sprite, and none for no item", () => {
-    renderList([makeMon({ id: "a", heldItem: "miracle-seed" }), makeMon({ id: "b" })]);
+    renderList([
+      makeMon({ ...CHIKORITA, id: "a", heldItem: "miracle-seed" }),
+      makeMon({ ...CHIKORITA, id: "b" }),
+    ]);
 
     const [withItem, without] = screen.getAllByRole("listitem");
     expect(

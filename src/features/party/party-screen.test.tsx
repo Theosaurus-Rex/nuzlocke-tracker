@@ -1,72 +1,27 @@
-import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { fireEvent, render, screen, waitFor, within } from "@testing-library/react";
+import { fireEvent, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { MemoryRouter, Route, Routes } from "react-router";
 
-import { DEFAULT_RULES } from "@/domain/rules";
-import type { Fight, Mon } from "@/domain/types";
+import type { Mon } from "@/domain/types";
 import type { StorageAdapter } from "@/storage/adapter";
 import { createMemoryAdapter } from "@/storage/memory-adapter";
-import { StorageProvider } from "@/storage/storage-context";
+import { makeFightDraft, makeMon, makeMonDraft, makeRules, makeRunDraft } from "@/test/factories";
 import { defaultPokeApiRoutes, stubPokeApi } from "@/test/pokeapi-fetch";
+import { renderWithProviders } from "@/test/render";
 
 import { PartyScreen, partyMembers } from "./party-screen";
 
-type MonDraft = Omit<Mon, "id" | "createdAt" | "updatedAt">;
-
-function makeMonDraft(runId: string, overrides: Partial<Mon> = {}): MonDraft {
-  return {
-    runId,
-    encounterId: null,
-    speciesId: "chikorita",
-    speciesIdCaught: "chikorita",
-    nickname: null,
-    gender: null,
-    level: 5,
-    levelCaught: 5,
-    nature: null,
-    ability: null,
-    heldItem: null,
-    moves: [],
-    status: "party",
-    partySlot: 0,
-    boxOrder: null,
-    caughtRouteId: null,
-    shiny: false,
-    ...overrides,
-  };
+async function seedRun(adapter: StorageAdapter, rules = makeRules()) {
+  return adapter.runs.put(makeRunDraft({ rules }));
 }
 
-async function seedRun(adapter: StorageAdapter, rules = DEFAULT_RULES) {
-  return adapter.runs.put({
-    name: "Test Run",
-    game: "heartgold",
-    status: "active",
-    rules,
-    finishedAt: null,
-  });
-}
-
-async function seedFight(adapter: StorageAdapter, runId: string, overrides: Partial<Fight>) {
-  return adapter.fights.put({
-    runId,
-    gameFightId: null,
-    name: "Falkner",
-    kind: "gym",
-    order: 1,
-    grantsBadge: true,
-    levelCap: 13,
-    status: "pending",
-    clearedAt: null,
-    ...overrides,
-  });
-}
-
-async function seedCapRun(adapter: StorageAdapter, levels: number[], rules = DEFAULT_RULES) {
+async function seedCapRun(adapter: StorageAdapter, levels: number[], rules = makeRules()) {
   const run = await seedRun(adapter, rules);
-  const falkner = await seedFight(adapter, run.id, { order: 1, levelCap: 13 });
-  await seedFight(adapter, run.id, { name: "Bugsy", order: 2, levelCap: 19 });
+  const falkner = await adapter.fights.put(
+    makeFightDraft(run.id, { name: "Falkner", order: 1, levelCap: 13 }),
+  );
+  await adapter.fights.put(makeFightDraft(run.id, { name: "Bugsy", order: 2, levelCap: 19 }));
   for (const [index, level] of levels.entries()) {
     await adapter.mons.put(
       makeMonDraft(run.id, { nickname: `Mon${String(level)}`, level, partySlot: index }),
@@ -76,17 +31,13 @@ async function seedCapRun(adapter: StorageAdapter, levels: number[], rules = DEF
 }
 
 function renderScreen(adapter: StorageAdapter, runId: string) {
-  const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
-  return render(
-    <QueryClientProvider client={client}>
-      <StorageProvider adapter={adapter}>
-        <MemoryRouter initialEntries={[`/runs/${runId}/party`]}>
-          <Routes>
-            <Route path="/runs/:runId/party" element={<PartyScreen />} />
-          </Routes>
-        </MemoryRouter>
-      </StorageProvider>
-    </QueryClientProvider>,
+  return renderWithProviders(
+    <MemoryRouter initialEntries={[`/runs/${runId}/party`]}>
+      <Routes>
+        <Route path="/runs/:runId/party" element={<PartyScreen />} />
+      </Routes>
+    </MemoryRouter>,
+    { adapter },
   );
 }
 
@@ -128,12 +79,7 @@ function stubTwoColumnLayout(): void {
 
 describe("partyMembers", () => {
   it("keeps only party mons, ordered by slot across gaps", () => {
-    const mon = (id: string, overrides: Partial<Mon>): Mon => ({
-      ...makeMonDraft("run-1", overrides),
-      id,
-      createdAt: "2026-09-27T00:00:00.000Z",
-      updatedAt: "2026-09-27T00:00:00.000Z",
-    });
+    const mon = (id: string, overrides: Partial<Mon>): Mon => makeMon({ id, ...overrides });
     const result = partyMembers([
       mon("e", { partySlot: 5 }),
       mon("boxed", { status: "box", partySlot: null, boxOrder: 0 }),
@@ -145,12 +91,7 @@ describe("partyMembers", () => {
   });
 
   it("sorts a party mon with no slot last, not first", () => {
-    const mon = (id: string, overrides: Partial<Mon>): Mon => ({
-      ...makeMonDraft("run-1", overrides),
-      id,
-      createdAt: "2026-09-27T00:00:00.000Z",
-      updatedAt: "2026-09-27T00:00:00.000Z",
-    });
+    const mon = (id: string, overrides: Partial<Mon>): Mon => makeMon({ id, ...overrides });
     const result = partyMembers([
       mon("no-slot", { partySlot: null }),
       mon("a", { partySlot: 0 }),
@@ -536,7 +477,7 @@ describe("PartyScreen", () => {
   });
 
   describe("level cap warnings", () => {
-    const capRules = { ...DEFAULT_RULES, levelCaps: true };
+    const capRules = makeRules({ levelCaps: true });
 
     it("shows the count and the cap when one party mon is over", async () => {
       const adapter = createMemoryAdapter();
@@ -571,7 +512,7 @@ describe("PartyScreen", () => {
 
     it("shows nothing cap-related when the rule is off", async () => {
       const adapter = createMemoryAdapter();
-      const { run } = await seedCapRun(adapter, [50], { ...DEFAULT_RULES, levelCaps: false });
+      const { run } = await seedCapRun(adapter, [50], makeRules({ levelCaps: false }));
       renderScreen(adapter, run.id);
 
       await screen.findByText("“Mon50”");
