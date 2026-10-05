@@ -4,64 +4,28 @@
  * covered in `@/storage/backup.test.ts`.
  */
 
-import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { render, screen, waitFor } from "@testing-library/react";
+import { screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { MemoryRouter, Route, Routes } from "react-router";
 import { describe, expect, it } from "vitest";
 
 import { SCHEMA_VERSION } from "@/domain/schema";
-import type { Run } from "@/domain/types";
 import type { StorageAdapter } from "@/storage/adapter";
 import { createMemoryAdapter } from "@/storage/memory-adapter";
-import { StorageProvider } from "@/storage/storage-context";
+import { makeRunDraft } from "@/test/factories";
+import { renderWithProviders } from "@/test/render";
 
 import { SettingsScreen } from "./settings-screen";
 
-const RULES_FIXTURE: Run["rules"] = {
-  dupesClause: false,
-  shinyClause: false,
-  nicknamesRequired: false,
-  levelCaps: false,
-  setMode: false,
-  hardcore: false,
-  randomiser: {
-    enabled: false,
-    wildEncounters: false,
-    trainers: false,
-    starters: false,
-    abilities: false,
-    items: false,
-    moves: false,
-    evolutions: false,
-  },
-  customClause: null,
-};
-
-function makeRunDraft(overrides: Partial<Run> = {}): Omit<Run, "id" | "createdAt" | "updatedAt"> {
-  return {
-    name: "Existing Run",
-    game: "heartgold",
-    status: "active",
-    rules: RULES_FIXTURE,
-    finishedAt: null,
-    ...overrides,
-  };
-}
-
 function renderScreen(adapter: StorageAdapter): void {
-  const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } });
-  render(
-    <QueryClientProvider client={queryClient}>
-      <StorageProvider adapter={adapter}>
-        <MemoryRouter>
-          <Routes>
-            <Route path="/" element={<SettingsScreen />} />
-            <Route path="/runs/:runId/routes" element={<p>Sample run routes</p>} />
-          </Routes>
-        </MemoryRouter>
-      </StorageProvider>
-    </QueryClientProvider>,
+  renderWithProviders(
+    <MemoryRouter>
+      <Routes>
+        <Route path="/" element={<SettingsScreen />} />
+        <Route path="/runs/:runId/routes" element={<p>Sample run routes</p>} />
+      </Routes>
+    </MemoryRouter>,
+    { adapter },
   );
 }
 

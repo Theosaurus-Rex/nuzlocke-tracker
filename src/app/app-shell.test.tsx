@@ -10,12 +10,19 @@ import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
 import { summariseRun } from "@/domain/derive";
-import type { Encounter, Fight, Mon, Route, Run, Rules } from "@/domain/types";
 import { createQueryClient } from "@/lib/query-client";
 import { createMemoryAdapter } from "@/storage/memory-adapter";
 import { invalidateRun } from "@/storage/queries";
 import type { StorageAdapter } from "@/storage/adapter";
 import { StorageProvider } from "@/storage/storage-context";
+import {
+  makeEncounterDraft,
+  makeFightDraft,
+  makeMonDraft,
+  makeRouteDraft,
+  makeRules,
+  makeRunDraft,
+} from "@/test/factories";
 
 import { navItemsFor } from "./nav-items";
 import { appRoutes } from "./router";
@@ -60,94 +67,6 @@ function shells() {
   return {
     sidebar: screen.getByRole("navigation", { name: "Sidebar navigation" }),
     tabBar: screen.getByRole("navigation", { name: "Tab bar navigation" }),
-  };
-}
-
-const RULES_FIXTURE: Rules = {
-  dupesClause: false,
-  shinyClause: false,
-  nicknamesRequired: false,
-  levelCaps: false,
-  setMode: false,
-  hardcore: false,
-  randomiser: {
-    enabled: false,
-    wildEncounters: false,
-    trainers: false,
-    starters: false,
-    abilities: false,
-    items: false,
-    moves: false,
-    evolutions: false,
-  },
-  customClause: null,
-};
-
-function makeRunDraft(overrides: Partial<Run> = {}): Omit<Run, "id" | "createdAt" | "updatedAt"> {
-  return {
-    name: "Test Run",
-    game: "heartgold",
-    status: "active",
-    rules: RULES_FIXTURE,
-    finishedAt: null,
-    ...overrides,
-  };
-}
-
-function makeRouteDraft(
-  runId: string,
-  overrides: Partial<Route> = {},
-): Omit<Route, "id" | "createdAt" | "updatedAt"> {
-  return {
-    runId,
-    name: "Route 29",
-    order: 1,
-    isCustom: false,
-    gameRouteId: null,
-    ...overrides,
-  };
-}
-
-function makeEncounterDraft(
-  runId: string,
-  routeId: string,
-  overrides: Partial<Encounter> = {},
-): Omit<Encounter, "id" | "createdAt" | "updatedAt"> {
-  return {
-    runId,
-    routeId,
-    status: "open",
-    speciesId: null,
-    level: null,
-    monId: null,
-    notes: null,
-    ...overrides,
-  };
-}
-
-function makeMonDraft(
-  runId: string,
-  overrides: Partial<Mon> = {},
-): Omit<Mon, "id" | "createdAt" | "updatedAt"> {
-  return {
-    runId,
-    encounterId: null,
-    speciesId: "chikorita",
-    speciesIdCaught: "chikorita",
-    nickname: null,
-    gender: null,
-    level: 5,
-    levelCaught: 5,
-    nature: null,
-    ability: null,
-    heldItem: null,
-    moves: [],
-    status: "party",
-    partySlot: 0,
-    boxOrder: null,
-    caughtRouteId: null,
-    shiny: false,
-    ...overrides,
   };
 }
 
@@ -752,28 +671,10 @@ describe("Offline", () => {
 });
 
 describe("Rules summary", () => {
-  function makeFightDraft(
-    runId: string,
-    overrides: Partial<Fight> = {},
-  ): Omit<Fight, "id" | "createdAt" | "updatedAt"> {
-    return {
-      runId,
-      gameFightId: null,
-      name: "Falkner",
-      kind: "gym",
-      order: 1,
-      grantsBadge: true,
-      levelCap: 13,
-      status: "pending",
-      clearedAt: null,
-      ...overrides,
-    };
-  }
-
   it("shows chips for the run's active rules and a cap from the first uncleared fight", async () => {
     const adapter = createMemoryAdapter();
     const run = await adapter.runs.put(
-      makeRunDraft({ rules: { ...RULES_FIXTURE, dupesClause: true, levelCaps: true } }),
+      makeRunDraft({ rules: makeRules({ dupesClause: true, levelCaps: true }) }),
     );
     await adapter.fights.put(makeFightDraft(run.id, { order: 1, levelCap: 13, status: "cleared" }));
     await adapter.fights.put(makeFightDraft(run.id, { order: 2, levelCap: 18 }));
@@ -794,8 +695,10 @@ describe("Rules summary", () => {
   it("counts earned badges against the total beside Gyms & E4", async () => {
     const adapter = createMemoryAdapter();
     const run = await adapter.runs.put(makeRunDraft());
-    await adapter.fights.put(makeFightDraft(run.id, { order: 1, status: "cleared" }));
-    await adapter.fights.put(makeFightDraft(run.id, { order: 2 }));
+    await adapter.fights.put(
+      makeFightDraft(run.id, { order: 1, grantsBadge: true, status: "cleared" }),
+    );
+    await adapter.fights.put(makeFightDraft(run.id, { order: 2, grantsBadge: true }));
     await adapter.fights.put(makeFightDraft(run.id, { order: 3, grantsBadge: false }));
 
     renderAt(`/runs/${run.id}/routes`, { adapter });
@@ -808,7 +711,7 @@ describe("Rules summary", () => {
 
   it("shows no rules without a current run", async () => {
     const adapter = createMemoryAdapter();
-    await adapter.runs.put(makeRunDraft({ rules: { ...RULES_FIXTURE, dupesClause: true } }));
+    await adapter.runs.put(makeRunDraft({ rules: makeRules({ dupesClause: true }) }));
 
     renderAt("/", { adapter });
 
