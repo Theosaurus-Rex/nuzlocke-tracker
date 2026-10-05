@@ -49,8 +49,10 @@ pnpm only. `packageManager` is pinned, so use corepack rather than a global pnpm
 | `pnpm test` | Vitest once |
 | `pnpm test:watch` | Vitest in watch mode |
 | `pnpm test:coverage` | Vitest with v8 coverage |
+| `pnpm test:e2e` | Playwright browser tests on a production build, desktop and mobile |
+| `pnpm test:e2e:ui` | Playwright in its interactive UI mode |
 
-**The gate before any commit is `pnpm lint && pnpm typecheck && pnpm format:check && pnpm test && pnpm build`.**
+**The gate before any commit is `pnpm lint && pnpm typecheck && pnpm format:check && pnpm test && pnpm build && pnpm test:e2e`.**
 Every commit in the history so far passes all five.
 
 Prettier does not touch Markdown — `*.md` is in `.prettierignore`. Prose here is hand-authored,
@@ -222,8 +224,8 @@ Failure modes already seen here, each of which passed CI:
   re-run the whole mutation battery, not just the mutation you are working on.**
 
 **Never write a test that cannot fail.** jsdom does not evaluate CSS media queries, so a
-breakpoint assertion passes whatever the classes say — there is deliberately none, and the gap
-is listed openly instead. Likewise never assert a constant against its own literal: it can only
+breakpoint assertion passes whatever the classes say. The breakpoint is checked in the Playwright
+tests instead, which run in a real browser. Likewise never assert a constant against its own literal: it can only
 fail when someone deliberately changes it and updates the test in the same breath.
 
 ---
@@ -397,7 +399,7 @@ From 2026-09-18 onward, work lands through a reviewed PR, not directly on `main`
 - **Never push to `main`, and never merge.** Theo verifies the change by hand and merges when
   satisfied. Opening the PR is where your work stops.
 - **The gate runs before the PR opens**, not after:
-  `pnpm lint && pnpm typecheck && pnpm format:check && pnpm test && pnpm build`.
+  `pnpm lint && pnpm typecheck && pnpm format:check && pnpm test && pnpm build && pnpm test:e2e`.
 - Link the Linear issue.
 - **No tool-attribution lines** in commit messages or PR bodies — no `Co-Authored-By`, no
   "Generated with Claude Code". This follows Theo's global config and applies here too.

@@ -3,6 +3,9 @@ dist/
 dist-ssr/
 *.local
 coverage/
+test-results/
+playwright-report/
+blob-report/
 .DS_Store
 *.log
 .vite/

@@ -6,7 +6,14 @@ import eslintConfigPrettier from "eslint-config-prettier";
 
 export default tseslint.config(
   {
-    ignores: ["dist/**", "node_modules/**", "coverage/**"],
+    ignores: [
+      "dist/**",
+      "node_modules/**",
+      "coverage/**",
+      "test-results/**",
+      "playwright-report/**",
+      "blob-report/**",
+    ],
   },
   {
     files: ["**/*.{ts,tsx}"],
