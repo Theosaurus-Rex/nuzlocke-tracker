@@ -121,90 +121,6 @@ describe("round trip", () => {
 
     expect((await target.mons.get(mon.id))?.shiny).toBe(true);
   });
-
-  it("imports a pre-shiny (schemaVersion 1) export, and its mons read as not shiny", async () => {
-    const timestamp = "2020-01-01T00:00:00.000Z";
-    // A real v1 export has no `shiny` key on its mons at all: the field did not exist yet.
-    const legacyMon = {
-      id: "mon-1",
-      createdAt: timestamp,
-      updatedAt: timestamp,
-      runId: "run-1",
-      encounterId: null,
-      speciesId: "chikorita",
-      speciesIdCaught: "chikorita",
-      nickname: null,
-      gender: "female",
-      level: 5,
-      levelCaught: 5,
-      nature: null,
-      ability: null,
-      heldItem: null,
-      moves: ["tackle"],
-      status: "party",
-      partySlot: 0,
-      boxOrder: null,
-      caughtRouteId: null,
-    };
-    const oldExport = {
-      schemaVersion: 1,
-      exportedAt: timestamp,
-      runs: [{ id: "run-1", createdAt: timestamp, updatedAt: timestamp, ...makeRunDraft() }],
-      routes: [],
-      encounters: [],
-      mons: [legacyMon],
-      deaths: [],
-      fights: [],
-    };
-
-    const result = parseBundle(JSON.stringify(oldExport));
-    expect(result.ok).toBe(true);
-    if (!result.ok) return;
-
-    const target = createMemoryAdapter();
-    await target.init();
-    const summary = await importBundle(target, result.bundle, "replace");
-
-    expect(summary.imported).toEqual([{ id: "run-1", name: "Test Run" }]);
-    expect((await target.mons.get("mon-1"))?.shiny).toBe(false);
-  });
-});
-
-describe("parseBundle — v3 export with a species clause", () => {
-  it("imports it with dupes on and no speciesClause key", async () => {
-    const timestamp = "2020-01-01T00:00:00.000Z";
-    const otherRules = makeRunDraft().rules;
-    const oldExport = {
-      schemaVersion: 3,
-      exportedAt: timestamp,
-      runs: [
-        {
-          id: "run-1",
-          createdAt: timestamp,
-          updatedAt: timestamp,
-          ...makeRunDraft(),
-          rules: { ...otherRules, dupesClause: false, speciesClause: true },
-        },
-      ],
-      routes: [],
-      encounters: [],
-      mons: [],
-      deaths: [],
-      fights: [],
-    };
-
-    const result = parseBundle(JSON.stringify(oldExport));
-    expect(result.ok).toBe(true);
-    if (!result.ok) return;
-
-    const target = createMemoryAdapter();
-    await target.init();
-    await importBundle(target, result.bundle, "replace");
-
-    const rules = (await target.runs.get("run-1"))?.rules as unknown as Record<string, unknown>;
-    expect(rules.dupesClause).toBe(true);
-    expect("speciesClause" in rules).toBe(false);
-  });
 });
 
 describe("serializeBundle", () => {
@@ -249,14 +165,14 @@ describe("parseBundle — schemaVersion", () => {
     }
   });
 
-  it("refuses a schemaVersion lower than SCHEMA_VERSION when no migration path exists", () => {
-    const bundle = emptyBundle({ schemaVersion: 0 });
+  it("refuses a schemaVersion lower than SCHEMA_VERSION", () => {
+    const bundle = emptyBundle({ schemaVersion: SCHEMA_VERSION - 1 });
 
     const result = parseBundle(JSON.stringify(bundle));
 
     expect(result.ok).toBe(false);
     if (!result.ok) {
-      expect(result.errors.join(" ")).toMatch(/no migration path/i);
+      expect(result.errors.join(" ")).toMatch(/older version/i);
     }
   });
 
