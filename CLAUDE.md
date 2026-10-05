@@ -53,7 +53,7 @@ pnpm only. `packageManager` is pinned, so use corepack rather than a global pnpm
 | `pnpm test:e2e:ui` | Playwright in its interactive UI mode |
 
 **The gate before any commit is `pnpm lint && pnpm typecheck && pnpm format:check && pnpm test && pnpm build && pnpm test:e2e`.**
-Every commit in the history so far passes all five.
+Every commit in the history so far passes the gate as it stood when it landed.
 
 Prettier does not touch Markdown — `*.md` is in `.prettierignore`. Prose here is hand-authored,
 and Prettier realigns tables and rewrites emphasis markers for no content change.
