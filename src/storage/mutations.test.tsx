@@ -8,7 +8,7 @@ import "fake-indexeddb/auto";
 
 import type { ReactNode } from "react";
 
-import { onlineManager, QueryClientProvider } from "@tanstack/react-query";
+import { onlineManager } from "@tanstack/react-query";
 import { renderHook, waitFor } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
@@ -16,7 +16,8 @@ import { DEFAULT_RULES } from "@/domain/rules";
 import type { CatchDetails, MonAmendments } from "@/domain/transitions";
 import type { Death, Encounter, Fight, Mon, Route, Run } from "@/domain/types";
 import { heartgold } from "@/game/data/heartgold";
-import { createQueryClient } from "@/lib/query-client";
+import { makeDeathDraft, makeEncounterDraft, makeFightDraft } from "@/test/factories";
+import { createWrapper } from "@/test/render";
 
 import type { StorageAdapter } from "./adapter";
 import { createDexieAdapter } from "./dexie-adapter";
@@ -31,41 +32,6 @@ import {
   useResetEncounter,
 } from "./mutations";
 import { useEncounters, useMons } from "./queries";
-import { StorageProvider } from "./storage-context";
-
-function makeEncounterDraft(
-  runId: string,
-  routeId: string,
-  overrides: Partial<Encounter> = {},
-): Omit<Encounter, "id" | "createdAt" | "updatedAt"> {
-  return {
-    runId,
-    routeId,
-    status: "open",
-    speciesId: null,
-    level: null,
-    monId: null,
-    notes: null,
-    ...overrides,
-  };
-}
-
-function createWrapper(
-  adapter: StorageAdapter,
-): ({ children }: { children: ReactNode }) => ReactNode {
-  const queryClient = createQueryClient({
-    queries: { retry: false },
-    mutations: { retry: false },
-  });
-
-  return function Wrapper({ children }: { children: ReactNode }): ReactNode {
-    return (
-      <QueryClientProvider client={queryClient}>
-        <StorageProvider adapter={adapter}>{children}</StorageProvider>
-      </QueryClientProvider>
-    );
-  };
-}
 
 /**
  * Wraps a StorageAdapter so routes.putMany always rejects. transaction re-wraps the scoped
@@ -866,41 +832,6 @@ describe("useAmendMon", () => {
     expect(result).toMatchObject({ nickname: "Sprout", speciesId: "weepinbell", status: "box" });
   });
 });
-
-function makeDeathDraft(
-  runId: string,
-  monId: string,
-  overrides: Partial<Death> = {},
-): Omit<Death, "id" | "createdAt" | "updatedAt"> {
-  return {
-    runId,
-    monId,
-    level: 10,
-    routeId: null,
-    cause: { type: "wild", species: "geodude", level: 10, move: "Rock Throw" },
-    diedAt: "2026-01-01T00:00:00.000Z",
-    notes: null,
-    ...overrides,
-  };
-}
-
-function makeFightDraft(
-  runId: string,
-  overrides: Partial<Fight> = {},
-): Omit<Fight, "id" | "createdAt" | "updatedAt"> {
-  return {
-    runId,
-    gameFightId: null,
-    name: "Falkner",
-    kind: "gym",
-    order: 1,
-    grantsBadge: true,
-    levelCap: 15,
-    status: "pending",
-    clearedAt: null,
-    ...overrides,
-  };
-}
 
 async function snapshotRun(
   adapter: StorageAdapter,

@@ -6,124 +6,20 @@
 
 import { describe, it, expect, beforeEach } from "vitest";
 
-import type { Draft, Run, Route, Encounter, Mon, Death, Fight, Cause } from "@/domain/types";
+import type { Run, Route, Cause } from "@/domain/types";
 import { SCHEMA_VERSION, isExportBundle } from "@/domain/schema";
+import {
+  makeDeathDraft,
+  makeEncounterDraft,
+  makeFightDraft,
+  makeMonDraft,
+  makeRouteDraft,
+  makeRunDraft,
+} from "@/test/factories";
 
 import type { StorageAdapter } from "./adapter";
 
 const UUID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
-
-function makeRunDraft(overrides: Partial<Draft<Run>> = {}): Draft<Run> {
-  return {
-    name: "Test Run",
-    game: "heartgold",
-    status: "active",
-    rules: {
-      dupesClause: false,
-      shinyClause: false,
-      nicknamesRequired: false,
-      levelCaps: false,
-      setMode: false,
-      hardcore: false,
-      randomiser: {
-        enabled: false,
-        wildEncounters: false,
-        trainers: false,
-        starters: false,
-        abilities: false,
-        items: false,
-        moves: false,
-        evolutions: false,
-      },
-      customClause: null,
-    },
-    finishedAt: null,
-    ...overrides,
-  };
-}
-
-function makeRouteDraft(runId: string, overrides: Partial<Draft<Route>> = {}): Draft<Route> {
-  return {
-    runId,
-    name: "Route 29",
-    order: 1,
-    isCustom: false,
-    gameRouteId: null,
-    ...overrides,
-  };
-}
-
-function makeEncounterDraft(
-  runId: string,
-  routeId: string,
-  overrides: Partial<Draft<Encounter>> = {},
-): Draft<Encounter> {
-  return {
-    runId,
-    routeId,
-    status: "open",
-    speciesId: null,
-    level: null,
-    monId: null,
-    notes: null,
-    ...overrides,
-  };
-}
-
-function makeMonDraft(runId: string, overrides: Partial<Draft<Mon>> = {}): Draft<Mon> {
-  return {
-    runId,
-    encounterId: null,
-    speciesId: "chikorita",
-    speciesIdCaught: "chikorita",
-    nickname: null,
-    gender: null,
-    level: 5,
-    levelCaught: 5,
-    nature: null,
-    ability: null,
-    heldItem: null,
-    moves: [],
-    status: "party",
-    partySlot: 0,
-    boxOrder: null,
-    caughtRouteId: null,
-    shiny: false,
-    ...overrides,
-  };
-}
-
-function makeDeathDraft(
-  runId: string,
-  monId: string,
-  overrides: Partial<Draft<Death>> = {},
-): Draft<Death> {
-  return {
-    runId,
-    monId,
-    level: 10,
-    routeId: null,
-    cause: { type: "wild", species: "geodude", level: 10, move: "Rock Throw" },
-    diedAt: "2026-01-01T00:00:00.000Z",
-    notes: null,
-    ...overrides,
-  };
-}
-
-function makeFightDraft(runId: string, overrides: Partial<Draft<Fight>> = {}): Draft<Fight> {
-  return {
-    runId,
-    gameFightId: null,
-    name: "Falkner",
-    kind: "gym",
-    order: 1,
-    grantsBadge: true,
-    levelCap: 15,
-    status: "pending",
-    clearedAt: null,
-    ...overrides,
-  };
-}
 
 /** A short, real delay so two `put`s land in different milliseconds, without mocking the clock
  * (fake timers risk interfering with the Dexie-backed adapter). */
