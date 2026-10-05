@@ -9,15 +9,9 @@ import { RouterProvider } from "react-router";
 
 import { Typography } from "@/components/typography";
 import type { StorageAdapter } from "@/storage/adapter";
-import { useSeedMissingFights } from "@/storage/mutations";
 import { StorageProvider } from "@/storage/storage-context";
 
 import { router } from "./router";
-
-function StorageStartup(): null {
-  useSeedMissingFights();
-  return null;
-}
 
 export function Root({
   adapter,
@@ -51,7 +45,6 @@ export function Root({
   return (
     <QueryClientProvider client={queryClient}>
       <StorageProvider adapter={adapter}>
-        <StorageStartup />
         <RouterProvider router={router} />
       </StorageProvider>
     </QueryClientProvider>
