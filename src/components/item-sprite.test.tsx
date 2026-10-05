@@ -12,11 +12,6 @@ describe("ItemSprite", () => {
     expect(container.querySelector("img")).toHaveAttribute("src", MIRACLE_SEED);
   });
 
-  it("points at the same sprite for an old typed name", () => {
-    const { container } = render(<ItemSprite item="Miracle Seed" />);
-    expect(container.querySelector("img")).toHaveAttribute("src", MIRACLE_SEED);
-  });
-
   it("is hidden from assistive tech", () => {
     const { container } = render(<ItemSprite item="miracle-seed" />);
     const img = container.querySelector("img");

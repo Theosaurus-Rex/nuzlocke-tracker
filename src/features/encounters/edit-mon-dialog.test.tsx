@@ -28,8 +28,8 @@ const FILLED_MON = {
   level: 18,
   levelCaught: 6,
   nature: "Jolly",
-  ability: "Chlorophyll",
-  heldItem: "Miracle Seed",
+  ability: "chlorophyll",
+  heldItem: "miracle-seed",
   moves: ["vine-whip", "growth"],
   caughtRouteId: "route-1",
 } satisfies Partial<Mon>;
@@ -223,38 +223,6 @@ describe("EditMonDialog", () => {
     });
   });
 
-  it("opens an old typed ability as the matching selection and saves its PokéAPI name", async () => {
-    const user = userEvent.setup();
-    const { adapter, mon } = renderDialog({
-      mon: makeMon({ ...FILLED_MON, ability: "Chlorophyll" }),
-    });
-    await adapter.mons.put(mon);
-
-    expect(screen.getByLabelText("Ability")).toHaveValue("Chlorophyll");
-    await user.click(screen.getByRole("button", { name: "Save changes" }));
-
-    await waitFor(async () => {
-      expect((await adapter.mons.get(mon.id))?.ability).toBe("chlorophyll");
-    });
-  });
-
-  it("clears an old ability the list does not know when the dialog saves", async () => {
-    const user = userEvent.setup();
-    const { adapter, mon } = renderDialog({
-      mon: makeMon({ ...FILLED_MON, ability: "Gooey Typo" }),
-    });
-    await adapter.mons.put(mon);
-
-    await waitFor(() => {
-      expect(screen.getByLabelText("Ability")).toHaveValue("");
-    });
-    await user.click(screen.getByRole("button", { name: "Save changes" }));
-
-    await waitFor(async () => {
-      expect((await adapter.mons.get(mon.id))?.ability).toBeNull();
-    });
-  });
-
   it("saves null when the ability is cleared", async () => {
     const user = userEvent.setup();
     const { adapter, mon } = renderDialog({});
@@ -280,36 +248,6 @@ describe("EditMonDialog", () => {
     await waitFor(async () => {
       const saved = await adapter.mons.get(mon.id);
       expect(saved?.heldItem).toBe("leftovers");
-    });
-  });
-
-  it("opens an old typed item as the matching selection and saves its PokéAPI name", async () => {
-    const user = userEvent.setup();
-    const { adapter, mon } = renderDialog({});
-    await adapter.mons.put(mon);
-
-    expect(screen.getByLabelText("Held item")).toHaveValue("Miracle Seed");
-    await user.click(screen.getByRole("button", { name: "Save changes" }));
-
-    await waitFor(async () => {
-      expect((await adapter.mons.get(mon.id))?.heldItem).toBe("miracle-seed");
-    });
-  });
-
-  it("clears an old item the list does not know when the dialog saves", async () => {
-    const user = userEvent.setup();
-    const { adapter, mon } = renderDialog({
-      mon: makeMon({ ...FILLED_MON, heldItem: "Gooey Typo" }),
-    });
-    await adapter.mons.put(mon);
-
-    await waitFor(() => {
-      expect(screen.getByLabelText("Held item")).toHaveValue("");
-    });
-    await user.click(screen.getByRole("button", { name: "Save changes" }));
-
-    await waitFor(async () => {
-      expect((await adapter.mons.get(mon.id))?.heldItem).toBeNull();
     });
   });
 

@@ -62,8 +62,8 @@ describe("PartyCard", () => {
         gender: "female",
         level: 22,
         nature: "Adamant",
-        ability: "Overgrow",
-        heldItem: "Miracle Seed",
+        ability: "overgrow",
+        heldItem: "miracle-seed",
         moves: ["vine-whip", "tackle"],
       }),
       "Route 29",
@@ -75,26 +75,6 @@ describe("PartyCard", () => {
     expect(screen.getByText("Miracle Seed").closest("p")?.textContent).toBe(
       "Miracle Seed · Overgrow · Route 29",
     );
-  });
-
-  it("shows an old typed ability and a PokéAPI name the same way", () => {
-    const { unmount } = renderCard(makeMon({ ...CHIKORITA, ability: "Water Absorb" }), "Route 29");
-    expect(screen.getByText("no item").closest("p")?.textContent).toBe(
-      "no item · Water Absorb · Route 29",
-    );
-    unmount();
-    renderCard(makeMon({ ...CHIKORITA, ability: "water-absorb" }), "Route 29");
-    expect(screen.getByText("no item").closest("p")?.textContent).toBe(
-      "no item · Water Absorb · Route 29",
-    );
-  });
-
-  it("shows an old typed item and a PokéAPI name the same way", () => {
-    const { unmount } = renderCard(makeMon({ ...CHIKORITA, heldItem: "Miracle Seed" }));
-    expect(screen.getByText("Miracle Seed")).toBeInTheDocument();
-    unmount();
-    renderCard(makeMon({ ...CHIKORITA, heldItem: "miracle-seed" }));
-    expect(screen.getByText("Miracle Seed")).toBeInTheDocument();
   });
 
   it("falls back to the species name, unquoted, with no nickname", () => {
@@ -130,7 +110,7 @@ describe("PartyCard", () => {
   });
 
   it("shows the held item sprite before the item name, and none for no item", () => {
-    const { container, unmount } = renderCard(makeMon({ ...CHIKORITA, heldItem: "Miracle Seed" }));
+    const { container, unmount } = renderCard(makeMon({ ...CHIKORITA, heldItem: "miracle-seed" }));
     expect(
       container.querySelector(
         'img[src="https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/items/miracle-seed.png"]',

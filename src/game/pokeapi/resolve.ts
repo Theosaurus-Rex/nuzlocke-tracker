@@ -90,13 +90,12 @@ export function speciesDisplayName(id: string): string {
   return speciesDisplayNames[id] ?? titleCase(id);
 }
 
-export function abilityDisplayName(value: string): string {
-  return titleCase(toNameForm(value));
+export function abilityDisplayName(id: string): string {
+  return titleCase(id);
 }
 
-export function itemDisplayName(value: string): string {
-  const name = toNameForm(value);
-  return itemDisplayNames[name] ?? titleCase(name);
+export function itemDisplayName(id: string): string {
+  return itemDisplayNames[id] ?? titleCase(id);
 }
 
 export function moveDisplayName(id: string): string {

@@ -2,7 +2,6 @@ import { isType, type Type } from "@/game/types";
 
 import { GENERATION_NUMBER, VERSION_GROUP_GENERATION } from "./generations";
 import type { IndexEntry, Move, PastMoveValue, PastTypes, Species } from "./model";
-import { toNameForm } from "./resolve";
 
 const ITEM_SPRITE_BASE = "https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/items";
 const BADGE_SPRITE_BASE = "https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/badges";
@@ -12,7 +11,7 @@ export function badgeSpriteUrl(sprite: number): string {
 }
 
 export function itemSpriteUrl(name: string): string {
-  return `${ITEM_SPRITE_BASE}/${toNameForm(name)}.png`;
+  return `${ITEM_SPRITE_BASE}/${name}.png`;
 }
 
 interface NamedRef {

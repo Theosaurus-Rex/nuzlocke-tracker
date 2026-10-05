@@ -135,8 +135,8 @@ describe("BoxTable", () => {
           gender: "female",
           level: 17,
           nature: "Modest",
-          ability: "Overgrow",
-          heldItem: "Oran Berry",
+          ability: "overgrow",
+          heldItem: "oran-berry",
           caughtRouteId: "route-29",
         }),
       ],
@@ -152,26 +152,6 @@ describe("BoxTable", () => {
       "Oran Berry",
       "Route 29",
     ]);
-  });
-
-  it("shows an old typed ability and a PokéAPI name the same way", () => {
-    renderTable([
-      makeMon({ ...CHIKORITA, id: "a", ability: "Water Absorb" }),
-      makeMon({ ...CHIKORITA, id: "b", ability: "water-absorb" }),
-    ]);
-
-    expect(cellsOf(1)[6]).toBe("Water Absorb");
-    expect(cellsOf(2)[6]).toBe("Water Absorb");
-  });
-
-  it("shows an old typed item and a PokéAPI name the same way", () => {
-    renderTable([
-      makeMon({ ...CHIKORITA, id: "a", heldItem: "Miracle Seed" }),
-      makeMon({ ...CHIKORITA, id: "b", heldItem: "miracle-seed" }),
-    ]);
-
-    expect(cellsOf(1)[7]).toBe("Miracle Seed");
-    expect(cellsOf(2)[7]).toBe("Miracle Seed");
   });
 
   it("shows a dash for missing values and no item for a missing item", () => {

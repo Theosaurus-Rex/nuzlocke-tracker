@@ -50,8 +50,8 @@ describe("BoxRowList", () => {
         nickname: "Sprig",
         gender: "male",
         level: 12,
-        heldItem: "Oran Berry",
-        ability: "Overgrow",
+        heldItem: "oran-berry",
+        ability: "overgrow",
       }),
     ]);
 
@@ -59,24 +59,6 @@ describe("BoxRowList", () => {
     expect(within(row).getByText("“Sprig”")).toBeInTheDocument();
     expect(within(row).getByText("Chikorita · ♂ · L12")).toBeInTheDocument();
     expect(within(row).getByText("Oran Berry · Overgrow")).toBeInTheDocument();
-  });
-
-  it("shows an old typed ability and a PokéAPI name the same way", () => {
-    renderList([
-      makeMon({ ...CHIKORITA, id: "a", ability: "Water Absorb" }),
-      makeMon({ ...CHIKORITA, id: "b", ability: "water-absorb" }),
-    ]);
-
-    expect(screen.getAllByText("no item · Water Absorb")).toHaveLength(2);
-  });
-
-  it("shows an old typed item and a PokéAPI name the same way", () => {
-    renderList([
-      makeMon({ ...CHIKORITA, id: "a", heldItem: "Miracle Seed" }),
-      makeMon({ ...CHIKORITA, id: "b", heldItem: "miracle-seed" }),
-    ]);
-
-    expect(screen.getAllByText("Miracle Seed")).toHaveLength(2);
   });
 
   it("falls back to the species name and drops missing parts", () => {
