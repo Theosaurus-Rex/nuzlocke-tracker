@@ -1,51 +1,8 @@
 import { describe, expect, test } from "vitest";
 
 import { countByMonStatus, countRoutesCovered, summariseRun } from "@/domain/derive";
-import type { Encounter, Mon } from "@/domain/types";
-
-const TIMESTAMP = "2026-09-17T00:00:00.000Z";
-
-function makeMon(overrides: Partial<Mon> = {}): Mon {
-  return {
-    id: "mon-1",
-    runId: "run-1",
-    encounterId: null,
-    speciesId: "chikorita",
-    speciesIdCaught: "chikorita",
-    nickname: null,
-    gender: null,
-    level: 5,
-    levelCaught: 5,
-    nature: null,
-    ability: null,
-    heldItem: null,
-    moves: [],
-    status: "party",
-    partySlot: 0,
-    boxOrder: null,
-    caughtRouteId: null,
-    shiny: false,
-    createdAt: TIMESTAMP,
-    updatedAt: TIMESTAMP,
-    ...overrides,
-  };
-}
-
-function makeEncounter(overrides: Partial<Encounter> = {}): Encounter {
-  return {
-    id: "encounter-1",
-    runId: "run-1",
-    routeId: "route-1",
-    status: "open",
-    speciesId: null,
-    level: null,
-    monId: null,
-    notes: null,
-    createdAt: TIMESTAMP,
-    updatedAt: TIMESTAMP,
-    ...overrides,
-  };
-}
+import type { Mon } from "@/domain/types";
+import { makeEncounter, makeMon } from "@/test/factories";
 
 describe("countByMonStatus", () => {
   test("tallies party, box and dead mons separately", () => {

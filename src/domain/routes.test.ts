@@ -1,37 +1,7 @@
 import { describe, expect, test } from "vitest";
 
 import { ROUTE_ORDER_STEP, canDeleteRoute, compareRoutes, nextRouteOrder } from "@/domain/routes";
-import type { Encounter, Route } from "@/domain/types";
-
-function makeRoute(overrides: Partial<Route> = {}): Route {
-  return {
-    id: "route-1",
-    runId: "run-1",
-    name: "Route 29",
-    order: 100,
-    isCustom: false,
-    gameRouteId: "route-29",
-    createdAt: "2026-09-17T00:00:00.000Z",
-    updatedAt: "2026-09-17T00:00:00.000Z",
-    ...overrides,
-  };
-}
-
-function makeEncounter(overrides: Partial<Encounter> = {}): Encounter {
-  return {
-    id: "encounter-1",
-    runId: "run-1",
-    routeId: "route-1",
-    status: "open",
-    speciesId: null,
-    level: null,
-    monId: null,
-    notes: null,
-    createdAt: "2026-09-17T00:00:00.000Z",
-    updatedAt: "2026-09-17T00:00:00.000Z",
-    ...overrides,
-  };
-}
+import { makeEncounter, makeRoute } from "@/test/factories";
 
 describe("nextRouteOrder", () => {
   test("returns ROUTE_ORDER_STEP for an empty list", () => {

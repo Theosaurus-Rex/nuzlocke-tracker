@@ -1,51 +1,8 @@
 import { describe, expect, test } from "vitest";
 
 import { badgeCount, buildFightSections, type FightLookup } from "@/domain/fight-list";
-import type { Death, Fight } from "@/domain/types";
 import { heartgold } from "@/game/data/heartgold";
-
-const TIMESTAMP = "2026-09-17T00:00:00.000Z";
-
-function makeFight(overrides: Partial<Fight> = {}): Fight {
-  return {
-    id: "fight-1",
-    runId: "run-1",
-    gameFightId: "g1",
-    name: "Fight",
-    kind: "gym",
-    order: 1,
-    grantsBadge: true,
-    levelCap: 10,
-    status: "pending",
-    clearedAt: null,
-    createdAt: TIMESTAMP,
-    updatedAt: TIMESTAMP,
-    ...overrides,
-  };
-}
-
-function makeDeath(overrides: Partial<Death> = {}): Death {
-  return {
-    id: "death-1",
-    runId: "run-1",
-    monId: "mon-1",
-    level: 10,
-    routeId: null,
-    cause: {
-      type: "trainer",
-      fightId: "fight-1",
-      trainerName: null,
-      species: "pidgey",
-      level: 9,
-      move: null,
-    },
-    diedAt: TIMESTAMP,
-    notes: null,
-    createdAt: TIMESTAMP,
-    updatedAt: TIMESTAMP,
-    ...overrides,
-  };
-}
+import { makeDeath, makeFight } from "@/test/factories";
 
 const lookup: FightLookup = (id) =>
   ({
@@ -180,7 +137,17 @@ describe("buildFightSections", () => {
   });
 
   test("attaches only trainer deaths for the fight itself", () => {
-    const own = makeDeath({ id: "own" });
+    const own = makeDeath({
+      id: "own",
+      cause: {
+        type: "trainer",
+        fightId: "fight-1",
+        trainerName: null,
+        species: "a",
+        level: 1,
+        move: null,
+      },
+    });
     const other = makeDeath({
       id: "other",
       cause: {
@@ -227,8 +194,8 @@ describe("badgeCount", () => {
   test("counts only badge fights, and earned only when cleared", () => {
     expect(
       badgeCount([
-        makeFight({ id: "a", status: "cleared" }),
-        makeFight({ id: "b" }),
+        makeFight({ id: "a", grantsBadge: true, status: "cleared" }),
+        makeFight({ id: "b", grantsBadge: true }),
         makeFight({ id: "r", grantsBadge: false, status: "cleared" }),
       ]),
     ).toEqual({ earned: 1, total: 2 });

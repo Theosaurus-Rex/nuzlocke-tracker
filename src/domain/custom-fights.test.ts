@@ -2,42 +2,8 @@ import { describe, expect, test } from "vitest";
 
 import { canDeleteFight, orderAfterLast, orderBefore, respaceFights } from "@/domain/custom-fights";
 import { FIGHT_ORDER_STEP } from "@/domain/fight-list";
-import type { Death, Fight } from "@/domain/types";
-
-const TIMESTAMP = "2026-09-17T00:00:00.000Z";
-
-function makeFight(id: string, order: number, overrides: Partial<Fight> = {}): Fight {
-  return {
-    id,
-    runId: "run-1",
-    gameFightId: null,
-    name: id,
-    kind: "custom",
-    order,
-    grantsBadge: false,
-    levelCap: null,
-    status: "pending",
-    clearedAt: null,
-    createdAt: TIMESTAMP,
-    updatedAt: TIMESTAMP,
-    ...overrides,
-  };
-}
-
-function makeDeath(cause: Death["cause"]): Death {
-  return {
-    id: "death-1",
-    runId: "run-1",
-    monId: "mon-1",
-    level: 10,
-    routeId: null,
-    cause,
-    diedAt: TIMESTAMP,
-    notes: null,
-    createdAt: TIMESTAMP,
-    updatedAt: TIMESTAMP,
-  };
-}
+import type { Death } from "@/domain/types";
+import { makeDeath, makeFight } from "@/test/factories";
 
 const trainerCause = (fightId: string): Death["cause"] => ({
   type: "trainer",
@@ -49,11 +15,17 @@ const trainerCause = (fightId: string): Death["cause"] => ({
 });
 
 describe("orderBefore", () => {
-  const fights = [makeFight("b", 200), makeFight("a", 100), makeFight("c", 300)];
+  const fights = [
+    makeFight({ id: "b", order: 200 }),
+    makeFight({ id: "a", order: 100 }),
+    makeFight({ id: "c", order: 300 }),
+  ];
 
   test("returns the floored midpoint between the target and the fight before it", () => {
     expect(orderBefore(fights, "c")).toBe(250);
-    expect(orderBefore([makeFight("a", 100), makeFight("b", 105)], "b")).toBe(102);
+    expect(
+      orderBefore([makeFight({ id: "a", order: 100 }), makeFight({ id: "b", order: 105 })], "b"),
+    ).toBe(102);
   });
 
   test("steps back by one fight step when the target is first", () => {
@@ -61,18 +33,22 @@ describe("orderBefore", () => {
   });
 
   test("returns null once the neighbours have no integer between them", () => {
-    expect(orderBefore([makeFight("a", 100), makeFight("b", 101)], "b")).toBeNull();
-    expect(orderBefore([makeFight("a", 100), makeFight("b", 100)], "b")).toBeNull();
+    expect(
+      orderBefore([makeFight({ id: "a", order: 100 }), makeFight({ id: "b", order: 101 })], "b"),
+    ).toBeNull();
+    expect(
+      orderBefore([makeFight({ id: "a", order: 100 }), makeFight({ id: "b", order: 100 })], "b"),
+    ).toBeNull();
   });
 
   test("repeated inserts at the same spot close the gap and then signal a respace", () => {
-    let list = [makeFight("a", 100), makeFight("b", 200)];
+    let list = [makeFight({ id: "a", order: 100 }), makeFight({ id: "b", order: 200 })];
     const results: (number | null)[] = [];
     for (let i = 0; i < 10; i++) {
       const order = orderBefore(list, "b");
       results.push(order);
       if (order === null) break;
-      list = [...list, makeFight(`n${i}`, order)];
+      list = [...list, makeFight({ id: `n${i}`, order })];
     }
     expect(results.at(-1)).toBeNull();
     expect(results.slice(0, 3)).toEqual([150, 175, 187]);
@@ -87,7 +63,9 @@ describe("orderBefore", () => {
 
 describe("orderAfterLast", () => {
   test("goes one step past the highest order", () => {
-    expect(orderAfterLast([makeFight("a", 500), makeFight("b", 200)])).toBe(500 + FIGHT_ORDER_STEP);
+    expect(
+      orderAfterLast([makeFight({ id: "a", order: 500 }), makeFight({ id: "b", order: 200 })]),
+    ).toBe(500 + FIGHT_ORDER_STEP);
   });
 
   test("starts at one step for an empty list", () => {
@@ -97,7 +75,11 @@ describe("orderAfterLast", () => {
 
 describe("respaceFights", () => {
   test("reassigns orders in steps and keeps the relative order", () => {
-    const result = respaceFights([makeFight("c", 102), makeFight("a", 100), makeFight("b", 101)]);
+    const result = respaceFights([
+      makeFight({ id: "c", order: 102 }),
+      makeFight({ id: "a", order: 100 }),
+      makeFight({ id: "b", order: 101 }),
+    ]);
     expect(result.map((f) => [f.id, f.order])).toEqual([
       ["a", 100],
       ["b", 200],
@@ -106,14 +88,14 @@ describe("respaceFights", () => {
   });
 
   test("does not mutate the input", () => {
-    const input = [makeFight("a", 7)];
+    const input = [makeFight({ id: "a", order: 7 })];
     respaceFights(input);
     expect(input[0]?.order).toBe(7);
   });
 });
 
 describe("canDeleteFight", () => {
-  const custom = makeFight("custom", 100);
+  const custom = makeFight({ id: "custom", order: 100, kind: "custom" });
 
   test("allows a pending custom fight with no deaths", () => {
     expect(canDeleteFight(custom, [])).toBe(true);
@@ -128,12 +110,12 @@ describe("canDeleteFight", () => {
   });
 
   test("refuses a custom fight with a linked death", () => {
-    expect(canDeleteFight(custom, [makeDeath(trainerCause("custom"))])).toBe(false);
+    expect(canDeleteFight(custom, [makeDeath({ cause: trainerCause("custom") })])).toBe(false);
   });
 
   test("ignores deaths linked to other fights or caused otherwise", () => {
-    const other = makeDeath(trainerCause("elsewhere"));
-    const wild = makeDeath({ type: "wild", species: "rattata", level: 3, move: null });
+    const other = makeDeath({ cause: trainerCause("elsewhere") });
+    const wild = makeDeath({ cause: { type: "wild", species: "rattata", level: 3, move: null } });
     expect(canDeleteFight(custom, [other, wild])).toBe(true);
   });
 });

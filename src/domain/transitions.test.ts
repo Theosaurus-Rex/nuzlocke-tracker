@@ -19,83 +19,8 @@ import {
   type KillDetails,
   type MonAmendments,
 } from "@/domain/transitions";
-import type { Death, Encounter, Fight, Mon } from "@/domain/types";
-
-function makeEncounter(overrides: Partial<Encounter> = {}): Encounter {
-  return {
-    id: "encounter-1",
-    runId: "run-1",
-    routeId: "route-1",
-    status: "open",
-    speciesId: null,
-    level: null,
-    monId: null,
-    notes: null,
-    createdAt: "2026-09-17T00:00:00.000Z",
-    updatedAt: "2026-09-17T00:00:00.000Z",
-    ...overrides,
-  };
-}
-
-function makeMon(overrides: Partial<Mon> = {}): Mon {
-  return {
-    id: "mon-1",
-    runId: "run-1",
-    encounterId: "encounter-1",
-    speciesId: "chikorita",
-    speciesIdCaught: "chikorita",
-    nickname: null,
-    gender: null,
-    level: 5,
-    levelCaught: 5,
-    nature: null,
-    ability: null,
-    heldItem: null,
-    moves: [],
-    status: "party",
-    partySlot: 0,
-    boxOrder: null,
-    caughtRouteId: "route-1",
-    shiny: false,
-    createdAt: "2026-09-17T00:00:00.000Z",
-    updatedAt: "2026-09-17T00:00:00.000Z",
-    ...overrides,
-  };
-}
-
-function makeDeath(overrides: Partial<Death> = {}): Death {
-  return {
-    id: "death-1",
-    runId: "run-1",
-    monId: "mon-1",
-    level: 12,
-    routeId: "route-3",
-    cause: { type: "wild", species: "geodude", level: 11, move: "rock-throw" },
-    diedAt: "2026-09-17T01:00:00.000Z",
-    notes: null,
-    createdAt: "2026-09-17T01:00:00.000Z",
-    updatedAt: "2026-09-17T01:00:00.000Z",
-    ...overrides,
-  };
-}
-
-function makeFight(overrides: Partial<Fight> = {}): Fight {
-  return {
-    id: "fight-1",
-    runId: "run-1",
-    gameFightId: null,
-    name: "Falkner",
-    kind: "gym",
-    order: 1,
-    grantsBadge: true,
-    levelCap: 15,
-    status: "pending",
-    clearedAt: null,
-    createdAt: "2026-09-17T00:00:00.000Z",
-    updatedAt: "2026-09-17T00:00:00.000Z",
-    ...overrides,
-  };
-}
+import type { Encounter, Mon } from "@/domain/types";
+import { makeDeath, makeEncounter, makeFight, makeMon } from "@/test/factories";
 
 const catchDetails: CatchDetails = {
   speciesId: "chikorita",
