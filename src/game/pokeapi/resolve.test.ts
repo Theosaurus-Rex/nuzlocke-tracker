@@ -142,22 +142,20 @@ describe("findByName", () => {
 });
 
 describe("abilityDisplayName", () => {
-  it("shows a PokéAPI name and old typed text the same way", () => {
+  it("spells a PokéAPI name in title case", () => {
     expect(abilityDisplayName("water-absorb")).toBe("Water Absorb");
-    expect(abilityDisplayName("Water Absorb")).toBe("Water Absorb");
-    expect(abilityDisplayName("  chlorophyll ")).toBe("Chlorophyll");
+    expect(abilityDisplayName("chlorophyll")).toBe("Chlorophyll");
   });
 });
 
 describe("itemDisplayName", () => {
-  it("shows a PokéAPI name and old typed text the same way", () => {
+  it("spells a PokéAPI name in title case", () => {
     expect(itemDisplayName("miracle-seed")).toBe("Miracle Seed");
-    expect(itemDisplayName("Miracle Seed")).toBe("Miracle Seed");
   });
 
   it("spells items title case gets wrong", () => {
     expect(itemDisplayName("never-melt-ice")).toBe("Never-Melt Ice");
-    expect(itemDisplayName("King's Rock")).toBe("King’s Rock");
+    expect(itemDisplayName("kings-rock")).toBe("King’s Rock");
   });
 });
 

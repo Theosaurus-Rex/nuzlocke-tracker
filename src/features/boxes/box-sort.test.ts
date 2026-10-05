@@ -79,7 +79,7 @@ describe("sortBoxedMons", () => {
   it("sorts ability and item by what is shown", () => {
     const input = [
       mon("b", { heldItem: "miracle-seed", ability: "water-absorb" }),
-      mon("a", { heldItem: "Oran Berry", ability: "Overgrow" }),
+      mon("a", { heldItem: "oran-berry", ability: "overgrow" }),
     ];
     expect(ids(sortBoxedMons(input, asc("item")))).toEqual(["b", "a"]);
     expect(ids(sortBoxedMons(input, asc("ability")))).toEqual(["a", "b"]);

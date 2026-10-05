@@ -3,8 +3,7 @@
  * jsdom does not evaluate CSS media queries, so there is no test here for the grid's breakpoint.
  */
 
-import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { render, screen, waitFor, within } from "@testing-library/react";
+import { screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { describe, expect, it, vi } from "vitest";
 import {
@@ -16,117 +15,19 @@ import {
 } from "react-router";
 
 import { summariseRun } from "@/domain/derive";
-import type { Death, Encounter, Mon, Route, Run, Rules } from "@/domain/types";
+import type { Encounter, Run } from "@/domain/types";
 import { createMemoryAdapter } from "@/storage/memory-adapter";
-import { StorageProvider } from "@/storage/storage-context";
 import type { StorageAdapter } from "@/storage/adapter";
+import {
+  makeDeathDraft,
+  makeEncounterDraft,
+  makeMonDraft,
+  makeRouteDraft,
+  makeRunDraft,
+} from "@/test/factories";
+import { renderWithProviders } from "@/test/render";
 
 import { RunListScreen } from "./run-list-screen";
-
-const RULES_FIXTURE: Rules = {
-  dupesClause: false,
-  shinyClause: false,
-  nicknamesRequired: false,
-  levelCaps: false,
-  setMode: false,
-  hardcore: false,
-  randomiser: {
-    enabled: false,
-    wildEncounters: false,
-    trainers: false,
-    starters: false,
-    abilities: false,
-    items: false,
-    moves: false,
-    evolutions: false,
-  },
-  customClause: null,
-};
-
-function makeRunDraft(overrides: Partial<Run> = {}): Omit<Run, "id" | "createdAt" | "updatedAt"> {
-  return {
-    name: "Test Run",
-    game: "heartgold",
-    status: "active",
-    rules: RULES_FIXTURE,
-    finishedAt: null,
-    ...overrides,
-  };
-}
-
-function makeRouteDraft(
-  runId: string,
-  overrides: Partial<Route> = {},
-): Omit<Route, "id" | "createdAt" | "updatedAt"> {
-  return {
-    runId,
-    name: "Route 29",
-    order: 1,
-    isCustom: false,
-    gameRouteId: null,
-    ...overrides,
-  };
-}
-
-function makeEncounterDraft(
-  runId: string,
-  routeId: string,
-  overrides: Partial<Encounter> = {},
-): Omit<Encounter, "id" | "createdAt" | "updatedAt"> {
-  return {
-    runId,
-    routeId,
-    status: "open",
-    speciesId: null,
-    level: null,
-    monId: null,
-    notes: null,
-    ...overrides,
-  };
-}
-
-function makeMonDraft(
-  runId: string,
-  overrides: Partial<Mon> = {},
-): Omit<Mon, "id" | "createdAt" | "updatedAt"> {
-  return {
-    runId,
-    encounterId: null,
-    speciesId: "chikorita",
-    speciesIdCaught: "chikorita",
-    nickname: null,
-    gender: null,
-    level: 5,
-    levelCaught: 5,
-    nature: null,
-    ability: null,
-    heldItem: null,
-    moves: [],
-    status: "party",
-    partySlot: 0,
-    boxOrder: null,
-    caughtRouteId: null,
-    shiny: false,
-    ...overrides,
-  };
-}
-
-function makeDeathDraft(
-  runId: string,
-  monId: string,
-  overrides: Partial<Death> = {},
-): Omit<Death, "id" | "createdAt" | "updatedAt"> {
-  return {
-    runId,
-    monId,
-    level: 10,
-    routeId: null,
-    cause: { type: "wild", species: "geodude", level: 10, move: "Rock Throw" },
-    diedAt: "2026-01-01T00:00:00.000Z",
-    notes: null,
-    ...overrides,
-  };
-}
 
 /** Maps each stat's label to its value, read out of the card's `<dl>` so assertions don't have
  * to guess which `getByText("1")` match is which stat. */
@@ -147,20 +48,15 @@ function statsIn(card: HTMLElement): Record<string, string> {
 }
 
 function renderScreen(adapter: StorageAdapter) {
-  const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } });
-  return render(
-    <QueryClientProvider client={queryClient}>
-      <StorageProvider adapter={adapter}>
-        <MemoryRouter initialEntries={["/"]}>
-          <RunListScreen />
-        </MemoryRouter>
-      </StorageProvider>
-    </QueryClientProvider>,
+  return renderWithProviders(
+    <MemoryRouter initialEntries={["/"]}>
+      <RunListScreen />
+    </MemoryRouter>,
+    { adapter },
   );
 }
 
 function renderRouted(adapter: StorageAdapter, initialEntries: string[] = ["/"]) {
-  const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } });
   const router = createMemoryRouter(
     [
       { path: "/", element: <RunListScreen /> },
@@ -168,13 +64,7 @@ function renderRouted(adapter: StorageAdapter, initialEntries: string[] = ["/"])
     ],
     { initialEntries },
   );
-  render(
-    <QueryClientProvider client={queryClient}>
-      <StorageProvider adapter={adapter}>
-        <RouterProvider router={router} />
-      </StorageProvider>
-    </QueryClientProvider>,
-  );
+  renderWithProviders(<RouterProvider router={router} />, { adapter });
   return { router };
 }
 
@@ -251,18 +141,14 @@ describe("RunListScreen", () => {
     const adapter = createMemoryAdapter();
     await adapter.runs.put(makeRunDraft({ name: "Blaze Nuzlocke", status: "active" }));
 
-    const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } });
-    render(
-      <QueryClientProvider client={queryClient}>
-        <StorageProvider adapter={adapter}>
-          <MemoryRouter initialEntries={["/"]}>
-            <Routes>
-              <RouterRoute path="/" element={<RunListScreen />} />
-              <RouterRoute path="/runs/new" element={<p>New run screen</p>} />
-            </Routes>
-          </MemoryRouter>
-        </StorageProvider>
-      </QueryClientProvider>,
+    renderWithProviders(
+      <MemoryRouter initialEntries={["/"]}>
+        <Routes>
+          <RouterRoute path="/" element={<RunListScreen />} />
+          <RouterRoute path="/runs/new" element={<p>New run screen</p>} />
+        </Routes>
+      </MemoryRouter>,
+      { adapter },
     );
 
     await screen.findByRole("heading", { name: "Runs" });

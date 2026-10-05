@@ -335,11 +335,9 @@ still holds, *anything typed* does not. Romhack species are deferred, and when t
 get a local layer behind the same hooks.
 
 Ability and held item are selections too, built like the move picker over PokéAPI's ability and
-item lists and stored as the PokéAPI name, such as `water-absorb` or `miracle-seed`. Runs saved
-before this hold typed text like "Water Absorb", so every read normalises through
-`abilityDisplayName` or `itemDisplayName`, and the edit dialog opens a known old value as the
-matching selection. An old value that matches nothing in the list is cleared in the edit dialog
-once the list loads, decided 2026-10-02. The item list is unfiltered. PokéAPI's `holdable`
+item lists and stored as the PokéAPI name, such as `water-absorb` or `miracle-seed`. Typed values
+from before the pickers are no longer handled. Nothing saved still holds one, decided 2026-10-06.
+The item list is unfiltered. PokéAPI's `holdable`
 attributes miss real held items such as Dragon Scale, Up-Grade, Eviolite and Mega Stones, so
 filtering would block real picks.
 

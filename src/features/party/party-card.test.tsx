@@ -5,34 +5,11 @@ import { describe, expect, it, vi } from "vitest";
 
 import type { Mon } from "@/domain/types";
 import { defaultPokeApiRoutes, stubPokeApi } from "@/test/pokeapi-fetch";
+import { makeMon } from "@/test/factories";
 
 import { PartyCard } from "./party-card";
 
-function makeMon(overrides: Partial<Mon> = {}): Mon {
-  return {
-    id: "mon-1",
-    createdAt: "2026-09-27T00:00:00.000Z",
-    updatedAt: "2026-09-27T00:00:00.000Z",
-    runId: "run-1",
-    encounterId: null,
-    speciesId: "chikorita",
-    speciesIdCaught: "chikorita",
-    nickname: null,
-    gender: null,
-    level: 5,
-    levelCaught: 5,
-    nature: null,
-    ability: null,
-    heldItem: null,
-    moves: [],
-    status: "party",
-    partySlot: 0,
-    boxOrder: null,
-    caughtRouteId: null,
-    shiny: false,
-    ...overrides,
-  };
-}
+const CHIKORITA = { speciesId: "chikorita", speciesIdCaught: "chikorita" };
 
 function renderCard(
   mon: Mon,
@@ -53,7 +30,7 @@ function renderCard(
 
 describe("PartyCard", () => {
   it("shows the mon's sprite", async () => {
-    const { container } = renderCard(makeMon());
+    const { container } = renderCard(makeMon(CHIKORITA));
     await waitFor(() =>
       expect(
         container.querySelector('img[src="https://sprites.test/still/152.png"]'),
@@ -69,7 +46,7 @@ describe("PartyCard", () => {
   });
 
   it("shows the shiny sprite for a shiny mon", async () => {
-    const { container } = renderCard(makeMon({ shiny: true }));
+    const { container } = renderCard(makeMon({ ...CHIKORITA, shiny: true }));
     await waitFor(() =>
       expect(
         container.querySelector('img[src="https://sprites.test/still/shiny/152.png"]'),
@@ -80,12 +57,13 @@ describe("PartyCard", () => {
   it("shows every detail of a fully filled-in mon", () => {
     renderCard(
       makeMon({
+        ...CHIKORITA,
         nickname: "Leafy",
         gender: "female",
         level: 22,
         nature: "Adamant",
-        ability: "Overgrow",
-        heldItem: "Miracle Seed",
+        ability: "overgrow",
+        heldItem: "miracle-seed",
         moves: ["vine-whip", "tackle"],
       }),
       "Route 29",
@@ -99,46 +77,26 @@ describe("PartyCard", () => {
     );
   });
 
-  it("shows an old typed ability and a PokéAPI name the same way", () => {
-    const { unmount } = renderCard(makeMon({ ability: "Water Absorb" }), "Route 29");
-    expect(screen.getByText("no item").closest("p")?.textContent).toBe(
-      "no item · Water Absorb · Route 29",
-    );
-    unmount();
-    renderCard(makeMon({ ability: "water-absorb" }), "Route 29");
-    expect(screen.getByText("no item").closest("p")?.textContent).toBe(
-      "no item · Water Absorb · Route 29",
-    );
-  });
-
-  it("shows an old typed item and a PokéAPI name the same way", () => {
-    const { unmount } = renderCard(makeMon({ heldItem: "Miracle Seed" }));
-    expect(screen.getByText("Miracle Seed")).toBeInTheDocument();
-    unmount();
-    renderCard(makeMon({ heldItem: "miracle-seed" }));
-    expect(screen.getByText("Miracle Seed")).toBeInTheDocument();
-  });
-
   it("falls back to the species name, unquoted, with no nickname", () => {
-    renderCard(makeMon());
+    renderCard(makeMon(CHIKORITA));
     expect(screen.getByRole("heading", { name: "Chikorita" })).toBeInTheDocument();
   });
 
   it("leaves out missing details without stray separators", () => {
-    renderCard(makeMon());
+    renderCard(makeMon({ ...CHIKORITA, level: 5 }));
     expect(screen.getByText("Chikorita · L5")).toBeInTheDocument();
     expect(screen.getByText("no item")).toBeInTheDocument();
     expect(screen.queryByText(/·\s*·|·\s*$|^\s*·/)).not.toBeInTheDocument();
   });
 
   it("shows the caught route even when item and ability are missing", () => {
-    renderCard(makeMon(), "Route 46");
+    renderCard(makeMon(CHIKORITA), "Route 46");
     expect(screen.getByText("no item").closest("p")?.textContent).toBe("no item · Route 46");
   });
 
   it("is one button named for the nickname that calls onEdit", async () => {
     const onEdit = vi.fn();
-    renderCard(makeMon({ nickname: "Sprig" }), null, onEdit);
+    renderCard(makeMon({ ...CHIKORITA, nickname: "Sprig" }), null, onEdit);
 
     await userEvent.click(screen.getByRole("button", { name: "Edit “Sprig”" }));
 
@@ -146,13 +104,13 @@ describe("PartyCard", () => {
   });
 
   it("names the button for the species when there is no nickname", () => {
-    renderCard(makeMon({ nickname: null, speciesId: "chikorita" }));
+    renderCard(makeMon({ ...CHIKORITA, nickname: null, speciesId: "chikorita" }));
 
     expect(screen.getByRole("button", { name: "Edit Chikorita" })).toBeInTheDocument();
   });
 
   it("shows the held item sprite before the item name, and none for no item", () => {
-    const { container, unmount } = renderCard(makeMon({ heldItem: "Miracle Seed" }));
+    const { container, unmount } = renderCard(makeMon({ ...CHIKORITA, heldItem: "miracle-seed" }));
     expect(
       container.querySelector(
         'img[src="https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/items/miracle-seed.png"]',
@@ -160,26 +118,26 @@ describe("PartyCard", () => {
     ).not.toBeNull();
     unmount();
 
-    const empty = renderCard(makeMon());
+    const empty = renderCard(makeMon(CHIKORITA));
     expect(empty.container.querySelector('img[src*="/items/"]')).toBeNull();
   });
 
   it("tags a mon above the cap", () => {
-    renderCard(makeMon({ level: 31 }), null, vi.fn(), 30);
+    renderCard(makeMon({ ...CHIKORITA, level: 31 }), null, vi.fn(), 30);
 
     expect(screen.getByText("Over cap L30")).toBeInTheDocument();
   });
 
   it("does not tag a mon at the cap, below it, or with no cap", () => {
-    const { unmount } = renderCard(makeMon({ level: 30 }), null, vi.fn(), 30);
+    const { unmount } = renderCard(makeMon({ ...CHIKORITA, level: 30 }), null, vi.fn(), 30);
     expect(screen.queryByText(/over cap/i)).toBeNull();
     unmount();
 
-    const below = renderCard(makeMon({ level: 12 }), null, vi.fn(), 30);
+    const below = renderCard(makeMon({ ...CHIKORITA, level: 12 }), null, vi.fn(), 30);
     expect(screen.queryByText(/over cap/i)).toBeNull();
     below.unmount();
 
-    renderCard(makeMon({ level: 99 }));
+    renderCard(makeMon({ ...CHIKORITA, level: 99 }));
     expect(screen.queryByText(/over cap/i)).toBeNull();
   });
 });

@@ -4,146 +4,28 @@
  * fresh adapter, so cache or rows can't leak between tests.
  */
 
-import type { ReactNode } from "react";
-
-import { onlineManager, QueryClientProvider } from "@tanstack/react-query";
+import { onlineManager } from "@tanstack/react-query";
 import { renderHook, waitFor } from "@testing-library/react";
 import { afterEach, describe, expect, it } from "vitest";
 
 import type { CatchDetails } from "@/domain/transitions";
-import type { Death, Encounter, Fight, Mon, Route, Run, Rules } from "@/domain/types";
+import type { Death, Encounter, Fight, Mon, Route, Run } from "@/domain/types";
 
 import { DEFAULT_RULES } from "@/domain/rules";
-import { createQueryClient } from "@/lib/query-client";
+import {
+  makeDeathDraft,
+  makeEncounterDraft,
+  makeFightDraft,
+  makeMonDraft,
+  makeRouteDraft,
+  makeRunDraft,
+} from "@/test/factories";
+import { createWrapper } from "@/test/render";
 
 import type { StorageAdapter } from "./adapter";
 import { createMemoryAdapter } from "./memory-adapter";
 import { useCatchEncounter, useCreateRun, useDeleteRun } from "./mutations";
 import { useEncounters, useMons, useRoutes, useRun, useRuns } from "./queries";
-import { StorageProvider } from "./storage-context";
-
-const RULES_FIXTURE: Rules = {
-  dupesClause: false,
-  shinyClause: false,
-  nicknamesRequired: false,
-  levelCaps: false,
-  setMode: false,
-  hardcore: false,
-  randomiser: {
-    enabled: false,
-    wildEncounters: false,
-    trainers: false,
-    starters: false,
-    abilities: false,
-    items: false,
-    moves: false,
-    evolutions: false,
-  },
-  customClause: null,
-};
-
-function makeRunDraft(overrides: Partial<Run> = {}): Omit<Run, "id" | "createdAt" | "updatedAt"> {
-  return {
-    name: "Test Run",
-    game: "heartgold",
-    status: "active",
-    rules: RULES_FIXTURE,
-    finishedAt: null,
-    ...overrides,
-  };
-}
-
-function makeRouteDraft(
-  runId: string,
-  overrides: Partial<Route> = {},
-): Omit<Route, "id" | "createdAt" | "updatedAt"> {
-  return {
-    runId,
-    name: "Route 29",
-    order: 1,
-    isCustom: false,
-    gameRouteId: null,
-    ...overrides,
-  };
-}
-
-function makeEncounterDraft(
-  runId: string,
-  routeId: string,
-  overrides: Partial<Encounter> = {},
-): Omit<Encounter, "id" | "createdAt" | "updatedAt"> {
-  return {
-    runId,
-    routeId,
-    status: "open",
-    speciesId: null,
-    level: null,
-    monId: null,
-    notes: null,
-    ...overrides,
-  };
-}
-
-function makeMonDraft(
-  runId: string,
-  overrides: Partial<Mon> = {},
-): Omit<Mon, "id" | "createdAt" | "updatedAt"> {
-  return {
-    runId,
-    encounterId: null,
-    speciesId: "chikorita",
-    speciesIdCaught: "chikorita",
-    nickname: null,
-    gender: null,
-    level: 5,
-    levelCaught: 5,
-    nature: null,
-    ability: null,
-    heldItem: null,
-    moves: [],
-    status: "party",
-    partySlot: 0,
-    boxOrder: null,
-    caughtRouteId: null,
-    shiny: false,
-    ...overrides,
-  };
-}
-
-function makeDeathDraft(
-  runId: string,
-  monId: string,
-  overrides: Partial<Death> = {},
-): Omit<Death, "id" | "createdAt" | "updatedAt"> {
-  return {
-    runId,
-    monId,
-    level: 10,
-    routeId: null,
-    cause: { type: "wild", species: "geodude", level: 10, move: "Rock Throw" },
-    diedAt: "2026-01-01T00:00:00.000Z",
-    notes: null,
-    ...overrides,
-  };
-}
-
-function makeFightDraft(
-  runId: string,
-  overrides: Partial<Fight> = {},
-): Omit<Fight, "id" | "createdAt" | "updatedAt"> {
-  return {
-    runId,
-    gameFightId: null,
-    name: "Falkner",
-    kind: "gym",
-    order: 1,
-    grantsBadge: true,
-    levelCap: 15,
-    status: "pending",
-    clearedAt: null,
-    ...overrides,
-  };
-}
 
 const CATCH_DETAILS: CatchDetails = {
   speciesId: "chikorita",
@@ -195,23 +77,6 @@ async function seedFullRun(
   const death = await adapter.deaths.put(makeDeathDraft(run.id, mon.id));
   const fight = await adapter.fights.put(makeFightDraft(run.id));
   return { run, route, encounter, mon, death, fight };
-}
-
-function createWrapper(
-  adapter: StorageAdapter,
-): ({ children }: { children: ReactNode }) => ReactNode {
-  const queryClient = createQueryClient({
-    queries: { retry: false },
-    mutations: { retry: false },
-  });
-
-  return function Wrapper({ children }: { children: ReactNode }): ReactNode {
-    return (
-      <QueryClientProvider client={queryClient}>
-        <StorageProvider adapter={adapter}>{children}</StorageProvider>
-      </QueryClientProvider>
-    );
-  };
 }
 
 /**

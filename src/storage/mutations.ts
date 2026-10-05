@@ -2,7 +2,6 @@
  * Mutation hooks over the StorageAdapter.
  */
 
-import { useEffect } from "react";
 import { useMutation, useQueryClient, type UseMutationResult } from "@tanstack/react-query";
 
 import { boxLayout, moveBoxedMon } from "@/domain/box-slots";
@@ -385,31 +384,6 @@ export async function persistCreateRun(
 
     return run;
   });
-}
-
-/** Gives every run that has no fights its game's fights. Safe to call more than once. */
-export async function persistSeedMissingFights(adapter: StorageAdapter): Promise<string[]> {
-  return adapter.transaction(async (tx) => {
-    const seeded: string[] = [];
-    for (const run of await tx.runs.getAll()) {
-      if ((await tx.fights.where("runId", run.id)).length === 0) {
-        await tx.fights.putMany(seedFights(run.id, GAMES[run.game]));
-        seeded.push(run.id);
-      }
-    }
-    return seeded;
-  });
-}
-
-export function useSeedMissingFights(): void {
-  const adapter = useStorage();
-  const queryClient = useQueryClient();
-
-  useEffect(() => {
-    void persistSeedMissingFights(adapter).then((seeded) =>
-      Promise.all(seeded.map((runId) => invalidateRun(queryClient, runId))),
-    );
-  }, [adapter, queryClient]);
 }
 
 /**

@@ -1,54 +1,27 @@
-import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { render, screen, waitFor } from "@testing-library/react";
+import { screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { describe, expect, it, vi } from "vitest";
 
-import { DEFAULT_RULES } from "@/domain/rules";
 import { buildRouteRows, type RouteRow } from "@/domain/route-rows";
-import type { Death, Encounter, Fight, Mon, Route, Run } from "@/domain/types";
+import type { Death, Fight, Route, Run } from "@/domain/types";
 import { createMemoryAdapter } from "@/storage/memory-adapter";
 import type { StorageAdapter } from "@/storage/adapter";
-import { StorageProvider } from "@/storage/storage-context";
+import {
+  makeDeath,
+  makeDeathDraft,
+  makeEncounterDraft,
+  makeFight,
+  makeFightDraft,
+  makeMon,
+  makeMonDraft,
+  makeRouteDraft,
+  makeRunDraft,
+} from "@/test/factories";
+import { renderWithProviders } from "@/test/render";
 
 import { describeReset, ResetEncounterDialog } from "./reset-encounter-dialog";
 
-const TIMESTAMP = "2026-09-17T00:00:00.000Z";
-
-function makeMon(overrides: Partial<Mon> = {}): Mon {
-  return {
-    ...makeMonDraft("run-1", "encounter-1"),
-    id: "mon-1",
-    createdAt: TIMESTAMP,
-    updatedAt: TIMESTAMP,
-    ...overrides,
-  };
-}
-
-function makeFight(overrides: Partial<Fight> = {}): Fight {
-  return {
-    ...makeFightDraft("run-1"),
-    id: "fight-1",
-    createdAt: TIMESTAMP,
-    updatedAt: TIMESTAMP,
-    ...overrides,
-  };
-}
-
-function makeDeath(overrides: Partial<Death> = {}): Death {
-  return {
-    id: "death-1",
-    runId: "run-1",
-    monId: "mon-1",
-    level: 12,
-    routeId: null,
-    cause: { type: "wild", species: "geodude", level: 10, move: "Rock Throw" },
-    diedAt: TIMESTAMP,
-    notes: null,
-    createdAt: TIMESTAMP,
-    updatedAt: TIMESTAMP,
-    ...overrides,
-  };
-}
+const BELLSPROUT = { speciesId: "bellsprout", speciesIdCaught: "bellsprout" };
 
 describe("describeReset", () => {
   it("says the route goes back to not encountered when there is no mon", () => {
@@ -58,21 +31,21 @@ describe("describeReset", () => {
   });
 
   it("names the mon by nickname and species when it has a nickname", () => {
-    const mon = makeMon({ nickname: "Sprig" });
+    const mon = makeMon({ ...BELLSPROUT, nickname: "Sprig" });
     expect(describeReset({ routeName: "Route 30", mon, death: null, fights: [] })).toBe(
       "Reset Route 30? This also deletes Sprig the Bellsprout. This can't be undone.",
     );
   });
 
   it("names the mon by species alone when it has no nickname", () => {
-    const mon = makeMon({ nickname: null });
+    const mon = makeMon({ ...BELLSPROUT, nickname: null });
     expect(describeReset({ routeName: "Route 30", mon, death: null, fights: [] })).toBe(
       "Reset Route 30? This also deletes Bellsprout. This can't be undone.",
     );
   });
 
   it("names the fight a trainer death happened in", () => {
-    const mon = makeMon({ nickname: "Sprig" });
+    const mon = makeMon({ ...BELLSPROUT, nickname: "Sprig" });
     const fight = makeFight({ id: "fight-1", name: "Falkner" });
     const death = makeDeath({
       cause: {
@@ -90,7 +63,7 @@ describe("describeReset", () => {
   });
 
   it("names a trainer with no fight by their trainerName", () => {
-    const mon = makeMon({ nickname: "Sprig" });
+    const mon = makeMon({ ...BELLSPROUT, nickname: "Sprig" });
     const death = makeDeath({
       cause: {
         type: "trainer",
@@ -107,7 +80,7 @@ describe("describeReset", () => {
   });
 
   it("says only the record of its death when the fight it points to isn't in the list", () => {
-    const mon = makeMon({ nickname: "Sprig" });
+    const mon = makeMon({ ...BELLSPROUT, nickname: "Sprig" });
     const death = makeDeath({
       cause: {
         type: "trainer",
@@ -124,100 +97,13 @@ describe("describeReset", () => {
   });
 
   it("says only the record of its death for a wild death", () => {
-    const mon = makeMon({ nickname: "Sprig" });
+    const mon = makeMon({ ...BELLSPROUT, nickname: "Sprig" });
     const death = makeDeath();
     expect(describeReset({ routeName: "Route 30", mon, death, fights: [] })).toBe(
       "Reset Route 30? This also deletes Sprig the Bellsprout and the record of its death. This can't be undone.",
     );
   });
 });
-
-function makeRunDraft(overrides: Partial<Run> = {}): Omit<Run, "id" | "createdAt" | "updatedAt"> {
-  return {
-    name: "Test Run",
-    game: "heartgold",
-    status: "active",
-    rules: DEFAULT_RULES,
-    finishedAt: null,
-    ...overrides,
-  };
-}
-
-function makeRouteDraft(
-  runId: string,
-  overrides: Partial<Route> = {},
-): Omit<Route, "id" | "createdAt" | "updatedAt"> {
-  return {
-    runId,
-    name: "Route 30",
-    order: 100,
-    isCustom: false,
-    gameRouteId: null,
-    ...overrides,
-  };
-}
-
-function makeEncounterDraft(
-  runId: string,
-  routeId: string,
-  overrides: Partial<Encounter> = {},
-): Omit<Encounter, "id" | "createdAt" | "updatedAt"> {
-  return {
-    runId,
-    routeId,
-    status: "open",
-    speciesId: null,
-    level: null,
-    monId: null,
-    notes: null,
-    ...overrides,
-  };
-}
-
-function makeMonDraft(
-  runId: string,
-  encounterId: string,
-  overrides: Partial<Mon> = {},
-): Omit<Mon, "id" | "createdAt" | "updatedAt"> {
-  return {
-    runId,
-    encounterId,
-    speciesId: "bellsprout",
-    speciesIdCaught: "bellsprout",
-    nickname: null,
-    gender: null,
-    level: 12,
-    levelCaught: 8,
-    nature: null,
-    ability: null,
-    heldItem: null,
-    moves: [],
-    status: "party",
-    partySlot: 0,
-    boxOrder: null,
-    caughtRouteId: null,
-    shiny: false,
-    ...overrides,
-  };
-}
-
-function makeFightDraft(
-  runId: string,
-  overrides: Partial<Fight> = {},
-): Omit<Fight, "id" | "createdAt" | "updatedAt"> {
-  return {
-    runId,
-    gameFightId: null,
-    name: "Falkner",
-    kind: "gym",
-    order: 1,
-    grantsBadge: true,
-    levelCap: 15,
-    status: "pending",
-    clearedAt: null,
-    ...overrides,
-  };
-}
 
 async function seedRunAndRoute(adapter: StorageAdapter): Promise<{ run: Run; route: Route }> {
   const run = await adapter.runs.put(makeRunDraft());
@@ -236,7 +122,9 @@ async function seedMissedRow(adapter: StorageAdapter): Promise<RouteRow> {
 async function seedCaughtRow(adapter: StorageAdapter): Promise<RouteRow> {
   const { run, route } = await seedRunAndRoute(adapter);
   const encounter = await adapter.encounters.put(makeEncounterDraft(run.id, route.id));
-  const mon = await adapter.mons.put(makeMonDraft(run.id, encounter.id, { nickname: "Sprig" }));
+  const mon = await adapter.mons.put(
+    makeMonDraft(run.id, { ...BELLSPROUT, encounterId: encounter.id, nickname: "Sprig" }),
+  );
   const caught = await adapter.encounters.put({ ...encounter, status: "caught", monId: mon.id });
   return buildRouteRows({ routes: [route], encounters: [caught], mons: [mon] })[0]!;
 }
@@ -247,26 +135,29 @@ async function seedDeadRowWithFight(
   const { run, route } = await seedRunAndRoute(adapter);
   const encounter = await adapter.encounters.put(makeEncounterDraft(run.id, route.id));
   const mon = await adapter.mons.put(
-    makeMonDraft(run.id, encounter.id, { nickname: "Sprig", status: "dead", partySlot: null }),
+    makeMonDraft(run.id, {
+      ...BELLSPROUT,
+      encounterId: encounter.id,
+      nickname: "Sprig",
+      status: "dead",
+      partySlot: null,
+    }),
   );
   const caught = await adapter.encounters.put({ ...encounter, status: "caught", monId: mon.id });
-  const fight = await adapter.fights.put(makeFightDraft(run.id));
-  const death = await adapter.deaths.put({
-    runId: run.id,
-    monId: mon.id,
-    level: 12,
-    routeId: route.id,
-    cause: {
-      type: "trainer",
-      fightId: fight.id,
-      trainerName: null,
-      species: "pidgey",
-      level: 9,
-      move: "Gust",
-    },
-    diedAt: TIMESTAMP,
-    notes: null,
-  });
+  const fight = await adapter.fights.put(makeFightDraft(run.id, { name: "Falkner" }));
+  const death = await adapter.deaths.put(
+    makeDeathDraft(run.id, mon.id, {
+      routeId: route.id,
+      cause: {
+        type: "trainer",
+        fightId: fight.id,
+        trainerName: null,
+        species: "pidgey",
+        level: 9,
+        move: "Gust",
+      },
+    }),
+  );
   const row = buildRouteRows({ routes: [route], encounters: [caught], mons: [mon] })[0]!;
   return { row, death, fight };
 }
@@ -280,16 +171,7 @@ async function findReadyResetButton(): Promise<HTMLElement> {
 }
 
 function renderDialog(adapter: StorageAdapter, row: RouteRow, onClose = vi.fn()) {
-  const queryClient = new QueryClient({
-    defaultOptions: { queries: { retry: false }, mutations: { retry: false } },
-  });
-  render(
-    <QueryClientProvider client={queryClient}>
-      <StorageProvider adapter={adapter}>
-        <ResetEncounterDialog row={row} onClose={onClose} />
-      </StorageProvider>
-    </QueryClientProvider>,
-  );
+  renderWithProviders(<ResetEncounterDialog row={row} onClose={onClose} />, { adapter });
   return { onClose };
 }
 

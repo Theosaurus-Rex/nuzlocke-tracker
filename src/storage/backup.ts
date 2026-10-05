@@ -4,7 +4,7 @@
  * every problem accumulates instead of the parse stopping at the first.
  */
 
-import { SCHEMA_VERSION, isExportBundle, migrateBundle, type ExportBundle } from "@/domain/schema";
+import { SCHEMA_VERSION, isExportBundle, type ExportBundle } from "@/domain/schema";
 import { CLAUSE_FIELDS, RANDOMISER_FIELDS } from "@/domain/rules";
 import type {
   Cause,
@@ -515,21 +515,22 @@ export function parseBundle(text: string): ParseResult {
     };
   }
 
-  let bundle = parsed;
   if (parsed.schemaVersion < SCHEMA_VERSION) {
-    const migrated = migrateBundle(parsed);
-    if (!migrated.ok) {
-      return { ok: false, errors: [migrated.error] };
-    }
-    bundle = migrated.bundle;
+    return {
+      ok: false,
+      errors: [
+        `This file was written by an older version of the app (schemaVersion ${parsed.schemaVersion}; ` +
+          `this app reads only ${SCHEMA_VERSION}). It cannot be imported.`,
+      ],
+    };
   }
 
-  const errors = validateBundleContents(bundle);
+  const errors = validateBundleContents(parsed);
   if (errors.length > 0) {
     return { ok: false, errors };
   }
 
-  return { ok: true, bundle };
+  return { ok: true, bundle: parsed };
 }
 
 export type ImportMode = "merge" | "replace";

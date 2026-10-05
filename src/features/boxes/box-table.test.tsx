@@ -6,35 +6,12 @@ import { describe, expect, it, vi } from "vitest";
 
 import type { Mon } from "@/domain/types";
 import { defaultPokeApiRoutes, stubPokeApi } from "@/test/pokeapi-fetch";
+import { makeMon } from "@/test/factories";
 
 import type { BoxSorting } from "./box-sort";
 import { BoxTable } from "./box-table";
 
-function makeMon(overrides: Partial<Mon> = {}): Mon {
-  return {
-    id: "mon-1",
-    createdAt: "2026-09-27T00:00:00.000Z",
-    updatedAt: "2026-09-27T00:00:00.000Z",
-    runId: "run-1",
-    encounterId: null,
-    speciesId: "chikorita",
-    speciesIdCaught: "chikorita",
-    nickname: null,
-    gender: null,
-    level: 5,
-    levelCaught: 5,
-    nature: null,
-    ability: null,
-    heldItem: null,
-    moves: [],
-    status: "box",
-    partySlot: null,
-    boxOrder: 0,
-    caughtRouteId: null,
-    shiny: false,
-    ...overrides,
-  };
-}
+const CHIKORITA = { speciesId: "chikorita", speciesIdCaught: "chikorita" };
 
 function Harness({
   mons,
@@ -97,7 +74,11 @@ function cellsOf(rowIndex: number): string[] {
 describe("BoxTable", () => {
   it("opens a mon from its name button or from a click anywhere on the row, once each", async () => {
     const onEdit = vi.fn();
-    renderTable([makeMon({ id: "a", nickname: "Sprig", nature: "Jolly" })], new Map(), onEdit);
+    renderTable(
+      [makeMon({ ...CHIKORITA, id: "a", nickname: "Sprig", nature: "Jolly" })],
+      new Map(),
+      onEdit,
+    );
 
     await userEvent.click(screen.getByRole("button", { name: "Edit “Sprig”" }));
     expect(onEdit).toHaveBeenCalledTimes(1);
@@ -110,7 +91,7 @@ describe("BoxTable", () => {
   });
 
   it("renders a header for every column", () => {
-    renderTable([makeMon()]);
+    renderTable([makeMon(CHIKORITA)]);
 
     const headers = screen.getAllByRole("columnheader").map((h) => h.textContent);
     expect(headers).toEqual([
@@ -127,13 +108,20 @@ describe("BoxTable", () => {
   });
 
   it("renders one row per mon", () => {
-    renderTable([makeMon({ id: "a" }), makeMon({ id: "b" }), makeMon({ id: "c" })]);
+    renderTable([
+      makeMon({ ...CHIKORITA, id: "a" }),
+      makeMon({ ...CHIKORITA, id: "b" }),
+      makeMon({ ...CHIKORITA, id: "c" }),
+    ]);
 
     expect(screen.getAllByRole("row")).toHaveLength(4);
   });
 
   it("shows a nickname in quotes, and the species name when there is none", () => {
-    renderTable([makeMon({ id: "a", nickname: "Sprig" }), makeMon({ id: "b", nickname: null })]);
+    renderTable([
+      makeMon({ ...CHIKORITA, id: "a", nickname: "Sprig" }),
+      makeMon({ ...CHIKORITA, id: "b", nickname: null }),
+    ]);
 
     expect(cellsOf(1)[1]).toBe("“Sprig”");
     expect(cellsOf(2)[1]).toBe("Chikorita");
@@ -143,11 +131,12 @@ describe("BoxTable", () => {
     renderTable(
       [
         makeMon({
+          ...CHIKORITA,
           gender: "female",
           level: 17,
           nature: "Modest",
-          ability: "Overgrow",
-          heldItem: "Oran Berry",
+          ability: "overgrow",
+          heldItem: "oran-berry",
           caughtRouteId: "route-29",
         }),
       ],
@@ -165,40 +154,23 @@ describe("BoxTable", () => {
     ]);
   });
 
-  it("shows an old typed ability and a PokéAPI name the same way", () => {
-    renderTable([
-      makeMon({ id: "a", ability: "Water Absorb" }),
-      makeMon({ id: "b", ability: "water-absorb" }),
-    ]);
-
-    expect(cellsOf(1)[6]).toBe("Water Absorb");
-    expect(cellsOf(2)[6]).toBe("Water Absorb");
-  });
-
-  it("shows an old typed item and a PokéAPI name the same way", () => {
-    renderTable([
-      makeMon({ id: "a", heldItem: "Miracle Seed" }),
-      makeMon({ id: "b", heldItem: "miracle-seed" }),
-    ]);
-
-    expect(cellsOf(1)[7]).toBe("Miracle Seed");
-    expect(cellsOf(2)[7]).toBe("Miracle Seed");
-  });
-
   it("shows a dash for missing values and no item for a missing item", () => {
-    renderTable([makeMon()]);
+    renderTable([makeMon(CHIKORITA)]);
 
     expect(cellsOf(1).slice(4)).toEqual(["—", "—", "—", "no item", "—"]);
   });
 
   it("shows a dash when the caught route is not in the name map", () => {
-    renderTable([makeMon({ caughtRouteId: "gone" })]);
+    renderTable([makeMon({ ...CHIKORITA, caughtRouteId: "gone" })]);
 
     expect(cellsOf(1)[8]).toBe("—");
   });
 
   it("shows the held item sprite, and none for no item", () => {
-    renderTable([makeMon({ id: "a", heldItem: "miracle-seed" }), makeMon({ id: "b" })]);
+    renderTable([
+      makeMon({ ...CHIKORITA, id: "a", heldItem: "miracle-seed" }),
+      makeMon({ ...CHIKORITA, id: "b" }),
+    ]);
 
     const [, withItem, without] = screen.getAllByRole("row");
     expect(
@@ -211,9 +183,17 @@ describe("BoxTable", () => {
 
   describe("sorting", () => {
     const slots = [
-      makeMon({ id: "b", nickname: "beta", level: 10, nature: "Jolly", heldItem: "oran-berry" }),
-      makeMon({ id: "e", nickname: null, level: 9 }),
       makeMon({
+        ...CHIKORITA,
+        id: "b",
+        nickname: "beta",
+        level: 10,
+        nature: "Jolly",
+        heldItem: "oran-berry",
+      }),
+      makeMon({ ...CHIKORITA, id: "e", nickname: null, level: 9 }),
+      makeMon({
+        ...CHIKORITA,
         id: "a",
         nickname: "alpha",
         level: 100,
@@ -259,9 +239,15 @@ describe("BoxTable", () => {
 
     it.each(["Nature", "Item"])("keeps empty %s last in both directions", async (name) => {
       const input = [
-        makeMon({ id: "empty", nickname: "empty" }),
-        makeMon({ id: "x", nickname: "x", nature: "Jolly", heldItem: "oran-berry" }),
-        makeMon({ id: "y", nickname: "y", nature: "Adamant", heldItem: "apicot-berry" }),
+        makeMon({ ...CHIKORITA, id: "empty", nickname: "empty" }),
+        makeMon({ ...CHIKORITA, id: "x", nickname: "x", nature: "Jolly", heldItem: "oran-berry" }),
+        makeMon({
+          ...CHIKORITA,
+          id: "y",
+          nickname: "y",
+          nature: "Adamant",
+          heldItem: "apicot-berry",
+        }),
       ];
       renderTable(input);
 
@@ -275,9 +261,9 @@ describe("BoxTable", () => {
 
     it("keeps slot order between ties", async () => {
       renderTable([
-        makeMon({ id: "1", nickname: "one", level: 5 }),
-        makeMon({ id: "2", nickname: "two", level: 5 }),
-        makeMon({ id: "3", nickname: "three", level: 1 }),
+        makeMon({ ...CHIKORITA, id: "1", nickname: "one", level: 5 }),
+        makeMon({ ...CHIKORITA, id: "2", nickname: "two", level: 5 }),
+        makeMon({ ...CHIKORITA, id: "3", nickname: "three", level: 1 }),
       ]);
 
       await clickHeader("Lvl");

@@ -6,7 +6,7 @@ import Dexie from "dexie";
 import type { Table, Transaction, IndexableType } from "dexie";
 
 import type { Draft, Timestamped, Run, Route, Encounter, Mon, Death, Fight } from "@/domain/types";
-import { SCHEMA_VERSION, foldSpeciesClause } from "@/domain/schema";
+import { SCHEMA_VERSION } from "@/domain/schema";
 import type { ExportBundle } from "@/domain/schema";
 
 import type {
@@ -45,25 +45,6 @@ class NuzlockeDexie extends Dexie {
       mons: "id, runId, status, encounterId",
       deaths: "id, runId, monId, cause.fightId",
       fights: "id, runId, status",
-    });
-
-    // shiny isn't indexed, so it needed no version bump, but a mon saved before the field
-    // existed has no `shiny` key at all rather than `false`. Backfill it on the way out.
-    // The hook also fires with no object at all, e.g. a miss on `get`, which must pass through.
-    this.mons.hook("reading", (mon: Mon) => {
-      if (mon == null) {
-        return mon;
-      }
-      const raw = mon as unknown as Record<string, unknown>;
-      return "shiny" in raw ? mon : ({ ...raw, shiny: false } as Mon);
-    });
-
-    // Runs saved before the species clause was folded into dupes still carry `speciesClause`.
-    this.runs.hook("reading", (run: Run) => {
-      if (!run?.rules || !("speciesClause" in run.rules)) {
-        return run;
-      }
-      return { ...run, rules: foldSpeciesClause(run.rules) };
     });
   }
 }
