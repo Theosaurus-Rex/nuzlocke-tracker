@@ -4,121 +4,27 @@
  * `src/storage/queries.test.tsx`.
  */
 
-import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { render, screen, waitFor, within } from "@testing-library/react";
+import { screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { describe, expect, it } from "vitest";
 import { MemoryRouter, Route, Routes } from "react-router";
 
-import type { Encounter, Mon, Route as RouteRow, Run, Rules } from "@/domain/types";
 import { createMemoryAdapter } from "@/storage/memory-adapter";
-import { StorageProvider } from "@/storage/storage-context";
 import type { StorageAdapter } from "@/storage/adapter";
+import { makeEncounterDraft, makeMonDraft, makeRouteDraft, makeRunDraft } from "@/test/factories";
 import { stubPokeApi } from "@/test/pokeapi-fetch";
+import { renderWithProviders } from "@/test/render";
 
 import { RoutesScreen } from "./routes-screen";
 
-const RULES_FIXTURE: Rules = {
-  dupesClause: false,
-  shinyClause: false,
-  nicknamesRequired: false,
-  levelCaps: false,
-  setMode: false,
-  hardcore: false,
-  randomiser: {
-    enabled: false,
-    wildEncounters: false,
-    trainers: false,
-    starters: false,
-    abilities: false,
-    items: false,
-    moves: false,
-    evolutions: false,
-  },
-  customClause: null,
-};
-
-function makeRunDraft(overrides: Partial<Run> = {}): Omit<Run, "id" | "createdAt" | "updatedAt"> {
-  return {
-    name: "Test Run",
-    game: "heartgold",
-    status: "active",
-    rules: RULES_FIXTURE,
-    finishedAt: null,
-    ...overrides,
-  };
-}
-
-function makeRouteDraft(
-  runId: string,
-  overrides: Partial<RouteRow> = {},
-): Omit<RouteRow, "id" | "createdAt" | "updatedAt"> {
-  return {
-    runId,
-    name: "Route 29",
-    order: 1,
-    isCustom: false,
-    gameRouteId: null,
-    ...overrides,
-  };
-}
-
-function makeEncounterDraft(
-  runId: string,
-  routeId: string,
-  overrides: Partial<Encounter> = {},
-): Omit<Encounter, "id" | "createdAt" | "updatedAt"> {
-  return {
-    runId,
-    routeId,
-    status: "open",
-    speciesId: null,
-    level: null,
-    monId: null,
-    notes: null,
-    ...overrides,
-  };
-}
-
-function makeMonDraft(
-  runId: string,
-  encounterId: string,
-  overrides: Partial<Mon> = {},
-): Omit<Mon, "id" | "createdAt" | "updatedAt"> {
-  return {
-    runId,
-    encounterId,
-    speciesId: "chikorita",
-    speciesIdCaught: "chikorita",
-    nickname: null,
-    gender: null,
-    level: 5,
-    levelCaught: 5,
-    nature: null,
-    ability: null,
-    heldItem: null,
-    moves: [],
-    status: "party",
-    partySlot: 0,
-    boxOrder: null,
-    caughtRouteId: null,
-    shiny: false,
-    ...overrides,
-  };
-}
-
 function renderScreen(adapter: StorageAdapter, runId: string) {
-  const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } });
-  return render(
-    <QueryClientProvider client={queryClient}>
-      <StorageProvider adapter={adapter}>
-        <MemoryRouter initialEntries={[`/runs/${runId}/routes`]}>
-          <Routes>
-            <Route path="/runs/:runId/routes" element={<RoutesScreen />} />
-          </Routes>
-        </MemoryRouter>
-      </StorageProvider>
-    </QueryClientProvider>,
+  return renderWithProviders(
+    <MemoryRouter initialEntries={[`/runs/${runId}/routes`]}>
+      <Routes>
+        <Route path="/runs/:runId/routes" element={<RoutesScreen />} />
+      </Routes>
+    </MemoryRouter>,
+    { adapter },
   );
 }
 
@@ -274,7 +180,7 @@ describe("RoutesScreen", () => {
     const caughtEncounter = await adapter.encounters.put(
       makeEncounterDraft(run.id, caughtRoute.id, { status: "caught" }),
     );
-    await adapter.mons.put(makeMonDraft(run.id, caughtEncounter.id));
+    await adapter.mons.put(makeMonDraft(run.id, { encounterId: caughtEncounter.id }));
     const missedRoute = await adapter.routes.put(
       makeRouteDraft(run.id, { name: "Route 46", order: 200 }),
     );
@@ -301,7 +207,7 @@ describe("RoutesScreen", () => {
     const caughtEncounter = await adapter.encounters.put(
       makeEncounterDraft(run.id, caughtRoute.id, { status: "caught" }),
     );
-    await adapter.mons.put(makeMonDraft(run.id, caughtEncounter.id));
+    await adapter.mons.put(makeMonDraft(run.id, { encounterId: caughtEncounter.id }));
     const missedRoute = await adapter.routes.put(
       makeRouteDraft(run.id, { name: "Route 46", order: 200 }),
     );
@@ -338,7 +244,7 @@ describe("RoutesScreen", () => {
     const caughtEncounter = await adapter.encounters.put(
       makeEncounterDraft(run.id, caughtRoute.id, { status: "caught" }),
     );
-    await adapter.mons.put(makeMonDraft(run.id, caughtEncounter.id));
+    await adapter.mons.put(makeMonDraft(run.id, { encounterId: caughtEncounter.id }));
     const missedRoute = await adapter.routes.put(
       makeRouteDraft(run.id, { name: "Route 46", order: 200 }),
     );
@@ -488,7 +394,7 @@ describe("RoutesScreen", () => {
     const caughtEncounter = await adapter.encounters.put(
       makeEncounterDraft(run.id, caughtCave.id, { status: "caught" }),
     );
-    await adapter.mons.put(makeMonDraft(run.id, caughtEncounter.id));
+    await adapter.mons.put(makeMonDraft(run.id, { encounterId: caughtEncounter.id }));
     const missedCave = await adapter.routes.put(
       makeRouteDraft(run.id, { name: "Dark Cave", order: 200 }),
     );
@@ -564,7 +470,13 @@ describe("RoutesScreen", () => {
     const encounter = await adapter.encounters.put(
       makeEncounterDraft(run.id, route.id, { status: "caught" }),
     );
-    const mon = await adapter.mons.put(makeMonDraft(run.id, encounter.id));
+    const mon = await adapter.mons.put(
+      makeMonDraft(run.id, {
+        encounterId: encounter.id,
+        speciesId: "chikorita",
+        speciesIdCaught: "chikorita",
+      }),
+    );
     await adapter.encounters.put({ ...encounter, monId: mon.id });
 
     renderScreen(adapter, run.id);
@@ -583,7 +495,7 @@ describe("RoutesScreen", () => {
     const encounter = await adapter.encounters.put(
       makeEncounterDraft(run.id, route.id, { status: "caught" }),
     );
-    const mon = await adapter.mons.put(makeMonDraft(run.id, encounter.id));
+    const mon = await adapter.mons.put(makeMonDraft(run.id, { encounterId: encounter.id }));
     await adapter.encounters.put({ ...encounter, monId: mon.id });
 
     renderScreen(adapter, run.id);

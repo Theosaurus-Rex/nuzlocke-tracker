@@ -11,66 +11,9 @@ import { describe, expect, it, vi } from "vitest";
 
 import { buildRouteRows } from "@/domain/route-rows";
 import type { Encounter, Mon, Route } from "@/domain/types";
+import { makeEncounter, makeMon, makeRoute } from "@/test/factories";
 
 import { RouteTable } from "./route-table";
-
-const TIMESTAMP = "2026-09-17T00:00:00.000Z";
-
-function makeRoute(overrides: Partial<Route> = {}): Route {
-  return {
-    id: "route-1",
-    runId: "run-1",
-    name: "Route 1",
-    order: 100,
-    isCustom: false,
-    gameRouteId: "route-1",
-    createdAt: TIMESTAMP,
-    updatedAt: TIMESTAMP,
-    ...overrides,
-  };
-}
-
-function makeEncounter(overrides: Partial<Encounter> = {}): Encounter {
-  return {
-    id: "encounter-1",
-    runId: "run-1",
-    routeId: "route-1",
-    status: "open",
-    speciesId: null,
-    level: null,
-    monId: null,
-    notes: null,
-    createdAt: TIMESTAMP,
-    updatedAt: TIMESTAMP,
-    ...overrides,
-  };
-}
-
-function makeMon(overrides: Partial<Mon> = {}): Mon {
-  return {
-    id: "mon-1",
-    runId: "run-1",
-    encounterId: "encounter-1",
-    speciesId: "chikorita",
-    speciesIdCaught: "chikorita",
-    nickname: null,
-    gender: null,
-    level: 5,
-    levelCaught: 5,
-    nature: null,
-    ability: null,
-    heldItem: null,
-    moves: [],
-    status: "party",
-    partySlot: 0,
-    boxOrder: null,
-    caughtRouteId: null,
-    shiny: false,
-    createdAt: TIMESTAMP,
-    updatedAt: TIMESTAMP,
-    ...overrides,
-  };
-}
 
 const HEARTGOLD_GENERATION = 4;
 
@@ -111,7 +54,7 @@ describe("RouteTable", () => {
   it("shows the caught mon's current species sprite", async () => {
     const route = makeRoute();
     const encounter = makeEncounter({ status: "caught", speciesId: "bellsprout", monId: "mon-1" });
-    const mon = makeMon({ speciesId: "victreebel", speciesIdCaught: "bellsprout" });
+    const mon = makeMon({ id: "mon-1", speciesId: "victreebel", speciesIdCaught: "bellsprout" });
     const { container } = renderTable({ routes: [route], encounters: [encounter], mons: [mon] });
     await waitFor(() =>
       expect(container.querySelector('img[src="https://sprites.test/icon/71.png"]')).not.toBeNull(),
@@ -133,7 +76,7 @@ describe("RouteTable", () => {
   it("fades the sprite on a fainted row", async () => {
     const route = makeRoute();
     const encounter = makeEncounter({ status: "caught", speciesId: "chikorita", monId: "mon-1" });
-    const mon = makeMon({ status: "dead", partySlot: null });
+    const mon = makeMon({ id: "mon-1", speciesId: "chikorita", status: "dead", partySlot: null });
     const { container } = renderTable({ routes: [route], encounters: [encounter], mons: [mon] });
     const img = await waitFor(() => {
       const found = container.querySelector('img[src="https://sprites.test/icon/152.png"]');
@@ -149,7 +92,7 @@ describe("RouteTable", () => {
     const { container } = renderTable({
       routes: [route],
       encounters: [encounter],
-      mons: [makeMon()],
+      mons: [makeMon({ id: "mon-1", speciesId: "chikorita" })],
     });
     const img = await waitFor(() => {
       const found = container.querySelector('img[src="https://sprites.test/icon/152.png"]');
@@ -184,9 +127,9 @@ describe("RouteTable", () => {
 
   it.each([
     ["not-encountered" as const, "log", []],
-    ["open" as const, "log", [makeEncounter({ status: "open" })]],
-    ["missed" as const, "missed", [makeEncounter({ status: "missed" })]],
-    ["skipped" as const, "skipped", [makeEncounter({ status: "skipped" })]],
+    ["open" as const, "log", [makeEncounter({ routeId: "route-1", status: "open" })]],
+    ["missed" as const, "missed", [makeEncounter({ routeId: "route-1", status: "missed" })]],
+    ["skipped" as const, "skipped", [makeEncounter({ routeId: "route-1", status: "skipped" })]],
   ])("renders the %s row's chip as %s", (_status, expectedLabel, encounters) => {
     const routes = [makeRoute({ id: "route-1" })];
 
@@ -362,17 +305,17 @@ describe("RouteTable", () => {
   });
 
   it.each([
-    ["open" as const, [makeEncounter({ status: "open" })], []],
-    ["missed" as const, [makeEncounter({ status: "missed" })], []],
-    ["skipped" as const, [makeEncounter({ status: "skipped" })], []],
+    ["open" as const, [makeEncounter({ routeId: "route-1", status: "open" })], []],
+    ["missed" as const, [makeEncounter({ routeId: "route-1", status: "missed" })], []],
+    ["skipped" as const, [makeEncounter({ routeId: "route-1", status: "skipped" })], []],
     [
       "caught" as const,
-      [makeEncounter({ status: "caught", monId: "mon-1" })],
+      [makeEncounter({ routeId: "route-1", status: "caught", monId: "mon-1" })],
       [makeMon({ id: "mon-1", status: "party" })],
     ],
     [
       "dead" as const,
-      [makeEncounter({ status: "caught", monId: "mon-1" })],
+      [makeEncounter({ routeId: "route-1", status: "caught", monId: "mon-1" })],
       [makeMon({ id: "mon-1", status: "dead" })],
     ],
   ])("shows no log control for a %s route", (_status, encounters, mons) => {
@@ -444,8 +387,8 @@ describe("RouteTable", () => {
   });
 
   it.each([
-    ["missed" as const, [makeEncounter({ status: "missed" })], []],
-    ["skipped" as const, [makeEncounter({ status: "skipped" })], []],
+    ["missed" as const, [makeEncounter({ routeId: "route-1", status: "missed" })], []],
+    ["skipped" as const, [makeEncounter({ routeId: "route-1", status: "skipped" })], []],
   ])("does nothing when a %s row is clicked", async (_status, encounters, mons) => {
     const route = makeRoute({ id: "route-1", name: "Route 1" });
     const onEditMon = vi.fn();
