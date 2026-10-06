@@ -1,6 +1,7 @@
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
+import { Fragment } from "react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import type { Death, Mon } from "@/domain/types";
@@ -64,7 +65,11 @@ function renderCards(...cards: React.ReactNode[]) {
   const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
   return render(
     <QueryClientProvider client={client}>
-      <ul>{cards}</ul>
+      <ul>
+        {cards.map((c, i) => (
+          <Fragment key={i}>{c}</Fragment>
+        ))}
+      </ul>
     </QueryClientProvider>,
   );
 }
