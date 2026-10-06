@@ -1,28 +1,23 @@
 import "fake-indexeddb/auto";
 
-import { afterEach } from "vitest";
+import Dexie from "dexie";
+import { IDBFactory } from "fake-indexeddb";
+import { beforeEach } from "vitest";
 
 import { runAdapterContractTests } from "./adapter.contract";
 import { createDexieAdapter } from "./dexie-adapter";
 
 let counter = 0;
-let currentDatabaseName: string | undefined;
 
-// Every test gets its own, uniquely-named IndexedDB database, so state from one test can never
-// leak into the next. `afterEach` then deletes it so fake-indexeddb doesn't accumulate a database
-// per assertion over the life of the run.
-afterEach(() => {
-  if (currentDatabaseName !== undefined) {
-    indexedDB.deleteDatabase(currentDatabaseName);
-    currentDatabaseName = undefined;
-  }
+// Each test gets a fresh in-memory IndexedDB, so state cannot leak and no database is ever
+// deleted while a connection to it is open.
+beforeEach(() => {
+  Dexie.dependencies.indexedDB = new IDBFactory();
 });
 
 runAdapterContractTests("DexieAdapter", async () => {
   counter += 1;
-  currentDatabaseName = `nuzlocke-tracker-test-${Date.now()}-${counter}`;
-
-  const adapter = createDexieAdapter(currentDatabaseName);
+  const adapter = createDexieAdapter(`nuzlocke-tracker-test-${counter}`);
   await adapter.init();
   return adapter;
 });
