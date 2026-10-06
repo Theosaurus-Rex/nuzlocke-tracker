@@ -153,6 +153,20 @@ describe("read hooks", () => {
     });
     expect(result.current.data?.id).not.toBe(first.id);
   });
+
+  it("succeeds with null when the run does not exist", async () => {
+    const adapter = createMemoryAdapter();
+    await adapter.init();
+
+    const { result } = renderHook(() => useRun("missing-run"), {
+      wrapper: createWrapper(adapter),
+    });
+
+    await waitFor(() => {
+      expect(result.current.isSuccess).toBe(true);
+    });
+    expect(result.current.data).toBeNull();
+  });
 });
 
 describe("useRoutes", () => {

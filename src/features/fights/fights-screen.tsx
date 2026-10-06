@@ -32,7 +32,7 @@ export function FightsScreen(): ReactNode {
 
   const run = runQuery.data;
   const fights = fightsQuery.data ?? [];
-  const loaded = run !== undefined && !fightsQuery.isPending && !deathsQuery.isPending;
+  const loaded = !runQuery.isPending && !fightsQuery.isPending && !deathsQuery.isPending;
   const deaths = deathsQuery.data ?? [];
   const defs = new Map(GAMES[run?.game ?? "heartgold"].fights.map((def) => [def.id, def]));
   const sections = buildFightSections(fights, (id) => defs.get(id), deaths);

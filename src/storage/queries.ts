@@ -30,11 +30,11 @@ export function useRuns(): UseQueryResult<Run[]> {
   });
 }
 
-export function useRun(runId: string): UseQueryResult<Run | undefined> {
+export function useRun(runId: string): UseQueryResult<Run | null> {
   const adapter = useStorage();
   return useQuery({
     queryKey: queryKeys.run(runId),
-    queryFn: () => adapter.runs.get(runId),
+    queryFn: async () => (await adapter.runs.get(runId)) ?? null,
     staleTime: Infinity,
   });
 }
