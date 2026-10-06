@@ -8,19 +8,17 @@ import { ScreenErrorBoundary } from "./screen-error-boundary";
 describe("ScreenErrorBoundary", () => {
   afterEach(() => {
     vi.restoreAllMocks();
-    vi.unstubAllGlobals();
   });
 
   it("shows a message and a reload button when a screen's code fails to load", async () => {
     vi.spyOn(console, "error").mockImplementation(() => undefined);
     const reload = vi.fn();
-    vi.stubGlobal("location", { ...window.location, reload });
     const Broken = lazy(() =>
       Promise.reject(new Error("Failed to fetch dynamically imported module")),
     );
 
     render(
-      <ScreenErrorBoundary>
+      <ScreenErrorBoundary onReload={reload}>
         <Suspense fallback="Loading…">
           <Broken />
         </Suspense>
