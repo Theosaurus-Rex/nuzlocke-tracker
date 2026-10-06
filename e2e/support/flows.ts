@@ -1,4 +1,5 @@
 import { expect, type Page } from "@playwright/test";
+import { stubExternalNetwork } from "./pokeapi";
 
 export async function createRun(page: Page, name: string): Promise<void> {
   await page.goto("/");
@@ -30,4 +31,20 @@ export function navFor(page: Page, projectName: string) {
   return page.getByRole("navigation", {
     name: projectName === "desktop" ? "Sidebar navigation" : "Tab bar navigation",
   });
+}
+
+/** Checks in a second tab, so the write is read back from storage and the first tab's cache can't answer. */
+export async function expectPersisted(
+  page: Page,
+  check: (fresh: Page) => Promise<void>,
+): Promise<void> {
+  const fresh = await page.context().newPage();
+  const escaped = await stubExternalNetwork(fresh);
+  await fresh.goto(page.url());
+  await expect(async () => {
+    await fresh.reload();
+    await check(fresh);
+  }).toPass();
+  await fresh.close();
+  expect(escaped, "requests that left the app unstubbed").toEqual([]);
 }
