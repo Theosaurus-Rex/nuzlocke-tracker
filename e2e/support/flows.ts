@@ -44,7 +44,7 @@ export async function expectPersisted(
   await expect(async () => {
     await fresh.reload();
     await check(fresh);
-  }).toPass();
+  }).toPass({ timeout: 10_000 });
   await fresh.close();
   expect(escaped, "requests that left the app unstubbed").toEqual([]);
 }
