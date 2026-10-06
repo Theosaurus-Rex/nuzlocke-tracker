@@ -78,6 +78,7 @@ Two families, no third.
   14, 15, 16 and 19px.
 - **Share Tech Mono** for every number: levels, counters, badge counts, route tallies, the
   `24/31` progress figures.
+  Sidebar counters are grey, and ink on the active yellow row because grey on yellow was 3.3:1.
 
 "Every number" is the rule as drawn, and honouring it precisely is most of what makes the
 direction read the way it does.

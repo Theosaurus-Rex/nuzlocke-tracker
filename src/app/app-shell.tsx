@@ -105,17 +105,21 @@ export function AppShell(): ReactNode {
                 )
               }
             >
-              <span data-slot="nav-label">{item.label}</span>
-              {counter !== undefined && (
-                <Typography
-                  as="span"
-                  variant="number"
-                  tone="muted"
-                  aria-hidden="true"
-                  data-slot="nav-counter"
-                >
-                  {counter}
-                </Typography>
+              {({ isActive }) => (
+                <>
+                  <span data-slot="nav-label">{item.label}</span>
+                  {counter !== undefined && (
+                    <Typography
+                      as="span"
+                      variant="number"
+                      tone={isActive ? undefined : "muted"}
+                      aria-hidden="true"
+                      data-slot="nav-counter"
+                    >
+                      {counter}
+                    </Typography>
+                  )}
+                </>
               )}
             </NavLink>
           );
