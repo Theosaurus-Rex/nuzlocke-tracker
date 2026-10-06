@@ -23,7 +23,7 @@ export function EncounterDialogHeader({
     <div
       className={cn(
         "flex shrink-0 items-center justify-between gap-3 border-b-[1.5px] border-border px-4 py-3",
-        alert ? "bg-destructive text-primary-foreground" : "bg-flag-tint",
+        alert ? "bg-destructive text-white" : "bg-flag-tint",
       )}
     >
       <div className="flex min-w-0 items-baseline gap-2">

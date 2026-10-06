@@ -78,6 +78,7 @@ Two families, no third.
   14, 15, 16 and 19px.
 - **Share Tech Mono** for every number: levels, counters, badge counts, route tallies, the
   `24/31` progress figures.
+  Sidebar counters are grey, and ink on the active yellow row because grey on yellow was 3.3:1.
 
 "Every number" is the rule as drawn, and honouring it precisely is most of what makes the
 direction read the way it does.
@@ -122,11 +123,13 @@ One shape throughout: uppercase, `font: 500 9px` Space Grotesk, `letter-spacing:
 
 | Chip | Background | Text |
 |---|---|---|
-| CAUGHT, PARTY, ACTIVE, CLEARED | `#2F9E6D` | white |
+| CAUGHT, PARTY, ACTIVE, CLEARED | `#2F9E6D` | `#141414` |
 | FAINTED, FAILED, OVER CAP | `#C8351F` | white |
 | PENDING, LOG, TRAINER, WILD | `#F4C531` | `#141414` |
 | BOXED, COMPLETE, rule clauses | `#E8E4D8` | `#141414` |
 | MISSED | white | `#141414` |
+
+Ink text sits on the go green because white on it was 3.4:1, under WCAG AA. Changed 2026-10-06.
 
 MISSED is white rather than grid so it reads as absence rather than as a neutral state.
 

@@ -10,13 +10,17 @@ import { Button } from "@/components/ui/button";
 import { DEFAULT_RULES } from "@/domain/rules";
 import { buildRouteRows, type RouteRow } from "@/domain/route-rows";
 import type { Mon, Route } from "@/domain/types";
-import { EditMonDialog } from "@/features/encounters/edit-mon-dialog";
-import { LogEncounterDialog } from "@/features/encounters/log-encounter-dialog";
 import { GAMES } from "@/game/registry";
 import { useAddCustomRoute, useDeleteCustomRoute } from "@/storage/mutations";
 import { useEncounters, useMons, useRoutes, useRun } from "@/storage/queries";
 import { cn } from "@/lib/utils";
 
+import {
+  DialogLoader,
+  EditMonDialog,
+  LogEncounterDialog,
+  ResetEncounterDialog,
+} from "./lazy-dialogs";
 import { RouteCardList } from "./route-card-list";
 import {
   filterRouteRows,
@@ -25,7 +29,6 @@ import {
   type RouteFilterBucket,
 } from "./route-presentation";
 import { RouteTable } from "./route-table";
-import { ResetEncounterDialog } from "./reset-encounter-dialog";
 
 const COUNTER_CHIPS: readonly {
   bucket: RouteFilterBucket;
@@ -320,54 +323,62 @@ export function RoutesScreen(): ReactNode {
       )}
 
       {logRoute && (
-        <LogEncounterDialog
-          open
-          onOpenChange={(nextOpen) => {
-            if (!nextOpen) {
-              setLogRoute(null);
-            }
-          }}
-          runId={activeRunId}
-          route={logRoute}
-          rules={runQuery.data?.rules ?? DEFAULT_RULES}
-          mons={mons}
-          existingEncounters={encounters}
-        />
+        <DialogLoader>
+          <LogEncounterDialog
+            open
+            onOpenChange={(nextOpen) => {
+              if (!nextOpen) {
+                setLogRoute(null);
+              }
+            }}
+            runId={activeRunId}
+            route={logRoute}
+            rules={runQuery.data?.rules ?? DEFAULT_RULES}
+            mons={mons}
+            existingEncounters={encounters}
+          />
+        </DialogLoader>
       )}
 
       {shinyOpen && (
-        <LogEncounterDialog
-          open
-          mode="shiny-bonus"
-          onOpenChange={(nextOpen) => {
-            if (!nextOpen) {
-              setShinyOpen(false);
-            }
-          }}
-          runId={activeRunId}
-          routes={routes}
-          rules={runQuery.data?.rules ?? DEFAULT_RULES}
-          mons={mons}
-          existingEncounters={encounters}
-        />
+        <DialogLoader>
+          <LogEncounterDialog
+            open
+            mode="shiny-bonus"
+            onOpenChange={(nextOpen) => {
+              if (!nextOpen) {
+                setShinyOpen(false);
+              }
+            }}
+            runId={activeRunId}
+            routes={routes}
+            rules={runQuery.data?.rules ?? DEFAULT_RULES}
+            mons={mons}
+            existingEncounters={encounters}
+          />
+        </DialogLoader>
       )}
 
       {editTarget && (
-        <EditMonDialog
-          open
-          onOpenChange={(nextOpen) => {
-            if (!nextOpen) {
-              setEditTarget(null);
-            }
-          }}
-          route={editTarget.route}
-          mon={editTarget.mon}
-          rules={runQuery.data?.rules ?? DEFAULT_RULES}
-        />
+        <DialogLoader>
+          <EditMonDialog
+            open
+            onOpenChange={(nextOpen) => {
+              if (!nextOpen) {
+                setEditTarget(null);
+              }
+            }}
+            route={editTarget.route}
+            mon={editTarget.mon}
+            rules={runQuery.data?.rules ?? DEFAULT_RULES}
+          />
+        </DialogLoader>
       )}
 
       {resetTarget && (
-        <ResetEncounterDialog row={resetTarget} onClose={() => setResetTarget(null)} />
+        <DialogLoader>
+          <ResetEncounterDialog row={resetTarget} onClose={() => setResetTarget(null)} />
+        </DialogLoader>
       )}
     </div>
   );

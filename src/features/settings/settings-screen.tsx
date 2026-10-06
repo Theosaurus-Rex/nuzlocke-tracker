@@ -189,6 +189,7 @@ export function SettingsScreen(): ReactNode {
               and its accessible name. */}
           <input
             type="file"
+            aria-label="Backup file"
             accept="application/json"
             onChange={(event) => void handleFileChange(event)}
             className="text-sm text-muted-foreground file:mr-3 file:cursor-pointer file:border-[1.5px] file:border-border file:bg-background file:px-3 file:py-1.5 file:text-sm file:font-medium file:text-foreground file:shadow-block hover:file:bg-muted"

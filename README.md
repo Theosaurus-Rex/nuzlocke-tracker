@@ -52,11 +52,14 @@ reported on the Settings screen and affects nothing else.
 | `pnpm test` | Vitest, once |
 | `pnpm test:watch` | Vitest in watch mode |
 | `pnpm test:coverage` | Vitest with v8 coverage |
+| `pnpm test:e2e` | Playwright browser tests on a production build |
+| `pnpm test:e2e:ui` | Playwright in its interactive UI mode |
 
 **The gate before any commit:**
 
 ```bash
-pnpm lint && pnpm typecheck && pnpm format:check && pnpm test && pnpm build
+pnpm exec playwright install chromium   # once, for test:e2e
+pnpm lint && pnpm typecheck && pnpm format:check && pnpm test && pnpm build && pnpm test:e2e
 ```
 
 Every commit in the history passes all five.
@@ -72,7 +75,7 @@ src/
   game/          HeartGold routes and bosses, natures, and the live PokéAPI client
   game/pokeapi/  fetch, map and resolve species and move data from PokéAPI, cached by TanStack Query
   features/      screens, one directory each
-  app/           routing and the responsive shell
+  app/           routing, the responsive shell, and lazy loading of each screen
   components/    shared Block Shadow components: Typography, Surface, chips
   components/ui/ shadcn primitives
 scripts/         one-shot generators and tooling (not run by the build)
@@ -177,6 +180,12 @@ node scripts/slice-wireframes.ts --force
 `pnpm test` covers the domain rules, both storage adapters via the shared contract, the query
 layer, the game data's invariants, and the app shell's routing.
 
+`pnpm test:e2e` runs Playwright against a production build, in a desktop and a mobile project.
+Specs live in `e2e/`. PokéAPI is stubbed from the unit-test fixtures and the sprite hosts are
+blocked, so the tests run offline, and a request to any other host fails the test. Run
+`pnpm exec playwright install chromium` once first. The `e2e` GitHub Actions workflow runs them
+on every pull request and uploads the report when they fail.
+
 In dev builds, Settings has a Developer section with a "Load sample run" button. It adds a
 run with a gapped party, a full box, deaths, open routes, every fight cleared up to Bugsy and a death
 at him, so screens can be checked by hand.
@@ -187,14 +196,13 @@ Two conventions worth keeping:
 - **Verify a new guarantee by watching the suite go red.** Break the thing deliberately, run
   `pnpm test`, confirm it fails *for the right reason*, then restore. Several tests in this
   repo passed while testing nothing until they were checked this way.
-- **No breakpoint tests.** jsdom does not evaluate CSS media queries, so a test asserting
-  "the tab bar shows at 375px" would pass regardless of the classes. The responsive switch
-  needs a real browser; there is deliberately no test pretending otherwise.
+- **The breakpoint is checked in a browser, not in jsdom.** jsdom does not evaluate CSS media
+  queries, so a unit test asserting "the tab bar shows at 375px" would pass regardless of the
+  classes. `e2e/shell.spec.ts` checks the sidebar and tab bar in Chromium at both widths.
 
 ---
 
 ## Known gaps
 
-- The desktop/mobile CSS breakpoint is unverified — needs a browser or Playwright check.
 - Five tab items at 320px is untested layout.
 - Visual direction is deliberately undecided; the UI is unstyled shadcn defaults on purpose.
