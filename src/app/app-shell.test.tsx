@@ -5,7 +5,7 @@
 
 import { createMemoryRouter, RouterProvider } from "react-router";
 import { onlineManager, QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { render, screen, waitFor, within } from "@testing-library/react";
+import { act, render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
@@ -290,12 +290,13 @@ describe("AppShell navigation", () => {
 
     await screen.findByRole("heading", { name: "New run" });
     expect(router.state.location.pathname).toBe("/runs/new");
+    expect(router.state.historyAction).toBe("REPLACE");
 
     const sidebar = screen.getByRole("navigation", { name: "Sidebar navigation" });
     expect(within(sidebar).getByRole("link", { name: "Runs" })).not.toHaveAttribute("aria-current");
 
     // Replaced in place, so there is nothing behind it for Back to land on.
-    await router.navigate(-1);
+    await act(() => router.navigate(-1));
     expect(router.state.location.pathname).toBe("/runs/new");
   });
 });
@@ -585,7 +586,7 @@ describe("Current run outlives the URL", () => {
     const { router } = renderAt(`/runs/${doomed.id}/party`, { adapter });
     await screen.findByRole("navigation", { name: "Sidebar navigation" });
 
-    await router.navigate("/");
+    await act(() => router.navigate("/"));
     await screen.findByRole("heading", { name: "Johto Hardcore" });
 
     const card = screen.getByRole("heading", { name: "Johto Hardcore" }).closest("li");

@@ -15,6 +15,7 @@ export default defineConfig({
     environment: "jsdom",
     exclude: [...configDefaults.exclude, "e2e/**"],
     globals: true,
+    pool: "vmThreads",
     setupFiles: ["./src/test/setup.ts"],
     unstubGlobals: true,
   },

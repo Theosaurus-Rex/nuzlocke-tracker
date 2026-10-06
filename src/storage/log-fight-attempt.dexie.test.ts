@@ -1,24 +1,21 @@
 import "fake-indexeddb/auto";
 
-import { afterEach, describe, expect, it } from "vitest";
+import Dexie from "dexie";
+import { IDBFactory } from "fake-indexeddb";
+import { beforeEach, describe, expect, it } from "vitest";
 
 import { createDexieAdapter } from "./dexie-adapter";
 import { persistLogFightAttempt } from "./mutations";
 
 const AT = "2026-09-30T10:00:00.000Z";
-let databaseName: string | undefined;
 
-afterEach(() => {
-  if (databaseName !== undefined) {
-    indexedDB.deleteDatabase(databaseName);
-    databaseName = undefined;
-  }
+beforeEach(() => {
+  Dexie.dependencies.indexedDB = new IDBFactory();
 });
 
 describe("persistLogFightAttempt on Dexie", () => {
   it("rolls back earlier deaths and the clear when a later loss is a dead mon", async () => {
-    databaseName = `fight-attempt-${String(Date.now())}`;
-    const adapter = createDexieAdapter(databaseName);
+    const adapter = createDexieAdapter("fight-attempt");
     await adapter.init();
     const base = {
       runId: "run-1",

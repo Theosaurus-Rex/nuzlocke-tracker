@@ -1,5 +1,5 @@
 import { onlineManager, QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { renderHook, waitFor } from "@testing-library/react";
+import { act, renderHook, waitFor } from "@testing-library/react";
 import type { ReactNode } from "react";
 import { describe, expect, it, vi } from "vitest";
 
@@ -159,7 +159,7 @@ describe("hooks", () => {
       configurePokeApiQueries(client);
       const { result } = renderHook(() => useSpeciesIndex(), { wrapper: wrapper(client) });
 
-      await vi.advanceTimersByTimeAsync(4000);
+      await act(() => vi.advanceTimersByTimeAsync(4000));
 
       expect(result.current.isError).toBe(true);
       expect((result.current.error as PokeApiError).status).toBe("network");

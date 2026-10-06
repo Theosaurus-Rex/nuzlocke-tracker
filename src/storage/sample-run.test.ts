@@ -1,6 +1,8 @@
 import "fake-indexeddb/auto";
 
-import { afterEach, describe, expect, it } from "vitest";
+import Dexie from "dexie";
+import { IDBFactory } from "fake-indexeddb";
+import { beforeEach, describe, expect, it } from "vitest";
 
 import type { StorageAdapter } from "./adapter";
 import { createDexieAdapter } from "./dexie-adapter";
@@ -150,19 +152,14 @@ describe("loadSampleRun", () => {
 
 describe("loadSampleRun on Dexie", () => {
   let counter = 0;
-  let databaseName: string | undefined;
 
-  afterEach(() => {
-    if (databaseName !== undefined) {
-      indexedDB.deleteDatabase(databaseName);
-      databaseName = undefined;
-    }
+  beforeEach(() => {
+    Dexie.dependencies.indexedDB = new IDBFactory();
   });
 
   async function dexieAdapter(): Promise<StorageAdapter> {
     counter += 1;
-    databaseName = `nuzlocke-tracker-sample-${Date.now()}-${counter}`;
-    const adapter = createDexieAdapter(databaseName);
+    const adapter = createDexieAdapter(`nuzlocke-tracker-sample-${counter}`);
     await adapter.init();
     return adapter;
   }

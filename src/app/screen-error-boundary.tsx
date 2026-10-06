@@ -5,6 +5,7 @@ import { Typography } from "@/components/typography";
 
 interface Props {
   children: ReactNode;
+  onReload?: () => void;
 }
 interface State {
   failed: boolean;
@@ -33,7 +34,11 @@ export class ScreenErrorBoundary extends Component<Props, State> {
         </Typography>
         <Button
           onClick={() => {
-            window.location.reload();
+            if (this.props.onReload) {
+              this.props.onReload();
+            } else {
+              window.location.reload();
+            }
           }}
         >
           Reload

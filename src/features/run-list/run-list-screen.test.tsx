@@ -3,7 +3,7 @@
  * jsdom does not evaluate CSS media queries, so there is no test here for the grid's breakpoint.
  */
 
-import { screen, waitFor, within } from "@testing-library/react";
+import { act, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { describe, expect, it, vi } from "vitest";
 import {
@@ -75,10 +75,11 @@ describe("RunListScreen", () => {
 
     await screen.findByText("New run screen");
     expect(router.state.location.pathname).toBe("/runs/new");
+    expect(router.state.historyAction).toBe("REPLACE");
 
     // Replaced, not pushed: there is nothing before it to go back to, so Back cannot bounce
     // to the empty home page.
-    await router.navigate(-1);
+    await act(() => router.navigate(-1));
     expect(router.state.location.pathname).toBe("/runs/new");
   });
 
