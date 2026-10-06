@@ -436,7 +436,7 @@ function LogDeathForm({
         <Button
           type="submit"
           disabled={save.isPending}
-          className="bg-destructive text-primary-foreground hover:bg-destructive/90"
+          className="bg-destructive text-white hover:bg-destructive/90"
         >
           {save.isPending ? "Saving…" : death ? "Save changes" : "Send to graveyard"}
         </Button>

@@ -42,7 +42,7 @@ export function GraveyardScreen(): ReactNode {
             type="button"
             aria-label="Log a death"
             disabled={!hasLiving}
-            className="bg-destructive text-primary-foreground shadow-block hover:bg-destructive/90"
+            className="bg-destructive text-white shadow-block hover:bg-destructive/90"
             onClick={() => setLogOpen(true)}
           >
             <span className="sm:hidden">+ Log</span>
