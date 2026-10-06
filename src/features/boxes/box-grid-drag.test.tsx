@@ -220,6 +220,9 @@ describe("dragging in the boxes grid", () => {
       expect(liveAnnouncement()).toBe("Picked up “Sprig”. Box 1, slot 1.");
     });
     fireEvent.keyDown(document, { code: "Escape" });
+    await waitFor(() => {
+      expect(liveAnnouncement()).toBe("Cancelled. “Sprig” is back in box 1, slot 1.");
+    });
   });
 
   describe("moving between boxes", () => {

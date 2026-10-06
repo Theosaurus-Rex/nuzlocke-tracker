@@ -1,4 +1,4 @@
-import { fireEvent, screen, waitFor, within } from "@testing-library/react";
+import { act, fireEvent, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { MemoryRouter, Route, Routes } from "react-router";
@@ -442,7 +442,9 @@ describe("PartyScreen", () => {
 
     fireTouch(card, "touchstart", 10, 10);
     fireTouch(card, "touchmove", 10, 30);
-    await new Promise((resolve) => setTimeout(resolve, 400));
+    await act(async () => {
+      await new Promise((resolve) => setTimeout(resolve, 400));
+    });
 
     expect(liveAnnouncement()).toBe("");
     expect(
