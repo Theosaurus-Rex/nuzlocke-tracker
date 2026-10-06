@@ -38,7 +38,7 @@ test("an exported run comes back whole in a fresh browser", async ({ page, brows
   await fresh.goto("/");
   await expect(fresh).toHaveURL(/\/runs\/new$/);
   await fresh.goto("/settings");
-  await fresh.locator('input[type="file"]').setInputFiles(exportPath);
+  await fresh.getByLabel("Backup file").setInputFiles(exportPath);
   await fresh.getByRole("button", { name: "Import", exact: true }).click();
   await expect(fresh.getByText(/Import complete/)).toBeVisible();
 
