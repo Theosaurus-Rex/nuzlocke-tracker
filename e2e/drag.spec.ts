@@ -63,9 +63,9 @@ test("dragging a boxed mon onto another swaps them and the swap survives a reloa
   await expect.poll(order).toEqual(["Edit Pidgey", "Edit Clefairy"]);
 
   await expectPersisted(page, async (fresh) => {
-    const labels = await fresh
-      .getByRole("button", { name: /^Edit / })
-      .evaluateAll((els) => els.map((el) => el.getAttribute("aria-label")));
+    const edits = fresh.getByRole("button", { name: /^Edit / });
+    await expect(edits).toHaveCount(2);
+    const labels = await edits.evaluateAll((els) => els.map((el) => el.getAttribute("aria-label")));
     expect(labels).toEqual(["Edit Pidgey", "Edit Clefairy"]);
   });
 });

@@ -219,13 +219,13 @@ describe("AppShell navigation", () => {
     await waitFor(() => {
       expect(router.state.location.pathname).toBe("/runs/run-123/routes");
     });
-    expect(screen.getByRole("heading", { name: "Encounter routes" })).toBeInTheDocument();
+    expect(await screen.findByRole("heading", { name: "Encounter routes" })).toBeInTheDocument();
   });
 
-  it("renders the not-found screen for an unknown path", () => {
+  it("renders the not-found screen for an unknown path", async () => {
     renderAt("/this-path-does-not-exist");
 
-    expect(screen.getByRole("heading", { name: "Not Found" })).toBeInTheDocument();
+    expect(await screen.findByRole("heading", { name: "Not Found" })).toBeInTheDocument();
   });
 
   it("exposes a New run link pinned in the sidebar, pointing at /runs/new, even when a run already exists", async () => {
@@ -453,7 +453,7 @@ describe("Run switcher and live counters", () => {
     await waitFor(() => {
       expect(router.state.location.pathname).toBe(`/runs/${runB.id}/party`);
     });
-    expect(screen.getByRole("heading", { name: "Party" })).toBeInTheDocument();
+    expect(await screen.findByRole("heading", { name: "Party" })).toBeInTheDocument();
   });
 
   it("updates the counters after a write, without a manual refetch", async () => {

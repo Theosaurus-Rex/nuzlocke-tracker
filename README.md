@@ -75,7 +75,7 @@ src/
   game/          HeartGold routes and bosses, natures, and the live PokéAPI client
   game/pokeapi/  fetch, map and resolve species and move data from PokéAPI, cached by TanStack Query
   features/      screens, one directory each
-  app/           routing and the responsive shell
+  app/           routing, the responsive shell, and lazy loading of each screen
   components/    shared Block Shadow components: Typography, Surface, chips
   components/ui/ shadcn primitives
 scripts/         one-shot generators and tooling (not run by the build)

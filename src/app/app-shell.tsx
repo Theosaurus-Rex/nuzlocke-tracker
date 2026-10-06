@@ -3,7 +3,7 @@
  * visible, not a `matchMedia` hook, which is also why there's no breakpoint test.
  */
 
-import type { ReactNode } from "react";
+import { Suspense, type ReactNode } from "react";
 import { Link, NavLink, Outlet, useLocation, useNavigate } from "react-router";
 import { cn } from "cn";
 
@@ -16,6 +16,7 @@ import { useEncounters, useFights, useMons, useRoutes, useRuns } from "@/storage
 
 import { navItemsFor, subScreenFromPath, type NavItem } from "./nav-items";
 import { RulesSummary } from "./rules-summary";
+import { ScreenErrorBoundary } from "./screen-error-boundary";
 import { RunSwitcher } from "./run-switcher";
 import { useCurrentRunId } from "./use-current-run-id";
 
@@ -153,7 +154,17 @@ export function AppShell(): ReactNode {
             )}
           </div>
         )}
-        <Outlet />
+        <ScreenErrorBoundary key={location.pathname}>
+          <Suspense
+            fallback={
+              <Typography variant="body" role="status" className="p-4">
+                Loading…
+              </Typography>
+            }
+          >
+            <Outlet />
+          </Suspense>
+        </ScreenErrorBoundary>
       </main>
 
       <nav
