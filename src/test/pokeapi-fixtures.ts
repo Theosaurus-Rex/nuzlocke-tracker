@@ -39,10 +39,15 @@ export const speciesIndexFixture: RawIndex = {
     ref("pokemon", 35, "clefairy"),
     ref("pokemon", 1, "bulbasaur"),
     ref("pokemon", 16, "pidgey"),
+    ref("pokemon", 27, "sandshrew"),
+    ref("pokemon", 28, "sandslash"),
     ref("pokemon", 74, "geodude"),
     ref("pokemon", 130, "gyarados"),
     ref("pokemon", 778, "mimikyu-disguised"),
     ref("pokemon", 10033, "venusaur-mega"),
+    ref("pokemon", 10092, "raticate-totem-alola"),
+    ref("pokemon", 10101, "sandshrew-alola"),
+    ref("pokemon", 10102, "sandslash-alola"),
   ],
 };
 
@@ -151,6 +156,8 @@ export const pokemonSpeciesFixtures: Record<string, RawPokemonSpecies> = {
   "71": { id: 71, name: "victreebel", evolution_chain: { url: `${API}/evolution-chain/29/` } },
   "43": { id: 43, name: "oddish", evolution_chain: { url: `${API}/evolution-chain/18/` } },
   "44": { id: 44, name: "gloom", evolution_chain: { url: `${API}/evolution-chain/18/` } },
+  "27": { id: 27, name: "sandshrew", evolution_chain: { url: `${API}/evolution-chain/51/` } },
+  "28": { id: 28, name: "sandslash", evolution_chain: { url: `${API}/evolution-chain/51/` } },
   "133": { id: 133, name: "eevee", evolution_chain: { url: `${API}/evolution-chain/67/` } },
 };
 
@@ -180,6 +187,13 @@ export const evolutionChainFixtures: Record<string, RawEvolutionChain> = {
           ],
         },
       ],
+    },
+  },
+  "51": {
+    id: 51,
+    chain: {
+      species: ref("pokemon-species", 27, "sandshrew"),
+      evolves_to: [{ species: ref("pokemon-species", 28, "sandslash"), evolves_to: [] }],
     },
   },
   "67": {

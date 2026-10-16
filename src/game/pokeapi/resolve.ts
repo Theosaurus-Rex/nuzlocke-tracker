@@ -1,6 +1,7 @@
 import { itemDisplayNames, moveDisplayNames, speciesDisplayNames } from "@/game/data/display-names";
 import type { Type } from "@/game/types";
 
+import { REGIONS, regionalForm } from "./forms";
 import type { IndexEntry, Move, Species } from "./model";
 
 export interface ResolvedMoveStats {
@@ -87,7 +88,11 @@ function titleCase(name: string): string {
 }
 
 export function speciesDisplayName(id: string): string {
-  return speciesDisplayNames[id] ?? titleCase(id);
+  const explicit = speciesDisplayNames[id];
+  if (explicit !== undefined) return explicit;
+  const form = regionalForm(id);
+  if (form !== null) return `${REGIONS[form.region]} ${speciesDisplayName(form.base)}`;
+  return titleCase(id);
 }
 
 export function abilityDisplayName(id: string): string {

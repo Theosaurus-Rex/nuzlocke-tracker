@@ -18,6 +18,7 @@ import {
   shouldRetry,
   useMove,
   useMoveIndex,
+  useEvolutionLine,
   useNextEvolutions,
   useSpecies,
   useSpeciesIndex,
@@ -222,11 +223,65 @@ describe("hooks", () => {
     expect(urls.some((url) => url.includes("/pokemon-species"))).toBe(false);
   });
 
+  it("evolves a regional form into its own region's next stage", async () => {
+    stubWithEvolutions();
+    const { result } = renderHook(() => useNextEvolutions("Alolan Sandshrew"), {
+      wrapper: wrapper(testClient()),
+    });
+    await waitFor(() => expect(result.current.isPending).toBe(false));
+    expect(result.current.data).toEqual([{ id: 10102, name: "sandslash-alola" }]);
+  });
+
+  it("offers a base species' next stage with its regional forms", async () => {
+    stubWithEvolutions();
+    const { result } = renderHook(() => useNextEvolutions("sandshrew"), {
+      wrapper: wrapper(testClient()),
+    });
+    await waitFor(() => expect(result.current.isPending).toBe(false));
+    expect(result.current.data).toEqual([
+      { id: 28, name: "sandslash" },
+      { id: 10102, name: "sandslash-alola" },
+    ]);
+  });
+
   it("reports failure", async () => {
     stubWithEvolutions({ "/pokemon-species/44": stubStatus(500) });
     const { result } = renderHook(() => useNextEvolutions("gloom"), {
       wrapper: wrapper(testClient()),
     });
     await waitFor(() => expect(result.current.isError).toBe(true));
+  });
+});
+
+describe("useEvolutionLine", () => {
+  it("includes the base line and regional forms for a regional form", async () => {
+    stubWithEvolutions();
+    const { result } = renderHook(() => useEvolutionLine("sandshrew-alola"), {
+      wrapper: wrapper(testClient()),
+    });
+    await waitFor(() => expect(result.current).toBeDefined());
+    expect(result.current).toEqual([
+      "sandshrew",
+      "sandslash",
+      "sandshrew-alola",
+      "sandslash-alola",
+    ]);
+  });
+
+  it("includes regional forms for a base species", async () => {
+    stubWithEvolutions();
+    const { result } = renderHook(() => useEvolutionLine("sandslash"), {
+      wrapper: wrapper(testClient()),
+    });
+    await waitFor(() => expect(result.current).toBeDefined());
+    expect(result.current).toContain("sandshrew-alola");
+  });
+
+  it("is undefined without a species", () => {
+    stubWithEvolutions();
+    const { result } = renderHook(() => useEvolutionLine(null), {
+      wrapper: wrapper(testClient()),
+    });
+    expect(result.current).toBeUndefined();
   });
 });

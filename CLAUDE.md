@@ -364,6 +364,12 @@ Consequences, all deliberate:
 - **Evolutions are not filtered by generation.** Evolve offers every next stage in PokéAPI's
   chain, so a HeartGold Meowth offers Perrserker. Romhacks can add later evolutions to earlier
   games. A run with evolutions randomised gets the full species picker instead.
+- **Regional forms are species in the picker, and share a line with their base — decided
+  2026-10-17.** Alolan, Galarian, Hisuian and Paldean forms are PokéAPI alternate forms (ids from
+  10001), listed alongside base species. Totem, cap and Zen Mode forms stay out. The dupes clause
+  treats a form as its base species' line, so Sandshrew and Alolan Sandshrew are dupes. Evolve
+  keeps a form in its region (Alolan Sandshrew offers Alolan Sandslash). A base species offers
+  every regional next stage too (Pikachu offers Alolan Raichu).
 
 **Scope: HeartGold only for V1.** Every additional game is a whole curated dataset, not a
 config flag. Build the ingest pipeline so a second game is additive.

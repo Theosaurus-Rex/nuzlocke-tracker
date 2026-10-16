@@ -20,14 +20,18 @@ import {
 } from "./map";
 
 describe("toSpeciesIndex", () => {
-  it("keeps default forms only, in dex order, with ids from the url", () => {
+  it("keeps default and regional forms, in dex order, with ids from the url", () => {
     expect(toSpeciesIndex(speciesIndexFixture)).toEqual([
       { id: 1, name: "bulbasaur" },
       { id: 16, name: "pidgey" },
+      { id: 27, name: "sandshrew" },
+      { id: 28, name: "sandslash" },
       { id: 35, name: "clefairy" },
       { id: 74, name: "geodude" },
       { id: 130, name: "gyarados" },
       { id: 778, name: "mimikyu-disguised" },
+      { id: 10101, name: "sandshrew-alola" },
+      { id: 10102, name: "sandslash-alola" },
     ]);
   });
 });
@@ -165,20 +169,11 @@ describe("nextStages", () => {
 
 describe("evolutionLine", () => {
   it("returns every stage of a linear chain", () => {
-    expect(evolutionLine(evolutionChainFixtures["29"]!)).toEqual([
-      "bellsprout",
-      "weepinbell",
-      "victreebel",
-    ]);
+    expect(evolutionLine(evolutionChainFixtures["29"]!)).toEqual([69, 70, 71]);
   });
 
   it("returns every branch, including stages past the first", () => {
-    expect(evolutionLine(evolutionChainFixtures["18"]!)).toEqual([
-      "oddish",
-      "gloom",
-      "vileplume",
-      "bellossom",
-    ]);
+    expect(evolutionLine(evolutionChainFixtures["18"]!)).toEqual([43, 44, 45, 182]);
   });
 });
 

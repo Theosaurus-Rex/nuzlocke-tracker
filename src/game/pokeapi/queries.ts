@@ -1,6 +1,7 @@
 import { useQueries, useQuery, type QueryClient } from "@tanstack/react-query";
 
 import { fetchJson, PokeApiError } from "./client";
+import { baseSpeciesId, expandNextStages } from "./forms";
 import {
   evolutionLine,
   idFromUrl,
@@ -114,34 +115,45 @@ export interface NextEvolutions {
 export function useEvolutionLine(speciesName: string | null): string[] | undefined {
   const index = useSpeciesIndex();
   const entries = index.data;
-  const id =
+  const entry =
     entries === undefined || speciesName === null
-      ? null
-      : (findByName(entries, speciesName, speciesDisplayName)?.id ?? null);
+      ? undefined
+      : findByName(entries, speciesName, speciesDisplayName);
+  const baseId =
+    entries === undefined || entry === undefined ? null : (baseSpeciesId(entries, entry) ?? null);
 
   const line = useQuery({
-    queryKey: ["pokeapi", "evolution-line", id],
+    queryKey: ["pokeapi", "evolution-line", baseId],
     queryFn: async () => {
-      const species = await fetchJson<RawPokemonSpecies>(`/pokemon-species/${String(id)}`);
-      if (species.evolution_chain === null) return [species.name];
+      const species = await fetchJson<RawPokemonSpecies>(`/pokemon-species/${String(baseId)}`);
+      if (species.evolution_chain === null) return [species.id];
       const chainId = idFromUrl(species.evolution_chain.url);
       return evolutionLine(
         await fetchJson<RawEvolutionChain>(`/evolution-chain/${String(chainId)}`),
       );
     },
-    enabled: id !== null,
+    enabled: baseId !== null,
   });
 
-  return line.data;
+  if (entries === undefined || line.data === undefined) return undefined;
+  const ids = new Set(line.data);
+  return entries.flatMap((e) => {
+    const id = baseSpeciesId(entries, e);
+    return id !== undefined && ids.has(id) ? [e.name] : [];
+  });
 }
 
 export function useNextEvolutions(speciesName: string | null): NextEvolutions {
   const index = useSpeciesIndex();
   const entries = index.data;
-  const id =
+  const current =
     entries === undefined || speciesName === null
+      ? undefined
+      : findByName(entries, speciesName, speciesDisplayName);
+  const id =
+    entries === undefined || current === undefined
       ? null
-      : (findByName(entries, speciesName, speciesDisplayName)?.id ?? null);
+      : (baseSpeciesId(entries, current) ?? null);
 
   const chain = useQuery({
     queryKey: ["pokeapi", "evolutions", id],
@@ -150,7 +162,7 @@ export function useNextEvolutions(speciesName: string | null): NextEvolutions {
       if (species.evolution_chain === null) return [];
       const chainId = idFromUrl(species.evolution_chain.url);
       const raw = await fetchJson<RawEvolutionChain>(`/evolution-chain/${String(chainId)}`);
-      return nextStages(raw, species.id);
+      return nextStages(raw, id ?? species.id);
     },
     enabled: id !== null,
   });
@@ -173,7 +185,7 @@ export function useNextEvolutions(speciesName: string | null): NextEvolutions {
       refetch: () => index.refetch(),
     };
   }
-  if (id === null) {
+  if (id === null || current === undefined) {
     return {
       data: [],
       isPending: false,
@@ -201,12 +213,8 @@ export function useNextEvolutions(speciesName: string | null): NextEvolutions {
     };
   }
 
-  const byId = new Map(entries.map((entry) => [entry.id, entry]));
   return {
-    data: chain.data.flatMap((stageId) => {
-      const entry = byId.get(stageId);
-      return entry === undefined ? [] : [entry];
-    }),
+    data: expandNextStages(entries, current, chain.data),
     isPending: false,
     isFetching: chain.isFetching,
     isError: false,
