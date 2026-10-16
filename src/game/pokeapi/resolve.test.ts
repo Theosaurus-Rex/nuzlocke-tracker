@@ -172,6 +172,29 @@ describe("display names", () => {
     expect(moveDisplayName("will-o-wisp")).toBe("Will-O-Wisp");
   });
 
+  it("prefixes regional forms with their region", () => {
+    expect(speciesDisplayName("sandshrew-alola")).toBe("Alolan Sandshrew");
+    expect(speciesDisplayName("mr-mime-galar")).toBe("Galarian Mr. Mime");
+    expect(speciesDisplayName("farfetchd-galar")).toBe("Galarian Farfetch'd");
+    expect(speciesDisplayName("darmanitan-galar-standard")).toBe("Galarian Darmanitan");
+  });
+
+  it("prefers an explicit name over the regional prefix", () => {
+    expect(speciesDisplayName("tauros-paldea-blaze-breed")).toBe("Paldean Tauros (Blaze Breed)");
+  });
+
+  it("finds a regional form by its displayed name", () => {
+    expect(findByName(index, "Alolan Sandshrew", speciesDisplayName)?.name).toBe("sandshrew-alola");
+    expect(searchIndex(index, "alolan", speciesDisplayName).map((e) => e.name)).toEqual([
+      "sandshrew-alola",
+      "sandslash-alola",
+    ]);
+    expect(searchIndex(index, "sandshrew", speciesDisplayName).map((e) => e.name)).toEqual([
+      "sandshrew",
+      "sandshrew-alola",
+    ]);
+  });
+
   it("title-cases names with nothing to override", () => {
     expect(speciesDisplayName("bulbasaur")).toBe("Bulbasaur");
     expect(speciesDisplayName("tapu-koko")).toBe("Tapu Koko");

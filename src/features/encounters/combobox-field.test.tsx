@@ -69,6 +69,15 @@ describe("ComboboxField keyboard handling", () => {
     expect(input).toHaveValue("Machop");
   });
 
+  it("selects a regional form from its typed display name", async () => {
+    const user = userEvent.setup();
+    const { onChange, input } = renderPicker();
+
+    await user.type(input, "Alolan Sandshrew");
+
+    await waitFor(() => expect(onChange).toHaveBeenLastCalledWith("sandshrew-alola"));
+  });
+
   it("selects the second option on ArrowDown, ArrowDown, Enter", async () => {
     const user = userEvent.setup();
     const { onChange, input } = renderPicker();
