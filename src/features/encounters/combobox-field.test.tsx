@@ -7,7 +7,7 @@
 import { useState } from "react";
 
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { render, screen, waitFor } from "@testing-library/react";
+import { render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { describe, expect, it, vi } from "vitest";
 
@@ -69,13 +69,15 @@ describe("ComboboxField keyboard handling", () => {
     expect(input).toHaveValue("Machop");
   });
 
-  it("selects a regional form from its typed display name", async () => {
+  it("selects a regional form from its typed display name on blur", async () => {
     const user = userEvent.setup();
     const { onChange, input } = renderPicker();
 
     await user.type(input, "Alolan Sandshrew");
+    expect(onChange).not.toHaveBeenCalled();
+    await user.tab();
 
-    await waitFor(() => expect(onChange).toHaveBeenLastCalledWith("sandshrew-alola"));
+    expect(onChange).toHaveBeenLastCalledWith("sandshrew-alola");
   });
 
   it("selects the second option on ArrowDown, ArrowDown, Enter", async () => {
@@ -197,68 +199,6 @@ describe("ComboboxField keyboard handling", () => {
     expect(document.querySelector("[data-base-ui-inert]")).toBeNull();
   });
 
-  it("resolves text typed before the options loaded once they arrive", async () => {
-    const onChange = vi.fn();
-    const empty = () => "";
-    const loaded = (text: string) => (text.toLowerCase() === "pidgey" ? "pidgey" : "");
-    const { rerender } = render(
-      <ComboboxField
-        id="f"
-        value=""
-        onChange={onChange}
-        search={() => []}
-        resolve={empty}
-        displayName={(id) => id}
-      />,
-    );
-    await userEvent.type(screen.getByRole("combobox"), "Pidgey");
-    expect(onChange).not.toHaveBeenCalledWith("pidgey");
-    rerender(
-      <ComboboxField
-        id="f"
-        value=""
-        onChange={onChange}
-        search={() => []}
-        resolve={loaded}
-        displayName={(id) => id}
-      />,
-    );
-    expect(onChange).toHaveBeenLastCalledWith("pidgey");
-  });
-
-  it("closes the popup rather than opening it once a late fill-in resolves", async () => {
-    const user = userEvent.setup();
-    let resolveFetch: ((response: Response) => void) | undefined;
-    const fetchMock = vi.fn((input: string | URL | Request): Promise<Response> => {
-      const url = input instanceof Request ? input.url : String(input);
-      const path = url.startsWith(POKEAPI_BASE) ? url.slice(POKEAPI_BASE.length) : url;
-      if (path !== "/pokemon?limit=100000") {
-        return Promise.resolve(new Response(null, { status: 404 }));
-      }
-      return new Promise<Response>((resolve) => {
-        resolveFetch = resolve;
-      });
-    });
-    vi.stubGlobal("fetch", fetchMock);
-
-    const onChange = vi.fn();
-    const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
-    render(
-      <QueryClientProvider client={client}>
-        <ControlledSpeciesPicker onChange={onChange} />
-      </QueryClientProvider>,
-    );
-
-    const input = screen.getByRole("combobox");
-    await user.type(input, "Pidgey");
-    expect(input).toHaveAttribute("aria-expanded", "false");
-
-    resolveFetch?.(Response.json(speciesIndexFixture));
-
-    await waitFor(() => expect(onChange).toHaveBeenLastCalledWith("pidgey"));
-    expect(input).toHaveAttribute("aria-expanded", "false");
-  });
-
   it("opens the list on click when the field already holds a value", async () => {
     const user = userEvent.setup();
     const items = [{ id: "pidgey", label: "Pidgey" }];
@@ -300,128 +240,6 @@ describe("ComboboxField keyboard handling", () => {
     expect(await screen.findByRole("listbox")).toBeInTheDocument();
   });
 
-  it("keeps the list closed once a late fill-in resolves, even though the list was open while typing", async () => {
-    function Field(props: {
-      search: (query: string) => ComboboxItem[];
-      resolve: (text: string) => string;
-      onValueChange: (id: string) => void;
-    }) {
-      const [value, setValue] = useState("");
-      return (
-        <ComboboxField
-          id="f"
-          value={value}
-          onChange={(id) => {
-            setValue(id);
-            props.onValueChange(id);
-          }}
-          search={props.search}
-          resolve={props.resolve}
-          displayName={(id) => id}
-        />
-      );
-    }
-
-    const onValueChange = vi.fn();
-    const { rerender } = render(
-      <Field search={() => []} resolve={() => ""} onValueChange={onValueChange} />,
-    );
-    const input = screen.getByRole("combobox");
-    await userEvent.type(input, "Pidgey");
-    expect(input).toHaveAttribute("aria-expanded", "false");
-
-    rerender(
-      <Field
-        search={(query) =>
-          query.toLowerCase() === "pidgey" ? [{ id: "pidgey", label: "Pidgey" }] : []
-        }
-        resolve={(text) => (text.toLowerCase() === "pidgey" ? "pidgey" : "")}
-        onValueChange={onValueChange}
-      />,
-    );
-
-    await waitFor(() => expect(onValueChange).toHaveBeenLastCalledWith("pidgey"));
-    expect(input).toHaveAttribute("aria-expanded", "false");
-  });
-
-  it("never clears an existing value when the resolver changes", () => {
-    const onChange = vi.fn();
-    const { rerender } = render(
-      <ComboboxField
-        id="f"
-        value="pidgey"
-        onChange={onChange}
-        search={() => []}
-        resolve={() => "pidgey"}
-        displayName={(id) => id}
-      />,
-    );
-    rerender(
-      <ComboboxField
-        id="f"
-        value="pidgey"
-        onChange={onChange}
-        search={() => []}
-        resolve={() => ""}
-        displayName={(id) => id}
-      />,
-    );
-    expect(onChange).not.toHaveBeenCalledWith("");
-  });
-
-  it("does not re-resolve an already-set value even when resolve starts returning something else", () => {
-    const onChange = vi.fn();
-    const { rerender } = render(
-      <ComboboxField
-        id="f"
-        value="pidgey"
-        onChange={onChange}
-        search={() => []}
-        resolve={() => "pidgey"}
-        displayName={(id) => id}
-      />,
-    );
-    onChange.mockClear();
-    rerender(
-      <ComboboxField
-        id="f"
-        value="pidgey"
-        onChange={onChange}
-        search={() => []}
-        resolve={() => "spearow"}
-        displayName={(id) => id}
-      />,
-    );
-    expect(onChange).not.toHaveBeenCalled();
-  });
-
-  it("does not call onChange when a freshly loaded resolver still finds no match", async () => {
-    const onChange = vi.fn();
-    const { rerender } = render(
-      <ComboboxField
-        id="f"
-        value=""
-        onChange={onChange}
-        search={() => []}
-        resolve={() => ""}
-        displayName={(id) => id}
-      />,
-    );
-    await userEvent.type(screen.getByRole("combobox"), "zzz");
-    onChange.mockClear();
-    rerender(
-      <ComboboxField
-        id="f"
-        value=""
-        onChange={onChange}
-        search={() => []}
-        resolve={() => ""}
-        displayName={(id) => id}
-      />,
-    );
-    expect(onChange).not.toHaveBeenCalled();
-  });
-
   it("ties the loading notice to the input via aria-describedby", () => {
     stubPokeApi({ "/pokemon?limit=100000": STUB_PENDING });
     const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
@@ -432,5 +250,127 @@ describe("ComboboxField keyboard handling", () => {
     );
 
     expect(screen.getByRole("combobox")).toHaveAccessibleDescription(/Loading Pokémon/);
+  });
+});
+
+const ACID_ITEMS: ComboboxItem[] = [
+  { id: "acid", label: "Acid" },
+  { id: "acid-spray", label: "Acid Spray" },
+];
+
+function ChosenField({
+  onChange,
+  initial = "",
+}: {
+  onChange: (id: string) => void;
+  initial?: string;
+}) {
+  const [value, setValue] = useState(initial);
+  return (
+    <ComboboxField
+      id="acid"
+      value={value}
+      onChange={(id) => {
+        setValue(id);
+        onChange(id);
+      }}
+      search={(query) =>
+        ACID_ITEMS.filter((item) => item.label.toLowerCase().startsWith(query.toLowerCase()))
+      }
+      resolve={(text) =>
+        ACID_ITEMS.find((item) => item.label.toLowerCase() === text.toLowerCase())?.id ?? ""
+      }
+      displayName={(id) => ACID_ITEMS.find((item) => item.id === id)?.label ?? id}
+    />
+  );
+}
+
+describe("ComboboxField picking", () => {
+  it("chooses nothing while a name is typed, so Acid does not beat Acid Spray", async () => {
+    const user = userEvent.setup();
+    const onChange = vi.fn();
+    render(<ChosenField onChange={onChange} />);
+    const input = screen.getByRole("combobox");
+
+    await user.type(input, "Acid");
+    expect(onChange).not.toHaveBeenCalledWith("acid");
+
+    await user.type(input, " Spray");
+    await user.click(await screen.findByRole("option", { name: "Acid Spray" }));
+
+    expect(onChange).not.toHaveBeenCalledWith("acid");
+    expect(onChange).toHaveBeenLastCalledWith("acid-spray");
+    expect(input).toHaveValue("Acid Spray");
+  });
+
+  it("does not pick Acid on Enter while no row is highlighted", async () => {
+    const user = userEvent.setup();
+    const onChange = vi.fn();
+    render(<ChosenField onChange={onChange} />);
+
+    await user.type(screen.getByRole("combobox"), "Acid");
+    await screen.findByRole("listbox");
+    await user.keyboard("{Enter}");
+
+    expect(onChange).not.toHaveBeenCalledWith("acid");
+  });
+
+  it("picks Acid on Enter when it is the highlighted row", async () => {
+    const user = userEvent.setup();
+    const onChange = vi.fn();
+    render(<ChosenField onChange={onChange} />);
+
+    await user.type(screen.getByRole("combobox"), "Acid");
+    await screen.findByRole("listbox");
+    await user.keyboard("{ArrowDown}{Enter}");
+
+    expect(onChange).toHaveBeenLastCalledWith("acid");
+  });
+
+  it("commits an exact match when the field loses focus", async () => {
+    const user = userEvent.setup();
+    const onChange = vi.fn();
+    render(<ChosenField onChange={onChange} />);
+
+    await user.type(screen.getByRole("combobox"), "acid spray");
+    expect(onChange).not.toHaveBeenCalled();
+    await user.tab();
+
+    expect(onChange).toHaveBeenCalledTimes(1);
+    expect(onChange).toHaveBeenCalledWith("acid-spray");
+  });
+
+  it("commits nothing on blur when the text matches no option", async () => {
+    const user = userEvent.setup();
+    const onChange = vi.fn();
+    render(<ChosenField onChange={onChange} />);
+
+    await user.type(screen.getByRole("combobox"), "Acid Sp");
+    await user.tab();
+
+    expect(onChange).not.toHaveBeenCalled();
+  });
+
+  it("clears an existing value when its text is edited", async () => {
+    const user = userEvent.setup();
+    const onChange = vi.fn();
+    render(<ChosenField onChange={onChange} initial="acid" />);
+
+    await user.type(screen.getByRole("combobox"), " Spray");
+
+    expect(onChange).toHaveBeenCalledWith("");
+    expect(onChange).not.toHaveBeenCalledWith("acid-spray");
+  });
+
+  it("does not re-commit a value picked by click when the field then blurs", async () => {
+    const user = userEvent.setup();
+    const onChange = vi.fn();
+    render(<ChosenField onChange={onChange} />);
+
+    await user.type(screen.getByRole("combobox"), "Acid");
+    await user.click(await screen.findByRole("option", { name: "Acid Spray" }));
+    await user.tab();
+
+    expect(onChange).toHaveBeenCalledTimes(1);
   });
 });

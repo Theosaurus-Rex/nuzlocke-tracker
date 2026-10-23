@@ -13,9 +13,12 @@ form when nothing is highlighted. Selection is committed from each `Item`'s `onC
 UI also fires for an Enter press on the highlighted item, rather than from `onValueChange`, since
 that callback only ever carries the item's string label.
 
-`open` is kept explicit rather than left uncontrolled. Base UI aria-hides everything outside the
-popup and its input while the popup is open, including sibling form controls such as the dialog's
-own submit button, since the input renders outside the popup. Typing a full match commits the
-value without the user ever pressing Enter or clicking an option, so nothing tells Base UI to
-close the list on its own in that case. Closing it ourselves once `resolve` finds a value avoids
-leaving the rest of the form hidden from assistive tech.
+Typing only filters. Nothing is chosen mid-typing, so "Acid" cannot beat "Acid Spray". A value is
+set by picking a row, or by blur: leaving the field with text that `resolve` matches exactly
+commits it, so a form saved straight after typing a full name keeps the value. Editing the text of
+a field that holds a value clears it. A mouse click on a row does not blur the input first, so
+blur never double-commits a click.
+
+`open` is kept explicit rather than left uncontrolled so that the popup closes after a pick.
+Base UI aria-hides everything outside the popup and its input while it is open, including the
+dialog's own submit button.

@@ -21,6 +21,8 @@ const EXTRA_MOVES = [
   { name: "growl", url: `${POKEAPI_BASE}/move/45/` },
   { name: "growth", url: `${POKEAPI_BASE}/move/74/` },
   { name: "razor-leaf", url: `${POKEAPI_BASE}/move/75/` },
+  { name: "acid", url: `${POKEAPI_BASE}/move/51/` },
+  { name: "acid-spray", url: `${POKEAPI_BASE}/move/491/` },
 ];
 
 const EXTENDED_MOVE_INDEX: RawIndex = {
@@ -30,22 +32,6 @@ const EXTENDED_MOVE_INDEX: RawIndex = {
 beforeEach(() => {
   stubPokeApi({ ...defaultPokeApiRoutes, "/move?limit=100000": EXTENDED_MOVE_INDEX });
 });
-
-function deferredMoveIndex() {
-  let resolveFetch: ((response: Response) => void) | undefined;
-  const fetchMock = vi.fn((input: string | URL | Request): Promise<Response> => {
-    const url = input instanceof Request ? input.url : String(input);
-    const path = url.startsWith(POKEAPI_BASE) ? url.slice(POKEAPI_BASE.length) : url;
-    if (path !== "/move?limit=100000") {
-      return Promise.resolve(new Response(null, { status: 404 }));
-    }
-    return new Promise<Response>((resolve) => {
-      resolveFetch = resolve;
-    });
-  });
-  vi.stubGlobal("fetch", fetchMock);
-  return { release: () => resolveFetch?.(Response.json(EXTENDED_MOVE_INDEX)) };
-}
 
 function StatefulMovesetField({
   initial,
@@ -100,7 +86,7 @@ describe("MovesetField", () => {
     expect(screen.getByText("Razor Leaf")).toBeInTheDocument();
   });
 
-  it("fills the first empty slot when a fully typed move name is entered", async () => {
+  it("fills the first empty slot when a fully typed move name is left", async () => {
     const user = userEvent.setup();
     const onChange = vi.fn();
     render(<StatefulMovesetField initial={[]} onChange={onChange} />);
@@ -108,6 +94,8 @@ describe("MovesetField", () => {
     const [firstPicker] = pickers();
     if (firstPicker === undefined) throw new Error("expected an empty picker");
     await user.type(firstPicker, "Tackle");
+    expect(onChange).not.toHaveBeenCalled();
+    await user.tab();
 
     expect(onChange).toHaveBeenCalledWith(["tackle"]);
     expect(screen.getByText("Tackle")).toBeInTheDocument();
@@ -119,9 +107,13 @@ describe("MovesetField", () => {
     render(<StatefulMovesetField initial={[]} />);
 
     await user.type(pickers()[0]!, "Tackle");
+    await user.tab();
     await user.type(pickers()[0]!, "Growl");
+    await user.tab();
     await user.type(pickers()[0]!, "Vine Whip");
+    await user.tab();
     await user.type(pickers()[0]!, "Razor Leaf");
+    await user.tab();
 
     expect(pickers()).toHaveLength(0);
     expect(screen.getByText("Tackle")).toBeInTheDocument();
@@ -155,6 +147,21 @@ describe("MovesetField", () => {
     expect(screen.queryByRole("option", { name: "Growl" })).not.toBeInTheDocument();
   });
 
+  it("does not take Acid while the rest of Acid Spray is still being typed", async () => {
+    const user = userEvent.setup();
+    const onChange = vi.fn();
+    render(<StatefulMovesetField initial={[]} onChange={onChange} />);
+
+    await user.type(pickers()[0]!, "Acid");
+    await user.type(pickers()[0]!, " Spray");
+    await user.click(await screen.findByRole("option", { name: "Acid Spray" }));
+
+    expect(onChange).toHaveBeenCalledTimes(1);
+    expect(onChange).toHaveBeenCalledWith(["acid-spray"]);
+    expect(screen.getByText("Acid Spray")).toBeInTheDocument();
+    expect(screen.queryByText("Acid")).not.toBeInTheDocument();
+  });
+
   it("typing a name unknown to the pokedex sets nothing", async () => {
     const user = userEvent.setup();
     const onChange = vi.fn();
@@ -166,39 +173,6 @@ describe("MovesetField", () => {
 
     expect(onChange).not.toHaveBeenCalled();
     expect(pickers()).toHaveLength(4);
-  });
-
-  it("keeps both moves when two slots resolve together as the move index arrives", async () => {
-    const user = userEvent.setup();
-    const onChange = vi.fn();
-    const deferred = deferredMoveIndex();
-    render(<StatefulMovesetField initial={[]} onChange={onChange} />);
-
-    await user.type(pickers()[0]!, "Growl");
-    await user.type(pickers()[1]!, "Tackle");
-
-    deferred.release();
-
-    await waitFor(() => {
-      expect(screen.getByText("Growl")).toBeInTheDocument();
-      expect(screen.getByText("Tackle")).toBeInTheDocument();
-    });
-  });
-
-  it("never adds the same move twice when two slots resolve to it together", async () => {
-    const user = userEvent.setup();
-    const onChange = vi.fn();
-    const deferred = deferredMoveIndex();
-    render(<StatefulMovesetField initial={[]} onChange={onChange} />);
-
-    await user.type(pickers()[0]!, "Tackle");
-    await user.type(pickers()[1]!, "Tackle");
-
-    deferred.release();
-
-    await waitFor(() => {
-      expect(onChange).toHaveBeenLastCalledWith(["tackle"]);
-    });
   });
 
   it("does not show the notice once every slot is filled, even while the move index fails", async () => {

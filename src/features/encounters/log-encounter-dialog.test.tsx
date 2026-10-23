@@ -94,6 +94,7 @@ describe("LogEncounterDialog dupes clause", () => {
     renderDialog({ rules: ON, mons: [owned] });
 
     await user.type(screen.getByLabelText("Species"), "Gloom");
+    await user.tab();
 
     expect(await screen.findByRole("status")).toHaveTextContent(
       "Dupes clause: you already have “Petal”, a Vileplume. This encounter doesn't count, so you can skip it and keep looking.",
@@ -109,6 +110,7 @@ describe("LogEncounterDialog dupes clause", () => {
 
     await user.click(screen.getByRole("radio", { name: "Skipped" }));
     await user.type(screen.getByLabelText("Species (optional)"), "Geodude");
+    await user.tab();
 
     expect(await screen.findByRole("status")).toHaveTextContent(
       "Dupes clause: you already have a Geodude. This encounter doesn't count",
@@ -128,6 +130,7 @@ describe("LogEncounterDialog dupes clause", () => {
     });
 
     await user.type(screen.getByLabelText("Species"), "Oddish");
+    await user.tab();
 
     expect(await screen.findByRole("status")).toHaveTextContent("an Oddish");
   });
@@ -140,6 +143,7 @@ describe("LogEncounterDialog dupes clause", () => {
     });
 
     await user.type(screen.getByLabelText("Species"), "Oddish");
+    await user.tab();
     await screen.findByRole("combobox", { name: "Species" });
 
     expect(screen.queryByRole("status")).not.toBeInTheDocument();
@@ -150,6 +154,7 @@ describe("LogEncounterDialog dupes clause", () => {
     renderDialog({ rules: ON, mons: [owned] });
 
     await user.type(screen.getByLabelText("Species"), "Chikorita");
+    await user.tab();
     await screen.findByRole("combobox", { name: "Species" });
 
     expect(screen.queryByRole("status")).not.toBeInTheDocument();
@@ -160,6 +165,7 @@ describe("LogEncounterDialog dupes clause", () => {
     const { adapter, onOpenChange } = renderDialog({ rules: ON, mons: [owned] });
 
     await user.type(screen.getByLabelText("Species"), "Gloom");
+    await user.tab();
     await screen.findByRole("status");
     await user.type(screen.getByLabelText("Level caught"), "6");
     await user.click(screen.getByRole("button", { name: "Save encounter" }));
@@ -237,6 +243,7 @@ describe("LogEncounterDialog", () => {
     renderDialog({});
 
     await user.type(screen.getByLabelText("Species"), "Chikorita");
+    await user.tab();
 
     expect(await screen.findByText("grass")).toBeInTheDocument();
   });
@@ -276,6 +283,7 @@ describe("LogEncounterDialog", () => {
     const { adapter, onOpenChange } = renderDialog({});
 
     await user.type(screen.getByLabelText("Species"), "Chikorita");
+    await user.tab();
     await user.type(screen.getByLabelText("Level caught"), "6");
     await user.click(screen.getByRole("button", { name: "Save encounter" }));
 
@@ -308,6 +316,7 @@ describe("LogEncounterDialog", () => {
     const { adapter, onOpenChange } = renderDialog({});
 
     await user.type(screen.getByLabelText("Species"), "Chikorita");
+    await user.tab();
     await user.type(screen.getByLabelText("Level caught"), "6");
     await user.type(screen.getByLabelText(/^Nickname/), "Sprig");
     await user.click(
@@ -316,7 +325,9 @@ describe("LogEncounterDialog", () => {
       }),
     );
     await user.type(screen.getByLabelText("Ability"), "Overgrow");
+    await user.tab();
     await user.type(screen.getByLabelText("Held item"), "Miracle Seed");
+    await user.tab();
     await user.click(screen.getByRole("button", { name: "Save encounter" }));
 
     await waitFor(() => {
@@ -337,9 +348,12 @@ describe("LogEncounterDialog", () => {
     const { adapter, onOpenChange } = renderDialog({});
 
     await user.type(screen.getByLabelText("Species"), "Chikorita");
+    await user.tab();
     await user.type(screen.getByLabelText("Level caught"), "6");
     await user.type(screen.getAllByPlaceholderText("+ move")[0]!, "Tackle");
+    await user.tab();
     await user.type(screen.getAllByPlaceholderText("+ move")[0]!, "Growl");
+    await user.tab();
     await user.click(screen.getByRole("button", { name: "Save encounter" }));
 
     await waitFor(() => {
@@ -558,11 +572,13 @@ describe("logging an encounter from the routes screen", () => {
 
     if (outcomeLabel === "Caught") {
       await user.type(screen.getByLabelText("Species"), "Chikorita");
+      await user.tab();
       await user.type(screen.getByLabelText("Level caught"), "6");
     } else {
       await user.click(screen.getByRole("radio", { name: outcomeLabel }));
       if (outcomeLabel === "Missed") {
         await user.type(screen.getByLabelText("Species"), "Geodude");
+        await user.tab();
       }
     }
 
