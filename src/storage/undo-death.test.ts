@@ -3,6 +3,7 @@ import { describe, expect, it } from "vitest";
 import type { StorageAdapter } from "./adapter";
 import { createMemoryAdapter } from "./memory-adapter";
 import { persistUndoDeath } from "./mutations";
+import { emptyMoveset } from "@/domain/moveset";
 
 function withFailingDeathsDelete(base: StorageAdapter): StorageAdapter {
   return {
@@ -27,7 +28,7 @@ async function seed(partySlots: number[]) {
     nature: null,
     ability: null,
     heldItem: null,
-    moves: [],
+    moves: emptyMoveset(),
     boxOrder: null,
     caughtRouteId: null,
     shiny: false,

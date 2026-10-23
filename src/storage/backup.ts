@@ -4,6 +4,7 @@
  * every problem accumulates instead of the parse stopping at the first.
  */
 
+import { isMoveset, padMoveset } from "@/domain/moveset";
 import { SCHEMA_VERSION, isExportBundle, type ExportBundle } from "@/domain/schema";
 import { CLAUSE_FIELDS, RANDOMISER_FIELDS } from "@/domain/rules";
 import type {
@@ -115,10 +116,6 @@ function isBoolean(value: unknown): value is boolean {
   return typeof value === "boolean";
 }
 
-function isStringArray(value: unknown): value is string[] {
-  return Array.isArray(value) && value.every((item) => typeof item === "string");
-}
-
 function isEnum<T extends string>(value: unknown, allowed: readonly T[]): value is T {
   return typeof value === "string" && (allowed as readonly string[]).includes(value);
 }
@@ -176,7 +173,10 @@ const nullableStr: FieldRule = { check: isNullableString, expected: "a string or
 const num: FieldRule = { check: isFiniteNumber, expected: "a number" };
 const nullableNum: FieldRule = { check: isNullableFiniteNumber, expected: "a number or null" };
 const bool: FieldRule = { check: isBoolean, expected: "a boolean" };
-const strArray: FieldRule = { check: isStringArray, expected: "an array of strings" };
+const moveset: FieldRule = {
+  check: isMoveset,
+  expected: "an array of 4 move slots, each a non-empty string or null",
+};
 
 function oneOf<T extends string>(allowed: readonly T[]): FieldRule {
   return { check: (value) => isEnum(value, allowed), expected: `one of ${allowed.join(", ")}` };
@@ -378,7 +378,7 @@ const MON_FIELDS: RowFields<Mon> = {
   nature: nullableStr,
   ability: nullableStr,
   heldItem: nullableStr,
-  moves: strArray,
+  moves: moveset,
   status: oneOf(MON_STATUSES),
   partySlot: nullableNum,
   boxOrder: nullableNum,
@@ -482,6 +482,21 @@ function validateBundleContents(bundle: ExportBundle): string[] {
   return errors;
 }
 
+const MIN_READABLE_SCHEMA_VERSION = 4;
+
+/** Version 4 stored moves as a list of the moves present. Version 5 stores four slots. */
+function upgradeV4(bundle: ExportBundle): ExportBundle {
+  return {
+    ...bundle,
+    schemaVersion: SCHEMA_VERSION,
+    mons: bundle.mons.map((mon) => {
+      const moves: unknown = mon.moves;
+      const isLegacyList = Array.isArray(moves) && moves.every((move) => typeof move === "string");
+      return isLegacyList ? { ...mon, moves: padMoveset(moves) } : mon;
+    }),
+  };
+}
+
 /**
  * Parses and validates raw text into an ExportBundle, never throwing. Checks run in order:
  * valid JSON, envelope shape, schemaVersion, then row and reference validation, all
@@ -515,22 +530,24 @@ export function parseBundle(text: string): ParseResult {
     };
   }
 
-  if (parsed.schemaVersion < SCHEMA_VERSION) {
+  if (parsed.schemaVersion < MIN_READABLE_SCHEMA_VERSION) {
     return {
       ok: false,
       errors: [
         `This file was written by an older version of the app (schemaVersion ${parsed.schemaVersion}; ` +
-          `this app reads only ${SCHEMA_VERSION}). It cannot be imported.`,
+          `this app reads ${MIN_READABLE_SCHEMA_VERSION} to ${SCHEMA_VERSION}). It cannot be imported.`,
       ],
     };
   }
 
-  const errors = validateBundleContents(parsed);
+  const bundle = parsed.schemaVersion === 4 ? upgradeV4(parsed) : parsed;
+
+  const errors = validateBundleContents(bundle);
   if (errors.length > 0) {
     return { ok: false, errors };
   }
 
-  return { ok: true, bundle: parsed };
+  return { ok: true, bundle };
 }
 
 export type ImportMode = "merge" | "replace";

@@ -5,10 +5,11 @@
  */
 
 import { nextFreeBoxSlot } from "./box-slots";
-import type { Cause, Draft, Encounter, Fight, Gender, Mon, Death } from "./types";
+import { MAX_MOVES, isMoveset } from "./moveset";
+import type { Cause, Draft, Encounter, Fight, Gender, Mon, Moveset, Death } from "./types";
 
 export const MAX_PARTY_SIZE = 6;
-export const MAX_MOVES = 4;
+export { MAX_MOVES };
 
 function assertEncounterOpen(encounter: Encounter): void {
   if (encounter.status !== "open") {
@@ -63,16 +64,20 @@ export interface CatchDetails {
   nature: string | null;
   ability: string | null;
   heldItem: string | null;
-  moves: string[];
+  moves: Moveset;
   shiny: boolean;
 }
 
-function assertCatchDetails(details: CatchDetails): void {
-  if (details.moves.length > MAX_MOVES) {
+function assertMoveset(moves: unknown): void {
+  if (!isMoveset(moves)) {
     throw new Error(
-      `A mon cannot have more than ${MAX_MOVES} moves (got ${details.moves.length}).`,
+      `A mon needs exactly ${MAX_MOVES} move slots, each a move or null (got ${JSON.stringify(moves)}).`,
     );
   }
+}
+
+function assertCatchDetails(details: CatchDetails): void {
+  assertMoveset(details.moves);
 
   if (details.level < details.levelCaught) {
     throw new Error(
@@ -307,7 +312,7 @@ export interface MonAmendments {
   nature: string | null;
   ability: string | null;
   heldItem: string | null;
-  moves: string[];
+  moves: Moveset;
   shiny: boolean;
 }
 
@@ -318,11 +323,7 @@ export function amendMon({ mon, amendments }: { mon: Mon; amendments: MonAmendme
     );
   }
 
-  if (amendments.moves.length > MAX_MOVES) {
-    throw new Error(
-      `A mon cannot have more than ${MAX_MOVES} moves (got ${amendments.moves.length}).`,
-    );
-  }
+  assertMoveset(amendments.moves);
 
   return {
     ...mon,

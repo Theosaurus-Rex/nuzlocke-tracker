@@ -3,6 +3,7 @@ import { describe, expect, it } from "vitest";
 import type { StorageAdapter } from "./adapter";
 import { createMemoryAdapter } from "./memory-adapter";
 import { persistReorderParty } from "./mutations";
+import { emptyMoveset } from "@/domain/moveset";
 
 function withSecondMonPutFailing(base: StorageAdapter): StorageAdapter {
   let puts = 0;
@@ -38,7 +39,7 @@ async function seed(partySlots: number[]) {
       nature: null,
       ability: null,
       heldItem: null,
-      moves: [],
+      moves: emptyMoveset(),
       status: "party",
       partySlot: slot,
       boxOrder: null,

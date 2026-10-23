@@ -10,6 +10,8 @@ import { render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
+import { padMoveset } from "@/domain/moveset";
+import type { Moveset } from "@/domain/types";
 import { POKEAPI_BASE } from "@/game/pokeapi/client";
 import type { RawIndex } from "@/game/pokeapi/map";
 import { defaultPokeApiRoutes, STUB_PENDING, stubPokeApi, stubStatus } from "@/test/pokeapi-fetch";
@@ -37,10 +39,10 @@ function StatefulMovesetField({
   initial,
   onChange,
 }: {
-  initial: string[];
-  onChange?: (moves: string[]) => void;
+  initial: readonly (string | null)[];
+  onChange?: (moves: Moveset) => void;
 }) {
-  const [moves, setMoves] = useState(initial);
+  const [moves, setMoves] = useState(() => padMoveset(initial));
   const [client] = useState(
     () => new QueryClient({ defaultOptions: { queries: { retry: false } } }),
   );
@@ -60,6 +62,16 @@ function StatefulMovesetField({
 
 function pickers(): HTMLElement[] {
   return screen.queryAllByPlaceholderText("+ move");
+}
+
+function slotLabels(): string[] {
+  const grid = screen.getByText("Moveset").nextElementSibling;
+  const labels: string[] = [];
+  for (const slot of Array.from(grid?.children ?? [])) {
+    if (slot.querySelector('input[placeholder="+ move"]') !== null) labels.push("+ move");
+    else if (slot.querySelector("button") !== null) labels.push(slot.textContent ?? "");
+  }
+  return labels;
 }
 
 describe("MovesetField", () => {
@@ -97,7 +109,7 @@ describe("MovesetField", () => {
     expect(onChange).not.toHaveBeenCalled();
     await user.tab();
 
-    expect(onChange).toHaveBeenCalledWith(["tackle"]);
+    expect(onChange).toHaveBeenCalledWith(["tackle", null, null, null]);
     expect(screen.getByText("Tackle")).toBeInTheDocument();
     expect(pickers()).toHaveLength(3);
   });
@@ -122,17 +134,49 @@ describe("MovesetField", () => {
     expect(screen.getByText("Razor Leaf")).toBeInTheDocument();
   });
 
-  it("removing a move from the middle leaves the rest contiguous", async () => {
+  it("clearing a move leaves its slot empty and the others where they were", async () => {
     const user = userEvent.setup();
     const onChange = vi.fn();
-    render(<StatefulMovesetField initial={["tackle", "growl", "vine-whip"]} onChange={onChange} />);
+    render(
+      <StatefulMovesetField
+        initial={["tackle", "growl", "vine-whip", "razor-leaf"]}
+        onChange={onChange}
+      />,
+    );
 
     await user.click(screen.getByRole("button", { name: "Remove Growl" }));
 
-    expect(onChange).toHaveBeenCalledWith(["tackle", "vine-whip"]);
+    expect(onChange).toHaveBeenCalledWith(["tackle", null, "vine-whip", "razor-leaf"]);
     expect(screen.queryByText("Growl")).not.toBeInTheDocument();
-    expect(screen.getByText("Tackle")).toBeInTheDocument();
-    expect(screen.getByText("Vine Whip")).toBeInTheDocument();
+    expect(slotLabels()).toEqual(["Tackle", "+ move", "Vine Whip", "Razor Leaf"]);
+  });
+
+  it("puts a move picked into an empty middle slot in that slot", async () => {
+    const user = userEvent.setup();
+    const onChange = vi.fn();
+    render(
+      <StatefulMovesetField
+        initial={["tackle", null, "vine-whip", "razor-leaf"]}
+        onChange={onChange}
+      />,
+    );
+
+    await user.type(pickers()[0]!, "Growl");
+    await user.tab();
+
+    expect(onChange).toHaveBeenCalledWith(["tackle", "growl", "vine-whip", "razor-leaf"]);
+    expect(slotLabels()).toEqual(["Tackle", "Growl", "Vine Whip", "Razor Leaf"]);
+  });
+
+  it("fills a gap without moving the moves after it", async () => {
+    const user = userEvent.setup();
+    const onChange = vi.fn();
+    render(<StatefulMovesetField initial={[null, null, "growl", null]} onChange={onChange} />);
+
+    await user.type(pickers()[1]!, "Tackle");
+    await user.tab();
+
+    expect(onChange).toHaveBeenLastCalledWith([null, "tackle", "growl", null]);
   });
 
   it("does not suggest a move that is already chosen", async () => {
@@ -157,7 +201,7 @@ describe("MovesetField", () => {
     await user.click(await screen.findByRole("option", { name: "Acid Spray" }));
 
     expect(onChange).toHaveBeenCalledTimes(1);
-    expect(onChange).toHaveBeenCalledWith(["acid-spray"]);
+    expect(onChange).toHaveBeenCalledWith(["acid-spray", null, null, null]);
     expect(screen.getByText("Acid Spray")).toBeInTheDocument();
     expect(screen.queryByText("Acid")).not.toBeInTheDocument();
   });

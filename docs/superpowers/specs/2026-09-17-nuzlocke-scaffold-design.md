@@ -213,7 +213,7 @@ of truth, and they will drift the first time a death is logged.
 | `nature` | `string?` | |
 | `ability` | `string?` | |
 | `heldItem` | `string?` | |
-| `moves` | `string[]` | max 4, validated in `domain` |
+| `moves` | `[string \| null, string \| null, string \| null, string \| null]` | four fixed slots in game order, validated in `domain`. A cleared move leaves `null` |
 | `status` | `'party' \| 'box' \| 'dead'` | indexed |
 | `partySlot` | `number?` | 0–5; set iff `status === 'party'` |
 | `boxOrder` | `number?` | |
@@ -344,7 +344,7 @@ pointing at a mon that does not exist.
 
 ```ts
 type ExportBundle = {
-  schemaVersion: number        // 1
+  schemaVersion: number        // SCHEMA_VERSION, currently 5
   exportedAt: string
   runs: Run[]
   routes: Route[]
@@ -359,6 +359,10 @@ Flat arrays, one per table, mirroring the row shapes exactly. `SCHEMA_VERSION` i
 commit that defines the model, per hard rule 4, and `adapter.exportAll()` is built here even
 though the import flow is PER-10. Fixing the shape now means nothing has to be renamed when
 import lands.
+
+Version 5 stores `Mon.moves` as four fixed slots, where version 4 stored only the moves present. Import still
+reads version 4 and pads each mon's moves. Older exports are refused. The local database makes
+the same change in its version 2 upgrade.
 
 ## 7. Storage adapter interface
 

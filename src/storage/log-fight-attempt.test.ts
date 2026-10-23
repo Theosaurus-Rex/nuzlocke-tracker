@@ -5,6 +5,7 @@ import type { Mon } from "@/domain/types";
 import type { StorageAdapter } from "./adapter";
 import { createMemoryAdapter } from "./memory-adapter";
 import { persistLogFightAttempt, persistUndoClearFight } from "./mutations";
+import { emptyMoveset } from "@/domain/moveset";
 
 const AT = "2026-09-30T10:00:00.000Z";
 
@@ -40,7 +41,7 @@ async function seed() {
       nature: null,
       ability: null,
       heldItem: null,
-      moves: [],
+      moves: emptyMoveset(),
       status: "party",
       partySlot: 0,
       boxOrder: null,

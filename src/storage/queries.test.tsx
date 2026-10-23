@@ -26,6 +26,7 @@ import type { StorageAdapter } from "./adapter";
 import { createMemoryAdapter } from "./memory-adapter";
 import { useCatchEncounter, useCreateRun, useDeleteRun } from "./mutations";
 import { useEncounters, useMons, useRoutes, useRun, useRuns } from "./queries";
+import { padMoveset } from "@/domain/moveset";
 
 const CATCH_DETAILS: CatchDetails = {
   speciesId: "chikorita",
@@ -37,7 +38,7 @@ const CATCH_DETAILS: CatchDetails = {
   nature: null,
   ability: null,
   heldItem: null,
-  moves: ["tackle"],
+  moves: padMoveset(["tackle"]),
   shiny: false,
 };
 

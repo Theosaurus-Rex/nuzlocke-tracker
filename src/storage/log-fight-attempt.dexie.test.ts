@@ -6,6 +6,7 @@ import { beforeEach, describe, expect, it } from "vitest";
 
 import { createDexieAdapter } from "./dexie-adapter";
 import { persistLogFightAttempt } from "./mutations";
+import { emptyMoveset } from "@/domain/moveset";
 
 const AT = "2026-09-30T10:00:00.000Z";
 
@@ -29,7 +30,7 @@ describe("persistLogFightAttempt on Dexie", () => {
       nature: null,
       ability: null,
       heldItem: null,
-      moves: [],
+      moves: emptyMoveset(),
       boxOrder: null,
       caughtRouteId: null,
       shiny: false,

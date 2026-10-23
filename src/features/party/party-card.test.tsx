@@ -8,6 +8,7 @@ import { defaultPokeApiRoutes, stubPokeApi } from "@/test/pokeapi-fetch";
 import { makeMon } from "@/test/factories";
 
 import { PartyCard } from "./party-card";
+import { padMoveset } from "@/domain/moveset";
 
 const CHIKORITA = { speciesId: "chikorita", speciesIdCaught: "chikorita" };
 
@@ -64,7 +65,7 @@ describe("PartyCard", () => {
         nature: "Adamant",
         ability: "overgrow",
         heldItem: "miracle-seed",
-        moves: ["vine-whip", "tackle"],
+        moves: padMoveset(["vine-whip", "tackle"]),
       }),
       "Route 29",
     );
@@ -75,6 +76,20 @@ describe("PartyCard", () => {
     expect(screen.getByText("Miracle Seed").closest("p")?.textContent).toBe(
       "Miracle Seed · Overgrow · Route 29",
     );
+  });
+
+  it("keeps each move in its slot when one in between is empty", () => {
+    renderCard(makeMon({ ...CHIKORITA, moves: ["vine-whip", null, "tackle", null] }));
+
+    const moveCells = Array.from(document.querySelectorAll("ul.grid > li")).map(
+      (li) => li.textContent,
+    );
+    expect(moveCells).toEqual(["Vine Whip", "", "Tackle"]);
+  });
+
+  it("shows no move cells for a mon with no moves", () => {
+    renderCard(makeMon(CHIKORITA));
+    expect(document.querySelectorAll("ul.grid > li")).toHaveLength(0);
   });
 
   it("falls back to the species name, unquoted, with no nickname", () => {

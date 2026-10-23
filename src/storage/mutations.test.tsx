@@ -29,6 +29,7 @@ import {
   useResetEncounter,
 } from "./mutations";
 import { useEncounters, useMons } from "./queries";
+import { emptyMoveset, padMoveset } from "@/domain/moveset";
 
 /**
  * Wraps a StorageAdapter so routes.putMany always rejects. transaction re-wraps the scoped
@@ -88,7 +89,7 @@ const CATCH_DETAILS: CatchDetails = {
   nature: null,
   ability: null,
   heldItem: null,
-  moves: [],
+  moves: emptyMoveset(),
   shiny: false,
 };
 
@@ -510,7 +511,7 @@ describe("useAmendMon", () => {
     nature: "adamant",
     ability: "overgrow",
     heldItem: "oran-berry",
-    moves: ["vine-whip", "growth"],
+    moves: padMoveset(["vine-whip", "growth"]),
     shiny: false,
   };
 
@@ -557,7 +558,7 @@ describe("useAmendMon", () => {
     expect(result.nature).toBe("adamant");
     expect(result.ability).toBe("overgrow");
     expect(result.heldItem).toBe("oran-berry");
-    expect(result.moves).toEqual(["vine-whip", "growth"]);
+    expect(result.moves).toEqual(["vine-whip", "growth", null, null]);
     expect(result.speciesId).toBe(targetMon.speciesId);
 
     const persisted = await adapter.mons.get(targetMon.id);

@@ -8,6 +8,7 @@ import type { Death, Mon } from "@/domain/types";
 import { defaultPokeApiRoutes, stubPokeApi } from "@/test/pokeapi-fetch";
 
 import { DeathCard, type DeathCardProps } from "./death-card";
+import { emptyMoveset } from "@/domain/moveset";
 
 const STAMP = "2026-09-17T00:00:00.000Z";
 
@@ -24,7 +25,7 @@ const mon: Mon = {
   nature: null,
   ability: null,
   heldItem: null,
-  moves: [],
+  moves: emptyMoveset(),
   status: "dead",
   partySlot: null,
   boxOrder: null,

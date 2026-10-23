@@ -10,6 +10,7 @@ import {
   type BoxSortField,
   type BoxSorting,
 } from "./box-sort";
+import { emptyMoveset } from "@/domain/moveset";
 
 function mon(id: string, overrides: Partial<Mon> = {}): Mon {
   return {
@@ -25,7 +26,7 @@ function mon(id: string, overrides: Partial<Mon> = {}): Mon {
     nature: null,
     ability: null,
     heldItem: null,
-    moves: [],
+    moves: emptyMoveset(),
     status: "box",
     partySlot: null,
     boxOrder: 0,

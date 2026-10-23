@@ -9,6 +9,7 @@ import {
 import { DEFAULT_RULES } from "@/domain/rules";
 import type { CatchDetails, MonAmendments } from "@/domain/transitions";
 import type { Rules } from "@/domain/types";
+import { emptyMoveset } from "@/domain/moveset";
 
 function makeDetails(overrides: Partial<CatchDetails> = {}): CatchDetails {
   return {
@@ -21,7 +22,7 @@ function makeDetails(overrides: Partial<CatchDetails> = {}): CatchDetails {
     nature: null,
     ability: null,
     heldItem: null,
-    moves: [],
+    moves: emptyMoveset(),
     shiny: false,
     ...overrides,
   };
@@ -147,7 +148,7 @@ function makeAmendments(overrides: Partial<MonAmendments> = {}): MonAmendments {
     nature: null,
     ability: null,
     heldItem: null,
-    moves: [],
+    moves: emptyMoveset(),
     shiny: false,
     ...overrides,
   };

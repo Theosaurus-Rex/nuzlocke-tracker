@@ -11,6 +11,7 @@ import { createMemoryAdapter } from "@/storage/memory-adapter";
 import { StorageProvider } from "@/storage/storage-context";
 
 import { FightsScreen } from "./fights-screen";
+import { emptyMoveset } from "@/domain/moveset";
 
 type FightDraft = Omit<Fight, "id" | "createdAt" | "updatedAt">;
 
@@ -71,7 +72,7 @@ async function seed(adapter: StorageAdapter, rules: Rules = { ...DEFAULT_RULES, 
     nature: null,
     ability: null,
     heldItem: null,
-    moves: [],
+    moves: emptyMoveset(),
     status: "dead",
     partySlot: null,
     boxOrder: null,

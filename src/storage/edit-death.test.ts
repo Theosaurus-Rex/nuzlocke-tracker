@@ -4,6 +4,7 @@ import type { Cause } from "@/domain/types";
 
 import { createMemoryAdapter } from "./memory-adapter";
 import { persistEditDeath } from "./mutations";
+import { padMoveset } from "@/domain/moveset";
 
 const STORED_CAUSE: Cause = {
   type: "trainer",
@@ -30,7 +31,7 @@ async function seed() {
     nature: null,
     ability: null,
     heldItem: null,
-    moves: ["tackle"],
+    moves: padMoveset(["tackle"]),
     status: "dead",
     partySlot: null,
     boxOrder: null,

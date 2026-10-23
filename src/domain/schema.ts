@@ -3,7 +3,7 @@
 import type { Run, Route, Encounter, Mon, Death, Fight } from "./types";
 
 /** Bumped whenever a table's shape changes in a way that breaks import of an older export. */
-export const SCHEMA_VERSION = 4;
+export const SCHEMA_VERSION = 5;
 
 export interface ExportBundle {
   schemaVersion: number;

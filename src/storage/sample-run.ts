@@ -3,9 +3,10 @@
 import { useMutation, useQueryClient, type UseMutationResult } from "@tanstack/react-query";
 
 import { DEFAULT_RULES } from "@/domain/rules";
+import { padMoveset } from "@/domain/moveset";
 import { compareRoutes } from "@/domain/routes";
 import { catchEncounter, killMon, missEncounter, skipEncounter } from "@/domain/transitions";
-import type { Cause, Fight, Gender, Mon, Run } from "@/domain/types";
+import type { Cause, Fight, Gender, Mon, Moveset, Run } from "@/domain/types";
 
 import type { StorageAdapter } from "./adapter";
 import { persistAddCustomRoute, persistCreateRun } from "./mutations";
@@ -26,7 +27,7 @@ interface MonPlan {
   nickname: string;
   level: number;
   levelCaught: number;
-  moves: string[];
+  moves: Moveset;
   gender?: Gender;
   nature?: string;
   ability?: string;
@@ -55,7 +56,7 @@ const PLANS: Plan[] = [
       gender: "male",
       nature: "Modest",
       ability: "blaze",
-      moves: ["tackle", "leer", "smokescreen", "ember"],
+      moves: ["tackle", null, "smokescreen", "ember"],
     },
   },
   { route: 1, kind: "skipped", species: null },
@@ -69,7 +70,7 @@ const PLANS: Plan[] = [
       level: 7,
       levelCaught: 3,
       gender: "female",
-      moves: ["scratch", "foresight"],
+      moves: padMoveset(["scratch", "foresight"]),
       death: {
         cause: {
           type: "trainer",
@@ -96,7 +97,7 @@ const PLANS: Plan[] = [
       gender: "male",
       nature: "Adamant",
       ability: "sturdy",
-      moves: ["tackle", "defense-curl", "rock-throw"],
+      moves: padMoveset(["tackle", "defense-curl", "rock-throw"]),
     },
   },
   {
@@ -112,7 +113,7 @@ const PLANS: Plan[] = [
       nature: "Jolly",
       ability: "chlorophyll",
       heldItem: "miracle-seed",
-      moves: ["vine-whip", "growth"],
+      moves: padMoveset(["vine-whip", "growth"]),
       boxOrder: 0,
     },
   },
@@ -125,7 +126,7 @@ const PLANS: Plan[] = [
       nickname: "Wiggly",
       level: 5,
       levelCaught: 3,
-      moves: ["tackle", "string-shot"],
+      moves: padMoveset(["tackle", "string-shot"]),
       death: {
         cause: { type: "wild", species: "zubat", level: 6, move: null },
         diedAt: "2026-09-01T12:01:00.000Z",
@@ -145,7 +146,7 @@ const PLANS: Plan[] = [
       gender: "female",
       nature: "Hasty",
       ability: "keen-eye",
-      moves: ["tackle", "gust"],
+      moves: padMoveset(["tackle", "gust"]),
       boxOrder: 3,
     },
   },
@@ -161,7 +162,7 @@ const PLANS: Plan[] = [
       gender: "female",
       nature: "Timid",
       ability: "inner-focus",
-      moves: ["leech-life", "supersonic"],
+      moves: padMoveset(["leech-life", "supersonic"]),
       boxOrder: 1,
     },
   },
@@ -177,7 +178,7 @@ const PLANS: Plan[] = [
       gender: "female",
       nature: "Calm",
       ability: "static",
-      moves: ["tackle", "growl", "thundershock"],
+      moves: padMoveset(["tackle", "growl", "thundershock"]),
     },
   },
   { route: 10, kind: "skipped", species: "rattata" },
@@ -194,7 +195,7 @@ const PLANS: Plan[] = [
       nature: "Relaxed",
       ability: "water-absorb",
       heldItem: "quick-claw",
-      moves: ["water-gun", "tail-whip"],
+      moves: padMoveset(["water-gun", "tail-whip"]),
       boxOrder: 2,
     },
   },
@@ -207,7 +208,7 @@ const PLANS: Plan[] = [
       nickname: "Burnie",
       level: 8,
       levelCaught: 5,
-      moves: ["tackle", "supersonic"],
+      moves: padMoveset(["tackle", "supersonic"]),
       death: { cause: { type: "status", status: "poison" }, diedAt: "2026-09-01T12:02:00.000Z" },
     },
   },
@@ -224,7 +225,7 @@ const PLANS: Plan[] = [
       nature: "Lonely",
       ability: "intimidate",
       heldItem: "quick-claw",
-      moves: ["wrap", "leer", "poison-sting"],
+      moves: padMoveset(["wrap", "leer", "poison-sting"]),
       boxOrder: 8,
     },
   },
@@ -240,7 +241,7 @@ const PLANS: Plan[] = [
       gender: "male",
       nature: "Adamant",
       ability: "keen-eye",
-      moves: ["peck", "growl"],
+      moves: padMoveset(["peck", "growl"]),
       boxOrder: 6,
     },
   },
@@ -256,7 +257,7 @@ const PLANS: Plan[] = [
       gender: "male",
       nature: "Bold",
       ability: "damp",
-      moves: ["water-gun", "hypnosis"],
+      moves: padMoveset(["water-gun", "hypnosis"]),
       boxOrder: 5,
     },
   },
@@ -274,7 +275,7 @@ const PLANS: Plan[] = [
       nature: "Naive",
       ability: "soundproof",
       heldItem: "magnet",
-      moves: ["tackle", "screech", "sonic-boom"],
+      moves: padMoveset(["tackle", "screech", "sonic-boom"]),
       shiny: true,
       boxOrder: 4,
     },
@@ -291,7 +292,7 @@ const PLANS: Plan[] = [
       gender: "female",
       nature: "Calm",
       ability: "insomnia",
-      moves: ["tackle", "growl", "foresight"],
+      moves: padMoveset(["tackle", "growl", "foresight"]),
       boxOrder: 7,
     },
   },
@@ -304,7 +305,7 @@ const PLANS: Plan[] = [
       nickname: "Drift",
       level: 9,
       levelCaught: 6,
-      moves: ["splash", "synthesis"],
+      moves: padMoveset(["splash", "synthesis"]),
       death: {
         cause: { type: "other", detail: "Crit on the switch-in" },
         diedAt: "2026-09-01T12:03:00.000Z",
@@ -323,7 +324,7 @@ const PLANS: Plan[] = [
       gender: "female",
       nature: "Impish",
       ability: "thick-fat",
-      moves: ["tackle", "water-gun", "defense-curl", "bubble"],
+      moves: padMoveset(["tackle", "water-gun", "defense-curl", "bubble"]),
     },
   },
   extra(21, "mr-mime", "Mime", 20, 9),
@@ -335,10 +336,10 @@ const PLANS: Plan[] = [
   extra(24, "deoxys-normal", "Helix", 30, 11),
   extra(25, "porygon-z", "Zed", 35, 12),
   extra(26, "genesect", "Gene", 40, 13),
-  extra(27, "chespin", "Spike", 16, 14, undefined, ["vine-whip", "play-rough"]),
+  extra(27, "chespin", "Spike", 16, 14, undefined, padMoveset(["vine-whip", "play-rough"])),
   extra(28, "flabebe", "Bloom", 18, 15),
   extra(29, "type-null", "Null", 25, 16),
-  extra(30, "tapu-koko", "Koko", 50, 17, undefined, ["thunderbolt", "spirit-break"]),
+  extra(30, "tapu-koko", "Koko", 50, 17, undefined, padMoveset(["thunderbolt", "spirit-break"])),
   extra(31, "sirfetchd", "Leek", 42, 18),
   extra(32, "great-tusk", "Tusk", 45, undefined, { type: "other", detail: "Fell off a cliff" }),
   { route: 33, kind: "missed", species: "corviknight" },
@@ -367,7 +368,7 @@ function extra(
   level: number,
   boxOrder?: number,
   cause?: Cause,
-  moves: string[] = ["tackle"],
+  moves: Moveset = padMoveset(["tackle"]),
 ): Plan {
   const death = cause && { cause, diedAt: `2026-09-01T12:${String(10 + route)}:00.000Z` };
   const mon: MonPlan = { species, nickname, level, levelCaught: level - 3, moves, boxOrder, death };

@@ -1,3 +1,4 @@
+import { emptyMoveset } from "@/domain/moveset";
 import type { Death, Draft, Encounter, Fight, Mon, Route, Run, Rules } from "@/domain/types";
 
 const PLACEHOLDER_TIME = "2000-01-01T00:00:00.000Z";
@@ -82,7 +83,7 @@ export function makeMonDraft(runId: string, overrides: Partial<Draft<Mon>> = {})
     nature: null,
     ability: null,
     heldItem: null,
-    moves: [],
+    moves: emptyMoveset(),
     status: "party",
     partySlot: 0,
     boxOrder: null,

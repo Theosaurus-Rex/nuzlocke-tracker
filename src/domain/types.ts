@@ -89,6 +89,9 @@ export type Encounter = Timestamped & {
   notes: string | null;
 };
 
+/** One entry per move slot. */
+export type Moveset = [string | null, string | null, string | null, string | null];
+
 export type Mon = Timestamped & {
   runId: string;
   /** Null for starters and gifts. */
@@ -105,8 +108,8 @@ export type Mon = Timestamped & {
   nature: string | null;
   ability: string | null;
   heldItem: string | null;
-  /** Max 4, validated in `domain`. */
-  moves: string[];
+  /** Four fixed slots in game order. A cleared move leaves null, so later moves keep their place. */
+  moves: Moveset;
   status: MonStatus;
   /** 0–5. Set iff `status === 'party'`. */
   partySlot: number | null;

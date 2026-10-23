@@ -9,6 +9,7 @@ import { createMemoryAdapter } from "@/storage/memory-adapter";
 import { StorageProvider } from "@/storage/storage-context";
 
 import { BoxGrid } from "./box-grid";
+import { emptyMoveset } from "@/domain/moveset";
 
 function mon(id: string, overrides: Partial<Mon> = {}): Mon {
   return {
@@ -24,7 +25,7 @@ function mon(id: string, overrides: Partial<Mon> = {}): Mon {
     nature: null,
     ability: null,
     heldItem: null,
-    moves: [],
+    moves: emptyMoveset(),
     status: "box",
     partySlot: null,
     boxOrder: 0,

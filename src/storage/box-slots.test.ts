@@ -14,6 +14,7 @@ import {
   persistResetEncounter,
   persistUndoDeath,
 } from "./mutations";
+import { emptyMoveset } from "@/domain/moveset";
 
 const DETAILS: CatchDetails = {
   speciesId: "geodude",
@@ -25,7 +26,7 @@ const DETAILS: CatchDetails = {
   nature: null,
   ability: null,
   heldItem: null,
-  moves: [],
+  moves: emptyMoveset(),
   shiny: false,
 };
 
@@ -36,7 +37,7 @@ const AMENDMENTS: MonAmendments = {
   nature: null,
   ability: null,
   heldItem: null,
-  moves: [],
+  moves: emptyMoveset(),
   shiny: false,
 };
 
@@ -53,7 +54,7 @@ async function putMon(adapter: StorageAdapter, overrides: Partial<Mon>): Promise
     nature: null,
     ability: null,
     heldItem: null,
-    moves: [],
+    moves: emptyMoveset(),
     status: "box",
     partySlot: null,
     boxOrder: null,

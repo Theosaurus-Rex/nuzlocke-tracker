@@ -5,6 +5,7 @@ import type { Mon } from "@/domain/types";
 import type { StorageAdapter } from "./adapter";
 import { createMemoryAdapter } from "./memory-adapter";
 import { persistMoveMonToParty } from "./mutations";
+import { emptyMoveset } from "@/domain/moveset";
 
 function withMonPutFailing(base: StorageAdapter): StorageAdapter {
   return {
@@ -27,7 +28,7 @@ async function putMon(adapter: StorageAdapter, overrides: Partial<Mon>): Promise
     nature: null,
     ability: null,
     heldItem: null,
-    moves: [],
+    moves: emptyMoveset(),
     status: "party",
     partySlot: 0,
     boxOrder: null,

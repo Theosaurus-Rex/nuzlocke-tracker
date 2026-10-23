@@ -9,7 +9,7 @@ import { LevelInput } from "@/components/level-input";
 import { countByMonStatus } from "@/domain/derive";
 import { validateAmendment, type EncounterField } from "@/domain/encounter-validation";
 import type { MonAmendments } from "@/domain/transitions";
-import type { Gender, Mon, Route, Rules } from "@/domain/types";
+import type { Gender, Mon, Moveset, Route, Rules } from "@/domain/types";
 import { GAMES } from "@/game/registry";
 import { speciesDisplayName } from "@/game/pokeapi/resolve";
 import { useAmendMon } from "@/storage/mutations";
@@ -123,7 +123,7 @@ function EditMonForm({ mon, runId, rules, generation, onDone }: EditMonFormProps
   const [nature, setNature] = useState<string | null>(mon.nature);
   const [ability, setAbility] = useState(mon.ability ?? "");
   const [heldItem, setHeldItem] = useState(mon.heldItem ?? "");
-  const [moves, setMoves] = useState<string[]>(mon.moves);
+  const [moves, setMoves] = useState<Moveset>(mon.moves);
   const [shiny, setShiny] = useState(mon.shiny);
   const [submitted, setSubmitted] = useState(false);
 

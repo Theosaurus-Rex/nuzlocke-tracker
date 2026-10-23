@@ -12,6 +12,7 @@ import { createMemoryAdapter } from "@/storage/memory-adapter";
 import { StorageProvider } from "@/storage/storage-context";
 
 import { BoxesScreen } from "./boxes-screen";
+import { emptyMoveset } from "@/domain/moveset";
 
 type MonDraft = Omit<Mon, "id" | "createdAt" | "updatedAt">;
 
@@ -28,7 +29,7 @@ function draft(runId: string, nickname: string, boxOrder: number): MonDraft {
     nature: null,
     ability: null,
     heldItem: null,
-    moves: [],
+    moves: emptyMoveset(),
     status: "box",
     partySlot: null,
     boxOrder,
