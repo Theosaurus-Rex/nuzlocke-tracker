@@ -37,12 +37,12 @@ function mon(id: string, overrides: Partial<Mon> = {}): Mon {
   };
 }
 
-function renderGrid(mons: Mon[], onEdit = vi.fn()) {
+function renderGrid(mons: Mon[], onEdit = vi.fn(), party: Mon[] = []) {
   const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
   render(
     <QueryClientProvider client={client}>
       <StorageProvider adapter={createMemoryAdapter()}>
-        <BoxGrid runId="run-1" mons={mons} onEdit={onEdit} />
+        <BoxGrid runId="run-1" mons={mons} party={party} onEdit={onEdit} />
       </StorageProvider>
     </QueryClientProvider>,
   );
@@ -50,9 +50,12 @@ function renderGrid(mons: Mon[], onEdit = vi.fn()) {
 }
 
 function slots(): HTMLElement[] {
-  return within(screen.getByRole("list", { hidden: true })).getAllByRole("listitem", {
-    hidden: true,
-  });
+  return within(screen.getByRole("list", { name: "Box slots", hidden: true })).getAllByRole(
+    "listitem",
+    {
+      hidden: true,
+    },
+  );
 }
 
 function slotsHolding(name: string): number[] {
@@ -132,6 +135,32 @@ describe("BoxGrid", () => {
     expect(screen.queryByRole("button", { name: "Box 3" })).not.toBeInTheDocument();
   });
 
+  it("draws six party slots and counts the party", () => {
+    const party = [
+      mon("Pip", { status: "party", partySlot: 0, boxOrder: null }),
+      mon("Tock", { status: "party", partySlot: 3, boxOrder: null }),
+    ];
+    renderGrid([mon("Sprig")], vi.fn(), party);
+
+    const row = screen.getByRole("list", { name: "Party slots", hidden: true });
+    const tiles = within(row).getAllByRole("listitem", { hidden: true });
+    expect(tiles).toHaveLength(6);
+    expect(within(tiles[3]!).getByRole("button", { name: "Edit “Tock”" })).toBeInTheDocument();
+    expect(tiles[1]).toHaveAttribute("aria-hidden", "true");
+    expect(screen.getByText("2 / 6")).toBeInTheDocument();
+  });
+
+  it("opens the editor from a party tile", async () => {
+    const user = userEvent.setup();
+    const onEdit = renderGrid([], vi.fn(), [
+      mon("Pip", { status: "party", partySlot: 1, boxOrder: null }),
+    ]);
+
+    await user.click(screen.getByRole("button", { name: "Edit “Pip”" }));
+
+    expect(onEdit).toHaveBeenCalledWith("Pip");
+  });
+
   it("reports the clicked mon", async () => {
     const user = userEvent.setup();
     const onEdit = renderGrid([mon("Sprig", { boxOrder: 5 })]);
@@ -146,7 +175,7 @@ describe("BoxGrid", () => {
 
     expect(
       screen.getByText(
-        "Tap a Pokémon to edit it. Long-press to pick it up, then drop it on any slot to move it.",
+        "Tap a Pokémon to edit it. Long-press to pick it up, then drop it on any box or party slot to move it.",
       ),
     ).toBeInTheDocument();
   });

@@ -69,3 +69,50 @@ test("dragging a boxed mon onto another swaps them and the swap survives a reloa
     expect(labels).toEqual(["Edit Pidgey", "Edit Clefairy"]);
   });
 });
+
+test("dragging between the boxes and the party moves a mon each way and it survives a reload", async ({
+  page,
+}, testInfo) => {
+  const nav = navFor(page, testInfo.project.name);
+
+  await createRun(page, "Party drag run");
+  await catchOnRoute(page, "Route 29", "Clefairy");
+  await catchOnRoute(page, "Route 46", "Pidgey", "Box");
+  if (testInfo.project.name === "mobile") {
+    await page.setViewportSize({ width: 375, height: 812 });
+  }
+  await nav.getByRole("link", { name: "Boxes" }).click();
+
+  const partySlots = page.locator("[aria-label='Party slots'] > li");
+  await expect(partySlots).toHaveCount(6);
+  await expect(partySlots.nth(0).getByRole("button", { name: "Edit Clefairy" })).toBeVisible();
+  await expect(partySlots.nth(5)).toBeInViewport();
+  const overflow = await page.evaluate(
+    () => document.documentElement.scrollWidth - document.documentElement.clientWidth,
+  );
+  expect(overflow).toBeLessThanOrEqual(0);
+
+  await dragBetween(page, page.getByRole("button", { name: "Edit Pidgey" }), partySlots.nth(3));
+  await expect(partySlots.nth(3).getByRole("button", { name: "Edit Pidgey" })).toBeVisible();
+  await expect(page.getByText("2 / 6")).toBeVisible();
+  await expect(page.getByText("No one in your boxes yet")).toBeVisible();
+
+  const boxSlots = page.locator("[aria-label='Box slots'] > li");
+  await dragBetween(page, page.getByRole("button", { name: "Edit Clefairy" }), boxSlots.nth(2));
+  await expect(boxSlots.nth(2).getByRole("button", { name: "Edit Clefairy" })).toBeVisible();
+
+  await expectPersisted(page, async (fresh) => {
+    await expect(
+      fresh
+        .locator("[aria-label='Party slots'] > li")
+        .nth(3)
+        .getByRole("button", { name: "Edit Pidgey" }),
+    ).toBeVisible();
+    await expect(
+      fresh
+        .locator("[aria-label='Box slots'] > li")
+        .nth(2)
+        .getByRole("button", { name: "Edit Clefairy" }),
+    ).toBeVisible();
+  });
+});

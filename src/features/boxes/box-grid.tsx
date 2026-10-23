@@ -6,7 +6,6 @@ import {
   TouchSensor,
   closestCenter,
   pointerWithin,
-  useDraggable,
   useDroppable,
   useSensor,
   useSensors,
@@ -19,38 +18,53 @@ import {
 } from "@dnd-kit/core";
 import { useEffect, useRef, useState, type ReactNode } from "react";
 
-import { SpeciesSprite } from "@/components/species-sprite";
 import { Typography } from "@/components/typography";
 import { BOX_SIZE, boxLayout, moveBoxedMon } from "@/domain/box-slots";
+import { placeMon, type PlaceTarget } from "@/domain/transitions";
 import type { Mon } from "@/domain/types";
 import { cn } from "@/lib/utils";
-import { useMoveBoxedMon } from "@/storage/mutations";
+import { usePlaceMon, useMoveBoxedMon, type PlaceMonInput } from "@/storage/mutations";
 
 import { monTitle } from "../encounters/mon-title";
+import { partyId, slotId } from "./drop-ids";
+import { PartyRow } from "./party-row";
+import { DROP_TARGET, EmptySlot, FilledSlot, MonSprite } from "./slot-tiles";
 
 const HOVER_SWITCH_MS = 500;
-
-function slotId(slot: number): string {
-  return `slot-${String(slot)}`;
-}
 
 function boxId(box: number): string {
   return `box-${String(box)}`;
 }
 
-function parseId(id: UniqueIdentifier | undefined, prefix: "slot" | "box"): number | null {
+function parseId(
+  id: UniqueIdentifier | undefined,
+  prefix: "slot" | "box" | "party",
+): number | null {
   if (typeof id !== "string" || !id.startsWith(`${prefix}-`)) {
     return null;
   }
   return Number(id.slice(prefix.length + 1));
 }
 
+function parseTarget(id: UniqueIdentifier | undefined): PlaceTarget | null {
+  const party = parseId(id, "party");
+  if (party !== null) return { kind: "party", slot: party };
+  const box = parseId(id, "slot");
+  return box === null ? null : { kind: "box", slot: box };
+}
+
 function describeSlot(slot: number): string {
   return `box ${String(Math.floor(slot / BOX_SIZE) + 1)}, slot ${String((slot % BOX_SIZE) + 1)}`;
 }
 
+function describeTarget(target: PlaceTarget): string {
+  return target.kind === "party"
+    ? `party slot ${String(target.slot + 1)}`
+    : describeSlot(target.slot);
+}
+
 const SCREEN_READER_INSTRUCTIONS =
-  "Press Space to pick up this Pokémon. Use the arrow keys to move to a slot or a box button. Press Space to drop it or Escape to cancel.";
+  "Press Space to pick up this Pokémon. Use the arrow keys to move to a box slot, a party slot or a box button. Press Space to drop it or Escape to cancel.";
 
 const collisions: CollisionDetection = (args) => {
   const within = pointerWithin(args);
@@ -106,6 +120,7 @@ const arrowCoordinates: KeyboardCoordinateGetter = (event, { context, currentCoo
 export interface BoxGridProps {
   runId: string;
   mons: readonly Mon[];
+  party: readonly Mon[];
   onEdit: (monId: string) => void;
 }
 
@@ -119,8 +134,6 @@ function boxCount(slots: Iterable<number>): number {
   const last = Math.max(...counts.keys());
   return last + 1 + (counts.get(last) === BOX_SIZE ? 1 : 0);
 }
-
-const DROP_TARGET = "border-dashed border-border bg-flag-tint";
 
 function BoxButton({
   box,
@@ -169,95 +182,55 @@ function BoxSwitcher({
   );
 }
 
-function MonSprite({ mon }: { mon: Mon }): ReactNode {
-  return (
-    <>
-      <span className="md:hidden">
-        <SpeciesSprite speciesId={mon.speciesId} shiny={mon.shiny} size={48} placeholder={false} />
-      </span>
-      <span className="hidden md:block">
-        <SpeciesSprite speciesId={mon.speciesId} shiny={mon.shiny} size={64} placeholder={false} />
-      </span>
-    </>
-  );
-}
+type Pending =
+  | { kind: "box"; monId: string; toSlot: number }
+  | { kind: "place"; monId: string; to: PlaceTarget };
 
-function FilledSlot({
-  mon,
-  slot,
-  onEdit,
-}: {
-  mon: Mon;
-  slot: number;
-  onEdit: (monId: string) => void;
-}): ReactNode {
-  const { setNodeRef: setDropRef, isOver } = useDroppable({ id: slotId(slot) });
-  const {
-    setNodeRef: setDragRef,
-    attributes,
-    listeners,
-    isDragging,
-  } = useDraggable({ id: mon.id });
-  return (
-    <li ref={setDropRef} className="aspect-square">
-      <button
-        ref={setDragRef}
-        type="button"
-        {...attributes}
-        {...listeners}
-        aria-label={`Edit ${monTitle(mon)}`}
-        onClick={() => onEdit(mon.id)}
-        // Stops the Space that drops a mon from also clicking the button.
-        onKeyUp={(event) => {
-          if (event.code === "Space") {
-            event.preventDefault();
-          }
-        }}
-        className={cn(
-          "flex size-full cursor-pointer items-center justify-center border-[1.5px] border-border bg-card focus-visible:outline-none focus-visible:ring-3 focus-visible:ring-ring/50",
-          isDragging && "opacity-30",
-          isOver && !isDragging && DROP_TARGET,
-        )}
-      >
-        <MonSprite mon={mon} />
-      </button>
-    </li>
-  );
-}
-
-function EmptySlot({ slot }: { slot: number }): ReactNode {
-  const { setNodeRef, isOver } = useDroppable({ id: slotId(slot) });
-  return (
-    <li
-      ref={setNodeRef}
-      aria-hidden="true"
-      className={cn(
-        "aspect-square border-[1.5px] border-dashed",
-        isOver ? "border-border bg-flag-tint" : "border-placeholder",
-      )}
-    />
-  );
-}
-
-function withPendingMove(
-  mons: readonly Mon[],
-  pending: { monId: string; toSlot: number } | undefined,
-): readonly Mon[] {
+function withPending(mons: readonly Mon[], pending: Pending | undefined): readonly Mon[] {
   if (pending === undefined) return mons;
-  const moved = new Map(
-    moveBoxedMon(mons, pending.monId, pending.toSlot).map((mon) => [mon.id, mon]),
-  );
-  return mons.map((mon) => moved.get(mon.id) ?? mon);
+  try {
+    const changed =
+      pending.kind === "box"
+        ? moveBoxedMon(mons, pending.monId, pending.toSlot)
+        : placeMon(mons, pending.monId, pending.to);
+    const moved = new Map(changed.map((mon) => [mon.id, mon]));
+    return mons.map((mon) => moved.get(mon.id) ?? mon);
+  } catch {
+    return mons;
+  }
 }
 
-export function BoxGrid({ runId, mons: saved, onEdit }: BoxGridProps): ReactNode {
+function partySlots(mons: readonly Mon[]): Map<number, Mon> {
+  const bySlot = new Map<number, Mon>();
+  for (const mon of mons) {
+    if (mon.status === "party" && mon.partySlot !== null && !bySlot.has(mon.partySlot)) {
+      bySlot.set(mon.partySlot, mon);
+    }
+  }
+  return bySlot;
+}
+
+export function BoxGrid({
+  runId,
+  mons: savedBox,
+  party: savedParty,
+  onEdit,
+}: BoxGridProps): ReactNode {
   const [selected, setSelected] = useState(0);
   const [saveFailed, setSaveFailed] = useState(false);
   const [liftedId, setLiftedId] = useState<string | null>(null);
   const hasMoved = useRef(false);
   const hoverTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const move = useMoveBoxedMon();
-  const mons = withPendingMove(saved, move.isPending ? move.variables : undefined);
+  const place = usePlaceMon();
+  const pending: Pending | undefined = move.isPending
+    ? { kind: "box", monId: move.variables.monId, toSlot: move.variables.toSlot }
+    : place.isPending
+      ? { kind: "place", monId: place.variables.monId, to: place.variables.to }
+      : undefined;
+  const everyone = withPending([...savedParty, ...savedBox], pending);
+  const mons = everyone.filter((mon) => mon.status === "box");
+  const partyBySlot = partySlots(everyone);
   const sensors = useSensors(
     useSensor(MouseSensor, { activationConstraint: { distance: 8 } }),
     useSensor(TouchSensor, { activationConstraint: { delay: 250, tolerance: 5 } }),
@@ -286,27 +259,37 @@ export function BoxGrid({ runId, mons: saved, onEdit }: BoxGridProps): ReactNode
     if (slot !== undefined) bySlot.set(slot, mon);
   }
   const filled = [...bySlot.keys()].filter((slot) => Math.floor(slot / BOX_SIZE) === current);
-  const lifted = mons.find((mon) => mon.id === liftedId);
+  const lifted = everyone.find((mon) => mon.id === liftedId);
 
   const nameOf = (id: UniqueIdentifier): string => {
-    const mon = mons.find((m) => m.id === id);
+    const mon = everyone.find((m) => m.id === id);
     return mon === undefined ? "Pokémon" : monTitle(mon);
   };
-  const slotOf = (id: UniqueIdentifier): number => layout.get(String(id)) ?? 0;
+  const placeOf = (id: UniqueIdentifier): PlaceTarget => {
+    const mon = everyone.find((m) => m.id === id);
+    if (mon?.status === "party" && mon.partySlot !== null) {
+      return { kind: "party", slot: mon.partySlot };
+    }
+    return { kind: "box", slot: layout.get(String(id)) ?? 0 };
+  };
+  const dropIdOf = (target: PlaceTarget): string =>
+    target.kind === "party" ? partyId(target.slot) : slotId(target.slot);
+  const occupantAt = (target: PlaceTarget): Mon | undefined =>
+    target.kind === "party" ? partyBySlot.get(target.slot) : bySlot.get(target.slot);
 
   const announcements: Announcements = {
     onDragStart: ({ active }) => {
       hasMoved.current = false;
-      return `Picked up ${nameOf(active.id)}. ${capitalise(describeSlot(slotOf(active.id)))}.`;
+      return `Picked up ${nameOf(active.id)}. ${capitalise(describeTarget(placeOf(active.id)))}.`;
     },
     onDragOver: ({ active, over }) => {
-      const slot = parseId(over?.id, "slot");
-      if (!hasMoved.current && slot === slotOf(active.id)) {
+      if (!hasMoved.current && over?.id === dropIdOf(placeOf(active.id))) {
         return undefined;
       }
       hasMoved.current = true;
-      if (slot !== null) {
-        return `Over ${describeSlot(slot)}.`;
+      const target = parseTarget(over?.id);
+      if (target !== null) {
+        return `Over ${describeTarget(target)}.`;
       }
       const box = parseId(over?.id, "box");
       if (box === null) {
@@ -317,17 +300,17 @@ export function BoxGrid({ runId, mons: saved, onEdit }: BoxGridProps): ReactNode
         : `Over Box ${String(box + 1)}. Hold to open it.`;
     },
     onDragEnd: ({ active, over }) => {
-      const slot = parseId(over?.id, "slot");
-      if (slot === null || slot === slotOf(active.id)) {
+      const target = parseTarget(over?.id);
+      if (target === null || over?.id === dropIdOf(placeOf(active.id))) {
         return `${nameOf(active.id)} was not moved.`;
       }
-      const occupant = bySlot.get(slot);
+      const occupant = occupantAt(target);
       return occupant
         ? `Swapped ${nameOf(active.id)} with ${monTitle(occupant)}.`
-        : `Moved ${nameOf(active.id)} to ${describeSlot(slot)}.`;
+        : `Moved ${nameOf(active.id)} to ${describeTarget(target)}.`;
     },
     onDragCancel: ({ active }) =>
-      `Cancelled. ${nameOf(active.id)} is back in ${describeSlot(slotOf(active.id))}.`,
+      `Cancelled. ${nameOf(active.id)} is back in ${describeTarget(placeOf(active.id))}.`,
   };
 
   const handleDragOver = ({ over }: DragOverEvent): void => {
@@ -344,15 +327,19 @@ export function BoxGrid({ runId, mons: saved, onEdit }: BoxGridProps): ReactNode
   const handleDragEnd = ({ active, over }: DragEndEvent): void => {
     clearHoverTimer();
     setLiftedId(null);
-    const toSlot = parseId(over?.id, "slot");
-    if (toSlot === null || toSlot === layout.get(String(active.id))) {
+    const target = parseTarget(over?.id);
+    if (target === null || over?.id === dropIdOf(placeOf(active.id))) {
       return;
     }
     setSaveFailed(false);
-    move.mutate(
-      { runId, monId: String(active.id), toSlot },
-      { onError: () => setSaveFailed(true) },
-    );
+    const monId = String(active.id);
+    const onError = (): void => setSaveFailed(true);
+    if (target.kind === "box" && placeOf(active.id).kind === "box") {
+      move.mutate({ runId, monId, toSlot: target.slot }, { onError });
+    } else {
+      const input: PlaceMonInput = { runId, monId, to: target };
+      place.mutate(input, { onError });
+    }
   };
 
   return (
@@ -372,6 +359,7 @@ export function BoxGrid({ runId, mons: saved, onEdit }: BoxGridProps): ReactNode
       }}
     >
       <div className="flex flex-col gap-4 p-4 md:max-w-3xl">
+        <PartyRow bySlot={partyBySlot} onEdit={onEdit} />
         {count > 1 && <BoxSwitcher count={count} current={current} onChange={setSelected} />}
         <div className="flex items-baseline justify-between">
           <Typography variant="eyebrow">{`Box ${String(current + 1)}`}</Typography>
@@ -379,14 +367,14 @@ export function BoxGrid({ runId, mons: saved, onEdit }: BoxGridProps): ReactNode
             {`${String(filled.length)} / ${String(BOX_SIZE)}`}
           </Typography>
         </div>
-        <ul className="grid grid-cols-5 gap-2 md:grid-cols-6 md:gap-3">
+        <ul aria-label="Box slots" className="grid grid-cols-5 gap-2 md:grid-cols-6 md:gap-3">
           {Array.from({ length: BOX_SIZE }, (_, position) => {
             const slot = first + position;
             const mon = bySlot.get(slot);
             return mon ? (
-              <FilledSlot key={slot} mon={mon} slot={slot} onEdit={onEdit} />
+              <FilledSlot key={slot} mon={mon} dropId={slotId(slot)} onEdit={onEdit} />
             ) : (
-              <EmptySlot key={slot} slot={slot} />
+              <EmptySlot key={slot} dropId={slotId(slot)} />
             );
           })}
         </ul>
@@ -396,7 +384,8 @@ export function BoxGrid({ runId, mons: saved, onEdit }: BoxGridProps): ReactNode
           </Typography>
         )}
         <Typography variant="body" tone="muted">
-          Tap a Pokémon to edit it. Long-press to pick it up, then drop it on any slot to move it.
+          Tap a Pokémon to edit it. Long-press to pick it up, then drop it on any box or party slot
+          to move it.
         </Typography>
       </div>
       <DragOverlay dropAnimation={null}>
