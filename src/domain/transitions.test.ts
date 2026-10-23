@@ -10,6 +10,7 @@ import {
   missEncounter,
   moveMonToBox,
   moveMonToParty,
+  placeMon,
   planEncounterReset,
   reorderParty,
   reviveMon,
@@ -462,6 +463,154 @@ describe("moveMonToParty", () => {
 
     expect(result.status).toBe("party");
     expect(result.partySlot).toBe(2);
+  });
+});
+
+describe("moveMonToParty with a chosen slot", () => {
+  const boxed = makeMon({ id: "boxed-mon", status: "box", partySlot: null, boxOrder: 3 });
+
+  test("lands in exactly that slot, even past a lower gap", () => {
+    const result = moveMonToParty({ mon: boxed, party: partyInSlots([0, 2, 3]), slot: 4 });
+    expect(result.partySlot).toBe(4);
+  });
+
+  test("fills a gap in the middle of the party", () => {
+    const result = moveMonToParty({ mon: boxed, party: partyInSlots([0, 2, 3]), slot: 1 });
+    expect(result).toMatchObject({ status: "party", partySlot: 1, boxOrder: null });
+  });
+
+  test("rejects an occupied slot", () => {
+    expect(() => moveMonToParty({ mon: boxed, party: partyInSlots([0, 1]), slot: 1 })).toThrow(
+      /already taken/,
+    );
+  });
+
+  test("rejects a slot outside the party", () => {
+    expect(() => moveMonToParty({ mon: boxed, party: [], slot: 6 })).toThrow(/between 0 and 5/);
+    expect(() => moveMonToParty({ mon: boxed, party: [], slot: -1 })).toThrow(/between 0 and 5/);
+  });
+
+  test("lets a mon keep its own slot", () => {
+    const mon = makeMon({ id: "in-party", status: "party", partySlot: 2 });
+    expect(moveMonToParty({ mon, party: [mon], slot: 2 }).partySlot).toBe(2);
+  });
+
+  test("rejects a dead mon", () => {
+    const dead = makeMon({ status: "dead", partySlot: null, boxOrder: null });
+    expect(() => moveMonToParty({ mon: dead, party: [], slot: 0 })).toThrow(/dead/);
+  });
+});
+
+describe("moveMonToBox with a chosen slot", () => {
+  const boxedMon = (id: string, boxOrder: number) =>
+    makeMon({ id, status: "box", partySlot: null, boxOrder });
+  const mon = makeMon({ id: "party-mon", status: "party", partySlot: 1 });
+
+  test("lands in exactly that slot", () => {
+    const result = moveMonToBox({ mon, box: [boxedMon("a", 0)], slot: 7 });
+    expect(result).toMatchObject({ status: "box", partySlot: null, boxOrder: 7 });
+  });
+
+  test("rejects an occupied slot", () => {
+    expect(() => moveMonToBox({ mon, box: [boxedMon("a", 7)], slot: 7 })).toThrow(/already taken/);
+  });
+
+  test("rejects a negative slot", () => {
+    expect(() => moveMonToBox({ mon, box: [], slot: -1 })).toThrow(/non-negative/);
+  });
+});
+
+describe("placeMon", () => {
+  const boxed = (id: string, boxOrder: number) =>
+    makeMon({ id, status: "box", partySlot: null, boxOrder });
+  const inParty = (id: string, partySlot: number) =>
+    makeMon({ id, status: "party", partySlot, boxOrder: null });
+  const byId = (mons: Mon[]) => new Map(mons.map((m) => [m.id, m]));
+
+  test("puts a box mon into a party gap on exactly that slot", () => {
+    const mons = [inParty("p0", 0), inParty("p2", 2), inParty("p3", 3), boxed("b", 5)];
+    const changed = placeMon(mons, "b", { kind: "party", slot: 1 });
+    expect(changed).toHaveLength(1);
+    expect(changed[0]).toMatchObject({ id: "b", status: "party", partySlot: 1, boxOrder: null });
+  });
+
+  test("swaps a box mon with a full party and keeps the party at six", () => {
+    const party = [0, 1, 2, 3, 4, 5].map((slot) => inParty(`p${String(slot)}`, slot));
+    const mons = [...party, boxed("b", 9)];
+    const changed = byId(placeMon(mons, "b", { kind: "party", slot: 3 }));
+    expect(changed.size).toBe(2);
+    expect(changed.get("b")).toMatchObject({ status: "party", partySlot: 3, boxOrder: null });
+    expect(changed.get("p3")).toMatchObject({ status: "box", partySlot: null, boxOrder: 9 });
+    const after = mons.map((m) => changed.get(m.id) ?? m);
+    expect(after.filter((m) => m.status === "party")).toHaveLength(6);
+  });
+
+  test("moves a party mon into an empty box slot", () => {
+    const mons = [inParty("p", 2), boxed("a", 0)];
+    const changed = placeMon(mons, "p", { kind: "box", slot: 12 });
+    expect(changed).toEqual([
+      expect.objectContaining({ id: "p", status: "box", partySlot: null, boxOrder: 12 }),
+    ]);
+  });
+
+  test("swaps a party mon with a box mon: each takes the other's slot", () => {
+    const mons = [inParty("p", 4), boxed("b", 12)];
+    const changed = byId(placeMon(mons, "p", { kind: "box", slot: 12 }));
+    expect(changed.get("p")).toMatchObject({ status: "box", partySlot: null, boxOrder: 12 });
+    expect(changed.get("b")).toMatchObject({ status: "party", partySlot: 4, boxOrder: null });
+  });
+
+  test("rejects a dead mon", () => {
+    const dead = makeMon({ id: "d", status: "dead", partySlot: null, boxOrder: null });
+    expect(() => placeMon([dead], "d", { kind: "party", slot: 0 })).toThrow(/dead/);
+    expect(() => placeMon([dead], "d", { kind: "box", slot: 0 })).toThrow(/dead/);
+  });
+
+  test("moves a party mon to an empty party slot and leaves the gap behind", () => {
+    const mons = [inParty("a", 0), inParty("b", 1), inParty("c", 2)];
+    const changed = placeMon(mons, "a", { kind: "party", slot: 4 });
+    expect(changed).toHaveLength(1);
+    expect(changed[0]).toMatchObject({ id: "a", status: "party", partySlot: 4 });
+  });
+
+  test("moves a party mon into a gap between others", () => {
+    const mons = [inParty("a", 0), inParty("b", 2), inParty("c", 5)];
+    const changed = placeMon(mons, "c", { kind: "party", slot: 1 });
+    expect(changed).toEqual([expect.objectContaining({ id: "c", partySlot: 1 })]);
+  });
+
+  test("swaps two party mons", () => {
+    const mons = [inParty("a", 1), inParty("b", 3)];
+    const changed = byId(placeMon(mons, "a", { kind: "party", slot: 3 }));
+    expect(changed.get("a")).toMatchObject({ status: "party", partySlot: 3 });
+    expect(changed.get("b")).toMatchObject({ status: "party", partySlot: 1 });
+  });
+
+  test("a party mon dropped on its own slot changes nothing", () => {
+    expect(placeMon([inParty("a", 2)], "a", { kind: "party", slot: 2 })).toEqual([]);
+  });
+
+  test("rejects a party slot outside the party", () => {
+    expect(() => placeMon([inParty("a", 0)], "a", { kind: "party", slot: 6 })).toThrow(
+      /between 0 and 5/,
+    );
+  });
+
+  test("rejects a box mon dropped on a box slot", () => {
+    expect(() => placeMon([boxed("b", 0)], "b", { kind: "box", slot: 1 })).toThrow(
+      /not in the party/,
+    );
+  });
+
+  test("rejects an unknown mon", () => {
+    expect(() => placeMon([], "nope", { kind: "party", slot: 0 })).toThrow(/not found/);
+  });
+
+  test("does not change its input", () => {
+    const mons = [inParty("p", 4), boxed("b", 12)];
+    const snapshot = structuredClone(mons);
+    placeMon(mons, "p", { kind: "box", slot: 12 });
+    expect(mons).toEqual(snapshot);
   });
 });
 
