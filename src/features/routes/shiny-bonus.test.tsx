@@ -226,6 +226,7 @@ describe("Bonus shiny dialog", () => {
 
     await openShinyDialog(user);
     await user.type(await screen.findByLabelText("Species"), "Geodude");
+    await user.tab();
     await screen.findByRole("combobox", { name: "Species" });
 
     expect(screen.queryByRole("status")).not.toBeInTheDocument();

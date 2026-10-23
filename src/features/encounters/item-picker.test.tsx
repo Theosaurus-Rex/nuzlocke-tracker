@@ -48,12 +48,13 @@ describe("ItemPicker", () => {
     expect(await screen.findByRole("option", { name: "King’s Rock" })).toBeInTheDocument();
   });
 
-  it("counts a fully typed name as choosing it", async () => {
+  it("chooses an exactly typed name once the field loses focus", async () => {
     const user = userEvent.setup();
     const onChange = vi.fn();
     render(<StatefulPicker onChange={onChange} />);
 
     await user.type(screen.getByRole("combobox"), "Miracle Seed");
+    await user.tab();
 
     expect(onChange).toHaveBeenLastCalledWith("miracle-seed");
   });

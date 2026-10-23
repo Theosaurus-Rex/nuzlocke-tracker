@@ -113,6 +113,7 @@ describe("EditMonDialog", () => {
 
     await user.click(screen.getByRole("button", { name: "Remove Growth" }));
     await user.type(screen.getAllByPlaceholderText("+ move")[0]!, "Tackle");
+    await user.tab();
     await user.click(screen.getByRole("button", { name: "Save changes" }));
 
     await waitFor(async () => {
@@ -215,6 +216,7 @@ describe("EditMonDialog", () => {
     const ability = screen.getByLabelText("Ability");
     await user.clear(ability);
     await user.type(ability, "Overgrow");
+    await user.tab();
     await user.click(screen.getByRole("button", { name: "Save changes" }));
 
     await waitFor(async () => {
@@ -243,6 +245,7 @@ describe("EditMonDialog", () => {
     const heldItem = screen.getByLabelText("Held item");
     await user.clear(heldItem);
     await user.type(heldItem, "Leftovers");
+    await user.tab();
     await user.click(screen.getByRole("button", { name: "Save changes" }));
 
     await waitFor(async () => {
@@ -483,7 +486,7 @@ describe("EditMonDialog", () => {
     await user.clear(species);
     await user.type(species, "Pidgey");
 
-    await user.click(screen.getByRole("button", { name: "Save changes" }));
+    await user.click(screen.getByRole("button", { name: "Save changes", hidden: true }));
 
     await waitFor(async () => {
       const saved = await adapter.mons.get(mon.id);
@@ -560,6 +563,7 @@ describe("EditMonDialog", () => {
     const species = screen.getByLabelText("Species");
     await user.clear(species);
     await user.type(species, "Pidgey");
+    await user.tab();
 
     await user.click(screen.getByRole("button", { name: "Undo" }));
 
@@ -601,6 +605,7 @@ describe("EditMonDialog", () => {
     const species = screen.getByLabelText("Species");
     await user.clear(species);
     await user.type(species, "Pidgey");
+    await user.tab();
 
     expect(species).toHaveAccessibleDescription(/Evolved from Bellsprout/);
   });

@@ -330,24 +330,26 @@ blocking them from logging it is worse than showing too many options. The random
 already existed to defeat these constraints; a constraint that must be defeatable was never a
 constraint.
 
-**The species picker takes a selection, not free text — decided 2026-09-21.** Typing filters the
-list and a fully typed name counts as choosing it, but a name the pokedex does not know leaves
-the field unset and the form refuses to save. This narrows the rule above: *all generations*
-still holds, *anything typed* does not. Romhack species are deferred, and when they come they
-get a local layer behind the same hooks.
+**The species picker takes a selection, not free text — decided 2026-09-21.** Typing only
+filters the list. A name is chosen by clicking, tapping or pressing Enter on a row, or by leaving
+the field with an exact name typed (amended 2026-10-23, since a full name used to pick itself
+mid-typing and "Acid" beat "Acid Spray"). A name the pokedex does not know leaves the field unset
+and the form refuses to save. This narrows the rule above: *all generations* still holds,
+*anything typed* does not. Romhack species are deferred, and when they come they get a local
+layer behind the same hooks.
 
-Ability and held item are selections too, built like the move picker over PokéAPI's ability and
-item lists and stored as the PokéAPI name, such as `water-absorb` or `miracle-seed`. Typed values
-from before the pickers are no longer handled. Nothing saved still holds one, decided 2026-10-06.
-The item list is unfiltered. PokéAPI's `holdable`
+Ability and held item are selections too, with the same pick rules, built like the move picker
+over PokéAPI's ability and item lists and stored as the PokéAPI name, such as `water-absorb` or
+`miracle-seed`. Typed values from before the pickers are no longer handled. Nothing saved still
+holds one, decided 2026-10-06. The item list is unfiltered. PokéAPI's `holdable`
 attributes miss real held items such as Dragon Scale, Up-Grade, Eviolite and Mega Stones, so
 filtering would block real picks.
 
 **The moveset editor takes a selection too — decided 2026-09-21.** Same rule as the species
-picker: typing filters the move index, a fully typed move name counts as choosing it, and a name
-the pokedex does not know leaves the slot empty. This amends the "free-text" half of the
-consequence below. The "over every move" half stands, since a move picked here is never filtered
-by a species' learnset.
+picker: typing filters the move index, and a move is added by picking a row or by leaving the slot
+with an exact name typed (amended 2026-10-23). A name the pokedex does not know leaves the slot
+empty. This amends the "free-text" half of the consequence below. The "over every move" half
+stands, since a move picked here is never filtered by a species' learnset.
 
 Consequences, all deliberate:
 

@@ -1,4 +1,4 @@
-import { useEffect, useState, type ReactNode } from "react";
+import { useState, type ReactNode } from "react";
 
 import { Autocomplete } from "@base-ui/react/autocomplete";
 
@@ -40,9 +40,8 @@ const INPUT_CLASS = cn(
 );
 
 /**
- * Type-to-filter input backing the species and move pickers. Text only becomes a value once it
- * resolves to a real option. A full name typed counts as choosing it, so the keyboard path needs
- * no click. See docs/notes/features.md#combobox-field for the Base UI integration details.
+ * Type-to-filter input behind every picker. Typing only filters. A value is set by picking an
+ * option, or by leaving the field with an exact name typed. See docs/notes/features.md#combobox-field.
  */
 export function ComboboxField({
   id,
@@ -61,34 +60,16 @@ export function ComboboxField({
 }: ComboboxFieldProps): ReactNode {
   const [query, setQuery] = useState(value === "" ? "" : displayName(value));
   const [open, setOpen] = useState(false);
-  const [prevValue, setPrevValue] = useState(value);
-  // Set when a render sees value go from empty to filled, so that render itself closes the
-  // popup rather than a late fill-in reopening it. Cleared on the next real open or close.
-  const [suppressOpen, setSuppressOpen] = useState(false);
-
-  if (value !== prevValue) {
-    setPrevValue(value);
-    if (prevValue === "" && value !== "") setSuppressOpen(true);
-  }
-
-  useEffect(() => {
-    if (value !== "" || query.trim() === "") return;
-    const resolved = resolve(query);
-    if (resolved !== "") onChange(resolved);
-  }, [query, value, resolve, onChange]);
-
-  function handleOpenChange(next: boolean): void {
-    setSuppressOpen(false);
-    setOpen(next);
-  }
-
   const results = query.trim() === "" ? [] : search(query).slice(0, MAX_RESULTS);
 
-  function commitText(text: string): void {
+  function handleTyping(text: string): void {
     setQuery(text);
-    const resolved = resolve(text);
-    onChange(resolved);
-    if (resolved !== "") setOpen(false);
+    if (value !== "") onChange("");
+  }
+
+  function commitOnBlur(): void {
+    const resolved = resolve(query);
+    if (resolved !== "" && resolved !== value) onChange(resolved);
   }
 
   function select(item: ComboboxItem): void {
@@ -102,11 +83,11 @@ export function ComboboxField({
       items={results}
       filter={null}
       value={query}
-      open={open && results.length > 0 && !suppressOpen}
-      onOpenChange={handleOpenChange}
+      open={open && results.length > 0}
+      onOpenChange={setOpen}
       onValueChange={(text, eventDetails) => {
         if (eventDetails.reason === "item-press") return;
-        commitText(text);
+        handleTyping(text);
       }}
       itemToStringValue={(item: ComboboxItem) => item.label}
       openOnInputClick
@@ -116,6 +97,7 @@ export function ComboboxField({
           id={id}
           autoComplete="off"
           placeholder={placeholder}
+          onBlur={commitOnBlur}
           aria-invalid={ariaInvalid}
           aria-describedby={ariaDescribedBy}
           className={cn(INPUT_CLASS, suffix && "pr-16", inputClassName)}
