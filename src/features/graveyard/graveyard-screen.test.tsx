@@ -11,6 +11,7 @@ import { StorageProvider } from "@/storage/storage-context";
 import { defaultPokeApiRoutes, stubPokeApi } from "@/test/pokeapi-fetch";
 
 import { GraveyardScreen } from "./graveyard-screen";
+import { emptyMoveset } from "@/domain/moveset";
 
 async function seedRun(adapter: StorageAdapter) {
   return adapter.runs.put({
@@ -52,7 +53,7 @@ async function bury(adapter: StorageAdapter, runId: string, fallen: Fallen) {
     nature: null,
     ability: null,
     heldItem: null,
-    moves: [],
+    moves: emptyMoveset(),
     status: "dead",
     partySlot: null,
     boxOrder: null,
@@ -208,7 +209,7 @@ describe("GraveyardScreen timeline", () => {
       nature: null,
       ability: null,
       heldItem: null,
-      moves: [],
+      moves: emptyMoveset(),
       status: "dead",
       partySlot: null,
       boxOrder: null,

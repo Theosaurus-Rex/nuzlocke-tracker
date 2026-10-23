@@ -165,8 +165,8 @@ describe("parseBundle — schemaVersion", () => {
     }
   });
 
-  it("refuses a schemaVersion lower than SCHEMA_VERSION", () => {
-    const bundle = emptyBundle({ schemaVersion: SCHEMA_VERSION - 1 });
+  it("refuses a schemaVersion below the oldest readable one", () => {
+    const bundle = emptyBundle({ schemaVersion: 3 });
 
     const result = parseBundle(JSON.stringify(bundle));
 
@@ -179,6 +179,53 @@ describe("parseBundle — schemaVersion", () => {
   it("accepts a bundle at exactly SCHEMA_VERSION", () => {
     const result = parseBundle(JSON.stringify(emptyBundle()));
     expect(result.ok).toBe(true);
+  });
+
+  it("upgrades a version 4 bundle by padding each mon's moves to four slots", async () => {
+    const adapter = createMemoryAdapter();
+    await adapter.init();
+    const { mon } = await seedFullRun(adapter);
+    const bundle = await exportBundle(adapter);
+    const legacyMon = { ...mon, moves: ["tackle", "leer"] };
+    const v4 = { ...bundle, schemaVersion: 4, mons: [legacyMon] };
+
+    const result = parseBundle(JSON.stringify(v4));
+
+    expect(result.ok).toBe(true);
+    if (result.ok) {
+      expect(result.bundle.schemaVersion).toBe(SCHEMA_VERSION);
+      expect(result.bundle.mons[0]?.moves).toEqual(["tackle", "leer", null, null]);
+    }
+  });
+
+  it("still validates a version 4 bundle after upgrading it", async () => {
+    const adapter = createMemoryAdapter();
+    await adapter.init();
+    const { mon } = await seedFullRun(adapter);
+    const bundle = await exportBundle(adapter);
+    const v4 = { ...bundle, schemaVersion: 4, mons: [{ ...mon, moves: ["tackle", 5] }] };
+
+    expect(parseBundle(JSON.stringify(v4)).ok).toBe(false);
+  });
+
+  it("round-trips a gap in a mon's moves, in the same slot", async () => {
+    const source = createMemoryAdapter();
+    await source.init();
+    const run = await source.runs.put(makeRunDraft());
+    const mon = await source.mons.put(
+      makeMonDraft(run.id, { moves: ["tackle", null, "ember", null] }),
+    );
+    const text = serializeBundle(await exportBundle(source));
+
+    const parsed = parseBundle(text);
+    expect(parsed.ok).toBe(true);
+    if (!parsed.ok) return;
+    const target = createMemoryAdapter();
+    await target.init();
+    await importBundle(target, parsed.bundle, "replace");
+
+    const imported = mustExist(await target.mons.get(mon.id), "imported mon");
+    expect(imported.moves).toEqual(["tackle", null, "ember", null]);
   });
 });
 
@@ -493,8 +540,12 @@ describe("parseBundle — field rules", () => {
     ["mons", "status", "fainted"],
     ["fights", "kind", "boss"],
 
-    // Mon.moves: not an array of strings
-    ["mons", "moves", ["tackle", 5]],
+    // Mon.moves: wrong length, a non-string entry, an empty string, not an array
+    ["mons", "moves", ["tackle", null, null]],
+    ["mons", "moves", ["a", "b", "c", "d", "e"]],
+    ["mons", "moves", ["tackle", 5, null, null]],
+    ["mons", "moves", ["tackle", "", null, null]],
+    ["mons", "moves", "tackle"],
   ])("rejects %s.%s = %p, naming that table and field", (table, field, badValue) => {
     const bundle = bundleWithBadField(table, field, badValue);
 

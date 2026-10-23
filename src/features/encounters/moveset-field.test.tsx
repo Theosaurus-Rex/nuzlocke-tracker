@@ -10,6 +10,8 @@ import { render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
+import { padMoveset } from "@/domain/moveset";
+import type { Moveset } from "@/domain/types";
 import { POKEAPI_BASE } from "@/game/pokeapi/client";
 import type { RawIndex } from "@/game/pokeapi/map";
 import { defaultPokeApiRoutes, STUB_PENDING, stubPokeApi, stubStatus } from "@/test/pokeapi-fetch";
@@ -38,9 +40,9 @@ function StatefulMovesetField({
   onChange,
 }: {
   initial: string[];
-  onChange?: (moves: string[]) => void;
+  onChange?: (moves: Moveset) => void;
 }) {
-  const [moves, setMoves] = useState(initial);
+  const [moves, setMoves] = useState(() => padMoveset(initial));
   const [client] = useState(
     () => new QueryClient({ defaultOptions: { queries: { retry: false } } }),
   );
@@ -97,7 +99,7 @@ describe("MovesetField", () => {
     expect(onChange).not.toHaveBeenCalled();
     await user.tab();
 
-    expect(onChange).toHaveBeenCalledWith(["tackle"]);
+    expect(onChange).toHaveBeenCalledWith(["tackle", null, null, null]);
     expect(screen.getByText("Tackle")).toBeInTheDocument();
     expect(pickers()).toHaveLength(3);
   });
@@ -129,7 +131,7 @@ describe("MovesetField", () => {
 
     await user.click(screen.getByRole("button", { name: "Remove Growl" }));
 
-    expect(onChange).toHaveBeenCalledWith(["tackle", "vine-whip"]);
+    expect(onChange).toHaveBeenCalledWith(["tackle", "vine-whip", null, null]);
     expect(screen.queryByText("Growl")).not.toBeInTheDocument();
     expect(screen.getByText("Tackle")).toBeInTheDocument();
     expect(screen.getByText("Vine Whip")).toBeInTheDocument();
@@ -157,7 +159,7 @@ describe("MovesetField", () => {
     await user.click(await screen.findByRole("option", { name: "Acid Spray" }));
 
     expect(onChange).toHaveBeenCalledTimes(1);
-    expect(onChange).toHaveBeenCalledWith(["acid-spray"]);
+    expect(onChange).toHaveBeenCalledWith(["acid-spray", null, null, null]);
     expect(screen.getByText("Acid Spray")).toBeInTheDocument();
     expect(screen.queryByText("Acid")).not.toBeInTheDocument();
   });

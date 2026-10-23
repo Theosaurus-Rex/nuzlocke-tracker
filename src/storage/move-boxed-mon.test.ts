@@ -5,6 +5,7 @@ import { BOX_SIZE, boxLayout } from "@/domain/box-slots";
 import type { StorageAdapter } from "./adapter";
 import { createMemoryAdapter } from "./memory-adapter";
 import { persistMoveBoxedMon } from "./mutations";
+import { emptyMoveset } from "@/domain/moveset";
 
 function withSecondMonPutFailing(base: StorageAdapter): StorageAdapter {
   let puts = 0;
@@ -40,7 +41,7 @@ async function seed(boxOrders: (number | null)[]) {
       nature: null,
       ability: null,
       heldItem: null,
-      moves: [],
+      moves: emptyMoveset(),
       status: "box",
       partySlot: null,
       boxOrder,

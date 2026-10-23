@@ -12,6 +12,7 @@ import { StorageProvider } from "@/storage/storage-context";
 import { defaultPokeApiRoutes, stubPokeApi } from "@/test/pokeapi-fetch";
 
 import { FightsScreen } from "./fights-screen";
+import { emptyMoveset } from "@/domain/moveset";
 
 function fightDraft(
   runId: string,
@@ -57,7 +58,7 @@ async function seed(adapter: StorageAdapter) {
     nature: null,
     ability: null,
     heldItem: null,
-    moves: [],
+    moves: emptyMoveset(),
     status: "party",
     partySlot: 0,
     boxOrder: null,

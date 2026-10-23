@@ -12,6 +12,7 @@ import { StorageProvider } from "@/storage/storage-context";
 import { defaultPokeApiRoutes, stubPokeApi } from "@/test/pokeapi-fetch";
 
 import { GraveyardScreen } from "./graveyard-screen";
+import { emptyMoveset } from "@/domain/moveset";
 
 async function seed(adapter: StorageAdapter, mons: Partial<Mon>[]) {
   const run = await adapter.runs.put({
@@ -41,7 +42,7 @@ async function seed(adapter: StorageAdapter, mons: Partial<Mon>[]) {
       nature: null,
       ability: null,
       heldItem: null,
-      moves: [],
+      moves: emptyMoveset(),
       status: "party",
       partySlot: 0,
       boxOrder: null,

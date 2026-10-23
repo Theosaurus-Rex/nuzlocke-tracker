@@ -374,7 +374,7 @@ describe("LogEncounterDialog", () => {
     });
 
     const [mon] = await adapter.mons.where("runId", "run-1");
-    expect(mon?.moves).toEqual(["tackle", "growl"]);
+    expect(mon?.moves).toEqual(["tackle", "growl", null, null]);
   });
 
   it("blocks submit on a missing nickname when the clause is on, and shows nothing was saved", async () => {

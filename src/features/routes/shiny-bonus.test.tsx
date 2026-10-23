@@ -14,6 +14,7 @@ import { defaultPokeApiRoutes, stubPokeApi } from "@/test/pokeapi-fetch";
 import { evolutionSpeciesIndexRefs, speciesIndexFixture } from "@/test/pokeapi-fixtures";
 
 import { RoutesScreen } from "./routes-screen";
+import { emptyMoveset } from "@/domain/moveset";
 
 const SPECIES_INDEX: RawIndex = {
   results: [
@@ -215,7 +216,7 @@ describe("Bonus shiny dialog", () => {
       nature: null,
       ability: null,
       heldItem: null,
-      moves: [],
+      moves: emptyMoveset(),
       status: "party",
       partySlot: 0,
       boxOrder: null,

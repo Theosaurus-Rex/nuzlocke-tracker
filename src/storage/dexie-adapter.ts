@@ -6,6 +6,7 @@ import Dexie from "dexie";
 import type { Table, Transaction, IndexableType } from "dexie";
 
 import type { Draft, Timestamped, Run, Route, Encounter, Mon, Death, Fight } from "@/domain/types";
+import { MAX_MOVES, padMoveset } from "@/domain/moveset";
 import { SCHEMA_VERSION } from "@/domain/schema";
 import type { ExportBundle } from "@/domain/schema";
 
@@ -46,6 +47,25 @@ class NuzlockeDexie extends Dexie {
       deaths: "id, runId, monId, cause.fightId",
       fights: "id, runId, status",
     });
+    this.version(2)
+      .stores({
+        runs: "id, status",
+        routes: "id, runId",
+        encounters: "id, runId, routeId, monId",
+        mons: "id, runId, status, encounterId",
+        deaths: "id, runId, monId, cause.fightId",
+        fights: "id, runId, status",
+      })
+      .upgrade((tx) =>
+        tx
+          .table<Mon, string>("mons")
+          .toCollection()
+          .modify((mon) => {
+            if (mon.moves.length !== MAX_MOVES) {
+              mon.moves = padMoveset(mon.moves);
+            }
+          }),
+      );
   }
 }
 

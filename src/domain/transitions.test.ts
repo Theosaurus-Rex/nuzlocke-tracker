@@ -19,8 +19,9 @@ import {
   type KillDetails,
   type MonAmendments,
 } from "@/domain/transitions";
-import type { Encounter, Mon } from "@/domain/types";
+import type { Encounter, Mon, Moveset } from "@/domain/types";
 import { makeDeath, makeEncounter, makeFight, makeMon } from "@/test/factories";
+import { padMoveset } from "@/domain/moveset";
 
 const catchDetails: CatchDetails = {
   speciesId: "chikorita",
@@ -32,7 +33,7 @@ const catchDetails: CatchDetails = {
   nature: null,
   ability: null,
   heldItem: null,
-  moves: ["tackle"],
+  moves: padMoveset(["tackle"]),
   shiny: false,
 };
 
@@ -154,15 +155,29 @@ describe("catchEncounter", () => {
     expect(mon.partySlot).toBe(1);
   });
 
-  test("throws when the catch details carry more than 4 moves", () => {
+  test.each([
+    ["five entries", ["tackle", "growl", "vine-whip", "razor-leaf", "synthesis"]],
+    ["three entries", ["tackle", null, "growl"]],
+    ["an empty string", ["tackle", "", null, null]],
+    ["a number", ["tackle", 5, null, null]],
+  ])("throws when the catch details carry %s as moves", (_label, moves) => {
     const encounter = makeEncounter();
-    const tooManyMoves: CatchDetails = {
-      ...catchDetails,
-      moves: ["tackle", "growl", "vine-whip", "razor-leaf", "synthesis"],
-    };
+    const bad: CatchDetails = { ...catchDetails, moves: moves as unknown as Moveset };
     expect(() =>
-      catchEncounter({ encounter, party: [], box: [], monId: "mon-1", details: tooManyMoves }),
-    ).toThrow(/4 moves/);
+      catchEncounter({ encounter, party: [], box: [], monId: "mon-1", details: bad }),
+    ).toThrow(/4 move slots/);
+  });
+
+  test("accepts a catch with a gap between moves", () => {
+    const details: CatchDetails = { ...catchDetails, moves: ["tackle", null, "growl", null] };
+    const { mon } = catchEncounter({
+      encounter: makeEncounter(),
+      party: [],
+      box: [],
+      monId: "mon-1",
+      details,
+    });
+    expect(mon.moves).toEqual(["tackle", null, "growl", null]);
   });
 
   test("the encounter records the level met at, not the mon's current level", () => {
@@ -302,10 +317,10 @@ describe("catchShinyBonus", () => {
     expect(mon.partySlot).toBeNull();
   });
 
-  test("refuses more than 4 moves and a current level below the level caught", () => {
-    const moves = ["a", "b", "c", "d", "e"];
+  test("refuses a bad moveset and a current level below the level caught", () => {
+    const moves = ["a", "b", "c", "d", "e"] as unknown as Moveset;
 
-    expect(() => bonus({ details: { ...catchDetails, moves } })).toThrow(/4 moves/);
+    expect(() => bonus({ details: { ...catchDetails, moves } })).toThrow(/4 move slots/);
     expect(() => bonus({ details: { ...catchDetails, levelCaught: 9, level: 5 } })).toThrow(
       /cannot be below/,
     );
@@ -491,7 +506,7 @@ describe("amendMon", () => {
     nature: "adamant",
     ability: "overgrow",
     heldItem: "oran-berry",
-    moves: ["vine-whip", "growth"],
+    moves: padMoveset(["vine-whip", "growth"]),
     shiny: false,
   };
 
@@ -504,7 +519,7 @@ describe("amendMon", () => {
       nature: null,
       ability: null,
       heldItem: null,
-      moves: ["tackle"],
+      moves: padMoveset(["tackle"]),
     });
 
     const result = amendMon({ mon, amendments });
@@ -515,7 +530,7 @@ describe("amendMon", () => {
     expect(result.nature).toBe("adamant");
     expect(result.ability).toBe("overgrow");
     expect(result.heldItem).toBe("oran-berry");
-    expect(result.moves).toEqual(["vine-whip", "growth"]);
+    expect(result.moves).toEqual(["vine-whip", "growth", null, null]);
   });
 
   test("preserves everything an amendment does not touch", () => {
@@ -523,7 +538,7 @@ describe("amendMon", () => {
       speciesId: "bayleef",
       speciesIdCaught: "chikorita",
       levelCaught: 10,
-      moves: ["tackle", "razor-leaf"],
+      moves: padMoveset(["tackle", "razor-leaf"]),
       status: "box",
       partySlot: null,
       boxOrder: 3,
@@ -551,15 +566,21 @@ describe("amendMon", () => {
   });
 
   test("replaces the mon's moves with the amendment's list", () => {
-    const mon = makeMon({ moves: ["tackle"] });
-    const result = amendMon({ mon, amendments: { ...amendments, moves: ["surf", "dig"] } });
-    expect(result.moves).toEqual(["surf", "dig"]);
+    const mon = makeMon({ moves: padMoveset(["tackle"]) });
+    const result = amendMon({
+      mon,
+      amendments: { ...amendments, moves: padMoveset(["surf", "dig"]) },
+    });
+    expect(result.moves).toEqual(["surf", "dig", null, null]);
   });
 
   test("preserves the mon's moves when the amendment carries the same list", () => {
-    const mon = makeMon({ moves: ["tackle", "growl"] });
-    const result = amendMon({ mon, amendments: { ...amendments, moves: ["tackle", "growl"] } });
-    expect(result.moves).toEqual(["tackle", "growl"]);
+    const mon = makeMon({ moves: padMoveset(["tackle", "growl"]) });
+    const result = amendMon({
+      mon,
+      amendments: { ...amendments, moves: padMoveset(["tackle", "growl"]) },
+    });
+    expect(result.moves).toEqual(["tackle", "growl", null, null]);
   });
 
   test("throws when the amendment carries more than 4 moves", () => {
@@ -569,10 +590,18 @@ describe("amendMon", () => {
         mon,
         amendments: {
           ...amendments,
-          moves: ["tackle", "growl", "vine-whip", "razor-leaf", "synthesis"],
+          moves: ["tackle", "growl", "vine-whip", "razor-leaf", "synthesis"] as unknown as Moveset,
         },
       }),
-    ).toThrow(/4 moves/);
+    ).toThrow(/4 move slots/);
+  });
+
+  test("keeps a gap in the amended moves", () => {
+    const result = amendMon({
+      mon: makeMon(),
+      amendments: { ...amendments, moves: ["tackle", null, "growl", null] },
+    });
+    expect(result.moves).toEqual(["tackle", null, "growl", null]);
   });
 
   test("amending a dead mon works and leaves it dead", () => {
@@ -836,7 +865,7 @@ describe("input immutability", () => {
             nature: "adamant",
             ability: "overgrow",
             heldItem: "oran-berry",
-            moves: ["tackle"],
+            moves: padMoveset(["tackle"]),
             shiny: false,
           },
         });

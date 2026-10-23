@@ -13,9 +13,10 @@ import {
 import { LevelInput } from "@/components/level-input";
 import { countByMonStatus } from "@/domain/derive";
 import { findDupe } from "@/domain/dupes";
+import { emptyMoveset } from "@/domain/moveset";
 import { validateEncounter, type EncounterField } from "@/domain/encounter-validation";
 import type { CatchDetails } from "@/domain/transitions";
-import type { Encounter, Gender, Mon, Route, Rules } from "@/domain/types";
+import type { Encounter, Gender, Mon, Moveset, Route, Rules } from "@/domain/types";
 import { useEvolutionLine } from "@/game/pokeapi/queries";
 import { speciesDisplayName } from "@/game/pokeapi/resolve";
 import { GAMES } from "@/game/registry";
@@ -161,7 +162,7 @@ function LogEncounterForm({
   const [nature, setNature] = useState<string | null>(null);
   const [ability, setAbility] = useState("");
   const [heldItem, setHeldItem] = useState("");
-  const [moves, setMoves] = useState<string[]>([]);
+  const [moves, setMoves] = useState<Moveset>(emptyMoveset);
   const [shiny, setShiny] = useState(shinyBonus);
   const [placement, setPlacement] = useState<"party" | "box">(
     countByMonStatus(mons).party < 6 ? "party" : "box",

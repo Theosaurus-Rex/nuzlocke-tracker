@@ -2,6 +2,7 @@ import { describe, expect, test } from "vitest";
 
 import { BOX_SIZE, boxLayout, moveBoxedMon, nextFreeBoxSlot } from "@/domain/box-slots";
 import type { Mon } from "@/domain/types";
+import { emptyMoveset } from "@/domain/moveset";
 
 function boxed(id: string, boxOrder: number | null, overrides: Partial<Mon> = {}): Mon {
   return {
@@ -17,7 +18,7 @@ function boxed(id: string, boxOrder: number | null, overrides: Partial<Mon> = {}
     nature: null,
     ability: null,
     heldItem: null,
-    moves: [],
+    moves: emptyMoveset(),
     status: "box",
     partySlot: null,
     boxOrder,

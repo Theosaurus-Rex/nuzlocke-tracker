@@ -81,11 +81,15 @@ export function PartyCard({
         {joinPresent([species, genderSymbol(mon.gender), `L${mon.level}`, mon.nature])}
       </Typography>
       <ul className="mt-4 grid grid-cols-2 gap-x-4 gap-y-3 border-t-[1.5px] border-border pt-4">
-        {mon.moves.map((move) => (
-          <li key={move}>
-            <MoveChip name={move} generation={generation} />
-          </li>
-        ))}
+        {mon.moves.flatMap((move) =>
+          move === null
+            ? []
+            : [
+                <li key={move}>
+                  <MoveChip name={move} generation={generation} />
+                </li>,
+              ],
+        )}
       </ul>
       <Typography variant="body" className="mt-4 break-words border-t border-muted pt-3">
         <span className="inline-flex items-center gap-1 align-middle">

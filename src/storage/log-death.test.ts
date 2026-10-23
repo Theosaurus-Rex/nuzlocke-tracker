@@ -5,6 +5,7 @@ import type { Cause } from "@/domain/types";
 import type { StorageAdapter } from "./adapter";
 import { createMemoryAdapter } from "./memory-adapter";
 import { persistLogDeath } from "./mutations";
+import { emptyMoveset } from "@/domain/moveset";
 
 const CAUSE: Cause = { type: "wild", species: "pidgey", level: 9, move: "gust" };
 const DIED_AT = "2026-09-29T10:00:00.000Z";
@@ -40,7 +41,7 @@ async function seed(status: "party" | "dead" = "party") {
     nature: null,
     ability: null,
     heldItem: null,
-    moves: [],
+    moves: emptyMoveset(),
     status,
     partySlot: status === "party" ? 2 : null,
     boxOrder: null,

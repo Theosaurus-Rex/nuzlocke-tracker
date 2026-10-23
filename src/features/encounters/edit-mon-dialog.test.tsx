@@ -16,6 +16,7 @@ import { findMenuTrigger, stubPokeApiWithEvolutions } from "@/test/pokeapi-fetch
 import { createWrapper } from "@/test/render";
 
 import { EditMonDialog } from "./edit-mon-dialog";
+import { padMoveset } from "@/domain/moveset";
 
 const SPROUT_TOWER = { id: "route-1", name: "Sprout Tower" };
 
@@ -30,7 +31,7 @@ const FILLED_MON = {
   nature: "Jolly",
   ability: "chlorophyll",
   heldItem: "miracle-seed",
-  moves: ["vine-whip", "growth"],
+  moves: padMoveset(["vine-whip", "growth"]),
   caughtRouteId: "route-1",
 } satisfies Partial<Mon>;
 
@@ -98,7 +99,7 @@ describe("EditMonDialog", () => {
   });
 
   it("pre-fills the moveset from the mon being edited", () => {
-    renderDialog({ mon: makeMon({ ...FILLED_MON, moves: ["vine-whip", "growth"] }) });
+    renderDialog({ mon: makeMon({ ...FILLED_MON, moves: padMoveset(["vine-whip", "growth"]) }) });
 
     expect(screen.getByText("Vine Whip")).toBeInTheDocument();
     expect(screen.getByText("Growth")).toBeInTheDocument();
@@ -108,7 +109,7 @@ describe("EditMonDialog", () => {
   it("saves changed moves onto the mon", async () => {
     const user = userEvent.setup();
     const { adapter, mon } = renderDialog({
-      mon: makeMon({ ...FILLED_MON, moves: ["vine-whip", "growth"] }),
+      mon: makeMon({ ...FILLED_MON, moves: padMoveset(["vine-whip", "growth"]) }),
     });
 
     await user.click(screen.getByRole("button", { name: "Remove Growth" }));
@@ -118,7 +119,7 @@ describe("EditMonDialog", () => {
 
     await waitFor(async () => {
       const saved = await adapter.mons.get(mon.id);
-      expect(saved?.moves).toEqual(["vine-whip", "tackle"]);
+      expect(saved?.moves).toEqual(["vine-whip", "tackle", null, null]);
     });
   });
 
@@ -643,7 +644,9 @@ describe("EditMonDialog", () => {
 describe("EditMonDialog moveset focus", () => {
   it("moves focus to the next control after the fourth move is picked", async () => {
     const user = userEvent.setup();
-    renderDialog({ mon: makeMon({ ...FILLED_MON, moves: ["vine-whip", "growth", "growl"] }) });
+    renderDialog({
+      mon: makeMon({ ...FILLED_MON, moves: padMoveset(["vine-whip", "growth", "growl"]) }),
+    });
 
     await user.type(screen.getByPlaceholderText("+ move"), "Tackle");
     await user.click(await screen.findByRole("option", { name: "Tackle" }));

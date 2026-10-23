@@ -3,13 +3,18 @@ import { useCallback, useEffect, useRef, type ReactNode } from "react";
 
 import { Typography } from "@/components/typography";
 import { Button } from "@/components/ui/button";
-import { MAX_MOVES } from "@/domain/transitions";
+import { MAX_MOVES, padMoveset } from "@/domain/moveset";
+import type { Moveset } from "@/domain/types";
 import type { IndexEntry } from "@/game/pokeapi/model";
 import { useMoveIndex } from "@/game/pokeapi/queries";
 import { findByName, moveDisplayName, searchIndex } from "@/game/pokeapi/resolve";
 
 import { ComboboxField } from "./combobox-field";
 import { PokeApiNotice } from "./pokeapi-notice";
+
+function present(value: Moveset): string[] {
+  return value.filter((move): move is string => move !== null);
+}
 
 function excludeChosen(entries: readonly IndexEntry[], chosen: readonly string[]): IndexEntry[] {
   return entries.filter((entry) => !chosen.includes(entry.name));
@@ -29,8 +34,8 @@ function nextTabbableAfter(container: HTMLElement): HTMLElement | undefined {
 
 export interface MovesetFieldProps {
   id: string;
-  value: string[];
-  onChange: (moves: string[]) => void;
+  value: Moveset;
+  onChange: (moves: Moveset) => void;
 }
 
 export function MovesetField({ id, value, onChange }: MovesetFieldProps): ReactNode {
@@ -39,22 +44,23 @@ export function MovesetField({ id, value, onChange }: MovesetFieldProps): ReactN
 
   // Two slots can resolve in the same commit when the move index arrives. This ref, kept
   // current by add/removeAt alone, stops both from building on the same stale `value`.
-  const latestValue = useRef(value);
+  const latestValue = useRef(present(value));
 
   function removeAt(index: number): void {
     const next = latestValue.current.filter((_, i) => i !== index);
     latestValue.current = next;
-    onChange(next);
+    onChange(padMoveset(next));
   }
 
   function add(moveId: string): void {
     if (latestValue.current.includes(moveId)) return;
     const next = [...latestValue.current, moveId];
     latestValue.current = next;
-    onChange(next);
+    onChange(padMoveset(next));
   }
 
-  const emptySlotCount = MAX_MOVES - value.length;
+  const moves = present(value);
+  const emptySlotCount = MAX_MOVES - moves.length;
   const container = useRef<HTMLDivElement>(null);
   const focusAfterPick = useRef(false);
 
@@ -72,7 +78,7 @@ export function MovesetField({ id, value, onChange }: MovesetFieldProps): ReactN
         Moveset
       </Typography>
       <div className="grid grid-cols-2 gap-2">
-        {value.map((moveId, index) => (
+        {moves.map((moveId, index) => (
           <div
             key={moveId}
             className="flex h-8 items-center justify-between border-[1.5px] border-border px-2.5 text-sm"
@@ -89,11 +95,11 @@ export function MovesetField({ id, value, onChange }: MovesetFieldProps): ReactN
             </Button>
           </div>
         ))}
-        {Array.from({ length: emptySlotCount }, (_, i) => value.length + i).map((slotIndex) => (
+        {Array.from({ length: emptySlotCount }, (_, i) => moves.length + i).map((slotIndex) => (
           <MoveSlotPicker
             key={slotIndex}
             id={`${id}-${String(slotIndex)}`}
-            existing={value}
+            existing={moves}
             entries={moveIndex.data}
             onAdd={add}
             onPick={() => {

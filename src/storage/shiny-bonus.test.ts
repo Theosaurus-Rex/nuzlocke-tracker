@@ -7,6 +7,7 @@ import type { Rules } from "@/domain/types";
 import type { StorageAdapter } from "./adapter";
 import { createMemoryAdapter } from "./memory-adapter";
 import { persistCatchShinyBonus, persistResetEncounter } from "./mutations";
+import { emptyMoveset } from "@/domain/moveset";
 
 const details: CatchDetails = {
   speciesId: "rattata",
@@ -18,7 +19,7 @@ const details: CatchDetails = {
   nature: null,
   ability: null,
   heldItem: null,
-  moves: [],
+  moves: emptyMoveset(),
   shiny: false,
 };
 
