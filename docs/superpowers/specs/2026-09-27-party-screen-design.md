@@ -40,8 +40,8 @@ A `Surface` card, top to bottom:
    since the quotes mark a nickname.
 3. A muted line: species · gender symbol · `L{level}` · nature. A missing gender or nature is left
    out, with its separator, rather than shown blank.
-4. A rule, then the moves in a two-by-two grid. A mon with fewer than four moves shows only the
-   moves it has.
+4. A rule, then the moves in a two-by-two grid. A cleared move leaves its cell empty, so later moves
+   keep their place. Empty cells after the last move are left out.
 5. A rule, then the footer: held item · ability · caught route.
    - No held item reads "no item", as `5b` draws it.
    - A missing ability is left out.

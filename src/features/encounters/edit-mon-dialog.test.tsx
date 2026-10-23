@@ -123,6 +123,34 @@ describe("EditMonDialog", () => {
     });
   });
 
+  it("keeps a cleared move's slot empty through save and reopen", async () => {
+    const user = userEvent.setup();
+    const { adapter, mon, unmount } = renderDialog({
+      mon: makeMon({
+        ...FILLED_MON,
+        moves: ["vine-whip", "growth", "tackle", "leech-seed"],
+      }),
+    });
+
+    await user.click(screen.getByRole("button", { name: "Remove Growth" }));
+    await user.click(screen.getByRole("button", { name: "Save changes" }));
+
+    let saved: Mon | undefined;
+    await waitFor(async () => {
+      saved = await adapter.mons.get(mon.id);
+      expect(saved?.moves).toEqual(["vine-whip", null, "tackle", "leech-seed"]);
+    });
+
+    unmount();
+    renderDialog({ adapter, mon: saved });
+    expect(screen.getAllByPlaceholderText("+ move")).toHaveLength(1);
+    const grid = screen.getByText("Moveset").nextElementSibling;
+    const order = Array.from(grid?.querySelectorAll('input[placeholder="+ move"], span') ?? []).map(
+      (el) => (el instanceof HTMLInputElement ? "+ move" : el.textContent),
+    );
+    expect(order).toEqual(["Vine Whip", "+ move", "Tackle", "Leech Seed"]);
+  });
+
   it("shows species and level caught, read-only", async () => {
     const user = userEvent.setup();
     renderDialog({ mon: makeMon({ ...FILLED_MON, speciesId: "bellsprout", levelCaught: 6 }) });

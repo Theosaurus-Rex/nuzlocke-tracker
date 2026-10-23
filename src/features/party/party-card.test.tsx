@@ -78,6 +78,20 @@ describe("PartyCard", () => {
     );
   });
 
+  it("keeps each move in its slot when one in between is empty", () => {
+    renderCard(makeMon({ ...CHIKORITA, moves: ["vine-whip", null, "tackle", null] }));
+
+    const moveCells = Array.from(document.querySelectorAll("ul.grid > li")).map(
+      (li) => li.textContent,
+    );
+    expect(moveCells).toEqual(["Vine Whip", "", "Tackle"]);
+  });
+
+  it("shows no move cells for a mon with no moves", () => {
+    renderCard(makeMon(CHIKORITA));
+    expect(document.querySelectorAll("ul.grid > li")).toHaveLength(0);
+  });
+
   it("falls back to the species name, unquoted, with no nickname", () => {
     renderCard(makeMon(CHIKORITA));
     expect(screen.getByRole("heading", { name: "Chikorita" })).toBeInTheDocument();

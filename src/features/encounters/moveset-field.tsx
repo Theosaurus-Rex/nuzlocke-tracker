@@ -3,7 +3,6 @@ import { useCallback, useEffect, useRef, type ReactNode } from "react";
 
 import { Typography } from "@/components/typography";
 import { Button } from "@/components/ui/button";
-import { MAX_MOVES, padMoveset } from "@/domain/moveset";
 import type { Moveset } from "@/domain/types";
 import type { IndexEntry } from "@/game/pokeapi/model";
 import { useMoveIndex } from "@/game/pokeapi/queries";
@@ -44,23 +43,18 @@ export function MovesetField({ id, value, onChange }: MovesetFieldProps): ReactN
 
   // Two slots can resolve in the same commit when the move index arrives. This ref, kept
   // current by add/removeAt alone, stops both from building on the same stale `value`.
-  const latestValue = useRef(present(value));
+  const latestValue = useRef(value);
 
-  function removeAt(index: number): void {
-    const next = latestValue.current.filter((_, i) => i !== index);
+  function setSlot(index: number, moveId: string | null): void {
+    if (moveId !== null && latestValue.current.includes(moveId)) return;
+    const next: Moveset = [...latestValue.current];
+    next[index] = moveId;
     latestValue.current = next;
-    onChange(padMoveset(next));
-  }
-
-  function add(moveId: string): void {
-    if (latestValue.current.includes(moveId)) return;
-    const next = [...latestValue.current, moveId];
-    latestValue.current = next;
-    onChange(padMoveset(next));
+    onChange(next);
   }
 
   const moves = present(value);
-  const emptySlotCount = MAX_MOVES - moves.length;
+  const hasEmptySlot = moves.length < value.length;
   const container = useRef<HTMLDivElement>(null);
   const focusAfterPick = useRef(false);
 
@@ -78,38 +72,39 @@ export function MovesetField({ id, value, onChange }: MovesetFieldProps): ReactN
         Moveset
       </Typography>
       <div className="grid grid-cols-2 gap-2">
-        {moves.map((moveId, index) => (
-          <div
-            key={moveId}
-            className="flex h-8 items-center justify-between border-[1.5px] border-border px-2.5 text-sm"
-          >
-            <span>{moveDisplayName(moveId)}</span>
-            <Button
-              type="button"
-              variant="ghost"
-              size="icon-xs"
-              aria-label={`Remove ${moveDisplayName(moveId)}`}
-              onClick={() => removeAt(index)}
+        {value.map((moveId, index) =>
+          moveId === null ? (
+            <MoveSlotPicker
+              key={index}
+              id={`${id}-${String(index)}`}
+              existing={moves}
+              entries={moveIndex.data}
+              onAdd={(picked) => setSlot(index, picked)}
+              onPick={() => {
+                focusAfterPick.current = true;
+              }}
+              describedBy={noticeId}
+            />
+          ) : (
+            <div
+              key={index}
+              className="flex h-8 items-center justify-between border-[1.5px] border-border px-2.5 text-sm"
             >
-              <XIcon />
-            </Button>
-          </div>
-        ))}
-        {Array.from({ length: emptySlotCount }, (_, i) => moves.length + i).map((slotIndex) => (
-          <MoveSlotPicker
-            key={slotIndex}
-            id={`${id}-${String(slotIndex)}`}
-            existing={moves}
-            entries={moveIndex.data}
-            onAdd={add}
-            onPick={() => {
-              focusAfterPick.current = true;
-            }}
-            describedBy={noticeId}
-          />
-        ))}
+              <span>{moveDisplayName(moveId)}</span>
+              <Button
+                type="button"
+                variant="ghost"
+                size="icon-xs"
+                aria-label={`Remove ${moveDisplayName(moveId)}`}
+                onClick={() => setSlot(index, null)}
+              >
+                <XIcon />
+              </Button>
+            </div>
+          ),
+        )}
       </div>
-      {emptySlotCount > 0 && (
+      {hasEmptySlot && (
         <PokeApiNotice id={noticeId} query={moveIndex} loadingText="Loading moves…" />
       )}
     </div>
