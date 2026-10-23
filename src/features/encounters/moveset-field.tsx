@@ -1,5 +1,5 @@
 import { XIcon } from "lucide-react";
-import { useCallback, useRef, type ReactNode } from "react";
+import { useCallback, useEffect, useRef, type ReactNode } from "react";
 
 import { Typography } from "@/components/typography";
 import { Button } from "@/components/ui/button";
@@ -13,6 +13,18 @@ import { PokeApiNotice } from "./pokeapi-notice";
 
 function excludeChosen(entries: readonly IndexEntry[], chosen: readonly string[]): IndexEntry[] {
   return entries.filter((entry) => !chosen.includes(entry.name));
+}
+
+const TABBABLE =
+  'a[href], button:not([disabled]), input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])';
+
+function nextTabbableAfter(container: HTMLElement): HTMLElement | undefined {
+  const scope = container.closest("[role=dialog], form") ?? document.body;
+  return Array.from(scope.querySelectorAll<HTMLElement>(TABBABLE)).find(
+    (el) =>
+      !container.contains(el) &&
+      Boolean(container.compareDocumentPosition(el) & Node.DOCUMENT_POSITION_FOLLOWING),
+  );
 }
 
 export interface MovesetFieldProps {
@@ -43,9 +55,19 @@ export function MovesetField({ id, value, onChange }: MovesetFieldProps): ReactN
   }
 
   const emptySlotCount = MAX_MOVES - value.length;
+  const container = useRef<HTMLDivElement>(null);
+  const focusAfterPick = useRef(false);
+
+  useEffect(() => {
+    if (!focusAfterPick.current) return;
+    focusAfterPick.current = false;
+    const root = container.current;
+    if (root === null) return;
+    (root.querySelector("input") ?? nextTabbableAfter(root))?.focus();
+  }, [value]);
 
   return (
-    <div>
+    <div ref={container}>
       <Typography as="span" variant="eyebrow" className="mb-1 block">
         Moveset
       </Typography>
@@ -74,6 +96,9 @@ export function MovesetField({ id, value, onChange }: MovesetFieldProps): ReactN
             existing={value}
             entries={moveIndex.data}
             onAdd={add}
+            onPick={() => {
+              focusAfterPick.current = true;
+            }}
             describedBy={noticeId}
           />
         ))}
@@ -90,6 +115,7 @@ interface MoveSlotPickerProps {
   existing: readonly string[];
   entries: readonly IndexEntry[] | undefined;
   onAdd: (moveId: string) => void;
+  onPick: () => void;
   describedBy: string;
 }
 
@@ -98,6 +124,7 @@ function MoveSlotPicker({
   existing,
   entries,
   onAdd,
+  onPick,
   describedBy,
 }: MoveSlotPickerProps): ReactNode {
   const resolve = useCallback(
@@ -129,6 +156,7 @@ function MoveSlotPicker({
       onChange={(moveId) => {
         if (moveId !== "") onAdd(moveId);
       }}
+      onPick={onPick}
       resolve={resolve}
       displayName={moveDisplayName}
       search={search}

@@ -640,6 +640,20 @@ describe("EditMonDialog", () => {
   });
 });
 
+describe("EditMonDialog moveset focus", () => {
+  it("moves focus to the next control after the fourth move is picked", async () => {
+    const user = userEvent.setup();
+    renderDialog({ mon: makeMon({ ...FILLED_MON, moves: ["vine-whip", "growth", "growl"] }) });
+
+    await user.type(screen.getByPlaceholderText("+ move"), "Tackle");
+    await user.click(await screen.findByRole("option", { name: "Tackle" }));
+
+    expect(screen.queryAllByPlaceholderText("+ move")).toHaveLength(0);
+    expect(document.activeElement).not.toBe(document.body);
+    expect(document.activeElement).toBe(document.getElementById("edit-mon-placement"));
+  });
+});
+
 describe("EditMonDialog placement", () => {
   async function seedParty(adapter: StorageAdapter, count: number): Promise<void> {
     for (let slot = 0; slot < count; slot++) {

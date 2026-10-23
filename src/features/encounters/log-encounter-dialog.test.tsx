@@ -207,6 +207,19 @@ describe("LogEncounterDialog", () => {
     expect(encounter?.speciesId).toBe("chikorita");
   });
 
+  it("moves focus to the placement field after the fourth move is picked", async () => {
+    const user = userEvent.setup();
+    renderDialog({});
+
+    for (const move of ["Tackle", "Growl", "Vine Whip", "Charm"]) {
+      await user.type(screen.getAllByPlaceholderText("+ move")[0]!, move);
+      await user.click(await screen.findByRole("option", { name: move }));
+    }
+
+    expect(screen.queryAllByPlaceholderText("+ move")).toHaveLength(0);
+    expect(document.activeElement).toBe(document.getElementById("log-encounter-placement"));
+  });
+
   it("shows the shiny toggle only while the outcome is Caught", async () => {
     const user = userEvent.setup();
     renderDialog({});

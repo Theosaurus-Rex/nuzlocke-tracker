@@ -15,6 +15,8 @@ export interface ComboboxFieldProps {
   id: string;
   value: string;
   onChange: (id: string) => void;
+  /** Called after an option is picked from the list, but not when a value commits on blur. */
+  onPick?: (id: string) => void;
   search: (query: string) => ComboboxItem[];
   resolve: (text: string) => string;
   displayName: (id: string) => string;
@@ -47,6 +49,7 @@ export function ComboboxField({
   id,
   value,
   onChange,
+  onPick,
   search,
   resolve,
   displayName,
@@ -75,6 +78,7 @@ export function ComboboxField({
   function select(item: ComboboxItem): void {
     setQuery(item.label);
     onChange(item.id);
+    onPick?.(item.id);
     setOpen(false);
   }
 
