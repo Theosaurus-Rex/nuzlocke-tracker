@@ -201,4 +201,70 @@ describe("MovesetField", () => {
 
     expect(pickers()[0]).toHaveAccessibleDescription(/Loading moves/);
   });
+
+  describe("focus after a pick", () => {
+    it("moves to the next empty slot after a keyboard pick", async () => {
+      const user = userEvent.setup();
+      render(<StatefulMovesetField initial={[]} />);
+
+      await user.type(pickers()[0]!, "Tackle");
+      await user.keyboard("{ArrowDown}{Enter}");
+
+      expect(screen.getByText("Tackle")).toBeInTheDocument();
+      expect(document.activeElement).toBe(pickers()[0]);
+    });
+
+    it("moves to the next empty slot after a click pick", async () => {
+      const user = userEvent.setup();
+      render(<StatefulMovesetField initial={["growl"]} />);
+
+      await user.type(pickers()[0]!, "Tackle");
+      await user.click(await screen.findByRole("option", { name: "Tackle" }));
+
+      expect(document.activeElement).toBe(pickers()[0]);
+      expect(document.activeElement).not.toBe(document.body);
+    });
+
+    it("moves to the next control after the fourth pick", async () => {
+      const user = userEvent.setup();
+      render(
+        <div role="dialog">
+          <StatefulMovesetField initial={["tackle", "growl", "vine-whip"]} />
+          <button type="button">After</button>
+        </div>,
+      );
+
+      await user.type(pickers()[0]!, "Razor Leaf");
+      await user.click(await screen.findByRole("option", { name: "Razor Leaf" }));
+
+      expect(document.activeElement).toBe(screen.getByRole("button", { name: "After" }));
+    });
+
+    it("does not take focus when a typed name commits on Tab", async () => {
+      const user = userEvent.setup();
+      render(<StatefulMovesetField initial={[]} />);
+
+      await user.type(pickers()[0]!, "Tackle");
+      await user.tab();
+
+      expect(screen.getByText("Tackle")).toBeInTheDocument();
+      expect(document.activeElement).toBe(pickers()[0]);
+    });
+
+    it("does not pull focus back when the user clicks away after typing a name", async () => {
+      const user = userEvent.setup();
+      render(
+        <div role="dialog">
+          <StatefulMovesetField initial={[]} />
+          <button type="button">Elsewhere</button>
+        </div>,
+      );
+
+      await user.type(pickers()[0]!, "Tackle");
+      await user.click(screen.getByText("Elsewhere"));
+
+      expect(screen.getByText("Tackle")).toBeInTheDocument();
+      expect(document.activeElement).toBe(screen.getByText("Elsewhere"));
+    });
+  });
 });
