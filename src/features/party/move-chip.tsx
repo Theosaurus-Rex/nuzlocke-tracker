@@ -8,12 +8,13 @@ import { cn } from "@/lib/utils";
 
 export interface MoveChipProps {
   name: string;
-  generation: number;
+  generation: number | undefined;
 }
 
 export function MoveChip({ name, generation }: MoveChipProps): ReactNode {
   const move = useMove(name);
-  const type = move.data ? moveStatsIn(move.data, generation).type : null;
+  const type =
+    move.data && generation !== undefined ? moveStatsIn(move.data, generation).type : null;
   const fill = type !== null && type !== "unknown" ? TYPE_FILL[type] : "bg-background";
 
   return (

@@ -10,9 +10,8 @@ import { Button } from "@/components/ui/button";
 import { DEFAULT_RULES } from "@/domain/rules";
 import { buildRouteRows, type RouteRow } from "@/domain/route-rows";
 import type { Mon, Route } from "@/domain/types";
-import { GAMES } from "@/game/registry";
 import { useAddCustomRoute, useDeleteCustomRoute } from "@/storage/mutations";
-import { useEncounters, useMons, useRoutes, useRun } from "@/storage/queries";
+import { useEncounters, useMons, useRoutes, useRun, useRunGame } from "@/storage/queries";
 import { cn } from "@/lib/utils";
 
 import {
@@ -98,6 +97,7 @@ function RouteCounters({
 export function RoutesScreen(): ReactNode {
   const { runId } = useParams<{ runId: string }>();
   const runQuery = useRun(runId ?? "");
+  const generation = useRunGame(runId ?? "")?.generation;
   const routesQuery = useRoutes(runId ?? "");
   const encountersQuery = useEncounters(runId);
   const monsQuery = useMons(runId);
@@ -170,10 +170,7 @@ export function RoutesScreen(): ReactNode {
   const visibleRows = searchRouteRows(filterRouteRows(rows, activeFilters), search);
   const counters = summariseRouteRows(rows);
   const trimmedSearch = search.trim();
-  // Falls back to HeartGold's generation, the only game seeded today, while the run itself is
-  // still loading rather than the table's rows.
   const shinyClause = runQuery.data?.rules.shinyClause === true;
-  const generation = GAMES[runQuery.data?.game ?? "heartgold"].generation;
 
   return (
     <div>

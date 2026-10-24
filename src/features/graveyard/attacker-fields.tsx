@@ -17,7 +17,7 @@ function FieldError({ id, message }: { id: string; message: string | undefined }
 
 export interface AttackerFieldsProps {
   idPrefix: string;
-  generation: number;
+  generation: number | undefined;
   speciesId: string;
   levelText: string;
   move: string;

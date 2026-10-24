@@ -6,7 +6,7 @@ import { STUB_PENDING, stubPokeApi, stubStatus } from "@/test/pokeapi-fetch";
 
 import { SpeciesTypeBadge } from "./species-type-badge";
 
-function renderBadge(speciesId: string | null, generation: number) {
+function renderBadge(speciesId: string | null, generation: number | undefined) {
   const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
   return render(
     <QueryClientProvider client={client}>
@@ -21,6 +21,13 @@ async function waitForBadgeToSettle(container: HTMLElement): Promise<void> {
 }
 
 describe("SpeciesTypeBadge", () => {
+  it("shows only the loading placeholder while the generation is unknown", async () => {
+    const { container } = renderBadge("clefairy", undefined);
+    await new Promise((resolve) => setTimeout(resolve, 50));
+    expect(container.querySelector("[aria-hidden='true']")).not.toBeNull();
+    expect(screen.queryByText("fairy")).toBeNull();
+  });
+
   it("shows Clefairy as Normal in a gen 4 run", async () => {
     const { container } = renderBadge("clefairy", 4);
     await waitForBadgeToSettle(container);

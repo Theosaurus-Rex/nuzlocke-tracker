@@ -10,10 +10,9 @@ import type { Mon } from "@/domain/types";
 import { EncounterDialogHeader } from "@/features/encounters/encounter-dialog-header";
 import { monTitle } from "@/features/encounters/mon-title";
 import { AttackerFields } from "@/features/graveyard/attacker-fields";
-import { GAMES } from "@/game/registry";
 import { cn } from "@/lib/utils";
 import { useLogFightAttempt } from "@/storage/mutations";
-import { useMons, useRun } from "@/storage/queries";
+import { useMons, useRunGame } from "@/storage/queries";
 
 const RESULTS = [
   { won: true, label: "Won" },
@@ -35,7 +34,7 @@ export function LogAttemptDialog({
   fightId,
   label,
 }: LogAttemptDialogProps): ReactNode {
-  const generation = GAMES[useRun(runId).data?.game ?? "heartgold"].generation;
+  const generation = useRunGame(runId)?.generation;
   const party = (useMons(runId).data ?? [])
     .filter((mon) => mon.status === "party")
     .sort((a, b) => (a.partySlot ?? 0) - (b.partySlot ?? 0));
@@ -84,7 +83,7 @@ function toDeathValues(input: LossInput) {
 interface LogAttemptFormProps {
   fightId: string;
   party: readonly Mon[];
-  generation: number;
+  generation: number | undefined;
   onDone: () => void;
 }
 

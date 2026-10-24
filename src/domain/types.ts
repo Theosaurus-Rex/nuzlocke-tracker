@@ -19,7 +19,9 @@ export interface Timestamped {
 export type Draft<T extends Timestamped> = Omit<T, "id" | "createdAt" | "updatedAt"> &
   Partial<Pick<T, "id" | "createdAt" | "updatedAt">>;
 
-export type GameId = "heartgold";
+export const GAME_IDS = ["heartgold"] as const;
+
+export type GameId = (typeof GAME_IDS)[number];
 
 export type RunStatus = "active" | "finished";
 

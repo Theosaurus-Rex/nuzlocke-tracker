@@ -178,6 +178,33 @@ result before committing.
 Run `pnpm format` afterwards — the generator does not format its own output, and
 `format:check` is part of the gate.
 
+### Adding a game
+
+A game is its data directory under `src/game/data/`, one entry in `GAMES` in
+`src/game/registry.ts`, and one id in `GAME_IDS` in `src/domain/types.ts`. The registry is typed
+`Record<GameId, GameData>`, so `pnpm typecheck` fails if an id has no entry or an entry has no
+id. Nothing else names a game: screens read the run's game through `useRunGame`, and the new run
+screen lists whatever the registry holds.
+
+To bootstrap a second game from nuzlocke.data, copy `scripts/extract-heartgold.ts` and adapt it.
+`docs/notes/scripts.md` says what to re-derive. A romhack is the same shape, written by hand.
+
+Two versions of one game, such as a pair, can share a dataset. Spread the shared `GameData` into a
+second registry entry with its own `id` and `name`, and add the id to `GAME_IDS`.
+
+`src/game/game-data.test.ts` runs its invariants over every game in the registry: contiguous
+route orders, unique ids, and level caps derived from rosters. A new game gets them for free.
+
+After editing a game's data, check its species names against PokéAPI. This needs a network
+connection and is not part of the gate:
+
+```bash
+node scripts/check-game-data.ts
+```
+
+It lists every roster species that is not a real PokéAPI pokemon name and exits non-zero if
+there are any. Species are plain strings, so the compiler cannot catch a typo.
+
 **Correct the data file, not the generator.** If you find an upstream error or want to tune a
 value, edit the committed file directly and say why in a comment beside the change, so the
 next reader knows it was deliberate rather than a transcription slip.

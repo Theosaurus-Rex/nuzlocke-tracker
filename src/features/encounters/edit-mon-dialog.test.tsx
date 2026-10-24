@@ -11,7 +11,7 @@ import { DEFAULT_RULES } from "@/domain/rules";
 import type { Mon, Route, Rules } from "@/domain/types";
 import type { StorageAdapter } from "@/storage/adapter";
 import { createMemoryAdapter } from "@/storage/memory-adapter";
-import { makeMon, makeRoute } from "@/test/factories";
+import { makeMon, makeRoute, makeRunDraft } from "@/test/factories";
 import { findMenuTrigger, stubPokeApiWithEvolutions } from "@/test/pokeapi-fetch";
 import { createWrapper } from "@/test/render";
 
@@ -82,7 +82,13 @@ describe("EditMonDialog", () => {
   });
 
   it("shows the mon's species type inline, resolved for the run's generation", async () => {
-    renderDialog({ mon: makeMon({ ...FILLED_MON, speciesId: "bellsprout" }) });
+    const adapter = createMemoryAdapter();
+    await adapter.init();
+    const run = await adapter.runs.put(makeRunDraft());
+    renderDialog({
+      adapter,
+      mon: makeMon({ ...FILLED_MON, runId: run.id, speciesId: "bellsprout" }),
+    });
 
     expect(await screen.findByText("grass")).toBeInTheDocument();
   });

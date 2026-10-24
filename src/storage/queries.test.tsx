@@ -25,7 +25,9 @@ import { createWrapper } from "@/test/render";
 import type { StorageAdapter } from "./adapter";
 import { createMemoryAdapter } from "./memory-adapter";
 import { useCatchEncounter, useCreateRun, useDeleteRun } from "./mutations";
-import { useEncounters, useMons, useRoutes, useRun, useRuns } from "./queries";
+import { GAMES } from "@/game/registry";
+
+import { useEncounters, useMons, useRoutes, useRun, useRunGame, useRuns } from "./queries";
 import { padMoveset } from "@/domain/moveset";
 
 const CATCH_DETAILS: CatchDetails = {
@@ -167,6 +169,33 @@ describe("read hooks", () => {
       expect(result.current.isSuccess).toBe(true);
     });
     expect(result.current.data).toBeNull();
+  });
+});
+
+describe("useRunGame", () => {
+  it("is undefined until the run loads, then the run's own game data", async () => {
+    const adapter = createMemoryAdapter();
+    await adapter.init();
+    const run = await adapter.runs.put(makeRunDraft());
+
+    const { result } = renderHook(() => useRunGame(run.id), { wrapper: createWrapper(adapter) });
+
+    expect(result.current).toBeUndefined();
+    await waitFor(() => {
+      expect(result.current).toBe(GAMES[run.game]);
+    });
+  });
+
+  it("stays undefined for a run that does not exist", async () => {
+    const adapter = createMemoryAdapter();
+    await adapter.init();
+
+    const { result } = renderHook(() => useRunGame("missing-run"), {
+      wrapper: createWrapper(adapter),
+    });
+
+    await new Promise((resolve) => setTimeout(resolve, 20));
+    expect(result.current).toBeUndefined();
   });
 });
 

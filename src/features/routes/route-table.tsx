@@ -65,7 +65,7 @@ function EncounterCell({ row }: { row: RouteRow }) {
   );
 }
 
-function TypeCell({ row, generation }: { row: RouteRow; generation: number }) {
+function TypeCell({ row, generation }: { row: RouteRow; generation: number | undefined }) {
   return <SpeciesTypeBadge speciesId={rowSpeciesId(row)} generation={generation} />;
 }
 
@@ -75,7 +75,7 @@ const columnHelper = createColumnHelper<typeof FEATURES, RouteRow>();
 export interface RouteTableProps {
   rows: RouteRow[];
   encounters: readonly Encounter[];
-  generation: number;
+  generation: number | undefined;
   onDelete: (route: Route) => void;
   deletePending: boolean;
   onLogEncounter: (route: Route) => void;

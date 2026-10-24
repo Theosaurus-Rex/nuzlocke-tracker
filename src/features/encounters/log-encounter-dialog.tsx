@@ -19,9 +19,8 @@ import type { CatchDetails } from "@/domain/transitions";
 import type { Encounter, Gender, Mon, Moveset, Route, Rules } from "@/domain/types";
 import { useEvolutionLine } from "@/game/pokeapi/queries";
 import { speciesDisplayName } from "@/game/pokeapi/resolve";
-import { GAMES } from "@/game/registry";
 import { useCatchShinyBonus, useLogEncounter } from "@/storage/mutations";
-import { useRun } from "@/storage/queries";
+import { useRunGame } from "@/storage/queries";
 import { cn } from "@/lib/utils";
 
 import { EncounterDialogHeader } from "./encounter-dialog-header";
@@ -91,9 +90,7 @@ export function LogEncounterDialog({
   existingEncounters,
   mode = "encounter",
 }: LogEncounterDialogProps): ReactNode {
-  const runQuery = useRun(runId);
-  // Falls back to HeartGold's generation, the only game seeded today, while the run is loading.
-  const generation = GAMES[runQuery.data?.game ?? "heartgold"].generation;
+  const generation = useRunGame(runId)?.generation;
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -131,7 +128,7 @@ interface LogEncounterFormProps {
   rules: Rules;
   mons: readonly Mon[];
   existingEncounters: readonly Encounter[];
-  generation: number;
+  generation: number | undefined;
   mode: "encounter" | "shiny-bonus";
   onDone: () => void;
 }
