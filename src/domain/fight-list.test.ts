@@ -6,9 +6,9 @@ import { makeDeath, makeFight } from "@/test/factories";
 
 const lookup: FightLookup = (id) =>
   ({
-    j1: { region: "johto", badge: "Zephyr", badgeSprite: 9 },
-    j2: { region: "johto", badge: null, badgeSprite: null },
-    k1: { region: "kanto", badge: "Thunder", badgeSprite: 3 },
+    j1: { region: "johto", badge: "Zephyr", badgeSprite: 9, ace: 13 },
+    j2: { region: "johto", badge: null, badgeSprite: null, ace: null },
+    k1: { region: "kanto", badge: "Thunder", badgeSprite: 3, ace: 53 },
   })[id];
 
 const ids = (sections: ReturnType<typeof buildFightSections>) =>
@@ -182,7 +182,7 @@ describe("buildFightSections", () => {
         grantsBadge: def.grantsBadge,
       }),
     );
-    const byId = new Map(heartgold.fights.map((f) => [f.id, f]));
+    const byId = new Map(heartgold.fights.map((f) => [f.id, { ...f, ace: null }]));
     const sections = buildFightSections(fights, (id) => byId.get(id), []);
     expect(sections.map((s) => s.label)).toEqual(["Johto", "Elite Four", "Kanto"]);
     expect(badgeCount(fights).total).toBe(16);

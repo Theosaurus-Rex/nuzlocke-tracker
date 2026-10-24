@@ -21,11 +21,11 @@ import { Navigate, useParams } from "react-router";
 import { ScreenHeader } from "@/components/screen-header";
 import { Typography } from "@/components/typography";
 import { StatusChip } from "@/components/status-chip";
-import { currentLevelCap, isOverCap } from "@/domain/rules-summary";
+import { isOverCap } from "@/domain/rules-summary";
 import { MAX_PARTY_SIZE } from "@/domain/transitions";
 import type { Mon } from "@/domain/types";
 import { useReorderParty } from "@/storage/mutations";
-import { useFights, useMons, useRoutes, useRun, useRunGame } from "@/storage/queries";
+import { useCurrentLevelCap, useMons, useRoutes, useRun, useRunGame } from "@/storage/queries";
 
 import { useEditMonDialog } from "../encounters/use-edit-mon-dialog";
 import { monTitle } from "../encounters/mon-title";
@@ -96,7 +96,7 @@ export function PartyScreen(): ReactNode {
   const generation = useRunGame(runId ?? "")?.generation;
   const routesQuery = useRoutes(runId ?? "");
   const monsQuery = useMons(runId);
-  const fightsQuery = useFights(runId ?? "");
+  const tableCap = useCurrentLevelCap(runId ?? "");
   const { openEditor, dialog } = useEditMonDialog(
     runId ?? "",
     monsQuery.data ?? [],
@@ -119,7 +119,7 @@ export function PartyScreen(): ReactNode {
   }
 
   const party = orderedBy(partyMembers(monsQuery.data ?? []), override);
-  const cap = runQuery.data?.rules.levelCaps ? currentLevelCap(fightsQuery.data ?? []) : null;
+  const cap = runQuery.data?.rules.levelCaps ? tableCap : null;
   const overCount = party.filter((mon) => isOverCap(mon.level, cap)).length;
   const overCapChip =
     overCount > 0 ? (

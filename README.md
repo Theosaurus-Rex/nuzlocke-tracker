@@ -27,7 +27,7 @@ What it covers today:
   between a box and the party.
 - **Graveyard.** Log a death with its cause and see the fallen on a timeline.
 - **Gyms and Elite Four.** Gym leaders, the Elite Four, the Champion and rival fights, with the
-  level cap for each. Mark them cleared and record what you lost to them.
+  ace level for each, and the current level cap. Mark them cleared and record what you lost to them.
 - **Evolve.** Move a Pokémon to its next stage without losing its history.
 - **Multiple runs.** Keep several runs at once, each with its own rules.
 - **Backup.** Export every run to one JSON file, and import it back on any device.
@@ -195,7 +195,7 @@ second entry with its own `id` and `name`, and add the id to `GAME_IDS`. SoulSil
 wild encounters differ, which the app does not store.
 
 `src/game/game-data.test.ts` runs its invariants over every game in the registry: contiguous
-route orders, unique ids, and level caps derived from rosters. A new game gets them for free.
+route orders, unique ids, and a valid level cap table. A new game gets them for free.
 
 After editing a game's data, check its species names against PokéAPI. This needs a network
 connection and is not part of the gate:

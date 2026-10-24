@@ -149,6 +149,12 @@ export type Death = Timestamped & {
   notes: string | null;
 };
 
+/** A cap holds until the run holds `badges` badges, or until the named game fight is cleared. */
+export interface LevelCapMilestone {
+  cap: number;
+  until: { badges: number } | { fight: string };
+}
+
 export type Fight = Timestamped & {
   runId: string;
   /** Links to seeded roster data. Null when custom. */
@@ -158,7 +164,7 @@ export type Fight = Timestamped & {
   order: number;
   /** Drives the badge count. */
   grantsBadge: boolean;
-  /** Derived from the boss's ace at ingest. */
+  /** A custom fight's own cap. Null for a built-in fight, whose cap comes from game data. */
   levelCap: number | null;
   status: FightStatus;
   clearedAt: string | null;

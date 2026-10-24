@@ -42,6 +42,47 @@ describe("heartgold spot-check: independently verified ace levels", () => {
   });
 });
 
+describe("heartgold level caps", () => {
+  const capOf = (id: string): number | undefined => {
+    const index = heartgold.levelCaps.findIndex(
+      ({ until }) => "fight" in until && until.fight === id,
+    );
+    return heartgold.levelCaps[index]?.cap;
+  };
+  const gymIds = (region: string): string[] =>
+    heartgold.fights.filter((f) => f.grantsBadge && f.region === region).map((f) => f.id);
+
+  test("Johto gym caps are the verified aces in gym order, with Pryce held at Jasmine's 35", () => {
+    const caps = heartgold.levelCaps.slice(0, 8).map((m) => m.cap);
+    const aces = gymIds("johto").map((id) => VERIFIED_ACE_LEVELS[id]);
+    expect(VERIFIED_ACE_LEVELS["gym-pryce"]).toBe(34);
+    expect(caps).toEqual(aces.map((ace, i) => (i === 6 ? 35 : ace)));
+  });
+
+  test.each([
+    "elite-four-will",
+    "elite-four-koga",
+    "elite-four-bruno",
+    "elite-four-karen",
+    "champion-lance",
+  ])("%s caps at its verified ace", (id) => {
+    expect(capOf(id)).toBe(VERIFIED_ACE_LEVELS[id]);
+  });
+
+  test("Kanto badge caps are the verified Kanto aces, lowest first", () => {
+    const caps = heartgold.levelCaps
+      .filter(({ until }) => "badges" in until && until.badges > 8)
+      .map((m) => m.cap);
+    const aces = gymIds("kanto").map((id) => VERIFIED_ACE_LEVELS[id] ?? 0);
+    expect(caps).toEqual(aces.toSorted((a, b) => a - b));
+  });
+
+  test("Red caps at his top level", () => {
+    const red = heartgold.fights.find((f) => f.id === "rival-red");
+    expect(capOf("rival-red")).toBe(Math.max(...(red?.roster.map((m) => m.level) ?? [])));
+  });
+});
+
 describe("heartgold badge sprites", () => {
   test("the 16 badge fights use the sprite numbers 1 to 16 once each", () => {
     const numbers = heartgold.fights

@@ -23,7 +23,7 @@ export function FightTable({ sections, monsById, onLog, deaths }: FightListProps
     <table aria-label="Fights" className="w-full border-collapse bg-background text-left text-sm">
       <thead>
         <tr className="border-y-[1.5px] border-border bg-muted">
-          {["Fight", "Cap", "Losses", "Status"].map((heading) => (
+          {["Fight", "Level", "Losses", "Status"].map((heading) => (
             <th key={heading} className="px-3 py-2">
               <Typography as="span" variant="eyebrow" tone="ink">
                 {heading}
@@ -41,7 +41,7 @@ export function FightTable({ sections, monsById, onLog, deaths }: FightListProps
               </Typography>
             </th>
           </tr>
-          {section.rows.map(({ fight, badge, badgeSprite, state, losses }) => {
+          {section.rows.map(({ fight, badge, badgeSprite, level, state, losses }) => {
             const lost = lossNames(losses, monsById);
             const renderRow = (undoButton: ReactNode, confirm: ReactNode): ReactNode => (
               <Fragment key={fight.id}>
@@ -61,7 +61,7 @@ export function FightTable({ sections, monsById, onLog, deaths }: FightListProps
                   </td>
                   <td className="px-3 py-2">
                     <Typography as="span" variant="number">
-                      {capLabel(fight.levelCap)}
+                      {capLabel(level)}
                     </Typography>
                   </td>
                   <td className="px-3 py-2">

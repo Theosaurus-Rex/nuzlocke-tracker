@@ -32,11 +32,32 @@ describe.each(Object.values(GAMES))("$id game data", (game) => {
     }
   });
 
-  test("level caps equal the ace for badge, Elite Four and Champion fights, and are null for the rest", () => {
-    for (const fight of game.fights) {
-      const ace = Math.max(...fight.roster.map((m) => m.level));
-      const capped = fight.grantsBadge || fight.kind === "elite_four" || fight.kind === "champion";
-      expect(fight.levelCap, fight.id).toBe(capped ? ace : null);
+  test("level cap milestones name real fights", () => {
+    const ids = new Set(game.fights.map((f) => f.id));
+    for (const { until } of game.levelCaps) {
+      if ("fight" in until) expect(ids.has(until.fight), until.fight).toBe(true);
+    }
+  });
+
+  test("level cap badge milestones strictly increase and fit the game's badge count", () => {
+    const badgeCount = game.fights.filter((f) => f.grantsBadge).length;
+    const counts = game.levelCaps.flatMap(({ until }) => ("badges" in until ? [until.badges] : []));
+    expect(counts.length).toBeGreaterThan(0);
+    counts.forEach((n, i) => {
+      expect(Number.isInteger(n) && n >= 1 && n <= badgeCount, `badges ${String(n)}`).toBe(true);
+      if (i > 0) expect(n).toBeGreaterThan(counts[i - 1] ?? Infinity);
+    });
+  });
+
+  test("level caps never decrease from one milestone to the next", () => {
+    game.levelCaps.forEach(({ cap }, i) => {
+      if (i > 0) expect(cap).toBeGreaterThanOrEqual(game.levelCaps[i - 1]?.cap ?? 0);
+    });
+  });
+
+  test("level caps are positive integers", () => {
+    for (const { cap } of game.levelCaps) {
+      expect(Number.isInteger(cap) && cap > 0, String(cap)).toBe(true);
     }
   });
 

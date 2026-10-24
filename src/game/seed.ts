@@ -30,7 +30,7 @@ export function seedFights(runId: string, game: GameData): Draft<Fight>[] {
     kind: def.kind,
     order: def.order * FIGHT_ORDER_STEP,
     grantsBadge: def.grantsBadge,
-    levelCap: def.levelCap,
+    levelCap: null,
     status: "pending",
     clearedAt: null,
   }));

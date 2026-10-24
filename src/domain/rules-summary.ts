@@ -1,15 +1,47 @@
-import type { Fight, Rules } from "./types";
+import type { Fight, LevelCapMilestone, Rules } from "./types";
 
 export interface RuleChip {
   label: string;
   tone: "neutral" | "flag";
 }
 
-export function currentLevelCap(fights: readonly Fight[]): number | null {
-  const next = [...fights]
-    .sort((a, b) => a.order - b.order)
-    .find((fight) => fight.status !== "cleared" && fight.levelCap !== null);
-  return next?.levelCap ?? null;
+export function currentLevelCap(
+  fights: readonly Fight[],
+  milestones: readonly LevelCapMilestone[],
+  badgeFightIds: ReadonlySet<string>,
+): number | null {
+  const builtIn = new Map<string, Fight>();
+  for (const fight of fights) {
+    if (fight.gameFightId !== null) builtIn.set(fight.gameFightId, fight);
+  }
+  const badges = [...builtIn.values()].filter(
+    (fight) => fight.status === "cleared" && badgeFightIds.has(fight.gameFightId ?? ""),
+  ).length;
+
+  const milestone = milestones.find(({ until }) =>
+    "badges" in until ? badges < until.badges : builtIn.get(until.fight)?.status === "pending",
+  );
+  if (milestone === undefined) return null;
+
+  const nextBadgeOrder = Math.min(
+    ...[...builtIn.values()]
+      .filter((fight) => fight.status !== "cleared" && badgeFightIds.has(fight.gameFightId ?? ""))
+      .map((fight) => fight.order),
+  );
+  const anchorOrder =
+    "fight" in milestone.until
+      ? (builtIn.get(milestone.until.fight)?.order ?? Infinity)
+      : nextBadgeOrder;
+  const overrides = fights
+    .filter(
+      (fight) =>
+        fight.gameFightId === null &&
+        fight.status !== "cleared" &&
+        fight.levelCap !== null &&
+        fight.order < anchorOrder,
+    )
+    .map((fight) => fight.levelCap ?? Infinity);
+  return Math.min(milestone.cap, ...overrides);
 }
 
 export function isOverCap(level: number, cap: number | null): boolean {
