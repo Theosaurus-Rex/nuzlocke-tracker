@@ -16,6 +16,8 @@ import {
   toMoveIndex,
   toSpecies,
   toSpeciesIndex,
+  type RawChainLink,
+  type RawEvolutionChain,
   type RawMove,
 } from "./map";
 
@@ -164,6 +166,56 @@ describe("nextStages", () => {
 
   it("does not return stages beyond the next one", () => {
     expect(nextStages(branch, 43)).toEqual([44]);
+  });
+});
+
+describe("nextStages gender", () => {
+  const link = (id: number, genders: (number | null)[] | null): RawChainLink => ({
+    species: {
+      name: `s${String(id)}`,
+      url: `https://pokeapi.co/api/v2/pokemon-species/${String(id)}/`,
+    },
+    ...(genders === null ? {} : { evolution_details: genders.map((gender) => ({ gender })) }),
+    evolves_to: [],
+  });
+  const chainOf = (...children: RawChainLink[]): RawEvolutionChain => ({
+    id: 1,
+    chain: { ...link(1, null), evolves_to: children },
+  });
+  const kirlia = chainOf(link(2, [null]), link(3, [2]));
+  const salandit = chainOf(link(2, [1]));
+  const burmy = chainOf(link(2, [1]), link(3, [2]));
+
+  it("offers a male-only stage to a male and hides it from a female", () => {
+    expect(nextStages(kirlia, 1, "male")).toEqual([2, 3]);
+    expect(nextStages(kirlia, 1, "female")).toEqual([2]);
+  });
+
+  it("hides a female-only stage from a male and offers it to a female", () => {
+    expect(nextStages(salandit, 1, "male")).toEqual([]);
+    expect(nextStages(salandit, 1, "female")).toEqual([2]);
+  });
+
+  it("splits a branch by gender", () => {
+    expect(nextStages(burmy, 1, "female")).toEqual([2]);
+    expect(nextStages(burmy, 1, "male")).toEqual([3]);
+  });
+
+  it("offers every stage when the gender is unknown or genderless", () => {
+    expect(nextStages(burmy, 1, null)).toEqual([2, 3]);
+    expect(nextStages(burmy, 1)).toEqual([2, 3]);
+    expect(nextStages(burmy, 1, "genderless")).toEqual([2, 3]);
+  });
+
+  it("keeps a stage with one gendered and one ungendered method for both genders", () => {
+    const mixed = chainOf(link(2, [1, null]));
+    expect(nextStages(mixed, 1, "male")).toEqual([2]);
+    expect(nextStages(mixed, 1, "female")).toEqual([2]);
+  });
+
+  it("keeps a stage with an empty evolution_details", () => {
+    const empty = chainOf(link(2, []));
+    expect(nextStages(empty, 1, "male")).toEqual([2]);
   });
 });
 

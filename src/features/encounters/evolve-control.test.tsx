@@ -29,6 +29,7 @@ function renderControl(
       <EvolveControl
         id="evolve"
         speciesId="bellsprout"
+        gender={null}
         randomised={false}
         onEvolve={onEvolve}
         onPickAny={onPickAny}
@@ -82,6 +83,26 @@ describe("EvolveControl", () => {
     await waitFor(() =>
       expect(screen.queryByRole("button", { name: "Evolve" })).not.toBeInTheDocument(),
     );
+  });
+
+  it("offers a male-only stage to a male", async () => {
+    stubPokeApiWithEvolutions();
+    renderControl({ speciesId: "kirlia", gender: "male" });
+    const user = userEvent.setup();
+
+    await user.click(await findMenuTrigger());
+    expect(await screen.findByRole("menuitem", { name: "Gardevoir" })).toBeInTheDocument();
+    expect(screen.getByRole("menuitem", { name: "Gallade" })).toBeInTheDocument();
+  });
+
+  it("hides a male-only stage from a female", async () => {
+    stubPokeApiWithEvolutions();
+    renderControl({ speciesId: "kirlia", gender: "female" });
+    const user = userEvent.setup();
+
+    await user.click(await findMenuTrigger());
+    expect(await screen.findByRole("menuitem", { name: "Gardevoir" })).toBeInTheDocument();
+    expect(screen.queryByRole("menuitem", { name: "Gallade" })).not.toBeInTheDocument();
   });
 
   it("calls onPickAny and fetches no species chain when randomised", async () => {

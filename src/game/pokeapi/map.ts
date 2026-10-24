@@ -1,3 +1,4 @@
+import type { Gender } from "@/domain/types";
 import { isType, type Type } from "@/game/types";
 
 import { FIRST_ALTERNATE_FORM_ID, regionalForm } from "./forms";
@@ -133,8 +134,13 @@ export interface RawPokemonSpecies {
   evolution_chain: { url: string } | null;
 }
 
+export interface RawEvolutionDetail {
+  gender: number | null;
+}
+
 export interface RawChainLink {
   species: NamedRef;
+  evolution_details?: RawEvolutionDetail[];
   evolves_to: RawChainLink[];
 }
 
@@ -152,9 +158,27 @@ function findLink(link: RawChainLink, speciesId: number): RawChainLink | undefin
   return undefined;
 }
 
-export function nextStages(chain: RawEvolutionChain, speciesId: number): number[] {
+const POKEAPI_GENDER: Record<"female" | "male", number> = { female: 1, male: 2 };
+
+function isOpenTo(child: RawChainLink, gender: Gender | null): boolean {
+  if (gender !== "female" && gender !== "male") return true;
+  const methods = child.evolution_details ?? [];
+  if (methods.length === 0) return true;
+  return methods.some(
+    (method) => method.gender === null || method.gender === POKEAPI_GENDER[gender],
+  );
+}
+
+export function nextStages(
+  chain: RawEvolutionChain,
+  speciesId: number,
+  gender: Gender | null = null,
+): number[] {
   const link = findLink(chain.chain, speciesId);
-  return link === undefined ? [] : link.evolves_to.map((child) => idFromUrl(child.species.url));
+  if (link === undefined) return [];
+  return link.evolves_to
+    .filter((child) => isOpenTo(child, gender))
+    .map((child) => idFromUrl(child.species.url));
 }
 
 export function evolutionLine(chain: RawEvolutionChain): number[] {

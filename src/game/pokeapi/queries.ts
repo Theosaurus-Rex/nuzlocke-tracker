@@ -1,5 +1,7 @@
 import { useQueries, useQuery, type QueryClient } from "@tanstack/react-query";
 
+import type { Gender } from "@/domain/types";
+
 import { fetchJson, PokeApiError } from "./client";
 import { baseSpeciesId, expandNextStages } from "./forms";
 import {
@@ -143,7 +145,10 @@ export function useEvolutionLine(speciesName: string | null): string[] | undefin
   });
 }
 
-export function useNextEvolutions(speciesName: string | null): NextEvolutions {
+export function useNextEvolutions(
+  speciesName: string | null,
+  gender: Gender | null = null,
+): NextEvolutions {
   const index = useSpeciesIndex();
   const entries = index.data;
   const current =
@@ -159,10 +164,9 @@ export function useNextEvolutions(speciesName: string | null): NextEvolutions {
     queryKey: ["pokeapi", "evolutions", id],
     queryFn: async () => {
       const species = await fetchJson<RawPokemonSpecies>(`/pokemon-species/${String(id)}`);
-      if (species.evolution_chain === null) return [];
+      if (species.evolution_chain === null) return null;
       const chainId = idFromUrl(species.evolution_chain.url);
-      const raw = await fetchJson<RawEvolutionChain>(`/evolution-chain/${String(chainId)}`);
-      return nextStages(raw, id ?? species.id);
+      return fetchJson<RawEvolutionChain>(`/evolution-chain/${String(chainId)}`);
     },
     enabled: id !== null,
   });
@@ -214,7 +218,11 @@ export function useNextEvolutions(speciesName: string | null): NextEvolutions {
   }
 
   return {
-    data: expandNextStages(entries, current, chain.data),
+    data: expandNextStages(
+      entries,
+      current,
+      chain.data === null ? [] : nextStages(chain.data, id, gender),
+    ),
     isPending: false,
     isFetching: chain.isFetching,
     isError: false,
