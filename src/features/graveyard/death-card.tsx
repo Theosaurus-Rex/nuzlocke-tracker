@@ -19,7 +19,7 @@ export interface DeathCardProps {
   mon: Mon;
   caughtRouteName: string | null;
   fights: readonly Fight[];
-  generation: number;
+  generation: number | undefined;
   onEdit: () => void;
 }
 

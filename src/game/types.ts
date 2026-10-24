@@ -1,7 +1,7 @@
 /**
  * Static game-data types: the shape of one game's route order and boss rosters.
- * Hand-authorable TypeScript, not JSON, so a typo'd species or missing level fails
- * `pnpm build` and a new game gets autocomplete.
+ * Hand-authorable TypeScript, not JSON, so a missing level fails `pnpm build`. Species are plain
+ * strings, so `scripts/check-game-data.ts` is what catches a typo'd one.
  */
 
 import type { FightKind, GameId } from "@/domain/types";
@@ -12,7 +12,7 @@ export interface BossMon {
   level: number;
 }
 
-export type Region = "johto" | "kanto";
+export type Region = string;
 
 export interface FightDef {
   /** Stable, game-scoped id, e.g. "gym-falkner". */

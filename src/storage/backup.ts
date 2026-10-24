@@ -7,17 +7,8 @@
 import { isMoveset, padMoveset } from "@/domain/moveset";
 import { SCHEMA_VERSION, isExportBundle, type ExportBundle } from "@/domain/schema";
 import { CLAUSE_FIELDS, RANDOMISER_FIELDS } from "@/domain/rules";
-import type {
-  Cause,
-  StatusCause,
-  GameId,
-  Run,
-  Route,
-  Encounter,
-  Mon,
-  Death,
-  Fight,
-} from "@/domain/types";
+import { GAME_IDS } from "@/domain/types";
+import type { Cause, StatusCause, Run, Route, Encounter, Mon, Death, Fight } from "@/domain/types";
 
 import type { StorageAdapter } from "./adapter";
 
@@ -67,7 +58,6 @@ export function downloadBundle(bundle: ExportBundle, filename?: string): void {
 
 export type ParseResult = { ok: true; bundle: ExportBundle } | { ok: false; errors: string[] };
 
-const GAME_IDS: readonly GameId[] = ["heartgold"];
 const RUN_STATUSES = ["active", "finished"] as const;
 const ENCOUNTER_STATUSES = ["open", "caught", "missed", "skipped"] as const;
 const MON_STATUSES = ["party", "box", "dead"] as const;

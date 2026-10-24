@@ -18,7 +18,13 @@ import {
   RANDOMISER_OFF,
   RANDOMISER_SUB_FIELDS,
 } from "@/domain/rules";
-import type { ClauseField, GameId, RandomiserSubField, Rules } from "@/domain/types";
+import {
+  GAME_IDS,
+  type ClauseField,
+  type GameId,
+  type RandomiserSubField,
+  type Rules,
+} from "@/domain/types";
 import { GAMES } from "@/game/registry";
 import { cn } from "@/lib/utils";
 import { useCreateRun } from "@/storage/mutations";
@@ -26,9 +32,7 @@ import { useRuns } from "@/storage/queries";
 
 const GAME_OPTIONS = Object.values(GAMES);
 
-// Guards noUncheckedIndexedAccess only. GAME_OPTIONS is never empty and remains the source of
-// truth for what's selectable.
-const FIRST_GAME_ID: GameId = GAME_OPTIONS[0]?.id ?? "heartgold";
+const FIRST_GAME_ID: GameId = GAME_IDS[0];
 
 const CLAUSE_LABELS: Record<ClauseField, string> = {
   dupesClause: "Dupes clause",

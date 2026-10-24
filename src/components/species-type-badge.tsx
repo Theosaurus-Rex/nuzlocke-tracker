@@ -9,14 +9,14 @@ import { TypeBadge, type TypeBadgeType } from "./type-badge";
 
 export interface SpeciesTypeBadgeProps {
   speciesId: string | null;
-  generation: number;
+  generation: number | undefined;
 }
 
 export function SpeciesTypeBadge({ speciesId, generation }: SpeciesTypeBadgeProps): ReactNode {
   const species = useSpecies(speciesId);
 
   if (speciesId === null || speciesId === "") return null;
-  if (species.isPending) {
+  if (species.isPending || generation === undefined) {
     return (
       <span aria-hidden="true" className={cn(CHIP_SHAPE, "invisible")}>
         normal

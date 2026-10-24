@@ -63,7 +63,7 @@ function RouteCardBadges({
   onLog,
 }: {
   row: RouteRow;
-  generation: number;
+  generation: number | undefined;
   onLog: () => void;
 }): ReactNode {
   const chip = chipForRouteRow(row);
@@ -95,7 +95,7 @@ function RouteCardBadges({
 export interface RouteCardListProps {
   rows: RouteRow[];
   encounters: readonly Encounter[];
-  generation: number;
+  generation: number | undefined;
   onDelete: (route: Route) => void;
   deletePending: boolean;
   onLogEncounter: (route: Route) => void;

@@ -24,9 +24,8 @@ import { StatusChip } from "@/components/status-chip";
 import { currentLevelCap, isOverCap } from "@/domain/rules-summary";
 import { MAX_PARTY_SIZE } from "@/domain/transitions";
 import type { Mon } from "@/domain/types";
-import { GAMES } from "@/game/registry";
 import { useReorderParty } from "@/storage/mutations";
-import { useFights, useMons, useRoutes, useRun } from "@/storage/queries";
+import { useFights, useMons, useRoutes, useRun, useRunGame } from "@/storage/queries";
 
 import { useEditMonDialog } from "../encounters/use-edit-mon-dialog";
 import { monTitle } from "../encounters/mon-title";
@@ -94,6 +93,7 @@ function EmptySlotTile({ disabled, onAdd }: { disabled: boolean; onAdd: () => vo
 export function PartyScreen(): ReactNode {
   const { runId } = useParams<{ runId: string }>();
   const runQuery = useRun(runId ?? "");
+  const generation = useRunGame(runId ?? "")?.generation;
   const routesQuery = useRoutes(runId ?? "");
   const monsQuery = useMons(runId);
   const fightsQuery = useFights(runId ?? "");
@@ -118,7 +118,6 @@ export function PartyScreen(): ReactNode {
     return <Navigate to="/" replace />;
   }
 
-  const generation = GAMES[runQuery.data?.game ?? "heartgold"].generation;
   const party = orderedBy(partyMembers(monsQuery.data ?? []), override);
   const cap = runQuery.data?.rules.levelCaps ? currentLevelCap(fightsQuery.data ?? []) : null;
   const overCount = party.filter((mon) => isOverCap(mon.level, cap)).length;

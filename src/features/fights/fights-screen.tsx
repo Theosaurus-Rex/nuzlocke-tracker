@@ -8,8 +8,7 @@ import { Button } from "@/components/ui/button";
 import { badgeCount, buildFightSections } from "@/domain/fight-list";
 import type { Fight } from "@/domain/types";
 import { currentLevelCap } from "@/domain/rules-summary";
-import { GAMES } from "@/game/registry";
-import { useDeaths, useFights, useMons, useRun } from "@/storage/queries";
+import { useDeaths, useFights, useMons, useRun, useRunGame } from "@/storage/queries";
 
 import { AddFightDialog } from "./add-fight-dialog";
 import { FightCardList } from "./fight-card-list";
@@ -20,6 +19,7 @@ import { LogAttemptDialog } from "./log-attempt-dialog";
 export function FightsScreen(): ReactNode {
   const { runId } = useParams<{ runId: string }>();
   const runQuery = useRun(runId ?? "");
+  const game = useRunGame(runId ?? "");
   const fightsQuery = useFights(runId ?? "");
   const deathsQuery = useDeaths(runId ?? "");
   const monsQuery = useMons(runId);
@@ -34,7 +34,7 @@ export function FightsScreen(): ReactNode {
   const fights = fightsQuery.data ?? [];
   const loaded = !runQuery.isPending && !fightsQuery.isPending && !deathsQuery.isPending;
   const deaths = deathsQuery.data ?? [];
-  const defs = new Map(GAMES[run?.game ?? "heartgold"].fights.map((def) => [def.id, def]));
+  const defs = new Map((game?.fights ?? []).map((def) => [def.id, def]));
   const sections = buildFightSections(fights, (id) => defs.get(id), deaths);
   const monsById = new Map((monsQuery.data ?? []).map((mon) => [mon.id, mon]));
   const { earned, total } = badgeCount(fights);

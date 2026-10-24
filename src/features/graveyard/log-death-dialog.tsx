@@ -29,12 +29,11 @@ import { EncounterDialogHeader } from "@/features/encounters/encounter-dialog-he
 import { monTitle } from "@/features/encounters/mon-title";
 import { PlacementField, type Placement } from "@/features/encounters/placement-field";
 import { speciesDisplayName } from "@/game/pokeapi/resolve";
-import { GAMES } from "@/game/registry";
 import { genderSymbol } from "@/lib/gender";
 import { joinPresent } from "@/lib/join-present";
 import { cn } from "@/lib/utils";
 import { useEditDeath, useLogDeath, useUndoDeath } from "@/storage/mutations";
-import { useMons, useRoutes, useRun } from "@/storage/queries";
+import { useMons, useRoutes, useRunGame } from "@/storage/queries";
 
 import { AttackerFields } from "./attacker-fields";
 import { titleCase } from "./cause-text";
@@ -95,10 +94,9 @@ export function LogDeathDialog({
   runId,
   death,
 }: LogDeathDialogProps): ReactNode {
-  const runQuery = useRun(runId);
   const monsQuery = useMons(runId);
   const routesQuery = useRoutes(runId);
-  const generation = GAMES[runQuery.data?.game ?? "heartgold"].generation;
+  const generation = useRunGame(runId)?.generation;
   const allMons = monsQuery.data ?? [];
   const deadMon = death && allMons.find((mon) => mon.id === death.monId);
   const choices = death ? (deadMon ? [deadMon] : []) : livingMons(allMons);
@@ -132,7 +130,7 @@ interface LogDeathFormProps {
   mons: readonly Mon[];
   death: Death | undefined;
   routes: readonly Route[];
-  generation: number;
+  generation: number | undefined;
   partyFull: boolean;
   onDone: () => void;
 }
