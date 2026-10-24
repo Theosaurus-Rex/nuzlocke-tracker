@@ -127,6 +127,19 @@ describe("NewRunScreen", () => {
     expect(select.value).toBe(expectedGames[0]?.id);
   });
 
+  it("creates a run for the game picked in the game picker", async () => {
+    const adapter = createMemoryAdapter();
+    renderScreen(adapter);
+
+    await userEvent.type(screen.getByLabelText("Run name"), "Silver Run");
+    await userEvent.selectOptions(screen.getByLabelText("Game"), "soulsilver");
+    await userEvent.click(screen.getByRole("button", { name: "Start run" }));
+
+    await waitFor(async () => {
+      expect((await adapter.runs.getAll()).map((run) => run.game)).toEqual(["soulsilver"]);
+    });
+  });
+
   it("creates the run with the given name and selected game, then navigates to its own screen", async () => {
     const adapter = createMemoryAdapter();
     const { router } = renderScreen(adapter);

@@ -99,7 +99,7 @@ Every commit in the history passes the whole gate.
 src/
   domain/        entity types and pure state transitions, imports nothing
   storage/       adapter interface, Dexie + in-memory implementations, query layer
-  game/          HeartGold routes and bosses, natures, and the live PokéAPI client
+  game/          HeartGold and SoulSilver routes and bosses, natures, and the live PokéAPI client
   game/pokeapi/  fetch, map and resolve species and move data from PokéAPI, cached by TanStack Query
   features/      screens, one directory each
   app/           routing, the responsive shell, and lazy loading of each screen
@@ -114,7 +114,7 @@ docs/            design specs, the visual direction, the wireframes and longer n
 
 Dependencies point one way: `features → storage → domain`. `domain/` imports from none of
 the others, which is what makes the game rules testable without a database. `game/` is a leaf
-holding HeartGold's routes and bosses plus the live PokéAPI client. Both `features/` and
+holding the HeartGold and SoulSilver routes and bosses plus the live PokéAPI client. Both `features/` and
 `storage/` read it, and it imports only from `domain/`. `components/` and `lib/` are shared by
 `features/` and never import from it or from `storage/`. `app/` sits on top and loads the screens.
 
@@ -190,7 +190,9 @@ To bootstrap a second game from nuzlocke.data, copy `scripts/extract-heartgold.t
 `docs/notes/scripts.md` says what to re-derive. A romhack is the same shape, written by hand.
 
 Two versions of one game, such as a pair, can share a dataset. Spread the shared `GameData` into a
-second registry entry with its own `id` and `name`, and add the id to `GAME_IDS`.
+second entry with its own `id` and `name`, and add the id to `GAME_IDS`. SoulSilver does this in
+`src/game/data/heartgold/index.ts`: its routes and boss rosters are HeartGold's, and only the
+wild encounters differ, which the app does not store.
 
 `src/game/game-data.test.ts` runs its invariants over every game in the registry: contiguous
 route orders, unique ids, and level caps derived from rosters. A new game gets them for free.

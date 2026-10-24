@@ -410,6 +410,24 @@ describe("useDeleteRun", () => {
   });
 });
 
+describe("useCreateRun for SoulSilver", () => {
+  it("seeds the routes and fights of its own game data", async () => {
+    const adapter = createMemoryAdapter();
+    await adapter.init();
+
+    const { result } = renderHook(() => useCreateRun(), { wrapper: createWrapper(adapter) });
+    const run = await result.current.mutateAsync({ name: "SS", game: "soulsilver" });
+
+    const routes = await adapter.routes.getAll();
+    const fights = await adapter.fights.getAll();
+    expect(run.game).toBe("soulsilver");
+    expect(routes).toHaveLength(GAMES.soulsilver.routes.length);
+    expect(fights).toHaveLength(GAMES.soulsilver.fights.length);
+    expect(routes.length).toBeGreaterThan(0);
+    expect(fights.length).toBeGreaterThan(0);
+  });
+});
+
 describe("useCreateRun", () => {
   it("persists a run with the given name and game, active status, and DEFAULT_RULES", async () => {
     const adapter = createMemoryAdapter();
