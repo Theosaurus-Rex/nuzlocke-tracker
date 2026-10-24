@@ -9,6 +9,7 @@ const lookup: FightLookup = (id) =>
     j1: { region: "johto", badge: "Zephyr", badgeSprite: 9, ace: 13 },
     j2: { region: "johto", badge: null, badgeSprite: null, ace: null },
     k1: { region: "kanto", badge: "Thunder", badgeSprite: 3, ace: 53 },
+    k2: { region: "kanto", badge: null, badgeSprite: null, ace: null },
   })[id];
 
 const ids = (sections: ReturnType<typeof buildFightSections>) =>
@@ -55,6 +56,20 @@ describe("buildFightSections", () => {
     );
     expect(sections.map((s) => s.label)).toEqual(["Johto", "Elite Four", "Kanto"]);
     expect(ids(sections)).toEqual([["a"], ["e", "l"], ["k"]]);
+  });
+
+  test("a boss fight sits in its region's section, not the league's", () => {
+    const sections = buildFightSections(
+      [
+        makeFight({ id: "a", gameFightId: "k1", order: 1 }),
+        makeFight({ id: "b", gameFightId: "k2", kind: "boss", grantsBadge: false, order: 2 }),
+        makeFight({ id: "c", gameFightId: "k1", order: 3 }),
+      ],
+      lookup,
+      [],
+    );
+    expect(sections.map((s) => s.label)).toEqual(["Kanto"]);
+    expect(ids(sections)).toEqual([["a", "b", "c"]]);
   });
 
   test("a custom fight with no region joins the section before it", () => {

@@ -29,7 +29,7 @@ export type EncounterStatus = "open" | "caught" | "missed" | "skipped";
 
 export type MonStatus = "party" | "box" | "dead";
 
-export type FightKind = "gym" | "elite_four" | "champion" | "rival" | "custom";
+export type FightKind = "gym" | "elite_four" | "champion" | "rival" | "boss" | "custom";
 
 export type FightStatus = "pending" | "cleared";
 
