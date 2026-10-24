@@ -672,13 +672,28 @@ describe("Offline", () => {
 });
 
 describe("Rules summary", () => {
-  it("shows chips for the run's active rules and a cap from the first uncleared fight", async () => {
+  it("shows chips for the run's active rules and the cap for the badges held, not the stored fight cap", async () => {
     const adapter = createMemoryAdapter();
     const run = await adapter.runs.put(
       makeRunDraft({ rules: makeRules({ dupesClause: true, levelCaps: true }) }),
     );
-    await adapter.fights.put(makeFightDraft(run.id, { order: 1, levelCap: 13, status: "cleared" }));
-    await adapter.fights.put(makeFightDraft(run.id, { order: 2, levelCap: 18 }));
+    await adapter.fights.put(
+      makeFightDraft(run.id, {
+        gameFightId: "gym-falkner",
+        grantsBadge: true,
+        order: 1,
+        levelCap: 1,
+        status: "cleared",
+      }),
+    );
+    await adapter.fights.put(
+      makeFightDraft(run.id, {
+        gameFightId: "gym-bugsy",
+        grantsBadge: true,
+        order: 2,
+        levelCap: 2,
+      }),
+    );
 
     renderAt(`/runs/${run.id}/routes`, { adapter });
 
@@ -689,7 +704,7 @@ describe("Rules summary", () => {
         within(list)
           .getAllByRole("listitem")
           .map((item) => item.textContent),
-      ).toEqual(["Dupes", "Cap L18"]);
+      ).toEqual(["Dupes", "Cap L17"]);
     });
   });
 

@@ -7,8 +7,14 @@ import { Typography } from "@/components/typography";
 import { Button } from "@/components/ui/button";
 import { badgeCount, buildFightSections } from "@/domain/fight-list";
 import type { Fight } from "@/domain/types";
-import { currentLevelCap } from "@/domain/rules-summary";
-import { useDeaths, useFights, useMons, useRun, useRunGame } from "@/storage/queries";
+import {
+  useDeaths,
+  useFights,
+  useMons,
+  useRun,
+  useRunGame,
+  useCurrentLevelCap,
+} from "@/storage/queries";
 
 import { AddFightDialog } from "./add-fight-dialog";
 import { FightCardList } from "./fight-card-list";
@@ -21,6 +27,7 @@ export function FightsScreen(): ReactNode {
   const runQuery = useRun(runId ?? "");
   const game = useRunGame(runId ?? "");
   const fightsQuery = useFights(runId ?? "");
+  const tableCap = useCurrentLevelCap(runId ?? "");
   const deathsQuery = useDeaths(runId ?? "");
   const monsQuery = useMons(runId);
   const [adding, setAdding] = useState(false);
@@ -34,11 +41,16 @@ export function FightsScreen(): ReactNode {
   const fights = fightsQuery.data ?? [];
   const loaded = !runQuery.isPending && !fightsQuery.isPending && !deathsQuery.isPending;
   const deaths = deathsQuery.data ?? [];
-  const defs = new Map((game?.fights ?? []).map((def) => [def.id, def]));
+  const defs = new Map(
+    (game?.fights ?? []).map((def) => [
+      def.id,
+      { ...def, ace: Math.max(...def.roster.map((mon) => mon.level)) },
+    ]),
+  );
   const sections = buildFightSections(fights, (id) => defs.get(id), deaths);
   const monsById = new Map((monsQuery.data ?? []).map((mon) => [mon.id, mon]));
   const { earned, total } = badgeCount(fights);
-  const cap = run?.rules.levelCaps ? currentLevelCap(fights) : null;
+  const cap = run?.rules.levelCaps ? tableCap : null;
   const onLog = (fight: Fight, label: string): void => setLogging({ fight, label });
   const allRows = sections.flatMap((section) => section.rows);
   const labels = numberedFightLabels(

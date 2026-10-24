@@ -21,7 +21,7 @@ export function FightCardList({ sections, monsById, onLog, deaths }: FightListPr
             </Typography>
           </div>
           <ul className="m-0 list-none p-0">
-            {section.rows.map(({ fight, badge, badgeSprite, state, losses }) => {
+            {section.rows.map(({ fight, badge, badgeSprite, level, state, losses }) => {
               const lost = lossNames(losses, monsById);
               const renderRow = (undoButton: ReactNode, confirm: ReactNode): ReactNode => (
                 <li
@@ -49,7 +49,7 @@ export function FightCardList({ sections, monsById, onLog, deaths }: FightListPr
                     )}
                   </div>
                   <Typography as="span" variant="number">
-                    {capLabel(fight.levelCap)}
+                    {capLabel(level)}
                   </Typography>
                   {state === "cleared" && (
                     <StatusChip status="cleared">

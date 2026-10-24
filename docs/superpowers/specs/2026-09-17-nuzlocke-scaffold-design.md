@@ -296,7 +296,7 @@ discriminant but nothing else — `notes` still records what happened.
 | `kind` | `'gym' \| 'elite_four' \| 'champion' \| 'rival' \| 'custom'` | |
 | `order` | `number` | |
 | `grantsBadge` | `boolean` | drives the badge count |
-| `levelCap` | `number?` | derived from the boss's ace at ingest |
+| `levelCap` | `number?` | null for a built-in fight, whose cap comes from the game's cap table. A custom fight's own cap |
 | `status` | `'pending' \| 'cleared'` | |
 | `clearedAt` | `string?` | |
 | `createdAt` / `updatedAt` | `string` | |

@@ -321,8 +321,12 @@ nothing and taxed the common case. A stray re-run is
 now destructive rather than idempotent, so the generator refuses to overwrite a populated output
 directory unless passed `--force`. See README.md "Game data" for the how.
 
-**Level caps are derived**, not sourced — take the ace (highest-level) mon per boss. They
-are a community convention, not a game mechanic, so no API will ever return them.
+**Level caps are a hand-entered table by progress**, credited to its source. Each game carries an
+ordered list of milestones (`levelCaps`): a cap that holds until some badge count is reached or
+some fight is cleared. They follow badges held, not each gym's own ace, so doing gyms out of
+order never lowers the cap. They are a community convention, not a game mechanic, so no API
+returns them, and a romhack can write its table without a roster. HeartGold's is credited in
+`src/game/data/heartgold/level-caps.ts`.
 
 **Pickers are never constrained to one generation — decided 2026-09-17.** Species, ability, move
 and item pickers search **all generations**. A randomiser or a romhack can put anything anywhere,

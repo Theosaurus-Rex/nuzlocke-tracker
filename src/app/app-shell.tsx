@@ -11,8 +11,14 @@ import { buttonVariants } from "@/components/ui/button";
 import { Typography } from "@/components/typography";
 import { badgeCount } from "@/domain/fight-list";
 import { summariseRun, type RunSummary } from "@/domain/derive";
-import { currentLevelCap } from "@/domain/rules-summary";
-import { useEncounters, useFights, useMons, useRoutes, useRuns } from "@/storage/queries";
+import {
+  useCurrentLevelCap,
+  useEncounters,
+  useFights,
+  useMons,
+  useRoutes,
+  useRuns,
+} from "@/storage/queries";
 
 import { navItemsFor, subScreenFromPath, type NavItem } from "./nav-items";
 import { RulesSummary } from "./rules-summary";
@@ -67,7 +73,7 @@ export function AppShell(): ReactNode {
   const routesQuery = useRoutes(runId ?? "");
   const fightsQuery = useFights(runId ?? "");
   const currentRun = runs.find((run) => run.id === runId);
-  const levelCap = currentLevelCap(fightsQuery.data ?? []);
+  const levelCap = useCurrentLevelCap(runId ?? "");
   const badges = fightsQuery.data === undefined ? undefined : badgeCount(fightsQuery.data);
   const summary =
     runId !== undefined && encountersQuery.data !== undefined && monsQuery.data !== undefined

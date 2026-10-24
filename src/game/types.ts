@@ -4,9 +4,9 @@
  * strings, so `scripts/check-game-data.ts` is what catches a typo'd one.
  */
 
-import type { FightKind, GameId } from "@/domain/types";
+import type { FightKind, GameId, LevelCapMilestone } from "@/domain/types";
 
-/** One member of a boss's team. Levels are hand-entered, and level caps derive from them. */
+/** One member of a boss's team. Levels are hand-entered. */
 export interface BossMon {
   species: string;
   level: number;
@@ -27,12 +27,6 @@ export interface FightDef {
   badge: string | null;
   /** Number of the badge image in PokéAPI's sprite set. */
   badgeSprite: number | null;
-  /**
-   * The ace's level for any fight that grants a badge, plus Elite Four and Champion fights.
-   * `null` for rivals: rivals are worth tracking, but their caps are debatable, so none is
-   * asserted. Always derived from `roster`, never hand-entered beside it.
-   */
-  levelCap: number | null;
   roster: BossMon[];
 }
 
@@ -52,6 +46,8 @@ export interface GameData {
   generation: number;
   routes: RouteDef[];
   fights: FightDef[];
+  /** Level caps by progress, in order. Written by hand, no roster needed. */
+  levelCaps: LevelCapMilestone[];
 }
 
 export const TYPES = [

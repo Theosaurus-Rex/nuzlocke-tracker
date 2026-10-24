@@ -4,6 +4,8 @@ export interface FightMeta {
   region: string;
   badge: string | null;
   badgeSprite: number | null;
+  /** The boss's highest team level. */
+  ace: number | null;
 }
 export type FightLookup = (gameFightId: string) => FightMeta | undefined;
 export type FightState = "cleared" | "next" | "upcoming";
@@ -12,6 +14,8 @@ export interface FightRow {
   fight: Fight;
   badge: string | null;
   badgeSprite: number | null;
+  /** The boss's ace level for a built-in fight, or the saved cap for a custom one. */
+  level: number | null;
   state: FightState;
   losses: Death[];
 }
@@ -57,6 +61,7 @@ export function buildFightSections(
       fight,
       badge: meta?.badge ?? null,
       badgeSprite: meta?.badgeSprite ?? null,
+      level: meta === undefined ? fight.levelCap : meta.ace,
       state: fight.status === "cleared" ? "cleared" : fight.id === nextId ? "next" : "upcoming",
       losses: deaths.filter((d) => d.cause.type === "trainer" && d.cause.fightId === fight.id),
     };
