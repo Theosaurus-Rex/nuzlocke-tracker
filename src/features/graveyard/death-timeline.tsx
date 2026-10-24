@@ -20,7 +20,7 @@ export interface DeathTimelineProps {
   routes: readonly Route[];
   monsById: ReadonlyMap<string, Mon>;
   fights: readonly Fight[];
-  generation: number;
+  generation: number | undefined;
   onEdit: (deathId: string) => void;
 }
 

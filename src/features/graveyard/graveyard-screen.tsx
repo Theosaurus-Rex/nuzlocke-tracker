@@ -4,8 +4,7 @@ import { Navigate, useParams } from "react-router";
 import { ScreenHeader } from "@/components/screen-header";
 import { Typography } from "@/components/typography";
 import { Button } from "@/components/ui/button";
-import { GAMES } from "@/game/registry";
-import { useDeaths, useFights, useMons, useRoutes, useRun } from "@/storage/queries";
+import { useDeaths, useFights, useMons, useRoutes, useRunGame } from "@/storage/queries";
 
 import { DeathTimeline, TimelineEmpty } from "./death-timeline";
 import { LogDeathDialog } from "./log-death-dialog";
@@ -13,7 +12,7 @@ import { groupDeathsByRoute } from "./timeline";
 
 export function GraveyardScreen(): ReactNode {
   const { runId } = useParams<{ runId: string }>();
-  const runQuery = useRun(runId ?? "");
+  const generation = useRunGame(runId ?? "")?.generation;
   const deathsQuery = useDeaths(runId ?? "");
   const monsQuery = useMons(runId);
   const routesQuery = useRoutes(runId ?? "");
@@ -25,7 +24,6 @@ export function GraveyardScreen(): ReactNode {
     return <Navigate to="/" replace />;
   }
 
-  const generation = GAMES[runQuery.data?.game ?? "heartgold"].generation;
   const mons = monsQuery.data ?? [];
   const monsById = new Map(mons.map((mon) => [mon.id, mon]));
   const deaths = (deathsQuery.data ?? []).filter((death) => monsById.has(death.monId));

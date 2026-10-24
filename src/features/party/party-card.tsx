@@ -23,7 +23,7 @@ import { MoveChip } from "./move-chip";
 export interface PartyCardProps {
   mon: Mon;
   routeName: string | null;
-  generation: number;
+  generation: number | undefined;
   cap?: number | null;
   onEdit: () => void;
 }

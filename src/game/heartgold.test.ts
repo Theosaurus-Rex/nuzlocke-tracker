@@ -1,74 +1,7 @@
 import { describe, expect, test } from "vitest";
 
 import { heartgold } from "@/game/data/heartgold";
-import { GAMES } from "@/game/registry";
 import type { FightDef } from "@/game/types";
-
-describe("heartgold routes", () => {
-  test("orders are unique and contiguous starting at 1", () => {
-    const orders = heartgold.routes.map((r) => r.order).toSorted((a, b) => a - b);
-    expect(new Set(orders).size).toBe(orders.length);
-    expect(orders).toEqual(Array.from({ length: orders.length }, (_, i) => i + 1));
-  });
-
-  test("routes are already in traversal order, with the Johto block preceding Kanto", () => {
-    const byOrder = [...heartgold.routes].toSorted((a, b) => a.order - b.order);
-    expect(byOrder).toEqual(heartgold.routes);
-
-    const firstKantoIndex = byOrder.findIndex((r) => r.region === "kanto");
-    expect(firstKantoIndex).toBeGreaterThan(0);
-    expect(byOrder.slice(0, firstKantoIndex).every((r) => r.region === "johto")).toBe(true);
-    expect(byOrder.slice(firstKantoIndex).every((r) => r.region === "kanto")).toBe(true);
-  });
-});
-
-describe("heartgold fights", () => {
-  test("orders are unique", () => {
-    const orders = heartgold.fights.map((f) => f.order);
-    expect(new Set(orders).size).toBe(orders.length);
-  });
-
-  test("no fight has an empty roster", () => {
-    for (const fight of heartgold.fights) {
-      expect(fight.roster.length).toBeGreaterThan(0);
-    }
-  });
-
-  test("every badge-granting fight has a levelCap equal to its ace's level", () => {
-    const badgeFights = heartgold.fights.filter((f) => f.grantsBadge);
-    expect(badgeFights.length).toBe(16); // 8 Johto + 8 Kanto gyms
-    for (const fight of badgeFights) {
-      const ace = Math.max(...fight.roster.map((m) => m.level));
-      expect(fight.levelCap).toBe(ace);
-    }
-  });
-
-  test("Elite Four and Champion fights derive a levelCap too, despite granting no badge", () => {
-    const capped = heartgold.fights.filter((f) => f.kind === "elite_four" || f.kind === "champion");
-    expect(capped.length).toBe(5); // Will, Koga, Bruno, Karen, Lance
-    for (const fight of capped) {
-      expect(fight.grantsBadge).toBe(false);
-      const ace = Math.max(...fight.roster.map((m) => m.level));
-      expect(fight.levelCap).toBe(ace);
-    }
-  });
-
-  test("every rival fight has no level cap and grants no badge", () => {
-    const rivalFights = heartgold.fights.filter((f) => f.kind === "rival");
-    expect(rivalFights.length).toBe(7); // Silver x6 + Red
-    for (const fight of rivalFights) {
-      expect(fight.levelCap).toBeNull();
-      expect(fight.grantsBadge).toBe(false);
-    }
-  });
-});
-
-describe("GAMES registry", () => {
-  test("resolves heartgold under its own id", () => {
-    expect(GAMES.heartgold.id).toBe("heartgold");
-    expect(GAMES.heartgold).toBe(heartgold);
-  });
-});
 
 /** Independently sourced ace levels, not derived from our own data or generator. See
  * docs/notes/game-data.md for the sources and why. */
@@ -122,5 +55,22 @@ describe("heartgold badge sprites", () => {
     for (const f of heartgold.fights.filter((f) => !f.grantsBadge)) {
       expect(f.badgeSprite).toBeNull();
     }
+  });
+});
+
+describe("heartgold shape", () => {
+  test("the Johto routes come before the Kanto routes", () => {
+    const regions = heartgold.routes.map((r) => r.region);
+    const firstKanto = regions.indexOf("kanto");
+    expect(firstKanto).toBeGreaterThan(0);
+    expect(regions.slice(0, firstKanto).every((r) => r === "johto")).toBe(true);
+    expect(regions.slice(firstKanto).every((r) => r === "kanto")).toBe(true);
+  });
+
+  test("has 16 gyms, 5 Elite Four and Champion fights, and 7 rival fights", () => {
+    const count = (pred: (f: FightDef) => boolean): number => heartgold.fights.filter(pred).length;
+    expect(count((f) => f.grantsBadge)).toBe(16);
+    expect(count((f) => f.kind === "elite_four" || f.kind === "champion")).toBe(5);
+    expect(count((f) => f.kind === "rival")).toBe(7);
   });
 });

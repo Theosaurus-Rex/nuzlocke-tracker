@@ -10,10 +10,9 @@ import { countByMonStatus } from "@/domain/derive";
 import { validateAmendment, type EncounterField } from "@/domain/encounter-validation";
 import type { MonAmendments } from "@/domain/transitions";
 import type { Gender, Mon, Moveset, Route, Rules } from "@/domain/types";
-import { GAMES } from "@/game/registry";
 import { speciesDisplayName } from "@/game/pokeapi/resolve";
 import { useAmendMon } from "@/storage/mutations";
-import { useMons, useRun } from "@/storage/queries";
+import { useMons, useRunGame } from "@/storage/queries";
 import { cn, joinIds } from "@/lib/utils";
 
 import { EncounterDialogHeader } from "./encounter-dialog-header";
@@ -50,9 +49,7 @@ export function EditMonDialog({
   mon,
   rules,
 }: EditMonDialogProps): ReactNode {
-  const runQuery = useRun(mon.runId);
-  // Falls back to HeartGold's generation, the only game seeded today, while the run is loading.
-  const generation = GAMES[runQuery.data?.game ?? "heartgold"].generation;
+  const generation = useRunGame(mon.runId)?.generation;
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -80,7 +77,7 @@ interface EditMonFormProps {
   mon: Mon;
   runId: string;
   rules: Rules;
-  generation: number;
+  generation: number | undefined;
   onDone: () => void;
 }
 

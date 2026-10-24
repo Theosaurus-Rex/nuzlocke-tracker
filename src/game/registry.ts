@@ -7,9 +7,10 @@
 
 import type { GameId } from "@/domain/types";
 
-import { heartgold } from "@/game/data/heartgold";
+import { heartgold, soulsilver } from "@/game/data/heartgold";
 import type { GameData } from "@/game/types";
 
 export const GAMES: Record<GameId, GameData> = {
   heartgold,
+  soulsilver,
 };

@@ -99,7 +99,7 @@ Every commit in the history passes the whole gate.
 src/
   domain/        entity types and pure state transitions, imports nothing
   storage/       adapter interface, Dexie + in-memory implementations, query layer
-  game/          HeartGold routes and bosses, natures, and the live PokéAPI client
+  game/          HeartGold and SoulSilver routes and bosses, natures, and the live PokéAPI client
   game/pokeapi/  fetch, map and resolve species and move data from PokéAPI, cached by TanStack Query
   features/      screens, one directory each
   app/           routing, the responsive shell, and lazy loading of each screen
@@ -114,7 +114,7 @@ docs/            design specs, the visual direction, the wireframes and longer n
 
 Dependencies point one way: `features → storage → domain`. `domain/` imports from none of
 the others, which is what makes the game rules testable without a database. `game/` is a leaf
-holding HeartGold's routes and bosses plus the live PokéAPI client. Both `features/` and
+holding the HeartGold and SoulSilver routes and bosses plus the live PokéAPI client. Both `features/` and
 `storage/` read it, and it imports only from `domain/`. `components/` and `lib/` are shared by
 `features/` and never import from it or from `storage/`. `app/` sits on top and loads the screens.
 
@@ -177,6 +177,35 @@ result before committing.
 
 Run `pnpm format` afterwards — the generator does not format its own output, and
 `format:check` is part of the gate.
+
+### Adding a game
+
+A game is its data directory under `src/game/data/`, one entry in `GAMES` in
+`src/game/registry.ts`, and one id in `GAME_IDS` in `src/domain/types.ts`. The registry is typed
+`Record<GameId, GameData>`, so `pnpm typecheck` fails if an id has no entry or an entry has no
+id. Nothing else names a game: screens read the run's game through `useRunGame`, and the new run
+screen lists whatever the registry holds.
+
+To bootstrap a second game from nuzlocke.data, copy `scripts/extract-heartgold.ts` and adapt it.
+`docs/notes/scripts.md` says what to re-derive. A romhack is the same shape, written by hand.
+
+Two versions of one game, such as a pair, can share a dataset. Spread the shared `GameData` into a
+second entry with its own `id` and `name`, and add the id to `GAME_IDS`. SoulSilver does this in
+`src/game/data/heartgold/index.ts`: its routes and boss rosters are HeartGold's, and only the
+wild encounters differ, which the app does not store.
+
+`src/game/game-data.test.ts` runs its invariants over every game in the registry: contiguous
+route orders, unique ids, and level caps derived from rosters. A new game gets them for free.
+
+After editing a game's data, check its species names against PokéAPI. This needs a network
+connection and is not part of the gate:
+
+```bash
+node scripts/check-game-data.ts
+```
+
+It lists every roster species that is not a real PokéAPI pokemon name and exits non-zero if
+there are any. Species are plain strings, so the compiler cannot catch a typo.
 
 **Correct the data file, not the generator.** If you find an upstream error or want to tune a
 value, edit the committed file directly and say why in a comment beside the change, so the

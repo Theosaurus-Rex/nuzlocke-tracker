@@ -123,6 +123,37 @@ describe("round trip", () => {
   });
 });
 
+describe("SoulSilver runs", () => {
+  it("survive export, parse and import into a fresh adapter", async () => {
+    const source = createMemoryAdapter();
+    await source.init();
+    const run = await source.runs.put(makeRunDraft({ game: "soulsilver" }));
+
+    const result = parseBundle(serializeBundle(await exportBundle(source)));
+    expect(result.ok).toBe(true);
+    if (!result.ok) return;
+
+    const target = createMemoryAdapter();
+    await target.init();
+    await importBundle(target, result.bundle, "replace");
+
+    expect((await target.runs.get(run.id))?.game).toBe("soulsilver");
+  });
+
+  it("are refused when the game is not a known id", async () => {
+    const source = createMemoryAdapter();
+    await source.init();
+    await source.runs.put(makeRunDraft({ game: "soulsilver" }));
+    const text = serializeBundle(await exportBundle(source)).replace(
+      '"game": "soulsilver"',
+      '"game": "crystal"',
+    );
+
+    expect(text).toContain("crystal");
+    expect(parseBundle(text).ok).toBe(false);
+  });
+});
+
 describe("serializeBundle", () => {
   it("is stable: the same data serializes to a byte-identical string", async () => {
     const adapter = createMemoryAdapter();

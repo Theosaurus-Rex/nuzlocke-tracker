@@ -7,6 +7,8 @@
 import { useQuery, type QueryClient, type UseQueryResult } from "@tanstack/react-query";
 
 import { compareRoutes } from "@/domain/routes";
+import { GAMES } from "@/game/registry";
+import type { GameData } from "@/game/types";
 import type { Run, Route, Encounter, Mon, Death, Fight } from "@/domain/types";
 
 import { useStorage } from "./storage-context";
@@ -37,6 +39,11 @@ export function useRun(runId: string): UseQueryResult<Run | null> {
     queryFn: async () => (await adapter.runs.get(runId)) ?? null,
     staleTime: Infinity,
   });
+}
+
+export function useRunGame(runId: string): GameData | undefined {
+  const run = useRun(runId).data;
+  return run ? GAMES[run.game] : undefined;
 }
 
 export function useRoutes(runId: string): UseQueryResult<Route[]> {

@@ -253,7 +253,10 @@ describe("LogEncounterDialog", () => {
 
   it("shows the species' resolved type inline once it matches", async () => {
     const user = userEvent.setup();
-    renderDialog({});
+    const adapter = createMemoryAdapter();
+    await adapter.init();
+    await adapter.runs.put(makeRunDraft({ id: "run-1" }));
+    renderDialog({ adapter });
 
     await user.type(screen.getByLabelText("Species"), "Chikorita");
     await user.tab();
