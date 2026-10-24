@@ -154,6 +154,27 @@ describe("SoulSilver runs", () => {
   });
 });
 
+describe("boss fights", () => {
+  it("survive export, parse and import into a fresh adapter", async () => {
+    const source = createMemoryAdapter();
+    await source.init();
+    const run = await source.runs.put(makeRunDraft());
+    const fight = await source.fights.put(
+      makeFightDraft(run.id, { kind: "boss", grantsBadge: false }),
+    );
+
+    const result = parseBundle(serializeBundle(await exportBundle(source)));
+    expect(result.ok).toBe(true);
+    if (!result.ok) return;
+
+    const target = createMemoryAdapter();
+    await target.init();
+    await importBundle(target, result.bundle, "replace");
+
+    expect((await target.fights.get(fight.id))?.kind).toBe("boss");
+  });
+});
+
 describe("serializeBundle", () => {
   it("is stable: the same data serializes to a byte-identical string", async () => {
     const adapter = createMemoryAdapter();
@@ -569,7 +590,7 @@ describe("parseBundle — field rules", () => {
     ["encounters", "status", "unknown"],
     ["mons", "gender", "unknown"],
     ["mons", "status", "fainted"],
-    ["fights", "kind", "boss"],
+    ["fights", "kind", "gatekeeper"],
 
     // Mon.moves: wrong length, a non-string entry, an empty string, not an array
     ["mons", "moves", ["tackle", null, null]],
