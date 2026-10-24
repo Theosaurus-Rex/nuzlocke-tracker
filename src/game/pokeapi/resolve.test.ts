@@ -67,6 +67,14 @@ const moves: IndexEntry[] = ["tackle", "u-turn", "will-o-wisp"].map((name, i) =>
   name,
 }));
 
+const named = (...names: string[]): IndexEntry[] => names.map((name, i) => ({ id: i + 1, name }));
+
+const acidMoves = named("acid", "acid-spray", "tackle");
+const forms = named("zorua", "zoroark", "zorua-hisui");
+const substrings = named("raichu", "pikachu", "chuchu");
+const ranked = named("murkray", "frayed", "mega-ray", "rayquaza", "ray");
+const mews = named("mewtwo", "mew");
+
 describe("searchIndex", () => {
   it("prefix-matches case-insensitively and treats spaces as hyphens", () => {
     expect(searchIndex(index, "Mimikyu D", speciesDisplayName).map((e) => e.name)).toEqual([
@@ -74,10 +82,12 @@ describe("searchIndex", () => {
     ]);
   });
 
-  it("keeps dex order", () => {
+  it("keeps dex order within a tier", () => {
     expect(searchIndex(index, "g", speciesDisplayName).map((e) => e.name)).toEqual([
       "geodude",
       "gyarados",
+      "pidgey",
+      "mimikyu-disguised",
     ]);
   });
 
@@ -99,8 +109,55 @@ describe("searchIndex", () => {
     ]);
   });
 
-  it("does not match in the middle of a name", () => {
-    expect(searchIndex(punctuated, "mime", speciesDisplayName)).toEqual([]);
+  it("finds a name from the start of any word in it", () => {
+    expect(searchIndex(punctuated, "mime", speciesDisplayName).map((e) => e.name)).toEqual([
+      "mr-mime",
+    ]);
+    expect(searchIndex(acidMoves, "spray", moveDisplayName).map((e) => e.name)).toEqual([
+      "acid-spray",
+    ]);
+  });
+
+  it("finds a regional form by its full displayed name or its base word", () => {
+    expect(searchIndex(forms, "hisuian zorua", speciesDisplayName).map((e) => e.name)).toEqual([
+      "zorua-hisui",
+    ]);
+    expect(searchIndex(forms, "zorua", speciesDisplayName).map((e) => e.name)).toEqual([
+      "zorua",
+      "zorua-hisui",
+    ]);
+  });
+
+  it("finds a name from the middle of a word", () => {
+    expect(searchIndex(substrings, "chu", speciesDisplayName).map((e) => e.name)).toEqual([
+      "chuchu",
+      "raichu",
+      "pikachu",
+    ]);
+  });
+
+  it("ranks exact, then name prefix, then word start, then substring", () => {
+    expect(searchIndex(ranked, "ray", speciesDisplayName).map((e) => e.name)).toEqual([
+      "ray",
+      "rayquaza",
+      "mega-ray",
+      "murkray",
+      "frayed",
+    ]);
+  });
+
+  it("puts an exact name ahead of a longer prefix match", () => {
+    expect(searchIndex(mews, "mew", speciesDisplayName).map((e) => e.name)).toEqual([
+      "mew",
+      "mewtwo",
+    ]);
+  });
+
+  it("keeps index order within a tier", () => {
+    expect(searchIndex(mews, "m", speciesDisplayName).map((e) => e.name)).toEqual([
+      "mewtwo",
+      "mew",
+    ]);
   });
 
   it("finds a move from its displayed spelling", () => {
