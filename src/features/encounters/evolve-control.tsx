@@ -8,6 +8,7 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import type { Gender } from "@/domain/types";
 import { useNextEvolutions } from "@/game/pokeapi/queries";
 import { speciesDisplayName } from "@/game/pokeapi/resolve";
 
@@ -16,6 +17,7 @@ import { PokeApiNotice } from "./pokeapi-notice";
 export interface EvolveControlProps {
   id: string;
   speciesId: string;
+  gender: Gender | null;
   randomised: boolean;
   onEvolve: (speciesId: string) => void;
   onPickAny: () => void;
@@ -24,11 +26,12 @@ export interface EvolveControlProps {
 export function EvolveControl({
   id,
   speciesId,
+  gender,
   randomised,
   onEvolve,
   onPickAny,
 }: EvolveControlProps): ReactNode {
-  const next = useNextEvolutions(randomised ? null : speciesId);
+  const next = useNextEvolutions(randomised ? null : speciesId, gender);
 
   if (randomised) {
     return (

@@ -148,6 +148,9 @@ export const evolutionSpeciesIndexRefs = [
   ref("pokemon", 134, "vaporeon"),
   ref("pokemon", 135, "jolteon"),
   ref("pokemon", 136, "flareon"),
+  ref("pokemon", 281, "kirlia"),
+  ref("pokemon", 282, "gardevoir"),
+  ref("pokemon", 475, "gallade"),
 ];
 
 export const pokemonSpeciesFixtures: Record<string, RawPokemonSpecies> = {
@@ -159,9 +162,33 @@ export const pokemonSpeciesFixtures: Record<string, RawPokemonSpecies> = {
   "27": { id: 27, name: "sandshrew", evolution_chain: { url: `${API}/evolution-chain/51/` } },
   "28": { id: 28, name: "sandslash", evolution_chain: { url: `${API}/evolution-chain/51/` } },
   "133": { id: 133, name: "eevee", evolution_chain: { url: `${API}/evolution-chain/67/` } },
+  "281": { id: 281, name: "kirlia", evolution_chain: { url: `${API}/evolution-chain/140/` } },
 };
 
 export const evolutionChainFixtures: Record<string, RawEvolutionChain> = {
+  "140": {
+    id: 140,
+    chain: {
+      species: ref("pokemon-species", 280, "ralts"),
+      evolves_to: [
+        {
+          species: ref("pokemon-species", 281, "kirlia"),
+          evolves_to: [
+            {
+              species: ref("pokemon-species", 282, "gardevoir"),
+              evolution_details: [{ gender: null }],
+              evolves_to: [],
+            },
+            {
+              species: ref("pokemon-species", 475, "gallade"),
+              evolution_details: [{ gender: 2 }],
+              evolves_to: [],
+            },
+          ],
+        },
+      ],
+    },
+  },
   "29": {
     id: 29,
     chain: {

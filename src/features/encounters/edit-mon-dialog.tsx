@@ -223,6 +223,7 @@ function EditMonForm({ mon, runId, rules, generation, onDone }: EditMonFormProps
                 <EvolveControl
                   id="edit-mon-evolve"
                   speciesId={pendingSpecies}
+                  gender={gender}
                   randomised={randomisedEvolutions}
                   onEvolve={setPendingSpecies}
                   onPickAny={() => setPickingAny(true)}
