@@ -4,7 +4,7 @@
  * mutating its input.
  */
 
-import { nextFreeBoxSlot } from "./box-slots";
+import { boxLayout, nextFreeBoxSlot } from "./box-slots";
 import { MAX_MOVES, isMoveset } from "./moveset";
 import type { Cause, Draft, Encounter, Fight, Gender, Mon, Moveset, Death } from "./types";
 
@@ -203,21 +203,140 @@ export function skipEncounter(encounter: Encounter): Encounter {
   return { ...encounter, status: "skipped" };
 }
 
-export function moveMonToBox({ mon, box }: { mon: Mon; box: readonly Mon[] }): Mon {
-  assertMonAlive(mon);
-  return { ...mon, status: "box", partySlot: null, boxOrder: nextFreeBoxSlot(box, mon.id) };
+function assertPartySlotFree(slot: number, party: readonly Mon[], monId: string): void {
+  if (!Number.isInteger(slot) || slot < 0 || slot >= MAX_PARTY_SIZE) {
+    throw new Error(`Party slot ${String(slot)} is not between 0 and ${MAX_PARTY_SIZE - 1}.`);
+  }
+  if (party.some((m) => m.id !== monId && m.status === "party" && m.partySlot === slot)) {
+    throw new Error(`Party slot ${String(slot)} is already taken.`);
+  }
 }
 
-export function moveMonToParty({ mon, party }: { mon: Mon; party: readonly Mon[] }): Mon {
+function assertBoxSlotFree(slot: number, box: readonly Mon[], monId: string): void {
+  if (!Number.isInteger(slot) || slot < 0) {
+    throw new Error(`Box slot ${String(slot)} is not a non-negative integer.`);
+  }
+  const taken = boxLayout(box.filter((m) => m.id !== monId)).values();
+  if ([...taken].includes(slot)) {
+    throw new Error(`Box slot ${String(slot)} is already taken.`);
+  }
+}
+
+export function moveMonToBox({
+  mon,
+  box,
+  slot,
+}: {
+  mon: Mon;
+  box: readonly Mon[];
+  slot?: number;
+}): Mon {
+  assertMonAlive(mon);
+  if (slot === undefined) {
+    return { ...mon, status: "box", partySlot: null, boxOrder: nextFreeBoxSlot(box, mon.id) };
+  }
+  assertBoxSlotFree(slot, box, mon.id);
+  return { ...mon, status: "box", partySlot: null, boxOrder: slot };
+}
+
+export function moveMonToParty({
+  mon,
+  party,
+  slot,
+}: {
+  mon: Mon;
+  party: readonly Mon[];
+  slot?: number;
+}): Mon {
   assertMonAlive(mon);
 
-  const slot = nextFreeSlot(party, mon.id);
+  if (slot !== undefined) {
+    assertPartySlotFree(slot, party, mon.id);
+    return { ...mon, status: "party", partySlot: slot, boxOrder: null };
+  }
 
-  if (slot === null) {
+  const free = nextFreeSlot(party, mon.id);
+
+  if (free === null) {
     throw new Error(`Party cannot exceed ${MAX_PARTY_SIZE} mons (currently at ${MAX_PARTY_SIZE}).`);
   }
 
-  return { ...mon, status: "party", partySlot: slot, boxOrder: null };
+  return { ...mon, status: "party", partySlot: free, boxOrder: null };
+}
+
+function reslotPartyMon(mon: Mon, party: readonly Mon[], slot: number): Mon[] {
+  if (mon.partySlot === null) {
+    throw new Error(`Mon ${mon.id} has no party slot.`);
+  }
+  if (mon.partySlot === slot) {
+    return [];
+  }
+  const occupant = party.find((m) => m.id !== mon.id && m.partySlot === slot);
+  if (occupant === undefined) {
+    return [moveMonToParty({ mon, party, slot })];
+  }
+  return [
+    moveMonToParty({ mon, party: party.filter((m) => m.id !== occupant.id), slot }),
+    moveMonToParty({
+      mon: occupant,
+      party: party.filter((m) => m.id !== mon.id),
+      slot: mon.partySlot,
+    }),
+  ];
+}
+
+export type PlaceTarget = { kind: "party"; slot: number } | { kind: "box"; slot: number };
+
+/**
+ * Puts a mon in an exact party or box slot. A mon already there swaps into the slot the mover
+ * left, so the party never grows. Returns only the mons that changed. Party to party moves
+ * leave gaps alone. A box mon cannot be placed in the box this way.
+ */
+export function placeMon(mons: readonly Mon[], monId: string, to: PlaceTarget): Mon[] {
+  const mon = mons.find((m) => m.id === monId);
+  if (mon === undefined) {
+    throw new Error(`Mon ${monId} not found.`);
+  }
+  assertMonAlive(mon);
+
+  const layout = boxLayout(mons);
+  const party = mons.filter((m) => m.status === "party");
+
+  if (to.kind === "party") {
+    if (mon.status === "party") {
+      return reslotPartyMon(mon, party, to.slot);
+    }
+    const occupant = party.find((m) => m.partySlot === to.slot);
+    if (occupant === undefined) {
+      return [moveMonToParty({ mon, party, slot: to.slot })];
+    }
+    const boxSlot = layout.get(mon.id);
+    if (boxSlot === undefined) {
+      throw new Error(`Mon ${monId} has no box slot.`);
+    }
+    const others = mons.filter((m) => m.id !== mon.id);
+    return [
+      moveMonToParty({ mon, party: party.filter((m) => m.id !== occupant.id), slot: to.slot }),
+      moveMonToBox({ mon: occupant, box: others, slot: boxSlot }),
+    ];
+  }
+
+  if (mon.status !== "party" || mon.partySlot === null) {
+    throw new Error(`Mon ${monId} is not in the party, so it cannot move to the box.`);
+  }
+  const occupant = mons.find((m) => m.status === "box" && layout.get(m.id) === to.slot);
+  if (occupant === undefined) {
+    return [moveMonToBox({ mon, box: mons, slot: to.slot })];
+  }
+  const others = mons.filter((m) => m.id !== occupant.id);
+  return [
+    moveMonToBox({ mon, box: others, slot: to.slot }),
+    moveMonToParty({
+      mon: occupant,
+      party: party.filter((m) => m.id !== mon.id),
+      slot: mon.partySlot,
+    }),
+  ];
 }
 
 /** Returns only the mons whose slot changed. Slots are compacted to 0..n-1, which closes gaps. */

@@ -17,6 +17,8 @@ import {
   missEncounter,
   moveMonToBox,
   moveMonToParty,
+  placeMon,
+  type PlaceTarget,
   planEncounterReset,
   reorderParty,
   reviveMon,
@@ -763,6 +765,24 @@ export async function persistMoveBoxedMon(
   });
 }
 
+export interface PlaceMonInput {
+  runId: string;
+  monId: string;
+  to: PlaceTarget;
+}
+
+export async function persistPlaceMon(
+  adapter: StorageAdapter,
+  input: PlaceMonInput,
+): Promise<void> {
+  await adapter.transaction(async (tx) => {
+    const runMons = await settleBoxSlots(tx, input.runId);
+    for (const mon of placeMon(runMons, input.monId, input.to)) {
+      await tx.mons.put(mon);
+    }
+  });
+}
+
 export interface MoveMonToPartyInput {
   monId: string;
 }
@@ -800,6 +820,18 @@ export function useMoveBoxedMon(): UseMutationResult<void, Error, MoveBoxedMonIn
 
   return useMutation({
     mutationFn: (input: MoveBoxedMonInput) => persistMoveBoxedMon(adapter, input),
+    onSuccess: async (_, input) => {
+      await invalidateRun(queryClient, input.runId);
+    },
+  });
+}
+
+export function usePlaceMon(): UseMutationResult<void, Error, PlaceMonInput> {
+  const adapter = useStorage();
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: (input: PlaceMonInput) => persistPlaceMon(adapter, input),
     onSuccess: async (_, input) => {
       await invalidateRun(queryClient, input.runId);
     },
