@@ -4,7 +4,7 @@ Reasoning too long for a code comment, linked from a one-line pointer in the sou
 
 ## combobox-field.tsx
 
-`ComboboxField` backs both the species and move pickers. It is built on Base UI's `Autocomplete`
+`ComboboxField` backs the species, move, ability and held item pickers. It is built on Base UI's `Autocomplete`
 so the popup lives in a portal rather than a descendant of whatever scroll container the field
 sits in.
 

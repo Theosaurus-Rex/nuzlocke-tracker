@@ -3,8 +3,9 @@
 A personal Pokémon Nuzlocke run tracker. Web app first, installable mobile app later.
 Single user — there is no multi-user story and no plan for one.
 
-**Status: M0 in progress.** Scaffolded and building — Vite/React/TS, Tailwind, shadcn/ui, and
-the lint/test harness are in. The data model, storage adapter and app shell are next. See
+**Status: M0 to M3 done, M4 and M5 in progress, M6 not started.** The data model, storage
+adapter, app shell and every run screen are built, and Block Shadow is applied. M4 is progression
+and rules, M5 is polish, M6 is mobile packaging. See
 `docs/superpowers/specs/2026-09-17-nuzlocke-scaffold-design.md` for the design this is built to;
 it is the source of truth for table shapes and the adapter interface.
 
@@ -356,8 +357,8 @@ Consequences, all deliberate:
 - **Learnsets are not fetched.** The moveset editor is a selection over every move, not filtered
   by species. Filtering by a species' legal set is exactly the constraint being removed.
 - **Wild encounter tables are not fetched.** The app does not show expected encounters per route
-  (PER-8 closed). The randomiser toggle labelled "hides known encounter tables" is therefore
-  misleading and needs rewording when PER-18 builds the rules screen.
+  (PER-8 closed). The randomiser toggle once labelled "hides known encounter tables" has been
+  reworded, and no such label remains.
 - **Types and move stats are resolved per generation**, not shipped as present-day values. A
   `GameData` carries its `generation`, and `src/game/pokeapi/resolve.ts` resolves through
   PokéAPI's `past_types` and `past_values`. Clefairy is Normal in a HeartGold run and Fairy in a
@@ -388,11 +389,11 @@ in the app may assume a game's data came from `nuzlocke.data`.
 
 - ~~**Visual direction.** shadcn defers this rather than answering it.~~ **Resolved
   2026-09-22:** Block Shadow, chosen from four directions and drawn across every screen. See
-  `docs/design/block-shadow.md`. M0–M2 shipped on stock shadcn, so applying it is its own work.
+  `docs/design/block-shadow.md`. It has since been applied to every screen.
 - **Desktop/mobile issue split.** Currently one responsive issue per screen.
 - ~~The randomiser toggle ("hides known encounter tables")~~ **Resolved 2026-09-17:** the app does
   not show expected encounters per route. PER-8 is closed and no encounter tables are stored.
-  Reword that toggle's label when PER-18 builds the rules screen.
+  The label has since been reworded.
 - Run stats screen and distraction-free logging mode are noted in the design but never
   drawn. They need design before they are buildable.
 
@@ -466,7 +467,7 @@ https://linear.app/theo-harris-dev/project/nuzlocke-tracker-v1-6f0791fd9d32
 
 Served by the `linear-personal` MCP server, scoped to this directory only.
 
-Issues are `PER-5` … `PER-41`, titled `NN · Title` where `NN` is the build-order number used
+Issues are numbered from `PER-5`, titled `NN · Title` where `NN` is the build-order number used
 in the backlog page. Milestones M0–M6 run in dependency order; `blockedBy` relations are set.
 
 **Theo's employer Linear (Alembic) may also be connected in other contexts. Never create
