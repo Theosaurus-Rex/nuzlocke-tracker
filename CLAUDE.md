@@ -378,8 +378,8 @@ Consequences, all deliberate:
   keeps a form in its region (Alolan Sandshrew offers Alolan Sandslash). A base species offers
   every regional next stage too (Pikachu offers Alolan Raichu).
 
-**Scope: HeartGold and SoulSilver for V1.** They share one dataset, and paired versions share
-data by registry entry. Every other game is a whole curated dataset, not a config flag. Build the ingest pipeline so a second game is additive.
+**Scope: HeartGold, SoulSilver, FireRed and LeafGreen for V1.** Each pair shares one dataset, and
+paired versions share data by registry entry. Every other game is a whole curated dataset, not a config flag. Build the ingest pipeline so a second game is additive.
 
 **Romhacks are a first-class future case, not an afterthought.** Theo intends to hand-author
 datasets for romhacks he wants to support. So the game-data format is something a human writes

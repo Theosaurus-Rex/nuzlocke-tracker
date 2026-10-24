@@ -44,3 +44,37 @@ https://www.serebii.net/heartgoldsoulsilver/gym.shtml.
 
 It is independent of both nuzlocke.data and scripts/extract-heartgold.ts, so a bad extraction,
 or a bad upstream value, fails the test even if the generator's arithmetic is right.
+
+## FireRed and LeafGreen (`src/game/data/frlg/`)
+
+One dataset serves both games. Routes, fights and caps are identical, and the two differ only in
+wild encounters, which the app does not store.
+
+Routes are upstream's `routes/fr.txt` plus every Sevii area where a Pokemon can be obtained, 72 in
+all. Silph Co. is added for the Lapras gift. Moltres is on Mt. Ember, not Victory Road. Navel Rock
+and Birth Island are left out, since Lugia, Ho-Oh and Deoxys are event-only on the original
+cartridges. The Dunsparce route is Three Isle Port, since the town has nothing to catch.
+
+Fights are first-run only, with no post-game rematches. Giovanni's Rocket Hideout and Silph Co.
+fights are kind `boss`, which grants no badge and has no cap. Upstream's "S.S. Anne" and "Rocket
+Hideout" route entries are fights here, because nothing can be caught in either.
+
+Rival rosters list all three starter variants together, as HeartGold's Silver does. Upstream tags
+the variants by the player's starter, and Serebii tags them by the rival's.
+
+Level caps are Nuzlocke University's. Every cap equals the verified ace. The middle three gyms
+(43, 43, 47) tie or rise in any order, so badge-count order needs no holds.
+
+### Verified ace levels (`frlg.test.ts`)
+
+Gym leaders, Elite Four and Champion aces agree between upstream, Serebii
+(https://www.serebii.net/fireredleafgreen/gyms.shtml, elitefour.shtml, rival.shtml) and
+Bulbapedia's per-leader pages. Bulbapedia returned 403 to every direct fetch, so its numbers were
+read from search result snippets, not full pages.
+
+Rosters resting on Serebii and upstream only:
+
+- Both Giovanni boss fights (Bulbapedia showed only Onix 25 for the Hideout).
+- Every rival level below the Champion's lead, apart from the Cerulean fight, which Bulbapedia
+  also confirms (Abra 16, where upstream has 15).
+- Every gym and Elite Four member below the ace.
