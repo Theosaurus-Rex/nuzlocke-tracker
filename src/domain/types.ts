@@ -19,7 +19,7 @@ export interface Timestamped {
 export type Draft<T extends Timestamped> = Omit<T, "id" | "createdAt" | "updatedAt"> &
   Partial<Pick<T, "id" | "createdAt" | "updatedAt">>;
 
-export const GAME_IDS = ["heartgold", "soulsilver"] as const;
+export const GAME_IDS = ["heartgold", "soulsilver", "firered", "leafgreen"] as const;
 
 export type GameId = (typeof GAME_IDS)[number];
 
@@ -29,7 +29,7 @@ export type EncounterStatus = "open" | "caught" | "missed" | "skipped";
 
 export type MonStatus = "party" | "box" | "dead";
 
-export type FightKind = "gym" | "elite_four" | "champion" | "rival" | "custom";
+export type FightKind = "gym" | "elite_four" | "champion" | "rival" | "boss" | "custom";
 
 export type FightStatus = "pending" | "cleared";
 

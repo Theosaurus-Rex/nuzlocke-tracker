@@ -210,6 +210,18 @@ describe("FightsScreen", () => {
     expect(rowFor(table, "Bugsy").querySelector("img")).toHaveAttribute("data-muted", "true");
   });
 
+  it("lists a boss fight with no badge image", async () => {
+    const adapter = createMemoryAdapter();
+    const { run } = await seed(adapter);
+    await adapter.fights.put(
+      fightDraft(run.id, { name: "Giovanni", kind: "boss", order: 4, grantsBadge: false }),
+    );
+    renderScreen(adapter, run.id);
+
+    const table = await findTable();
+    expect(rowFor(table, "Giovanni").querySelector("img")).toBeNull();
+  });
+
   it("shows no badge image on an Elite Four row", async () => {
     const adapter = createMemoryAdapter();
     const { run } = await seed(adapter);

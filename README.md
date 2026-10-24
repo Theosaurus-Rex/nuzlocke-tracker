@@ -1,6 +1,6 @@
 # Nuzlocke Tracker
 
-A personal Pokémon Nuzlocke run tracker. Local-first React app, HeartGold only at V1,
+A personal Pokémon Nuzlocke run tracker. Local-first React app, HeartGold, SoulSilver, FireRed and LeafGreen at V1,
 installable as a mobile app later via Capacitor.
 
 There is no backend and no account system. Your data lives in your browser, and the JSON
@@ -20,7 +20,7 @@ keeps the record of one of those runs, so you do not have to track it on paper.
 
 What it covers today:
 
-- **Routes.** Every route in HeartGold, in order, with a dialog to log what you met there. The
+- **Routes.** Every route in the chosen game, in order, with a dialog to log what you met there. The
   dupes clause is checked when you log a catch.
 - **Party.** Your six, with their moves, held items and nature. Drag to reorder them.
 - **Boxes.** Everything else you have caught, in a grid or a sortable list. Drag a Pokémon
@@ -99,7 +99,7 @@ Every commit in the history passes the whole gate.
 src/
   domain/        entity types and pure state transitions, imports nothing
   storage/       adapter interface, Dexie + in-memory implementations, query layer
-  game/          HeartGold and SoulSilver routes and bosses, natures, and the live PokéAPI client
+  game/          HeartGold, SoulSilver, FireRed and LeafGreen routes and bosses, natures, and the live PokéAPI client
   game/pokeapi/  fetch, map and resolve species and move data from PokéAPI, cached by TanStack Query
   features/      screens, one directory each
   app/           routing, the responsive shell, and lazy loading of each screen
@@ -114,8 +114,8 @@ docs/            design specs, the visual direction, the wireframes and longer n
 
 Dependencies point one way: `features → storage → domain`. `domain/` imports from none of
 the others, which is what makes the game rules testable without a database. `game/` is a leaf
-holding the HeartGold and SoulSilver routes and bosses plus the live PokéAPI client. Both `features/` and
-`storage/` read it, and it imports only from `domain/`. `components/` and `lib/` are shared by
+holding the HeartGold, SoulSilver, FireRed and LeafGreen routes and bosses plus the live PokéAPI
+client. Both `features/` and `storage/` read it, and it imports only from `domain/`. `components/` and `lib/` are shared by
 `features/` and never import from it or from `storage/`. `app/` sits on top and loads the screens.
 
 ---
