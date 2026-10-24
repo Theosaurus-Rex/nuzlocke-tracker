@@ -60,14 +60,33 @@ function displayFormsOf(index: readonly IndexEntry[], displayName: DisplayName):
   return forms;
 }
 
+function matchTier(candidate: string, q: string, wordStart: string): number {
+  if (candidate === q) return 0;
+  if (candidate.startsWith(q)) return 1;
+  if (candidate.includes(wordStart)) return 2;
+  return candidate.includes(q) ? 3 : 4;
+}
+
+// Best tier first: exact, name prefix, word start, substring. Ties keep index order.
 export function searchIndex(
   index: readonly IndexEntry[],
   query: string,
   displayName: DisplayName,
 ): IndexEntry[] {
   const q = toNameForm(query);
+  const wordStart = `-${q}`;
   const forms = displayFormsOf(index, displayName);
-  return index.filter((entry, i) => entry.name.startsWith(q) || forms[i]?.startsWith(q) === true);
+  const tiers: IndexEntry[][] = [[], [], [], []];
+  for (let i = 0; i < index.length; i++) {
+    const entry = index[i]!;
+    const form = forms[i];
+    const tier = Math.min(
+      matchTier(entry.name, q, wordStart),
+      form === undefined ? 4 : matchTier(form, q, wordStart),
+    );
+    tiers[tier]?.push(entry);
+  }
+  return tiers.flat();
 }
 
 export function findByName(
