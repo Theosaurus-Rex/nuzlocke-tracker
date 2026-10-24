@@ -121,7 +121,6 @@ run row is not that.
 ```ts
 type Rules = {
   dupesClause: boolean
-  speciesClause: boolean
   shinyClause: boolean
   nicknamesRequired: boolean
   levelCaps: boolean
@@ -253,8 +252,8 @@ type StatusCause =
 
 type Cause =
   | { type: 'trainer'; fightId: string | null; trainerName: string | null;
-      species: string; level: number; move: string }
-  | { type: 'wild';    species: string; level: number; move: string }
+      species: string; level: number; move: string | null }
+  | { type: 'wild';    species: string; level: number; move: string | null }
   | { type: 'status';  status: StatusCause }
   | { type: 'other';   detail: string }
 ```
@@ -367,26 +366,28 @@ the same change in its version 2 upgrade.
 ## 7. Storage adapter interface
 
 ```ts
-interface Repository<T extends { id: string }> {
+interface Repository<T extends Timestamped, TIndexed extends keyof T> {
   get(id: string): Promise<T | undefined>
   getAll(): Promise<T[]>
-  where<K extends IndexedKey<T>>(field: K, value: T[K]): Promise<T[]>
+  where<K extends TIndexed>(field: K, value: T[K]): Promise<T[]>
   put(record: Draft<T>): Promise<T>
   putMany(records: Draft<T>[]): Promise<T[]>
   delete(id: string): Promise<void>
+  restoreMany(rows: T[]): Promise<T[]>
 }
 
 interface StorageAdapter {
   init(): Promise<void>
-  runs: Repository<Run>
-  routes: Repository<Route>
-  encounters: Repository<Encounter>
-  mons: Repository<Mon>
-  deaths: Repository<Death>
-  fights: Repository<Fight>
+  runs: Repository<Run, RunIndexedKey>
+  routes: Repository<Route, RouteIndexedKey>
+  encounters: Repository<Encounter, EncounterIndexedKey>
+  mons: Repository<Mon, MonIndexedKey>
+  deaths: Repository<Death, DeathIndexedKey>
+  fights: Repository<Fight, FightIndexedKey>
   transaction<T>(fn: (tx: StorageAdapter) => Promise<T>): Promise<T>
   exportAll(): Promise<ExportBundle>
   clear(): Promise<void>
+  deathsByFight(fightId: string): Promise<Death[]>
 }
 ```
 
@@ -394,7 +395,7 @@ interface StorageAdapter {
 absent and always stamps `updatedAt`, so hard rule 2's per-record `updatedAt` cannot be
 forgotten by a caller.
 
-`where` is constrained to indexed fields via `IndexedKey<T>`, declared per table. An unindexed
+`where` is constrained to indexed fields via the per-table `TIndexed` key union. An unindexed
 query is a type error rather than a silent full-table scan that only bites once a run has 31
 routes of data. Anything compound gets a named method on the adapter instead.
 

@@ -6,8 +6,32 @@ installable as a mobile app later via Capacitor.
 There is no backend and no account system. Your data lives in your browser, and the JSON
 export is the backup.
 
-**Status:** milestone M0 (foundations) complete — data model, storage layer, game data,
-app shell. Screens are placeholders until M1.
+**Status:** milestones M0 to M3 are done. M4 (progression and rules) and M5 (polish) are under
+way, and M6 (mobile packaging) has not started. The backlog and dependency order are in the
+Linear project, linked from `CLAUDE.md`.
+
+---
+
+## What it does
+
+A Nuzlocke is a way of playing a Pokémon game to make it harder. You may catch only the first
+Pokémon you meet on each route, and if one of your Pokémon faints, it is dead for good. This app
+keeps the record of one of those runs, so you do not have to track it on paper.
+
+What it covers today:
+
+- **Routes.** Every route in HeartGold, in order, with a dialog to log what you met there. The
+  dupes clause is checked when you log a catch.
+- **Party.** Your six, with their moves, held items and nature. Drag to reorder them.
+- **Boxes.** Everything else you have caught, in a grid or a sortable list. Drag a Pokémon
+  between a box and the party.
+- **Graveyard.** Log a death with its cause and see the fallen on a timeline.
+- **Gyms and Elite Four.** Gym leaders, the Elite Four, the Champion and rival fights, with the
+  level cap for each. Mark them cleared and record what you lost to them.
+- **Evolve.** Move a Pokémon to its next stage without losing its history.
+- **Multiple runs.** Keep several runs at once, each with its own rules.
+- **Backup.** Export every run to one JSON file, and import it back on any device.
+- **Sample run.** In dev builds, one button loads a sample run to try the screens.
 
 ---
 
@@ -37,6 +61,9 @@ pnpm dev
 database called `nuzlocke-tracker` and calls `navigator.storage.persist()` — the result is
 reported on the Settings screen and affects nothing else.
 
+Netlify builds it from `netlify.toml`, which runs the gate minus the browser tests and serves
+`index.html` for every path so deep links work.
+
 ---
 
 ## Commands
@@ -62,7 +89,7 @@ pnpm exec playwright install chromium   # once, for test:e2e
 pnpm lint && pnpm typecheck && pnpm format:check && pnpm test && pnpm build && pnpm test:e2e
 ```
 
-Every commit in the history passes all five.
+Every commit in the history passes the whole gate.
 
 ---
 
@@ -70,22 +97,26 @@ Every commit in the history passes all five.
 
 ```
 src/
-  domain/        entity types and pure state transitions — imports nothing
+  domain/        entity types and pure state transitions, imports nothing
   storage/       adapter interface, Dexie + in-memory implementations, query layer
   game/          HeartGold routes and bosses, natures, and the live PokéAPI client
   game/pokeapi/  fetch, map and resolve species and move data from PokéAPI, cached by TanStack Query
   features/      screens, one directory each
   app/           routing, the responsive shell, and lazy loading of each screen
-  components/    shared Block Shadow components: Typography, Surface, chips
+  components/    shared Block Shadow components: Typography, Surface, chips, sprites
   components/ui/ shadcn primitives
+  lib/           small helpers: the shared query client, class names, gender symbols
+  test/          shared test factories, PokéAPI fixtures and render helpers
+e2e/             Playwright specs, plus the shared fixtures in e2e/support/
 scripts/         one-shot generators and tooling (not run by the build)
-docs/            design specs, the visual direction, and the wireframes
+docs/            design specs, the visual direction, the wireframes and longer notes
 ```
 
 Dependencies point one way: `features → storage → domain`. `domain/` imports from none of
 the others, which is what makes the game rules testable without a database. `game/` is a leaf
 holding HeartGold's routes and bosses plus the live PokéAPI client. Both `features/` and
-`storage/` read it, and it imports only types from `domain/`.
+`storage/` read it, and it imports only from `domain/`. `components/` and `lib/` are shared by
+`features/` and never import from it or from `storage/`. `app/` sits on top and loads the screens.
 
 ---
 
@@ -178,18 +209,19 @@ node scripts/slice-wireframes.ts --force
 ## Testing
 
 `pnpm test` covers the domain rules, both storage adapters via the shared contract, the query
-layer, the game data's invariants, and the app shell's routing.
+layer, the game data's invariants, the app shell's routing, and the screens.
 
 `pnpm test:e2e` runs Playwright against a production build, in a desktop and a mobile project.
-Specs live in `e2e/`. PokéAPI is stubbed from the unit-test fixtures and the sprite hosts are
+Specs live in `e2e/`: the shell, drag and drop, logging a catch and a death, JSON backup and an
+accessibility scan. PokéAPI is stubbed from the unit-test fixtures and the sprite hosts are
 blocked, so the tests run offline, and a request to any other host fails the test. Run
 `pnpm exec playwright install chromium` once first. The `e2e` GitHub Actions workflow runs them
 on every pull request and uploads the report when they fail.
 
 In dev builds, Settings has a Developer section with a "Load sample run" button. It adds a
-run with a gapped party, a full box, deaths, open routes, every fight cleared up to Bugsy and a death
-at him, so screens can be checked by hand.
-The section is compiled out of production builds.
+run with a gapped party, enough boxed Pokémon to fill a box, deaths, open and skipped routes, a
+custom route, and every fight cleared up to Bugsy with a death at him. That lets screens be
+checked by hand. The section is compiled out of production builds.
 
 Two conventions worth keeping:
 
@@ -204,5 +236,5 @@ Two conventions worth keeping:
 
 ## Known gaps
 
-- Five tab items at 320px is untested layout.
-- Visual direction is deliberately undecided; the UI is unstyled shadcn defaults on purpose.
+- Six tab items at 320px is untested layout. The browser tests check 767px and 768px, and a
+  Pixel 7 phone.
