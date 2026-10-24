@@ -111,7 +111,7 @@ describe("boxedMons", () => {
 });
 
 describe("BoxesScreen", () => {
-  it("shows boxed mons in order and skips party and dead mons", async () => {
+  it("shows boxed mons in order in the box and party mons in the party row, never dead ones", async () => {
     const adapter = createMemoryAdapter();
     const run = await seedRun(adapter);
     await adapter.mons.put(
@@ -142,7 +142,10 @@ describe("BoxesScreen", () => {
 
     renderScreen(adapter, run.id);
 
-    expect(await gridNames()).toEqual(["“First”", "“Second”"]);
+    expect(await gridNames()).toEqual(["“Partied”", "“First”", "“Second”"]);
+    const boxList = screen.getByRole("list", { name: "Box slots", hidden: true });
+    expect(within(boxList).queryByRole("button", { name: "Edit “Partied”" })).toBeNull();
+    expect(screen.queryByRole("button", { name: "Edit “Gone”" })).toBeNull();
     expect(screen.getByText("2 stored")).toBeInTheDocument();
   });
 

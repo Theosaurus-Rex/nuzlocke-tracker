@@ -138,6 +138,7 @@ export function BoxesScreen(): ReactNode {
   const [sorting, setSorting] = useState<BoxSorting | null>(null);
   const [search, setSearch] = useState("");
   const boxed = boxedMons(monsQuery.data ?? []);
+  const party = (monsQuery.data ?? []).filter((mon) => mon.status === "party");
   const routeNames = useMemo(
     () => new Map((routesQuery.data ?? []).map((route) => [route.id, route.name])),
     [routesQuery.data],
@@ -194,8 +195,8 @@ export function BoxesScreen(): ReactNode {
           No boxed mons match “{search.trim()}”
         </Typography>
       )}
-      {boxed.length > 0 && view === "grid" && (
-        <BoxGrid runId={runId} mons={boxed} onEdit={openEditor} />
+      {(boxed.length > 0 || party.length > 0) && view === "grid" && (
+        <BoxGrid runId={runId} mons={boxed} party={party} onEdit={openEditor} />
       )}
       {visible.length > 0 && view === "list" && (
         <>

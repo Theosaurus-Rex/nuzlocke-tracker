@@ -38,7 +38,11 @@ function draft(runId: string, nickname: string, boxOrder: number): MonDraft {
   };
 }
 
-async function seed(adapter: StorageAdapter, mons: Record<string, number>) {
+async function seed(
+  adapter: StorageAdapter,
+  mons: Record<string, number>,
+  party: Record<string, number> = {},
+) {
   const run = await adapter.runs.put({
     name: "Test Run",
     game: "heartgold",
@@ -49,6 +53,14 @@ async function seed(adapter: StorageAdapter, mons: Record<string, number>) {
   const saved: Record<string, Mon> = {};
   for (const [name, slot] of Object.entries(mons)) {
     saved[name] = await adapter.mons.put(draft(run.id, name, slot));
+  }
+  for (const [name, slot] of Object.entries(party)) {
+    saved[name] = await adapter.mons.put({
+      ...draft(run.id, name, 0),
+      status: "party",
+      partySlot: slot,
+      boxOrder: null,
+    });
   }
   return { run, saved };
 }
@@ -71,24 +83,35 @@ function renderScreen(adapter: StorageAdapter, runId: string) {
 const COLUMNS = 5;
 const CELL = 110;
 
-function stubLayout(liftedIndex: number): void {
+function stubLayout(liftedIndex: number, liftedParty = false): void {
   const cell = (index: number) =>
     new DOMRect((index % COLUMNS) * CELL, 100 + Math.floor(index / COLUMNS) * CELL, 100, 100);
   vi.spyOn(Element.prototype, "getBoundingClientRect").mockImplementation(function (this: Element) {
     const item = this.closest("li");
     if (item?.parentElement?.tagName === "UL") {
-      return cell(Array.from(item.parentElement.children).indexOf(item));
+      const index = Array.from(item.parentElement.children).indexOf(item);
+      if (item.parentElement.getAttribute("aria-label") === "Party slots") {
+        return new DOMRect(index * CELL, -CELL, 100, 100);
+      }
+      return cell(index);
     }
     const group = this.closest("[aria-label='Choose box']");
     if (this.tagName === "BUTTON" && group) {
       return new DOMRect(Array.from(group.children).indexOf(this) * CELL, 0, 100, 40);
     }
-    return cell(liftedIndex);
+    return liftedParty ? new DOMRect(liftedIndex * CELL, -CELL, 100, 100) : cell(liftedIndex);
   });
 }
 
 function liveAnnouncement(): string {
   return document.querySelector("[id^=DndLiveRegion]")?.textContent ?? "";
+}
+
+function partyIndexOf(name: string): number {
+  const item = screen.getByRole("button", { name: `Edit “${name}”` }).closest("li")!;
+  return item.parentElement!.getAttribute("aria-label") === "Party slots"
+    ? Array.from(item.parentElement!.children).indexOf(item)
+    : -1;
 }
 
 function slotIndexOf(name: string): number {
@@ -309,6 +332,215 @@ describe("dragging in the boxes grid", () => {
       await wait(500);
 
       expect(boxTwoIsOpen()).toBe(false);
+    });
+  });
+
+  describe("moving between the boxes and the party", () => {
+    async function drag(user: ReturnType<typeof userEvent.setup>, name: string, keys: string) {
+      await focusMon(name);
+      await user.keyboard(" ");
+      await user.keyboard(keys);
+      await user.keyboard(" ");
+    }
+
+    it("puts a boxed mon in the exact party slot it is dropped on", async () => {
+      stubLayout(0);
+      const user = userEvent.setup();
+      const adapter = createMemoryAdapter();
+      const { run, saved } = await seed(adapter, { Sprig: 0 });
+      renderScreen(adapter, run.id);
+
+      await focusMon("Sprig");
+      await user.keyboard(" ");
+      await user.keyboard("{ArrowUp}");
+      expect(liveAnnouncement()).toBe("Over party slot 1.");
+      await user.keyboard("{ArrowRight}{ArrowRight}");
+      await user.keyboard(" ");
+
+      await waitFor(async () => {
+        expect(await adapter.mons.get(saved.Sprig!.id)).toMatchObject({
+          status: "party",
+          partySlot: 2,
+        });
+      });
+      expect(liveAnnouncement()).toBe("Moved “Sprig” to party slot 3.");
+    });
+
+    it("fills a gap in the party rather than the next free count", async () => {
+      stubLayout(0);
+      const user = userEvent.setup();
+      const adapter = createMemoryAdapter();
+      const { run, saved } = await seed(adapter, { Sprig: 0 }, { Pip: 0, Zubb: 2, Mud: 3 });
+      renderScreen(adapter, run.id);
+
+      await drag(user, "Sprig", "{ArrowUp}{ArrowRight}");
+
+      await waitFor(async () => {
+        expect(await adapter.mons.get(saved.Sprig!.id)).toMatchObject({ partySlot: 1 });
+      });
+      expect(await adapter.mons.get(saved.Zubb!.id)).toMatchObject({ partySlot: 2 });
+    });
+
+    it("swaps a boxed mon with a party mon and keeps the party at six", async () => {
+      stubLayout(0);
+      const user = userEvent.setup();
+      const adapter = createMemoryAdapter();
+      const full = { Pip: 0, Zubb: 1, Mud: 2, Tock: 3, Fizz: 4, Nut: 5 };
+      const { run, saved } = await seed(adapter, { Sprig: 4 }, full);
+      renderScreen(adapter, run.id);
+
+      await drag(user, "Sprig", "{ArrowUp}{ArrowRight}");
+
+      await waitFor(async () => {
+        expect(await adapter.mons.get(saved.Sprig!.id)).toMatchObject({
+          status: "party",
+          partySlot: 1,
+        });
+      });
+      expect(await adapter.mons.get(saved.Zubb!.id)).toMatchObject({
+        status: "box",
+        partySlot: null,
+        boxOrder: 4,
+      });
+      const party = (await adapter.mons.getAll()).filter((mon) => mon.status === "party");
+      expect(party).toHaveLength(6);
+      expect(liveAnnouncement()).toBe("Swapped “Sprig” with “Zubb”.");
+    });
+
+    it("moves a party mon to an empty box slot", async () => {
+      stubLayout(0, true);
+      const user = userEvent.setup();
+      const adapter = createMemoryAdapter();
+      const { run, saved } = await seed(adapter, { Sprig: 0 }, { Pip: 0 });
+      renderScreen(adapter, run.id);
+
+      await drag(user, "Pip", "{ArrowDown}{ArrowRight}{ArrowRight}");
+
+      await waitFor(async () => {
+        expect(await adapter.mons.get(saved.Pip!.id)).toMatchObject({
+          status: "box",
+          partySlot: null,
+          boxOrder: 2,
+        });
+      });
+      expect(liveAnnouncement()).toBe("Moved “Pip” to box 1, slot 3.");
+    });
+
+    it("swaps a party mon with a boxed mon", async () => {
+      stubLayout(1, true);
+      const user = userEvent.setup();
+      const adapter = createMemoryAdapter();
+      const { run, saved } = await seed(adapter, { Sprig: 1 }, { Pip: 1 });
+      renderScreen(adapter, run.id);
+
+      await drag(user, "Pip", "{ArrowDown}");
+
+      await waitFor(async () => {
+        expect(await adapter.mons.get(saved.Pip!.id)).toMatchObject({
+          status: "box",
+          boxOrder: 1,
+        });
+      });
+      expect(await adapter.mons.get(saved.Sprig!.id)).toMatchObject({
+        status: "party",
+        partySlot: 1,
+      });
+      expect(liveAnnouncement()).toBe("Swapped “Pip” with “Sprig”.");
+    });
+
+    it("swaps two party mons", async () => {
+      stubLayout(0, true);
+      const user = userEvent.setup();
+      const adapter = createMemoryAdapter();
+      const { run, saved } = await seed(adapter, {}, { Pip: 0, Zubb: 1 });
+      renderScreen(adapter, run.id);
+
+      await drag(user, "Pip", "{ArrowRight}");
+
+      await waitFor(async () => {
+        expect(await adapter.mons.get(saved.Pip!.id)).toMatchObject({ partySlot: 1 });
+      });
+      expect(await adapter.mons.get(saved.Zubb!.id)).toMatchObject({ partySlot: 0 });
+      expect(liveAnnouncement()).toBe("Swapped “Pip” with “Zubb”.");
+    });
+
+    it("moves a party mon to an empty party slot and leaves the gap", async () => {
+      stubLayout(0, true);
+      const user = userEvent.setup();
+      const adapter = createMemoryAdapter();
+      const { run, saved } = await seed(adapter, {}, { Pip: 0, Zubb: 1 });
+      renderScreen(adapter, run.id);
+
+      await drag(user, "Pip", "{ArrowRight}{ArrowRight}");
+
+      await waitFor(async () => {
+        expect(await adapter.mons.get(saved.Pip!.id)).toMatchObject({ partySlot: 2 });
+      });
+      expect(await adapter.mons.get(saved.Zubb!.id)).toMatchObject({ partySlot: 1 });
+      expect(liveAnnouncement()).toBe("Moved “Pip” to party slot 3.");
+    });
+
+    it("says nothing moved when a party mon is dropped on its own slot", async () => {
+      stubLayout(2, true);
+      const user = userEvent.setup();
+      const adapter = createMemoryAdapter();
+      const { run, saved } = await seed(adapter, {}, { Pip: 2 });
+      renderScreen(adapter, run.id);
+
+      await focusMon("Pip");
+      await user.keyboard(" ");
+      await user.keyboard(" ");
+
+      expect(liveAnnouncement()).toBe("“Pip” was not moved.");
+      expect(await adapter.mons.get(saved.Pip!.id)).toMatchObject({ partySlot: 2 });
+    });
+
+    it("shows the mon in its new party slot while the move is saving", async () => {
+      stubLayout(0);
+      const user = userEvent.setup();
+      const base = createMemoryAdapter();
+      let release: () => void = () => undefined;
+      const held = new Promise<void>((resolve) => {
+        release = resolve;
+      });
+      const adapter: StorageAdapter = {
+        ...base,
+        transaction: async (fn) => {
+          await held;
+          return base.transaction(fn);
+        },
+      };
+      const { run } = await seed(adapter, { Sprig: 0 });
+      renderScreen(adapter, run.id);
+
+      await drag(user, "Sprig", "{ArrowUp}{ArrowRight}");
+
+      await waitFor(() => expect(partyIndexOf("Sprig")).toBe(1));
+      await act(async () => {
+        release();
+        await held;
+      });
+      await waitFor(() => expect(partyIndexOf("Sprig")).toBe(1));
+    });
+
+    it("says nothing was changed when a swap fails to save", async () => {
+      stubLayout(0);
+      const user = userEvent.setup();
+      const base = createMemoryAdapter();
+      const adapter: StorageAdapter = {
+        ...base,
+        transaction: () => Promise.reject(new Error("simulated failure")),
+      };
+      const { run } = await seed(adapter, { Sprig: 0 }, { Pip: 0 });
+      renderScreen(adapter, run.id);
+
+      await drag(user, "Sprig", "{ArrowUp}");
+
+      expect(await screen.findByRole("alert")).toHaveTextContent(
+        "Could not move that Pokémon. Nothing was changed.",
+      );
+      expect(partyIndexOf("Pip")).toBe(0);
+      expect(partyIndexOf("Sprig")).toBe(-1);
     });
   });
 
