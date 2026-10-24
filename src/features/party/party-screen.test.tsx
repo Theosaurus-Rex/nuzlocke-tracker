@@ -19,9 +19,25 @@ async function seedRun(adapter: StorageAdapter, rules = makeRules()) {
 async function seedCapRun(adapter: StorageAdapter, levels: number[], rules = makeRules()) {
   const run = await seedRun(adapter, rules);
   const falkner = await adapter.fights.put(
-    makeFightDraft(run.id, { name: "Falkner", order: 1, levelCap: 13 }),
+    makeFightDraft(run.id, {
+      gameFightId: "gym-falkner",
+      kind: "gym",
+      grantsBadge: true,
+      name: "Falkner",
+      order: 1,
+      levelCap: 1,
+    }),
   );
-  await adapter.fights.put(makeFightDraft(run.id, { name: "Bugsy", order: 2, levelCap: 19 }));
+  await adapter.fights.put(
+    makeFightDraft(run.id, {
+      gameFightId: "gym-bugsy",
+      kind: "gym",
+      grantsBadge: true,
+      name: "Bugsy",
+      order: 2,
+      levelCap: 2,
+    }),
+  );
   for (const [index, level] of levels.entries()) {
     await adapter.mons.put(
       makeMonDraft(run.id, { nickname: `Mon${String(level)}`, level, partySlot: index }),
@@ -483,32 +499,32 @@ describe("PartyScreen", () => {
 
     it("shows the count and the cap when one party mon is over", async () => {
       const adapter = createMemoryAdapter();
-      const { run, falkner } = await seedCapRun(adapter, [20, 19, 10], capRules);
+      const { run, falkner } = await seedCapRun(adapter, [18, 17, 10], capRules);
       await adapter.fights.put({ ...falkner, status: "cleared" });
       renderScreen(adapter, run.id);
 
       expect((await screen.findAllByText("1 over cap")).length).toBeGreaterThan(0);
-      expect(screen.getByText("cap L19")).toBeInTheDocument();
+      expect(screen.getByText("cap L17")).toBeInTheDocument();
     });
 
     it("tags only the over mon's card, not one exactly at the cap", async () => {
       const adapter = createMemoryAdapter();
-      const { run, falkner } = await seedCapRun(adapter, [20, 19, 10], capRules);
+      const { run, falkner } = await seedCapRun(adapter, [18, 17, 10], capRules);
       await adapter.fights.put({ ...falkner, status: "cleared" });
       renderScreen(adapter, run.id);
 
-      const tags = await screen.findAllByText("Over cap L19");
+      const tags = await screen.findAllByText("Over cap L17");
       expect(tags).toHaveLength(1);
-      expect(tags[0]?.closest("li")).toHaveTextContent("Mon20");
+      expect(tags[0]?.closest("li")).toHaveTextContent("Mon18");
     });
 
     it("shows the cap but no chip when nothing is over", async () => {
       const adapter = createMemoryAdapter();
-      const { run, falkner } = await seedCapRun(adapter, [19, 10], capRules);
+      const { run, falkner } = await seedCapRun(adapter, [17, 10], capRules);
       await adapter.fights.put({ ...falkner, status: "cleared" });
       renderScreen(adapter, run.id);
 
-      expect(await screen.findByText("cap L19")).toBeInTheDocument();
+      expect(await screen.findByText("cap L17")).toBeInTheDocument();
       expect(screen.queryByText(/over cap/i)).toBeNull();
     });
 
@@ -537,7 +553,7 @@ describe("PartyScreen", () => {
       await adapter.fights.put({ ...falkner, status: "cleared" });
       renderScreen(adapter, run.id);
 
-      expect(await screen.findByText("cap L19")).toBeInTheDocument();
+      expect(await screen.findByText("cap L17")).toBeInTheDocument();
       expect(screen.queryByText(/over cap/i)).toBeNull();
     });
 
@@ -550,7 +566,7 @@ describe("PartyScreen", () => {
       );
       renderScreen(adapter, run.id);
 
-      expect(await screen.findByText("cap L19")).toBeInTheDocument();
+      expect(await screen.findByText("cap L17")).toBeInTheDocument();
       expect(screen.queryByText(/over cap/i)).toBeNull();
     });
   });

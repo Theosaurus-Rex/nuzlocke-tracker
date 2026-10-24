@@ -6,6 +6,7 @@
 import type { GameData } from "@/game/types";
 
 import { fights } from "./fights";
+import { levelCaps } from "./level-caps";
 import { routes } from "./routes";
 
 export const heartgold: GameData = {
@@ -14,6 +15,7 @@ export const heartgold: GameData = {
   generation: 4,
   routes,
   fights,
+  levelCaps,
 };
 
 export const soulsilver: GameData = { ...heartgold, id: "soulsilver", name: "SoulSilver" };

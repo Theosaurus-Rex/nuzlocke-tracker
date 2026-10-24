@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 
 import { currentLevelCap } from "@/domain/rules-summary";
 import type { Fight } from "@/domain/types";
+import { heartgold } from "@/game/data/heartgold";
 
 import type { StorageAdapter } from "./adapter";
 import { createMemoryAdapter } from "./memory-adapter";
@@ -80,7 +81,8 @@ describe("persistAddCustomFight", () => {
       beforeFightId: first.id,
     });
 
-    expect(currentLevelCap(await ordered())).toBe(7);
+    const badgeIds = new Set(heartgold.fights.filter((f) => f.grantsBadge).map((f) => f.id));
+    expect(currentLevelCap(await ordered(), heartgold.levelCaps, badgeIds)).toBe(7);
   });
 
   it("respaces when the gap is closed and still lands in the right place", async () => {

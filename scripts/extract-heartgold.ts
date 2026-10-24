@@ -238,7 +238,6 @@ interface BuiltFight {
   kind: OurFightKind;
   order: number;
   grantsBadge: boolean;
-  levelCap: number | null;
   roster: RawBossMon[];
 }
 
@@ -257,7 +256,6 @@ function emitFightsModule(fights: BuiltFight[]): string {
     region: "johto",
     badge: null,
     badgeSprite: null,
-    levelCap: ${f.levelCap ?? "null"},
     roster: [
 ${roster}
     ],
@@ -268,7 +266,6 @@ ${roster}
   return `/**
  * HeartGold boss rosters, bootstrapped from domtronn/nuzlocke.data
  * (https://github.com/domtronn/nuzlocke.data). Hand-owned now, see CLAUDE.md "Game data".
- * levelCap is computed from each fight's own roster, never hand-entered. Rivals have no cap.
  */
 
 import type { FightDef } from "@/game/types";
@@ -315,14 +312,12 @@ function main(cloneRootArg: string) {
     }
     const kind = mapKind(anchor);
     const grantsBadge = kind === "gym";
-    const levelCap = kind === "rival" ? null : Math.max(...roster.map((m) => m.level));
     return {
       id: fightId(kind, anchor.name, anchor.key),
       name: anchor.name,
       kind,
       order: anchor.order,
       grantsBadge,
-      levelCap,
       roster,
     };
   });

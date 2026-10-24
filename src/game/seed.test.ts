@@ -14,6 +14,7 @@ function makeGame(routes: RouteDef[]): GameData {
     generation: 4,
     routes,
     fights: [],
+    levelCaps: [],
   };
 }
 
@@ -66,7 +67,7 @@ describe("seedFights", () => {
     expect(drafts.map((d) => d.gameFightId)).toEqual(heartgold.fights.map((f) => f.id));
   });
 
-  test("carries name, kind, badge flag and level cap, with order spaced by the step", () => {
+  test("carries name, kind, badge flag and no stored cap, with order spaced by the step", () => {
     const [def] = heartgold.fights;
     const [draft] = seedFights("run-1", heartgold);
 
@@ -74,7 +75,7 @@ describe("seedFights", () => {
       name: def?.name,
       kind: def?.kind,
       grantsBadge: def?.grantsBadge,
-      levelCap: def?.levelCap,
+      levelCap: null,
       order: (def?.order ?? 0) * FIGHT_ORDER_STEP,
     });
   });

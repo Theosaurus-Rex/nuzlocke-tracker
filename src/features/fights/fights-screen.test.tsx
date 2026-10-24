@@ -43,12 +43,12 @@ async function seed(adapter: StorageAdapter, rules: Rules = { ...DEFAULT_RULES, 
       gameFightId: "gym-falkner",
       name: "Falkner",
       order: 1,
-      levelCap: 13,
+      levelCap: 1,
       status: "cleared",
     }),
   );
   const bugsy = await adapter.fights.put(
-    fightDraft(run.id, { gameFightId: "gym-bugsy", name: "Bugsy", order: 2, levelCap: 17 }),
+    fightDraft(run.id, { gameFightId: "gym-bugsy", name: "Bugsy", order: 2, levelCap: 2 }),
   );
   await adapter.fights.put(
     fightDraft(run.id, {
@@ -57,7 +57,7 @@ async function seed(adapter: StorageAdapter, rules: Rules = { ...DEFAULT_RULES, 
       kind: "elite_four",
       order: 3,
       grantsBadge: false,
-      levelCap: 50,
+      levelCap: 3,
     }),
   );
   const mon = await adapter.mons.put({
@@ -176,6 +176,16 @@ describe("FightsScreen", () => {
     await findTable();
     expect(screen.getAllByText("1 of 2 badges").length).toBeGreaterThan(0);
     expect(screen.getByText("Cap L17")).toBeInTheDocument();
+  });
+
+  it("shows a built-in fight's ace level, not its stored cap", async () => {
+    const adapter = createMemoryAdapter();
+    const { run } = await seed(adapter);
+    renderScreen(adapter, run.id);
+
+    const table = await findTable();
+    expect(within(rowFor(table, "Bugsy")).getByText("L17")).toBeInTheDocument();
+    expect(within(rowFor(table, "Will")).getByText("L42")).toBeInTheDocument();
   });
 
   it("hides the level cap when level caps are off", async () => {

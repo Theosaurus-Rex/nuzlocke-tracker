@@ -25,6 +25,15 @@ not an error.
 Damage class was a per-type rule before Gen 4 and became a per-move property from Gen 4 on.
 We store the modern per-move value only.
 
+## Level caps (`src/game/data/heartgold/level-caps.ts`)
+
+The cap table is copied from Nuzlocke University's "Hardcore Nuzlocke Level Caps by Generation".
+Its Johto, Elite Four and Champion numbers equal the verified ace levels below. Its Kanto gyms are
+listed in town order, with caps that go up and down. Our table sorts them lowest first, so the
+cap follows badges held and never drops. The source has Pryce at 34 after Jasmine at 35. We hold
+the cap at 35 for Pryce so it never goes down. His verified ace stays 34.
+Red's 88 is the source's number and his top level in our roster.
+
 ## Verified ace levels (`heartgold.test.ts`)
 
 `VERIFIED_ACE_LEVELS` is the ace (highest-level) Pokemon for each gym leader, Elite Four member
