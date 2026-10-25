@@ -25,7 +25,14 @@ import { isOverCap } from "@/domain/rules-summary";
 import { MAX_PARTY_SIZE } from "@/domain/transitions";
 import type { Mon } from "@/domain/types";
 import { useReorderParty } from "@/storage/mutations";
-import { useCurrentLevelCap, useMons, useRoutes, useRun, useRunGame } from "@/storage/queries";
+import {
+  useCurrentLevelCap,
+  useMons,
+  useRoutes,
+  useRun,
+  useRunFields,
+  useRunGame,
+} from "@/storage/queries";
 
 import { useEditMonDialog } from "../encounters/use-edit-mon-dialog";
 import { monTitle } from "../encounters/mon-title";
@@ -94,6 +101,7 @@ export function PartyScreen(): ReactNode {
   const { runId } = useParams<{ runId: string }>();
   const runQuery = useRun(runId ?? "");
   const generation = useRunGame(runId ?? "")?.generation;
+  const fields = useRunFields(runId ?? "");
   const routesQuery = useRoutes(runId ?? "");
   const monsQuery = useMons(runId);
   const tableCap = useCurrentLevelCap(runId ?? "");
@@ -189,6 +197,7 @@ export function PartyScreen(): ReactNode {
                     mon.caughtRouteId === null ? null : (routeNames.get(mon.caughtRouteId) ?? null)
                   }
                   generation={generation}
+                  fields={fields}
                   cap={cap}
                   onEdit={() => openEditor(mon.id)}
                 />

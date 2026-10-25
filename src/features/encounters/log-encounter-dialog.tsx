@@ -20,7 +20,7 @@ import type { Encounter, Gender, Mon, Moveset, Route, Rules } from "@/domain/typ
 import { useEvolutionLine } from "@/game/pokeapi/queries";
 import { speciesDisplayName } from "@/game/pokeapi/resolve";
 import { useCatchShinyBonus, useLogEncounter } from "@/storage/mutations";
-import { useRunGame } from "@/storage/queries";
+import { useRunFields, useRunGame } from "@/storage/queries";
 import { cn } from "@/lib/utils";
 
 import { EncounterDialogHeader } from "./encounter-dialog-header";
@@ -145,6 +145,7 @@ function LogEncounterForm({
   onDone,
 }: LogEncounterFormProps): ReactNode {
   const logEncounter = useLogEncounter();
+  const fields = useRunFields(runId);
   const catchShinyBonus = useCatchShinyBonus();
   const shinyBonus = mode === "shiny-bonus";
   const saveMutation = shinyBonus ? catchShinyBonus : logEncounter;
@@ -316,7 +317,7 @@ function LogEncounterForm({
             </div>
           )}
 
-          {outcome === "caught" && (
+          {outcome === "caught" && fields.shiny && (
             <ShinyField
               id="log-encounter-shiny"
               value={shiny}
@@ -398,7 +399,7 @@ function LogEncounterForm({
               error={errors.nickname}
             />
 
-            <GenderField value={gender} onChange={setGender} />
+            {fields.gender && <GenderField value={gender} onChange={setGender} />}
 
             <div>
               <Typography
@@ -462,11 +463,17 @@ function LogEncounterForm({
               )}
             </div>
 
-            <NatureField id="log-encounter-nature" value={nature} onChange={setNature} />
+            {fields.nature && (
+              <NatureField id="log-encounter-nature" value={nature} onChange={setNature} />
+            )}
 
-            <AbilityField id="log-encounter-ability" value={ability} onChange={setAbility} />
+            {fields.ability && (
+              <AbilityField id="log-encounter-ability" value={ability} onChange={setAbility} />
+            )}
 
-            <HeldItemField id="log-encounter-held-item" value={heldItem} onChange={setHeldItem} />
+            {fields.heldItem && (
+              <HeldItemField id="log-encounter-held-item" value={heldItem} onChange={setHeldItem} />
+            )}
 
             <div className="sm:col-span-2">
               <MovesetField id="log-encounter-move" value={moves} onChange={setMoves} />

@@ -39,11 +39,21 @@ export interface RouteDef {
   region: Region;
 }
 
+export interface MonFields {
+  nature: boolean;
+  ability: boolean;
+  heldItem: boolean;
+  gender: boolean;
+  shiny: boolean;
+}
+
 export interface GameData {
   id: GameId;
   name: string;
   /** The generation whose types and move stats this game's runs resolve against. */
   generation: number;
+  /** Turns a field on or off where the game differs from its generation's default. */
+  fields?: Partial<MonFields>;
   routes: RouteDef[];
   fights: FightDef[];
   /** Level caps by progress, in order. Written by hand, no roster needed. */

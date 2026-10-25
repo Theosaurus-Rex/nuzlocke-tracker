@@ -1,8 +1,10 @@
 import { describe, expect, it } from "vitest";
 
 import type { Mon } from "@/domain/types";
+import { monFields } from "@/game/fields";
 
 import {
+  boxSortFields,
   boxSortValue,
   compareBoxSortValues,
   searchMons,
@@ -165,5 +167,37 @@ describe("searchMons", () => {
 
   it("returns nothing when no name matches", () => {
     expect(searchMons(input, "zzz")).toEqual([]);
+  });
+});
+
+describe("boxSortFields", () => {
+  it("offers every field for a game that has them all", () => {
+    expect(boxSortFields(monFields({ generation: 4 })).map((f) => f.field)).toEqual([
+      "name",
+      "species",
+      "level",
+      "gender",
+      "nature",
+      "ability",
+      "item",
+    ]);
+  });
+
+  it("drops nature and ability for generation 2", () => {
+    expect(boxSortFields(monFields({ generation: 2 })).map((f) => f.field)).toEqual([
+      "name",
+      "species",
+      "level",
+      "gender",
+      "item",
+    ]);
+  });
+
+  it("keeps only name, species and level for generation 1", () => {
+    expect(boxSortFields(monFields({ generation: 1 })).map((f) => f.field)).toEqual([
+      "name",
+      "species",
+      "level",
+    ]);
   });
 });

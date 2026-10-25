@@ -4,6 +4,8 @@ import userEvent from "@testing-library/user-event";
 import { describe, expect, it, vi } from "vitest";
 
 import type { Mon } from "@/domain/types";
+import { ALL_FIELDS, monFields } from "@/game/fields";
+import type { MonFields } from "@/game/types";
 import { defaultPokeApiRoutes, stubPokeApi } from "@/test/pokeapi-fetch";
 import { makeMon } from "@/test/factories";
 
@@ -11,12 +13,16 @@ import { BoxRowList } from "./box-row-list";
 
 const CHIKORITA = { speciesId: "chikorita", speciesIdCaught: "chikorita" };
 
-function renderList(mons: Mon[], onEdit: (monId: string) => void = vi.fn()) {
+function renderList(
+  mons: Mon[],
+  onEdit: (monId: string) => void = vi.fn(),
+  fields: MonFields = ALL_FIELDS,
+) {
   stubPokeApi(defaultPokeApiRoutes);
   const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
   return render(
     <QueryClientProvider client={client}>
-      <BoxRowList mons={mons} onEdit={onEdit} />
+      <BoxRowList mons={mons} fields={fields} onEdit={onEdit} />
     </QueryClientProvider>,
   );
 }
@@ -59,6 +65,26 @@ describe("BoxRowList", () => {
     expect(within(row).getByText("“Sprig”")).toBeInTheDocument();
     expect(within(row).getByText("Chikorita · ♂ · L12")).toBeInTheDocument();
     expect(within(row).getByText("Oran Berry · Overgrow")).toBeInTheDocument();
+  });
+
+  it("hides gender, item and ability for a game without them", () => {
+    renderList(
+      [
+        makeMon({
+          ...CHIKORITA,
+          gender: "male",
+          level: 12,
+          heldItem: "oran-berry",
+          ability: "overgrow",
+        }),
+      ],
+      vi.fn(),
+      monFields({ generation: 1 }),
+    );
+
+    const row = screen.getByRole("listitem");
+    expect(within(row).getByText("Chikorita · L12")).toBeInTheDocument();
+    expect(within(row).queryByText(/Oran Berry|Overgrow|no item/)).toBeNull();
   });
 
   it("falls back to the species name and drops missing parts", () => {

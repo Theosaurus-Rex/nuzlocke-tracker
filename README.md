@@ -186,6 +186,10 @@ A game is its data directory under `src/game/data/`, one entry in `GAMES` in
 id. Nothing else names a game: screens read the run's game through `useRunGame`, and the new run
 screen lists whatever the registry holds.
 
+Which of nature, ability, held item, gender and shiny a game has comes from its `generation`, in
+`monFields` (`src/game/fields.ts`). Set `fields` on a game's `GameData` to differ from that, such as
+Let's Go turning off ability and held item.
+
 To bootstrap a second game from nuzlocke.data, copy `scripts/extract-heartgold.ts` and adapt it.
 `docs/notes/scripts.md` says what to re-derive. A romhack is the same shape, written by hand.
 

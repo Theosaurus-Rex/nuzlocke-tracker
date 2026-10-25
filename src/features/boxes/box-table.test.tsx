@@ -5,6 +5,8 @@ import { useState } from "react";
 import { describe, expect, it, vi } from "vitest";
 
 import type { Mon } from "@/domain/types";
+import { ALL_FIELDS, monFields } from "@/game/fields";
+import type { MonFields } from "@/game/types";
 import { defaultPokeApiRoutes, stubPokeApi } from "@/test/pokeapi-fetch";
 import { makeMon } from "@/test/factories";
 
@@ -17,15 +19,18 @@ function Harness({
   mons,
   routeNames,
   onEdit,
+  fields,
 }: {
   mons: Mon[];
   routeNames: ReadonlyMap<string, string>;
   onEdit: (monId: string) => void;
+  fields: MonFields;
 }) {
   const [sorting, setSorting] = useState<BoxSorting | null>(null);
   return (
     <BoxTable
       mons={mons}
+      fields={fields}
       sorting={sorting}
       onSortingChange={setSorting}
       routeNames={routeNames}
@@ -38,12 +43,13 @@ function renderTable(
   mons: Mon[],
   routeNames = new Map<string, string>(),
   onEdit: (monId: string) => void = vi.fn(),
+  fields: MonFields = ALL_FIELDS,
 ) {
   stubPokeApi(defaultPokeApiRoutes);
   const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
   return render(
     <QueryClientProvider client={client}>
-      <Harness mons={mons} routeNames={routeNames} onEdit={onEdit} />
+      <Harness mons={mons} routeNames={routeNames} onEdit={onEdit} fields={fields} />
     </QueryClientProvider>,
   );
 }
@@ -72,6 +78,24 @@ function cellsOf(rowIndex: number): string[] {
 }
 
 describe("BoxTable", () => {
+  it("drops the columns a game does not have", () => {
+    renderTable([makeMon(CHIKORITA)], undefined, undefined, monFields({ generation: 1 }));
+
+    for (const name of ["Gender", "Nature", "Ability", "Item"]) {
+      expect(screen.queryByRole("columnheader", { name })).toBeNull();
+    }
+    expect(header("Species")).toBeInTheDocument();
+  });
+
+  it("shows gender and item but not nature or ability for generation 2", () => {
+    renderTable([makeMon(CHIKORITA)], undefined, undefined, monFields({ generation: 2 }));
+
+    expect(header("Gender")).toBeInTheDocument();
+    expect(header("Item")).toBeInTheDocument();
+    expect(screen.queryByRole("columnheader", { name: "Nature" })).toBeNull();
+    expect(screen.queryByRole("columnheader", { name: "Ability" })).toBeNull();
+  });
+
   it("opens a mon from its name button or from a click anywhere on the row, once each", async () => {
     const onEdit = vi.fn();
     renderTable(

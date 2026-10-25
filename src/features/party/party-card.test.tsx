@@ -4,6 +4,8 @@ import userEvent from "@testing-library/user-event";
 import { describe, expect, it, vi } from "vitest";
 
 import type { Mon } from "@/domain/types";
+import { ALL_FIELDS, monFields } from "@/game/fields";
+import type { MonFields } from "@/game/types";
 import { defaultPokeApiRoutes, stubPokeApi } from "@/test/pokeapi-fetch";
 import { makeMon } from "@/test/factories";
 
@@ -17,13 +19,21 @@ function renderCard(
   routeName: string | null = null,
   onEdit: () => void = vi.fn(),
   cap: number | null = null,
+  fields: MonFields = ALL_FIELDS,
 ) {
   stubPokeApi(defaultPokeApiRoutes);
   const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
   return render(
     <QueryClientProvider client={client}>
       <ul>
-        <PartyCard mon={mon} routeName={routeName} generation={4} cap={cap} onEdit={onEdit} />
+        <PartyCard
+          mon={mon}
+          routeName={routeName}
+          generation={4}
+          fields={fields}
+          cap={cap}
+          onEdit={onEdit}
+        />
       </ul>
     </QueryClientProvider>,
   );
@@ -53,6 +63,27 @@ describe("PartyCard", () => {
         container.querySelector('img[src="https://sprites.test/still/shiny/152.png"]'),
       ).not.toBeNull(),
     );
+  });
+
+  it("hides gender, nature, item and ability for a game without them", () => {
+    renderCard(
+      makeMon({
+        ...CHIKORITA,
+        gender: "female",
+        level: 22,
+        nature: "Adamant",
+        ability: "overgrow",
+        heldItem: "miracle-seed",
+      }),
+      "Route 29",
+      vi.fn(),
+      null,
+      monFields({ generation: 1 }),
+    );
+
+    expect(screen.getByText("Chikorita · L22")).toBeInTheDocument();
+    expect(screen.queryByText(/Miracle Seed|Overgrow|Adamant|no item/)).toBeNull();
+    expect(screen.getByText("Route 29")).toBeInTheDocument();
   });
 
   it("shows every detail of a fully filled-in mon", () => {
