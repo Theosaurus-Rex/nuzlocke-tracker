@@ -78,3 +78,46 @@ Rosters resting on Serebii and upstream only:
 - Every rival level below the Champion's lead, apart from the Cerulean fight, which Bulbapedia
   also confirms (Abra 16, where upstream has 15).
 - Every gym and Elite Four member below the ace.
+
+## Emerald (`src/game/data/emerald/`)
+
+Routes are upstream's `routes/em.txt` as 65 core routes in traversal order, then four post-game
+routes after Victory Road: Desert Underpass, Altering Cave, Terra Cave and Marine Cave. Mirage
+Island and Sky Pillar stay in the core list. Littleroot Town (the Johto starters need a full
+Hoenn dex), Artisan Cave and the event-ticket islands are out. Aqua Hideout is a route for its
+static Electrode, which upstream files under the Magma Hideout. Kyogre and Groudon are in Marine
+Cave and Terra Cave, not the Cave of Origin. Altering Cave has Zubat only in Emerald, where
+upstream lists FireRed's encounters.
+
+Fights are first-run only. The rival's Rustboro and Lilycove fights and Shelly's second Seafloor
+Cavern fight are optional and left out, so the rival has three fights. The rival is named
+"May / Brendan", with both genders' teams listed together, as well as all three starter
+variants. Team Magma, Team Aqua and Steven are kind `boss`. Steven at Meteor Falls is post-game
+and is the final cap, 78, from Nuzlocke University's "Meteor Falls: Lv 78" line.
+
+Upstream fixes: Matt has no Sharpedo (a Ruby and Sapphire leftover), Archie has Crobat where
+upstream has Golbat, Maxie's Mt. Chimney fight is added, the Champion is kind `champion` where
+upstream says `elite-four`, and the rival's Route 119 variants are rebuilt.
+
+### Sources and verified ace levels (`emerald.test.ts`)
+
+Three sources, not two. The `pret/pokeemerald` decompilation (`src/data/trainers.h`,
+`trainer_parties.h`, and the map scripts to see which fights can be declined) is the game's own
+data. Serebii (https://www.serebii.net/emerald/gym.shtml, elite.shtml, steven.shtml) covers gyms,
+Elite Four, Wallace and Steven. Bulbapedia returned 403 to every direct fetch, so its numbers
+were read from search result snippets. Gym, Elite Four, Wallace and Steven aces agree across all
+of them and upstream, and every cap equals its ace.
+
+Rosters resting on the decomp and upstream only:
+
+- Every rival fight. Serebii has no rival page and Bulbapedia's snippets showed no rival levels.
+- Wally's first fight. Both Wally fights are kind `rival`, with no cap.
+- Tabitha and Maxie at Mt. Chimney have Bulbapedia as well, Shelly at the Weather Institute
+  does not.
+- Every gym and Elite Four member below the ace, apart from Claydol and Xatu, which Bulbapedia
+  did not show.
+
+Not verified: whether Tabitha at Mt. Chimney and Shelly at the Weather Institute can be walked
+past. They are standing trainers, so both are kept. Moves, abilities and held items were not
+checked, since the data does not store them. Badge sprites 17 to 24 were matched by eye to the
+decomp's badge sheet.
