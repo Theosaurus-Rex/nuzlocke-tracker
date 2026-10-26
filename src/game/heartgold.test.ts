@@ -122,7 +122,6 @@ describe("heartgold only-routes", () => {
       heartgold.routes.filter((r) => r.only !== undefined).map((r) => [r.id, r.only]),
     );
     expect(flagged).toEqual({
-      starter: "gift",
       "goldenrod-city": "gift",
       "saffron-city": "gift",
       "rocket-hideout": "static",

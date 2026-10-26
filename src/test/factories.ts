@@ -12,6 +12,8 @@ export function makeRules(overrides: Partial<Rules> = {}): Rules {
   return {
     dupesClause: false,
     shinyClause: false,
+    giftClause: false,
+    noGifts: false,
     nicknamesRequired: false,
     levelCaps: false,
     setMode: false,

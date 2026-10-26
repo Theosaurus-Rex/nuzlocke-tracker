@@ -38,6 +38,8 @@ export type Gender = "male" | "female" | "genderless";
 export interface Rules {
   dupesClause: boolean;
   shinyClause: boolean;
+  giftClause: boolean;
+  noGifts: boolean;
   nicknamesRequired: boolean;
   levelCaps: boolean;
   setMode: boolean;

@@ -11,6 +11,8 @@ export interface RouteRow {
   encounter: Encounter | null;
   mon: Mon | null;
   status: RouteRowStatus;
+  /** True when the run bans this route. It shows greyed and cannot be logged. */
+  blocked?: boolean;
 }
 
 function earliestEncounter(encounters: readonly Encounter[]): Encounter | undefined {

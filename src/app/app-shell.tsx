@@ -10,6 +10,8 @@ import { cn } from "cn";
 import { buttonVariants } from "@/components/ui/button";
 import { Typography } from "@/components/typography";
 import { badgeCount } from "@/domain/fight-list";
+import { routeIdsOutOfTotals } from "@/game/route-only";
+import { GAMES } from "@/game/registry";
 import { summariseRun, type RunSummary } from "@/domain/derive";
 import {
   useCurrentLevelCap,
@@ -80,6 +82,17 @@ export function AppShell(): ReactNode {
       ? summariseRun({ encounters: encountersQuery.data, mons: monsQuery.data })
       : undefined;
 
+  const routeTotal =
+    routesQuery.data === undefined || currentRun === undefined
+      ? routesQuery.data?.length
+      : routesQuery.data.length -
+        routeIdsOutOfTotals(
+          GAMES[currentRun.game],
+          routesQuery.data,
+          encountersQuery.data ?? [],
+          currentRun.rules,
+        ).size;
+
   function handleSwitchRun(nextRunId: string): void {
     void navigate(`/runs/${nextRunId}/${subScreenFromPath(location.pathname)}`);
   }
@@ -99,7 +112,7 @@ export function AppShell(): ReactNode {
           </div>
         )}
         {navItems.map((item) => {
-          const counter = counterFor(item, summary, routesQuery.data?.length, badges);
+          const counter = counterFor(item, summary, routeTotal, badges);
           return (
             <NavLink
               key={item.to}

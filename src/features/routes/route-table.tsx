@@ -44,6 +44,14 @@ function StatusCell({ row, onLogEncounter }: { row: RouteRow; onLogEncounter: ()
 }
 
 function EncounterCell({ row }: { row: RouteRow }) {
+  if (row.blocked === true) {
+    return (
+      <Typography as="span" variant="body" tone="muted">
+        gifts are banned
+      </Typography>
+    );
+  }
+
   if (row.encounter === null) {
     return (
       <Typography as="span" variant="body" tone="muted">
@@ -235,6 +243,7 @@ export function RouteTable({
               className={cn(
                 "border-b border-muted last:border-b-0",
                 canLogEncounter(row.original) && "bg-flag-tint",
+                row.original.blocked === true && "opacity-50",
                 tappable && "cursor-pointer",
               )}
             >

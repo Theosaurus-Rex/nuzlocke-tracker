@@ -22,6 +22,11 @@ describe("findDupe", () => {
     expect(findDupe({ line: ["geodude"], mons: [mon] })).toBe(mon);
   });
 
+  it("counts a gift, which has no encounter", () => {
+    const mon = makeMon({ ...GEODUDE, encounterId: null });
+    expect(findDupe({ line: LINE, mons: [mon] })).toBe(mon);
+  });
+
   it("counts a dead mon", () => {
     const mon = makeMon({ ...GEODUDE, status: "dead", partySlot: null });
     expect(findDupe({ line: LINE, mons: [mon] })).toBe(mon);

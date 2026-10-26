@@ -164,22 +164,27 @@ export function catchEncounter({
   return { encounter: updatedEncounter, mon };
 }
 
-/** A shiny caught on a route whose encounter is already used. It has no encounter of its own. */
-export function catchShinyBonus({
-  runId,
-  routeId,
-  party,
-  box,
-  monId,
-  details,
-}: {
+export type BonusKind = "shiny" | "gift";
+
+interface CatchBonusInput {
   runId: string;
   routeId: string;
   party: readonly Mon[];
   box: readonly Mon[];
   monId: string;
   details: CatchDetails;
-}): Draft<Mon> {
+}
+
+/** A catch tied to a route without using up its encounter. It has no encounter of its own. */
+export function catchBonus({
+  kind,
+  runId,
+  routeId,
+  party,
+  box,
+  monId,
+  details,
+}: CatchBonusInput & { kind: BonusKind }): Draft<Mon> {
   assertCatchDetails(details);
 
   return buildCaughtMon({
@@ -189,8 +194,12 @@ export function catchShinyBonus({
     party,
     box,
     monId,
-    details: { ...details, shiny: true },
+    details: kind === "shiny" ? { ...details, shiny: true } : details,
   });
+}
+
+export function catchShinyBonus(input: CatchBonusInput): Draft<Mon> {
+  return catchBonus({ ...input, kind: "shiny" });
 }
 
 export function missEncounter(encounter: Encounter): Encounter {

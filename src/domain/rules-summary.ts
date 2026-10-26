@@ -57,6 +57,8 @@ export function ruleChips(rules: Rules, levelCap: number | null): RuleChip[] {
   };
   add(rules.dupesClause, "Dupes");
   add(rules.shinyClause, "Shiny");
+  add(rules.giftClause, "Gift clause");
+  add(rules.noGifts, "No gifts");
   add(rules.nicknamesRequired, "Nicknames");
   add(rules.levelCaps, levelCap === null ? "Caps" : `Cap L${String(levelCap)}`, "flag");
   add(rules.setMode, "Set mode");

@@ -184,6 +184,15 @@ describe("ruleChips", () => {
     ]);
   });
 
+  it("shows a chip for each gift rule when on", () => {
+    expect(ruleChips({ ...ALL_OFF, giftClause: true }, null).map((c) => c.label)).toEqual([
+      "Gift clause",
+    ]);
+    expect(ruleChips({ ...ALL_OFF, noGifts: true }, null).map((c) => c.label)).toEqual([
+      "No gifts",
+    ]);
+  });
+
   it("shows Randomised from the randomiser switch", () => {
     const rules = { ...ALL_OFF, randomiser: { ...ALL_OFF.randomiser, enabled: true } };
     expect(ruleChips(rules, null).map((chip) => chip.label)).toEqual(["Randomised"]);

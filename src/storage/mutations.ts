@@ -11,7 +11,8 @@ import { canDeleteRoute, nextRouteOrder } from "@/domain/routes";
 import {
   amendMon,
   catchEncounter,
-  catchShinyBonus,
+  catchBonus,
+  type BonusKind,
   evolveMon,
   killMon,
   missEncounter,
@@ -218,25 +219,32 @@ export function useLogEncounter(): UseMutationResult<LogEncounterResult, Error, 
   });
 }
 
-export interface CatchShinyBonusInput {
+export interface CatchBonusInput {
+  kind: BonusKind;
   runId: string;
   routeId: string;
   details: CatchDetails;
 }
 
-export async function persistCatchShinyBonus(
+const BONUS_RULE: Record<BonusKind, { field: "shinyClause" | "giftClause"; name: string }> = {
+  shiny: { field: "shinyClause", name: "shiny clause" },
+  gift: { field: "giftClause", name: "gift clause" },
+};
+
+export async function persistCatchBonus(
   adapter: StorageAdapter,
-  input: CatchShinyBonusInput,
+  input: CatchBonusInput,
 ): Promise<Mon> {
   const monId = crypto.randomUUID();
+  const rule = BONUS_RULE[input.kind];
 
   return adapter.transaction(async (tx) => {
     const run = await tx.runs.get(input.runId);
     if (run === undefined) {
       throw new Error(`Run ${input.runId} no longer exists.`);
     }
-    if (!run.rules.shinyClause) {
-      throw new Error("The shiny clause is off for this run.");
+    if (!run.rules[rule.field]) {
+      throw new Error(`The ${rule.name} is off for this run.`);
     }
     const route = await tx.routes.get(input.routeId);
     if (route?.runId !== input.runId) {
@@ -244,7 +252,8 @@ export async function persistCatchShinyBonus(
     }
 
     const runMons = await settleBoxSlots(tx, input.runId);
-    const draft = catchShinyBonus({
+    const draft = catchBonus({
+      kind: input.kind,
       runId: input.runId,
       routeId: input.routeId,
       party: partyOf(runMons),
@@ -257,12 +266,19 @@ export async function persistCatchShinyBonus(
   });
 }
 
-export function useCatchShinyBonus(): UseMutationResult<Mon, Error, CatchShinyBonusInput> {
+export function persistCatchShinyBonus(
+  adapter: StorageAdapter,
+  input: Omit<CatchBonusInput, "kind">,
+): Promise<Mon> {
+  return persistCatchBonus(adapter, { ...input, kind: "shiny" });
+}
+
+export function useCatchBonus(): UseMutationResult<Mon, Error, CatchBonusInput> {
   const adapter = useStorage();
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: (input: CatchShinyBonusInput) => persistCatchShinyBonus(adapter, input),
+    mutationFn: (input: CatchBonusInput) => persistCatchBonus(adapter, input),
     onSuccess: async (mon) => {
       await invalidateRun(queryClient, mon.runId);
     },

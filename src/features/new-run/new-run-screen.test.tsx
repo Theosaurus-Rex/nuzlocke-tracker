@@ -216,6 +216,8 @@ describe("NewRunScreen", () => {
     const expectedRules: Rules = {
       dupesClause: !DEFAULT_RULES.dupesClause,
       shinyClause: !DEFAULT_RULES.shinyClause,
+      giftClause: DEFAULT_RULES.giftClause,
+      noGifts: DEFAULT_RULES.noGifts,
       nicknamesRequired: !DEFAULT_RULES.nicknamesRequired,
       levelCaps: !DEFAULT_RULES.levelCaps,
       setMode: !DEFAULT_RULES.setMode,
@@ -314,6 +316,47 @@ describe("NewRunScreen", () => {
 
     await screen.findByRole("heading", { name: "New run" });
     expect(screen.queryByRole("link", { name: "Cancel" })).not.toBeInTheDocument();
+  });
+});
+
+describe("NewRunScreen gift rules", () => {
+  it("starts with both gift rules off", () => {
+    renderScreen(createMemoryAdapter());
+
+    expect(screen.getByLabelText("Gift clause")).not.toBeChecked();
+    expect(screen.getByLabelText("No gifts")).not.toBeChecked();
+  });
+
+  it("turns one off when the other is turned on", async () => {
+    renderScreen(createMemoryAdapter());
+
+    await userEvent.click(screen.getByLabelText("Gift clause"));
+    expect(screen.getByLabelText("Gift clause")).toBeChecked();
+
+    await userEvent.click(screen.getByLabelText("No gifts"));
+    expect(screen.getByLabelText("No gifts")).toBeChecked();
+    expect(screen.getByLabelText("Gift clause")).not.toBeChecked();
+
+    await userEvent.click(screen.getByLabelText("Gift clause"));
+    expect(screen.getByLabelText("Gift clause")).toBeChecked();
+    expect(screen.getByLabelText("No gifts")).not.toBeChecked();
+  });
+
+  it("saves the chosen gift rule", async () => {
+    const adapter = createMemoryAdapter();
+    renderScreen(adapter);
+
+    await userEvent.type(screen.getByLabelText("Run name"), "Gifts");
+    await userEvent.click(screen.getByLabelText("No gifts"));
+    await userEvent.click(screen.getByRole("button", { name: "Start run" }));
+
+    const [run] = await waitFor(async () => {
+      const runs = await adapter.runs.getAll();
+      expect(runs).toHaveLength(1);
+      return runs;
+    });
+    expect(run?.rules.noGifts).toBe(true);
+    expect(run?.rules.giftClause).toBe(false);
   });
 });
 

@@ -160,7 +160,6 @@ describe("emerald only-routes", () => {
       emerald.routes.filter((r) => r.only !== undefined).map((r) => [r.id, r.only]),
     );
     expect(flagged).toEqual({
-      starter: "gift",
       "rustboro-city": "gift",
       "lavaridge-town": "gift",
       "fortree-city": "gift",
