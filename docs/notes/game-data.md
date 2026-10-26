@@ -156,6 +156,37 @@ walked past. They are standing trainers that both Serebii and Bulbapedia describ
 fights, so all five are kept. Badge sprites 17 to 24 are the Emerald numbers, matched by eye to
 the decomp's badge sheet.
 
+## Diamond and Pearl (`src/game/data/dp/`)
+
+Both versions share one routes list, one fights list and one cap table, so Pearl is a spread of
+Diamond. Source files are `routes/d.txt`, `routes/p.txt` and `leagues/dp.txt` from
+`domtronn/nuzlocke.data`. Rosters were checked against the `pret/pokediamond` decompilation
+(`files/poketool/trainer/trdata.json`, trainer names there are placeholders so fights were found
+by trainer class), Bulbapedia's walkthrough and Serebii. Bulbapedia's direct pages return 403 but
+its MediaWiki API works, for example `w/api.php?action=parse&prop=wikitext&format=json&page=<Title>`.
+Serebii has gym, Elite Four and legendary pages only.
+
+Routes are 57, ending at the Pokémon League with no post-game places. Floaroma Meadow stays
+untagged, since its honey tree is its only encounter. Ruin Maniac Cave and Tunnel are one route.
+Veilstone City is not a route. Snowpoint City (Haunter trade, gift) and Spear Pillar (Dialga or
+Palkia, static) are added after upstream left them out. Route 207, Lake Valor and Trophy Garden
+move later to match the walkthrough. Fights are 26, with Barry's starter variants flattened.
+
+Upstream fixes: Cynthia's Lucario is 63 (upstream 64), Saturn's Bronzor at Galactic HQ is 38
+(35), and Jupiter's Golbat in the Spear Pillar double is 41 (42). The last one is the decomp's
+value. Bulbapedia and upstream say 42. The Barry fights at the Canalave drawbridge and the League
+entrance were mislabelled Route 218 and Victory Road upstream.
+
+Serebii typos, not copied: Volkner's Octillery is 47 not 48, and Bertha's Sudowoodo is 56 not 57.
+
+Level caps are Nuzlocke University's Diamond/Pearl block and equal the aces. Badges 3 and 4 are
+both 30. Badge sprites 25 to 32 were matched by eye.
+
+Not verified: whether Mars, Jupiter, Saturn and Cyrus can all be walked past (Bulbapedia calls them
+scripted story fights, so all are kept), the script-side placement of the Eevee, Happiny egg and
+Riolu egg gifts (the decomp's scripts are binary, so these rest on Bulbapedia), and whether Routes
+219 to 221 are reachable before the credits (taken from search results, so they stay core).
+
 ## Gift-only and static-only routes (`only`)
 
 A route is flagged when nothing on it can be met in the wild. Any grass, surf, fishing, headbutt
@@ -192,3 +223,8 @@ Ruby and Sapphire:
 - rustboro-city: gift (fossil revival, Slakoth trade). lavaridge-town: gift (Wynaut egg).
   fortree-city: gift (Pikachu for Skitty trade). lilycove-hideout: static (Electrode). Sky Pillar
   and the Cave of Origin have wild Pokemon, so neither is flagged.
+
+Diamond and Pearl:
+- oreburgh-city: gift (Abra for Machop trade, fossil revival). hearthome-city: gift (Eevee, Happiny
+  egg). snowpoint-city: gift (Medicham for Haunter trade). spear-pillar: static (Dialga or
+  Palkia). Floaroma Meadow has only a honey tree, which counts as wild, so it is not flagged.

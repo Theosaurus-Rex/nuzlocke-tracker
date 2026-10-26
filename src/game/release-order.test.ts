@@ -14,6 +14,8 @@ describe("release order", () => {
       "firered",
       "leafgreen",
       "emerald",
+      "diamond",
+      "pearl",
       "heartgold",
       "soulsilver",
     ]);
@@ -36,6 +38,7 @@ describe("game search", () => {
       "sapphire",
       "firered",
       "leafgreen",
+      "pearl",
       "heartgold",
       "soulsilver",
     ]);

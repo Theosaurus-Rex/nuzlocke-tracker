@@ -7,6 +7,7 @@
 
 import type { GameId } from "@/domain/types";
 
+import { diamond, pearl } from "@/game/data/dp";
 import { emerald } from "@/game/data/emerald";
 import { firered, leafgreen } from "@/game/data/frlg";
 import { heartgold, soulsilver } from "@/game/data/heartgold";
@@ -21,4 +22,6 @@ export const GAMES: Record<GameId, GameData> = {
   emerald,
   ruby,
   sapphire,
+  diamond,
+  pearl,
 };
