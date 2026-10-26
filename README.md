@@ -61,8 +61,34 @@ pnpm dev
 database called `nuzlocke-tracker` and calls `navigator.storage.persist()` — the result is
 reported on the Settings screen and affects nothing else.
 
-Netlify builds it from `netlify.toml`, which runs the gate minus the browser tests and serves
-`index.html` for every path so deep links work.
+Netlify hosts the built site and builds nothing. See Deploy below.
+
+---
+
+## Deploy
+
+GitHub Actions deploys `main` after the `gate` job passes. It builds the site and uploads `dist/`
+with the Netlify CLI. Pull requests from this repo get a draft preview at a `pr-<number>` alias,
+and the URL is posted as a comment on the PR. Netlify builds nothing, so no Netlify build minutes
+are used. `public/_redirects` sends every path to the app, so deep links load on a hard refresh.
+
+Two repo secrets drive it:
+
+| Secret | What it is |
+|---|---|
+| `NETLIFY_SITE_ID` | The site's ID, from Site configuration in Netlify |
+| `NETLIFY_AUTH_TOKEN` | A personal access token, from User settings, then Applications |
+
+Until both are set, the deploy and preview jobs skip themselves with a notice and CI stays green.
+
+One-time setup for the existing site:
+
+1. In Netlify, open Site configuration, then Build & deploy, then Continuous deployment, and
+   unlink the repository. The site and its address stay. Netlify just stops building it.
+2. Copy the Site ID from Site configuration.
+3. Create a personal access token under User settings, then Applications.
+4. Run `gh secret set NETLIFY_SITE_ID` and `gh secret set NETLIFY_AUTH_TOKEN`, and paste each value.
+5. Re-run the latest CI run.
 
 ---
 
@@ -248,7 +274,7 @@ layer, the game data's invariants, the app shell's routing, and the screens.
 Specs live in `e2e/`: the shell, drag and drop, logging a catch and a death, JSON backup and an
 accessibility scan. PokéAPI is stubbed from the unit-test fixtures and the sprite hosts are
 blocked, so the tests run offline, and a request to any other host fails the test. Run
-`pnpm exec playwright install chromium` once first. The `e2e` GitHub Actions workflow runs them
+`pnpm exec playwright install chromium` once first. The `gate` job in the `ci` workflow runs them
 on every pull request and uploads the report when they fail.
 
 In dev builds, Settings has a Developer section with a "Load sample run" button. It adds a
