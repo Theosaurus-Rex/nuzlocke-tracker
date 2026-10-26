@@ -83,8 +83,8 @@ Until both are set, the deploy and preview jobs skip themselves with a notice an
 
 One-time setup for the existing site:
 
-1. In Netlify, open Site configuration, then Build & deploy, then Continuous deployment, and choose
-   Stop builds.
+1. In Netlify, open Site configuration, then Build & deploy, then Continuous deployment, and
+   unlink the repository. The site and its address stay. Netlify just stops building it.
 2. Copy the Site ID from Site configuration.
 3. Create a personal access token under User settings, then Applications.
 4. Run `gh secret set NETLIFY_SITE_ID` and `gh secret set NETLIFY_AUTH_TOKEN`, and paste each value.
