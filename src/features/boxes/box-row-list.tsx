@@ -4,6 +4,7 @@ import { ItemSprite } from "@/components/item-sprite";
 import { SpeciesSprite } from "@/components/species-sprite";
 import { Typography } from "@/components/typography";
 import type { Mon } from "@/domain/types";
+import type { MonFields } from "@/game/types";
 import { abilityDisplayName, itemDisplayName, speciesDisplayName } from "@/game/pokeapi/resolve";
 import { genderSymbol } from "@/lib/gender";
 import { joinPresent } from "@/lib/join-present";
@@ -12,10 +13,11 @@ import { monTitle } from "../encounters/mon-title";
 
 export interface BoxRowListProps {
   mons: Mon[];
+  fields: MonFields;
   onEdit: (monId: string) => void;
 }
 
-export function BoxRowList({ mons, onEdit }: BoxRowListProps): ReactNode {
+export function BoxRowList({ mons, fields, onEdit }: BoxRowListProps): ReactNode {
   return (
     <ul className="m-0 flex list-none flex-col border-[1.5px] border-border bg-card p-0">
       {mons.map((mon) => {
@@ -33,17 +35,29 @@ export function BoxRowList({ mons, onEdit }: BoxRowListProps): ReactNode {
                 {title}
               </Typography>
               <Typography as="p" variant="body" tone="muted">
-                {joinPresent([species, genderSymbol(mon.gender), `L${mon.level}`])}
+                {joinPresent([
+                  species,
+                  fields.gender ? genderSymbol(mon.gender) : null,
+                  `L${mon.level}`,
+                ])}
               </Typography>
-              <div className="flex items-center gap-1.5">
-                {mon.heldItem !== null && <ItemSprite item={mon.heldItem} />}
-                <Typography as="p" variant="body" tone="muted">
-                  {joinPresent([
-                    mon.heldItem === null ? "no item" : itemDisplayName(mon.heldItem),
-                    mon.ability === null ? null : abilityDisplayName(mon.ability),
-                  ])}
-                </Typography>
-              </div>
+              {(fields.heldItem || fields.ability) && (
+                <div className="flex items-center gap-1.5">
+                  {fields.heldItem && mon.heldItem !== null && <ItemSprite item={mon.heldItem} />}
+                  <Typography as="p" variant="body" tone="muted">
+                    {joinPresent([
+                      !fields.heldItem
+                        ? null
+                        : mon.heldItem === null
+                          ? "no item"
+                          : itemDisplayName(mon.heldItem),
+                      !fields.ability || mon.ability === null
+                        ? null
+                        : abilityDisplayName(mon.ability),
+                    ])}
+                  </Typography>
+                </div>
+              )}
             </div>
             <EditMonButton mon={mon} onEdit={() => onEdit(mon.id)} />
           </li>

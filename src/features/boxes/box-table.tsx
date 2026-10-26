@@ -14,6 +14,7 @@ import { ItemSprite } from "@/components/item-sprite";
 import { SpeciesSprite } from "@/components/species-sprite";
 import { Typography } from "@/components/typography";
 import type { Mon } from "@/domain/types";
+import type { MonFields } from "@/game/types";
 import { monTitle } from "../encounters/mon-title";
 import { genderSymbol } from "@/lib/gender";
 import { boxSortValue, compareBoxSortValues, type BoxSortField, type BoxSorting } from "./box-sort";
@@ -67,13 +68,21 @@ function fromTableSorting(state: SortingState): BoxSorting | null {
 
 export interface BoxTableProps {
   mons: Mon[];
+  fields: MonFields;
   sorting: BoxSorting | null;
   onSortingChange: (sorting: BoxSorting | null) => void;
   routeNames: ReadonlyMap<string, string>;
   onEdit: (monId: string) => void;
 }
 
-export function BoxTable({ mons, sorting, onSortingChange, routeNames, onEdit }: BoxTableProps) {
+export function BoxTable({
+  mons,
+  fields,
+  sorting,
+  onSortingChange,
+  routeNames,
+  onEdit,
+}: BoxTableProps) {
   const columns = useMemo(
     () =>
       columnHelper.columns([
@@ -120,33 +129,49 @@ export function BoxTable({ mons, sorting, onSortingChange, routeNames, onEdit }:
             </Typography>
           ),
         }),
-        columnHelper.accessor((mon) => boxSortValue(mon, "gender"), {
-          ...sortable("gender", "Gender"),
-          cell: ({ row }) => genderSymbol(row.original.gender) ?? "—",
-        }),
-        columnHelper.accessor((mon) => boxSortValue(mon, "nature"), {
-          ...sortable("nature", "Nature"),
-          cell: ({ getValue }) => orDash(getValue()),
-        }),
-        columnHelper.accessor((mon) => boxSortValue(mon, "ability"), {
-          ...sortable("ability", "Ability"),
-          cell: ({ getValue }) => orDash(getValue()),
-        }),
-        columnHelper.accessor((mon) => boxSortValue(mon, "item"), {
-          ...sortable("item", "Item"),
-          cell: ({ row, getValue }) => (
-            <span className="inline-flex items-center gap-1.5">
-              {row.original.heldItem !== null && <ItemSprite item={row.original.heldItem} />}
-              {getValue() ?? "no item"}
-            </span>
-          ),
-        }),
+        ...(fields.gender
+          ? [
+              columnHelper.accessor((mon) => boxSortValue(mon, "gender"), {
+                ...sortable("gender", "Gender"),
+                cell: ({ row }) => genderSymbol(row.original.gender) ?? "—",
+              }),
+            ]
+          : []),
+        ...(fields.nature
+          ? [
+              columnHelper.accessor((mon) => boxSortValue(mon, "nature"), {
+                ...sortable("nature", "Nature"),
+                cell: ({ getValue }) => orDash(getValue()),
+              }),
+            ]
+          : []),
+        ...(fields.ability
+          ? [
+              columnHelper.accessor((mon) => boxSortValue(mon, "ability"), {
+                ...sortable("ability", "Ability"),
+                cell: ({ getValue }) => orDash(getValue()),
+              }),
+            ]
+          : []),
+        ...(fields.heldItem
+          ? [
+              columnHelper.accessor((mon) => boxSortValue(mon, "item"), {
+                ...sortable("item", "Item"),
+                cell: ({ row, getValue }) => (
+                  <span className="inline-flex items-center gap-1.5">
+                    {row.original.heldItem !== null && <ItemSprite item={row.original.heldItem} />}
+                    {getValue() ?? "no item"}
+                  </span>
+                ),
+              }),
+            ]
+          : []),
         columnHelper.accessor(
           (mon) => (mon.caughtRouteId === null ? "—" : (routeNames.get(mon.caughtRouteId) ?? "—")),
           { id: "caughtOn", header: "Caught on", enableSorting: false },
         ),
       ]),
-    [routeNames, onEdit],
+    [routeNames, onEdit, fields],
   );
 
   const table = useTable({

@@ -25,6 +25,7 @@ import {
   type RandomiserSubField,
   type Rules,
 } from "@/domain/types";
+import { monFields } from "@/game/fields";
 import { GAMES } from "@/game/registry";
 import { cn } from "@/lib/utils";
 import { useCreateRun } from "@/storage/mutations";
@@ -77,6 +78,7 @@ export function NewRunScreen(): ReactNode {
   const [customClauseText, setCustomClauseText] = useState(DEFAULT_RULES.customClause ?? "");
   const [submitted, setSubmitted] = useState(false);
 
+  const hasShinies = monFields(GAMES[game]).shiny;
   const trimmedName = name.trim();
   const nameIsInvalid = submitted && trimmedName.length === 0;
 
@@ -123,6 +125,7 @@ export function NewRunScreen(): ReactNode {
     const trimmedCustomClause = customClauseText.trim();
     const finalRules: Rules = {
       ...rules,
+      shinyClause: rules.shinyClause && hasShinies,
       customClause: trimmedCustomClause.length > 0 ? trimmedCustomClause : null,
     };
 
@@ -284,7 +287,7 @@ export function NewRunScreen(): ReactNode {
           <Typography as="legend" variant="eyebrow" className="mb-1 block">
             Rules
           </Typography>
-          {CLAUSE_FIELDS.map((key) => {
+          {CLAUSE_FIELDS.filter((key) => key !== "shinyClause" || hasShinies).map((key) => {
             const id = `rule-${key}`;
             return (
               <div key={key} className="flex items-center gap-2">

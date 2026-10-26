@@ -1,7 +1,7 @@
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import { beforeEach, describe, expect, it } from "vitest";
+import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import { MemoryRouter, Route, Routes } from "react-router";
 
 import { DEFAULT_RULES } from "@/domain/rules";
@@ -10,6 +10,7 @@ import { POKEAPI_BASE } from "@/game/pokeapi/client";
 import type { RawIndex } from "@/game/pokeapi/map";
 import { createMemoryAdapter } from "@/storage/memory-adapter";
 import { StorageProvider } from "@/storage/storage-context";
+import { overrideGame } from "@/test/override-game";
 import { defaultPokeApiRoutes, stubPokeApi } from "@/test/pokeapi-fetch";
 import { evolutionSpeciesIndexRefs, speciesIndexFixture } from "@/test/pokeapi-fixtures";
 
@@ -26,6 +27,13 @@ const SPECIES_INDEX: RawIndex = {
 
 beforeEach(() => {
   stubPokeApi({ ...defaultPokeApiRoutes, "/pokemon?limit=100000": SPECIES_INDEX });
+});
+
+let restore: (() => void) | undefined;
+
+afterEach(() => {
+  restore?.();
+  restore = undefined;
 });
 
 type EncounterStatus = Encounter["status"];
@@ -112,6 +120,17 @@ describe("Add bonus shiny header button", () => {
     renderScreen(adapter, run.id);
 
     await listItem("Route 1");
+
+    expect(screen.queryByRole("button", { name: "Add bonus shiny" })).not.toBeInTheDocument();
+  });
+
+  it("is hidden for a game without shinies even if the clause is on", async () => {
+    restore = overrideGame("heartgold", { generation: 1 });
+    const { adapter, run } = await seed({ shinyClause: true }, ["missed"]);
+    renderScreen(adapter, run.id);
+
+    await listItem("Route 1");
+    await screen.findByText("Encounter routes");
 
     expect(screen.queryByRole("button", { name: "Add bonus shiny" })).not.toBeInTheDocument();
   });

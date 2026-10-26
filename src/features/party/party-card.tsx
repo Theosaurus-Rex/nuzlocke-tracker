@@ -11,6 +11,7 @@ import { Typography } from "@/components/typography";
 import { StatusChip } from "@/components/status-chip";
 import { isOverCap } from "@/domain/rules-summary";
 import type { Mon } from "@/domain/types";
+import type { MonFields } from "@/game/types";
 import { abilityDisplayName, itemDisplayName, speciesDisplayName } from "@/game/pokeapi/resolve";
 import { genderSymbol } from "@/lib/gender";
 import { joinPresent } from "@/lib/join-present";
@@ -24,6 +25,7 @@ export interface PartyCardProps {
   mon: Mon;
   routeName: string | null;
   generation: number | undefined;
+  fields: MonFields;
   cap?: number | null;
   onEdit: () => void;
 }
@@ -32,6 +34,7 @@ export function PartyCard({
   mon,
   routeName,
   generation,
+  fields,
   cap = null,
   onEdit,
 }: PartyCardProps): ReactNode {
@@ -52,7 +55,7 @@ export function PartyCard({
 
   const itemText = mon.heldItem === null ? "no item" : itemDisplayName(mon.heldItem);
   const footerRest = joinPresent([
-    mon.ability === null ? null : abilityDisplayName(mon.ability),
+    fields.ability && mon.ability !== null ? abilityDisplayName(mon.ability) : null,
     routeName,
   ]);
 
@@ -78,7 +81,12 @@ export function PartyCard({
         </Typography>
       </div>
       <Typography variant="body" tone="muted" className="mt-1">
-        {joinPresent([species, genderSymbol(mon.gender), `L${mon.level}`, mon.nature])}
+        {joinPresent([
+          species,
+          fields.gender ? genderSymbol(mon.gender) : null,
+          `L${mon.level}`,
+          fields.nature ? mon.nature : null,
+        ])}
       </Typography>
       <ul className="mt-4 grid grid-cols-2 gap-x-4 gap-y-3 border-t-[1.5px] border-border pt-4">
         {mon.moves
@@ -87,19 +95,23 @@ export function PartyCard({
             <li key={index}>{move !== null && <MoveChip name={move} generation={generation} />}</li>
           ))}
       </ul>
-      <Typography variant="body" className="mt-4 break-words border-t border-muted pt-3">
-        <span className="inline-flex items-center gap-1 align-middle">
-          {mon.heldItem !== null && <ItemSprite item={mon.heldItem} />}
-          <Typography as="span" variant="body" tone="ink">
-            {itemText}
-          </Typography>
-        </span>
-        {footerRest !== "" && (
-          <Typography as="span" variant="body" tone="muted">
-            {` · ${footerRest}`}
-          </Typography>
-        )}
-      </Typography>
+      {(fields.heldItem || footerRest !== "") && (
+        <Typography variant="body" className="mt-4 break-words border-t border-muted pt-3">
+          {fields.heldItem && (
+            <span className="inline-flex items-center gap-1 align-middle">
+              {mon.heldItem !== null && <ItemSprite item={mon.heldItem} />}
+              <Typography as="span" variant="body" tone="ink">
+                {itemText}
+              </Typography>
+            </span>
+          )}
+          {footerRest !== "" && (
+            <Typography as="span" variant="body" tone="muted">
+              {fields.heldItem ? ` · ${footerRest}` : footerRest}
+            </Typography>
+          )}
+        </Typography>
+      )}
       <EditMonButton mon={mon} onEdit={onEdit} />
       <button
         type="button"

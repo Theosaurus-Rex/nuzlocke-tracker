@@ -11,7 +11,14 @@ import { DEFAULT_RULES } from "@/domain/rules";
 import { buildRouteRows, type RouteRow } from "@/domain/route-rows";
 import type { Mon, Route } from "@/domain/types";
 import { useAddCustomRoute, useDeleteCustomRoute } from "@/storage/mutations";
-import { useEncounters, useMons, useRoutes, useRun, useRunGame } from "@/storage/queries";
+import {
+  useEncounters,
+  useMons,
+  useRoutes,
+  useRun,
+  useRunFields,
+  useRunGame,
+} from "@/storage/queries";
 import { cn } from "@/lib/utils";
 
 import {
@@ -97,6 +104,7 @@ function RouteCounters({
 export function RoutesScreen(): ReactNode {
   const { runId } = useParams<{ runId: string }>();
   const runQuery = useRun(runId ?? "");
+  const fields = useRunFields(runId ?? "");
   const generation = useRunGame(runId ?? "")?.generation;
   const routesQuery = useRoutes(runId ?? "");
   const encountersQuery = useEncounters(runId);
@@ -170,7 +178,7 @@ export function RoutesScreen(): ReactNode {
   const visibleRows = searchRouteRows(filterRouteRows(rows, activeFilters), search);
   const counters = summariseRouteRows(rows);
   const trimmedSearch = search.trim();
-  const shinyClause = runQuery.data?.rules.shinyClause === true;
+  const shinyClause = runQuery.data?.rules.shinyClause === true && fields.shiny;
 
   return (
     <div>

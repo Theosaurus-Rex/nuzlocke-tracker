@@ -1,4 +1,5 @@
 import type { Mon } from "@/domain/types";
+import type { MonFields } from "@/game/types";
 import {
   abilityDisplayName,
   itemDisplayName,
@@ -22,6 +23,16 @@ export const BOX_SORT_FIELDS: readonly { field: BoxSortField; label: string }[] 
   { field: "ability", label: "Ability" },
   { field: "item", label: "Item" },
 ];
+
+export function boxSortFields(fields: MonFields): { field: BoxSortField; label: string }[] {
+  const hidden: Partial<Record<BoxSortField, boolean>> = {
+    gender: !fields.gender,
+    nature: !fields.nature,
+    ability: !fields.ability,
+    item: !fields.heldItem,
+  };
+  return BOX_SORT_FIELDS.filter(({ field }) => hidden[field] !== true);
+}
 
 function present(value: string | null): string | undefined {
   return value === null || value === "" ? undefined : value;

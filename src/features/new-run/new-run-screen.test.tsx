@@ -8,7 +8,7 @@ import type { ReactNode } from "react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import { describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it } from "vitest";
 import { createMemoryRouter, RouterProvider, useParams } from "react-router";
 
 import { DEFAULT_RULES } from "@/domain/rules";
@@ -17,6 +17,7 @@ import type { StorageAdapter } from "@/storage/adapter";
 import { createMemoryAdapter } from "@/storage/memory-adapter";
 import { StorageProvider } from "@/storage/storage-context";
 import { GAMES } from "@/game/registry";
+import { overrideGame } from "@/test/override-game";
 
 import { NewRunScreen } from "./new-run-screen";
 
@@ -313,5 +314,39 @@ describe("NewRunScreen", () => {
 
     await screen.findByRole("heading", { name: "New run" });
     expect(screen.queryByRole("link", { name: "Cancel" })).not.toBeInTheDocument();
+  });
+});
+
+describe("NewRunScreen shiny clause by game", () => {
+  let restore: (() => void) | undefined;
+
+  afterEach(() => {
+    restore?.();
+    restore = undefined;
+  });
+
+  it("hides the shiny clause and saves it as off for a game without shinies", async () => {
+    restore = overrideGame("heartgold", { generation: 1 });
+    const adapter = createMemoryAdapter();
+    renderScreen(adapter);
+
+    expect(screen.queryByLabelText("Shiny clause")).toBeNull();
+    expect(screen.getByLabelText("Dupes clause")).toBeInTheDocument();
+
+    await userEvent.type(screen.getByLabelText("Run name"), "Kanto");
+    await userEvent.click(screen.getByRole("button", { name: "Start run" }));
+
+    const [run] = await waitFor(async () => {
+      const runs = await adapter.runs.getAll();
+      expect(runs).toHaveLength(1);
+      return runs;
+    });
+    expect(run?.rules.shinyClause).toBe(false);
+  });
+
+  it("offers the shiny clause for a game with shinies", () => {
+    renderScreen(createMemoryAdapter());
+
+    expect(screen.getByLabelText("Shiny clause")).toBeInTheDocument();
   });
 });

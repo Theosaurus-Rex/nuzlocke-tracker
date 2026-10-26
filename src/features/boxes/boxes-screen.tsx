@@ -14,13 +14,14 @@ import {
 } from "@/components/ui/select";
 import { boxLayout } from "@/domain/box-slots";
 import type { Mon } from "@/domain/types";
+import type { MonFields } from "@/game/types";
 import { cn } from "@/lib/utils";
-import { useMons, useRoutes } from "@/storage/queries";
+import { useMons, useRoutes, useRunFields } from "@/storage/queries";
 
 import { useEditMonDialog } from "../encounters/use-edit-mon-dialog";
 import { BoxGrid } from "./box-grid";
 import {
-  BOX_SORT_FIELDS,
+  boxSortFields,
   searchMons,
   sortBoxedMons,
   type BoxSortField,
@@ -76,22 +77,24 @@ function ViewToggle({
 
 const CAUGHT = "caught";
 
-const SORT_ITEMS = [
-  { value: CAUGHT, label: "Sort: Caught" },
-  ...BOX_SORT_FIELDS.map(({ field, label }) => ({ value: field, label: `Sort: ${label}` })),
-];
-
 function SortControl({
   sorting,
+  fields,
   onChange,
 }: {
   sorting: BoxSorting | null;
+  fields: MonFields;
   onChange: (sorting: BoxSorting | null) => void;
 }): ReactNode {
+  const sortFields = boxSortFields(fields);
+  const sortItems = [
+    { value: CAUGHT, label: "Sort: Caught" },
+    ...sortFields.map(({ field, label }) => ({ value: field, label: `Sort: ${label}` })),
+  ];
   return (
     <div className="flex items-center gap-2 md:hidden">
       <Select
-        items={SORT_ITEMS}
+        items={sortItems}
         value={sorting?.field ?? CAUGHT}
         onValueChange={(next) =>
           onChange(
@@ -106,7 +109,7 @@ function SortControl({
         </SelectTrigger>
         <SelectContent>
           <SelectItem value={CAUGHT}>Caught</SelectItem>
-          {BOX_SORT_FIELDS.map((option) => (
+          {sortFields.map((option) => (
             <SelectItem key={option.field} value={option.field}>
               {option.label}
             </SelectItem>
@@ -134,6 +137,7 @@ export function BoxesScreen(): ReactNode {
   const { runId } = useParams<{ runId: string }>();
   const monsQuery = useMons(runId);
   const routesQuery = useRoutes(runId ?? "");
+  const fields = useRunFields(runId ?? "");
   const [view, setView] = useBoxView();
   const [sorting, setSorting] = useState<BoxSorting | null>(null);
   const [search, setSearch] = useState("");
@@ -162,7 +166,9 @@ export function BoxesScreen(): ReactNode {
         actions={
           <div className="flex flex-wrap items-center gap-3">
             <ViewToggle view={view} onChange={setView} />
-            {view === "list" && <SortControl sorting={sorting} onChange={setSorting} />}
+            {view === "list" && (
+              <SortControl sorting={sorting} fields={fields} onChange={setSorting} />
+            )}
           </div>
         }
       >
@@ -203,6 +209,7 @@ export function BoxesScreen(): ReactNode {
           <div className="hidden md:block">
             <BoxTable
               mons={visible}
+              fields={fields}
               sorting={sorting}
               onSortingChange={setSorting}
               routeNames={routeNames}
@@ -210,7 +217,11 @@ export function BoxesScreen(): ReactNode {
             />
           </div>
           <div className="md:hidden">
-            <BoxRowList mons={sortBoxedMons(visible, sorting)} onEdit={openEditor} />
+            <BoxRowList
+              mons={sortBoxedMons(visible, sorting)}
+              fields={fields}
+              onEdit={openEditor}
+            />
           </div>
         </>
       )}

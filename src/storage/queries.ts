@@ -8,8 +8,9 @@ import { useQuery, type QueryClient, type UseQueryResult } from "@tanstack/react
 
 import { compareRoutes } from "@/domain/routes";
 import { currentLevelCap } from "@/domain/rules-summary";
+import { ALL_FIELDS, monFields } from "@/game/fields";
 import { GAMES } from "@/game/registry";
-import type { GameData } from "@/game/types";
+import type { GameData, MonFields } from "@/game/types";
 import type { Run, Route, Encounter, Mon, Death, Fight } from "@/domain/types";
 
 import { useStorage } from "./storage-context";
@@ -45,6 +46,11 @@ export function useRun(runId: string): UseQueryResult<Run | null> {
 export function useRunGame(runId: string): GameData | undefined {
   const run = useRun(runId).data;
   return run ? GAMES[run.game] : undefined;
+}
+
+export function useRunFields(runId: string): MonFields {
+  const game = useRunGame(runId);
+  return game === undefined ? ALL_FIELDS : monFields(game);
 }
 
 export function useCurrentLevelCap(runId: string): number | null {

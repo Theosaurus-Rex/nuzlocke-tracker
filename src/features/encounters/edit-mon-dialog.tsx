@@ -12,7 +12,7 @@ import type { MonAmendments } from "@/domain/transitions";
 import type { Gender, Mon, Moveset, Route, Rules } from "@/domain/types";
 import { speciesDisplayName } from "@/game/pokeapi/resolve";
 import { useAmendMon } from "@/storage/mutations";
-import { useMons, useRunGame } from "@/storage/queries";
+import { useMons, useRunFields, useRunGame } from "@/storage/queries";
 import { cn, joinIds } from "@/lib/utils";
 
 import { EncounterDialogHeader } from "./encounter-dialog-header";
@@ -83,6 +83,7 @@ interface EditMonFormProps {
 
 function EditMonForm({ mon, runId, rules, generation, onDone }: EditMonFormProps): ReactNode {
   const amendMon = useAmendMon();
+  const fields = useRunFields(runId);
   const monsQuery = useMons(runId);
   const partyFull = countByMonStatus(monsQuery.data ?? []).party >= 6 && mon.status !== "party";
   const canPlace = mon.status !== "dead";
@@ -175,9 +176,11 @@ function EditMonForm({ mon, runId, rules, generation, onDone }: EditMonFormProps
   return (
     <form className="flex min-h-0 flex-1 flex-col" onSubmit={handleSubmit} noValidate>
       <div className="flex-1 space-y-4 overflow-y-auto p-4">
-        <div className="flex justify-end">
-          <ShinyField id="edit-mon-shiny" value={shiny} onChange={setShiny} />
-        </div>
+        {fields.shiny && (
+          <div className="flex justify-end">
+            <ShinyField id="edit-mon-shiny" value={shiny} onChange={setShiny} />
+          </div>
+        )}
 
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
           <div className="sm:col-span-2">
@@ -262,7 +265,7 @@ function EditMonForm({ mon, runId, rules, generation, onDone }: EditMonFormProps
             error={errors.nickname}
           />
 
-          <GenderField value={gender} onChange={setGender} />
+          {fields.gender && <GenderField value={gender} onChange={setGender} />}
 
           <div>
             <Typography
@@ -311,11 +314,17 @@ function EditMonForm({ mon, runId, rules, generation, onDone }: EditMonFormProps
             )}
           </div>
 
-          <NatureField id="edit-mon-nature" value={nature} onChange={setNature} />
+          {fields.nature && (
+            <NatureField id="edit-mon-nature" value={nature} onChange={setNature} />
+          )}
 
-          <AbilityField id="edit-mon-ability" value={ability} onChange={setAbility} />
+          {fields.ability && (
+            <AbilityField id="edit-mon-ability" value={ability} onChange={setAbility} />
+          )}
 
-          <HeldItemField id="edit-mon-held-item" value={heldItem} onChange={setHeldItem} />
+          {fields.heldItem && (
+            <HeldItemField id="edit-mon-held-item" value={heldItem} onChange={setHeldItem} />
+          )}
 
           <div className="sm:col-span-2">
             <MovesetField id="edit-mon-move" value={moves} onChange={setMoves} />
