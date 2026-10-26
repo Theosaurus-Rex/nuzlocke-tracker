@@ -533,6 +533,39 @@ describe("parseBundle — killer's move", () => {
   });
 });
 
+describe("parseBundle — gift rules", () => {
+  function bundleWithRules(rules: Record<string, unknown>): string {
+    const bundle = baseValidBundle();
+    const run = bundle.runs[0];
+    if (run === undefined) throw new Error("fixture has no run");
+    const withoutGift: Record<string, unknown> = { ...run.rules, ...rules };
+    for (const key of Object.keys(withoutGift)) {
+      if (withoutGift[key] === undefined) delete withoutGift[key];
+    }
+    return JSON.stringify({ ...bundle, runs: [{ ...run, rules: withoutGift }] });
+  }
+
+  it("reads a run saved before the gift rules existed as both off", () => {
+    const result = parseBundle(bundleWithRules({ giftClause: undefined, noGifts: undefined }));
+    expect(result.ok).toBe(true);
+    if (!result.ok) return;
+    expect(result.bundle.runs[0]?.rules.giftClause).toBe(false);
+    expect(result.bundle.runs[0]?.rules.noGifts).toBe(false);
+  });
+
+  it("keeps the gift rules a backup carries", () => {
+    const result = parseBundle(bundleWithRules({ giftClause: true }));
+    expect(result.ok).toBe(true);
+    if (!result.ok) return;
+    expect(result.bundle.runs[0]?.rules.giftClause).toBe(true);
+  });
+
+  it("rejects a gift rule that is not a boolean", () => {
+    const result = parseBundle(bundleWithRules({ noGifts: "yes" }));
+    expect(result.ok).toBe(false);
+  });
+});
+
 describe("parseBundle — field rules", () => {
   it("accepts the base fixture bundle unmodified (control for the cases below)", () => {
     const result = parseBundle(JSON.stringify(baseValidBundle()));

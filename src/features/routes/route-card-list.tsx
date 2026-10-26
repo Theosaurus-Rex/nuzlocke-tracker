@@ -23,6 +23,14 @@ import { RouteOnlyChip } from "./route-only-chip";
 import { RowEndAction } from "./row-end-action";
 
 function RouteCardSubtitle({ row }: { row: RouteRow }): ReactNode {
+  if (row.blocked === true) {
+    return (
+      <Typography as="p" variant="body" tone="muted">
+        gifts are banned
+      </Typography>
+    );
+  }
+
   if (row.encounter === null) {
     return (
       <Typography as="p" variant="body" tone="muted">
@@ -141,6 +149,7 @@ export function RouteCardList({
             className={cn(
               "flex items-center justify-between gap-3 border-b border-muted p-3 last:border-b-0",
               canLogEncounter(row) && "bg-flag-tint",
+              row.blocked === true && "opacity-50",
               tappable && "cursor-pointer",
             )}
           >

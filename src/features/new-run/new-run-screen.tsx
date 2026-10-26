@@ -15,6 +15,7 @@ import { Button, buttonVariants } from "@/components/ui/button";
 import {
   CLAUSE_FIELDS,
   DEFAULT_RULES,
+  toggleClause,
   RANDOMISER_OFF,
   RANDOMISER_SUB_FIELDS,
 } from "@/domain/rules";
@@ -38,6 +39,8 @@ const FIRST_GAME_ID: GameId = GAME_IDS[0];
 const CLAUSE_LABELS: Record<ClauseField, string> = {
   dupesClause: "Dupes clause",
   shinyClause: "Shiny clause",
+  giftClause: "Gift clause",
+  noGifts: "No gifts",
   nicknamesRequired: "Nicknames required",
   levelCaps: "Level caps by badge",
   setMode: "Set mode",
@@ -91,7 +94,7 @@ export function NewRunScreen(): ReactNode {
   }
 
   function handleClauseToggle(key: ClauseField): void {
-    setRules((prev) => ({ ...prev, [key]: !prev[key] }));
+    setRules((prev) => toggleClause(prev, key));
   }
 
   function handleRandomiserMasterToggle(): void {

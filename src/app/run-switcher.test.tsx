@@ -43,6 +43,8 @@ const RUN_A: Run = {
   rules: {
     dupesClause: false,
     shinyClause: false,
+    giftClause: false,
+    noGifts: false,
     nicknamesRequired: false,
     levelCaps: false,
     setMode: false,

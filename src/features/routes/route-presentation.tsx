@@ -85,6 +85,7 @@ export interface RouteRowChip {
  * when hand-edited or partial data leaves the mon missing.
  */
 export function chipForRouteRow(row: RouteRow): RouteRowChip {
+  if (row.blocked === true) return { status: "clause", label: "No gifts" };
   switch (row.status) {
     case "not-encountered":
     case "open":
@@ -107,7 +108,7 @@ export function chipForRouteRow(row: RouteRow): RouteRowChip {
  * a second log action to do.
  */
 export function canLogEncounter(row: RouteRow): boolean {
-  return row.status === "not-encountered";
+  return row.status === "not-encountered" && row.blocked !== true;
 }
 
 export type RowTapAction = { kind: "edit"; mon: Mon } | { kind: "log" } | { kind: "none" };
@@ -129,6 +130,7 @@ export function rowTapAction(row: RouteRow): RowTapAction {
 export type RouteBucket = "caught" | "missed" | "fainted" | "pending" | "skipped";
 
 export function routeBucket(row: RouteRow): RouteBucket {
+  if (row.blocked === true) return "skipped";
   switch (row.status) {
     case "caught":
       return "caught";

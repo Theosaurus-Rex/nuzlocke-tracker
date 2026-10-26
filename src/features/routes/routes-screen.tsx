@@ -8,6 +8,7 @@ import { statusChipFill, type StatusChipStatus } from "@/components/status-chip"
 import { Typography } from "@/components/typography";
 import { Button } from "@/components/ui/button";
 import { DEFAULT_RULES } from "@/domain/rules";
+import { blockedRouteIds, routeIdsOutOfTotals } from "@/game/route-only";
 import { buildRouteRows, type RouteRow } from "@/domain/route-rows";
 import type { Mon, Route } from "@/domain/types";
 import { useAddCustomRoute, useDeleteCustomRoute } from "@/storage/mutations";
@@ -175,9 +176,14 @@ export function RoutesScreen(): ReactNode {
   const encounters = encountersQuery.data ?? [];
   const mons = monsQuery.data ?? [];
 
-  const rows = buildRouteRows({ routes, encounters, mons });
+  const rules = runQuery.data?.rules ?? DEFAULT_RULES;
+  const blocked = blockedRouteIds(game, routes, rules);
+  const outOfTotals = routeIdsOutOfTotals(game, routes, encounters, rules);
+  const rows = buildRouteRows({ routes, encounters, mons }).map((row) =>
+    blocked.has(row.route.id) ? { ...row, blocked: true } : row,
+  );
   const visibleRows = searchRouteRows(filterRouteRows(rows, activeFilters), search);
-  const counters = summariseRouteRows(rows);
+  const counters = summariseRouteRows(rows.filter((row) => !outOfTotals.has(row.route.id)));
   const trimmedSearch = search.trim();
   const shinyClause = runQuery.data?.rules.shinyClause === true && fields.shiny;
 

@@ -6,7 +6,12 @@
 
 import { isMoveset, padMoveset } from "@/domain/moveset";
 import { SCHEMA_VERSION, isExportBundle, type ExportBundle } from "@/domain/schema";
-import { CLAUSE_FIELDS, RANDOMISER_FIELDS } from "@/domain/rules";
+import {
+  CLAUSE_FIELDS,
+  DEFAULTED_CLAUSE_FIELDS,
+  RANDOMISER_FIELDS,
+  withDefaultedClauses,
+} from "@/domain/rules";
 import { GAME_IDS } from "@/domain/types";
 import type { Cause, StatusCause, Run, Route, Encounter, Mon, Death, Fight } from "@/domain/types";
 
@@ -205,6 +210,8 @@ function validateRules(label: string, rulesValue: unknown): string[] {
   }
 
   for (const field of CLAUSE_FIELDS) {
+    const optional = (DEFAULTED_CLAUSE_FIELDS as readonly string[]).includes(field);
+    if (optional && rulesValue[field] === undefined) continue;
     if (!isBoolean(rulesValue[field])) {
       errors.push(`${label}: "rules.${field}" must be a boolean.`);
     }
@@ -487,6 +494,15 @@ function upgradeV4(bundle: ExportBundle): ExportBundle {
   };
 }
 
+function withRulesDefaults(bundle: ExportBundle): ExportBundle {
+  return {
+    ...bundle,
+    runs: bundle.runs.map((run) =>
+      isRecord(run.rules) ? { ...run, rules: withDefaultedClauses(run.rules) } : run,
+    ),
+  };
+}
+
 /**
  * Parses and validates raw text into an ExportBundle, never throwing. Checks run in order:
  * valid JSON, envelope shape, schemaVersion, then row and reference validation, all
@@ -537,7 +553,7 @@ export function parseBundle(text: string): ParseResult {
     return { ok: false, errors };
   }
 
-  return { ok: true, bundle };
+  return { ok: true, bundle: withRulesDefaults(bundle) };
 }
 
 export type ImportMode = "merge" | "replace";
