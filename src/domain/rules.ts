@@ -3,7 +3,7 @@
  * and the new-run form in step with the `Rules` type.
  */
 
-import type { ClauseField, RandomiserField, RandomiserSubField, Rules } from "./types";
+import type { ClauseField, RandomiserField, RandomiserSubField, Rules, Run } from "./types";
 
 /** Resolves to `never` when a list below covers its field union. Adding a field to `Rules`
  * without listing it here fails the build instead of silently skipping validation and UI. */
@@ -32,6 +32,10 @@ export function withDefaultedClauses(rules: Rules): Rules {
     filled[field] = rules[field] === true;
   }
   return filled;
+}
+
+export function withRuleDefaults(run: Run): Run {
+  return { ...run, rules: withDefaultedClauses(run.rules) };
 }
 
 const EXCLUSIVE_CLAUSES: Partial<Record<ClauseField, ClauseField>> = {

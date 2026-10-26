@@ -143,6 +143,27 @@ describe("read hooks", () => {
     });
   });
 
+  it("reads a run saved before the gift rules existed with both off", async () => {
+    const adapter = createMemoryAdapter();
+    await adapter.init();
+    const draft = makeRunDraft();
+    const { giftClause, noGifts, ...oldRules } = draft.rules;
+    void giftClause;
+    void noGifts;
+    const run = await adapter.runs.put({ ...draft, rules: oldRules as typeof draft.rules });
+
+    const one = renderHook(() => useRun(run.id), { wrapper: createWrapper(adapter) });
+    const all = renderHook(() => useRuns(), { wrapper: createWrapper(adapter) });
+
+    await waitFor(() => {
+      expect(one.result.current.data?.rules).toMatchObject({ giftClause: false, noGifts: false });
+      expect(all.result.current.data?.[0]?.rules).toMatchObject({
+        giftClause: false,
+        noGifts: false,
+      });
+    });
+  });
+
   it("useRun returns the single run matching its id, not another run", async () => {
     const adapter = createMemoryAdapter();
     await adapter.init();

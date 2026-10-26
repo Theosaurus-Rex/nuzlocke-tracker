@@ -6,6 +6,7 @@
 
 import { useQuery, type QueryClient, type UseQueryResult } from "@tanstack/react-query";
 
+import { withRuleDefaults } from "@/domain/rules";
 import { compareRoutes } from "@/domain/routes";
 import { currentLevelCap } from "@/domain/rules-summary";
 import { ALL_FIELDS, monFields } from "@/game/fields";
@@ -29,7 +30,7 @@ export function useRuns(): UseQueryResult<Run[]> {
   const adapter = useStorage();
   return useQuery({
     queryKey: queryKeys.runs(),
-    queryFn: () => adapter.runs.getAll(),
+    queryFn: async () => (await adapter.runs.getAll()).map(withRuleDefaults),
     staleTime: Infinity,
   });
 }
@@ -38,7 +39,10 @@ export function useRun(runId: string): UseQueryResult<Run | null> {
   const adapter = useStorage();
   return useQuery({
     queryKey: queryKeys.run(runId),
-    queryFn: async () => (await adapter.runs.get(runId)) ?? null,
+    queryFn: async () => {
+      const run = await adapter.runs.get(runId);
+      return run === undefined ? null : withRuleDefaults(run);
+    },
     staleTime: Infinity,
   });
 }
