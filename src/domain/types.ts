@@ -27,6 +27,8 @@ export const GAME_IDS = [
   "emerald",
   "ruby",
   "sapphire",
+  "diamond",
+  "pearl",
 ] as const;
 
 export type GameId = (typeof GAME_IDS)[number];

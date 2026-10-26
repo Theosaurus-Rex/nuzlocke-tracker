@@ -70,10 +70,8 @@ export function ComboboxField({
   const [open, setOpen] = useState(false);
   const showingChoice = value !== "" && query === displayName(value);
   const listAll = showAllOnEmpty && (query.trim() === "" || showingChoice);
-  const results =
-    query.trim() === "" && !showAllOnEmpty
-      ? []
-      : search(listAll ? "" : query).slice(0, MAX_RESULTS);
+  const found = query.trim() === "" && !showAllOnEmpty ? [] : search(listAll ? "" : query);
+  const results = listAll ? found : found.slice(0, MAX_RESULTS);
 
   function handleTyping(text: string): void {
     setQuery(text);
