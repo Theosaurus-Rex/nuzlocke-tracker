@@ -119,6 +119,8 @@ describe("NewRunScreen", () => {
 
     const options = await screen.findAllByRole("option");
     expect(options.map((option) => option.textContent)).toEqual([
+      "Ruby· Gen 3",
+      "Sapphire· Gen 3",
       "FireRed· Gen 3",
       "LeafGreen· Gen 3",
       "Emerald· Gen 3",
@@ -127,7 +129,7 @@ describe("NewRunScreen", () => {
     ]);
   });
 
-  it("starts on the earliest game, so an untouched submit creates a FireRed run", async () => {
+  it("starts on the earliest game, so an untouched submit creates a Ruby run", async () => {
     const adapter = createMemoryAdapter();
     renderScreen(adapter);
 
@@ -135,7 +137,7 @@ describe("NewRunScreen", () => {
     await userEvent.click(screen.getByRole("button", { name: "Start run" }));
 
     await waitFor(async () => {
-      expect((await adapter.runs.getAll()).map((run) => run.game)).toEqual(["firered"]);
+      expect((await adapter.runs.getAll()).map((run) => run.game)).toEqual(["ruby"]);
     });
   });
 
@@ -200,7 +202,7 @@ describe("NewRunScreen", () => {
       throw new Error("Expected a run to have been created.");
     }
 
-    expect(run.game).toBe("firered");
+    expect(run.game).toBe("ruby");
     expect(run.status).toBe("active");
 
     await waitFor(() => {
@@ -412,7 +414,7 @@ describe("NewRunScreen shiny clause by game", () => {
   });
 
   it("hides the shiny clause and saves it as off for a game without shinies", async () => {
-    restore = overrideGame("firered", { generation: 1 });
+    restore = overrideGame("ruby", { generation: 1 });
     const adapter = createMemoryAdapter();
     renderScreen(adapter);
 
