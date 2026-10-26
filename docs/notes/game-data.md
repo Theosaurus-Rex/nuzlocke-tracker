@@ -187,6 +187,34 @@ scripted story fights, so all are kept), the script-side placement of the Eevee,
 Riolu egg gifts (the decomp's scripts are binary, so these rest on Bulbapedia), and whether Routes
 219 to 221 are reachable before the credits (taken from search results, so they stay core).
 
+## Platinum (`src/game/data/platinum/`)
+
+One game, no pair, so it is a plain `GameData` like Emerald. Sources are `routes/pt.txt` and
+`leagues/plat.txt` from `domtronn/nuzlocke.data`. `routes/plat.txt` is stale and not used. Rosters
+were checked against the `pret/pokeplatinum` decompilation, whose trainer JSON, wild tables and
+event scripts are readable. The scripts settled where each gift, static and forced fight is, so
+those were checked against source and not only the walkthrough. Bulbapedia and Serebii agree with
+the decomp on every ace.
+
+Routes are 59, ending at the Pokémon League. Great Marsh and Trophy Garden are normal routes, as
+both are open in the story. Sendoff Spring follows the Distortion World. Lake Valor, Trophy
+Garden, Snowpoint City and Sendoff Spring are added after upstream left them out. Ruin Maniac Cave
+and Tunnel are one route. Spear Pillar is not a route, and Mesprit roams so it has none. Route
+207, the Old Chateau, Valley Windworks and Route 213 move to match the walkthrough. Fights are 28,
+with Barry's starter variants flattened and his forced Route 201 fight kept as `rival-1`.
+
+Upstream fixes: Gardenia's Cherrim is level 20 (upstream has Cherubi), Candice's Piloswine is 40
+(38), and Barry's fights at Hearthome's gate, Pastoria City, the drawbridge and the League
+entrance were mislabelled. Barry's Pastoria fight comes before Crasher Wake.
+
+Level caps are Nuzlocke University's Platinum block and equal the aces. Fantina is third. Badge
+sprites follow badge identity: Relic 29, Cobble 27 and Fen 28 for gyms 3 to 5. The Distortion
+World, Galactic HQ and Spear Pillar fights have no cap.
+
+Not verified: that Fantina must be third (from the map and walkthrough, no script gate was
+found), whether Routes 219 to 221 are reachable before the credits, and Barry's Spear Pillar
+partner turn, which is left out.
+
 ## Gift-only and static-only routes (`only`)
 
 A route is flagged when nothing on it can be met in the wild. Any grass, surf, fishing, headbutt
@@ -228,3 +256,9 @@ Diamond and Pearl:
 - oreburgh-city: gift (Abra for Machop trade, fossil revival). hearthome-city: gift (Eevee, Happiny
   egg). snowpoint-city: gift (Medicham for Haunter trade). spear-pillar: static (Dialga or
   Palkia). Floaroma Meadow has only a honey tree, which counts as wild, so it is not flagged.
+
+Platinum:
+- oreburgh-city: gift (Abra for Machop trade, fossil revival). hearthome-city: gift (Eevee).
+  veilstone-city: gift (Porygon). snowpoint-city: gift (Medicham for Haunter trade).
+  distortion-world: static (Giratina, Origin Forme). Floaroma Meadow stays untagged. Eterna City,
+  Old Chateau and Iron Island have wild Pokemon, so their gifts do not flag them.

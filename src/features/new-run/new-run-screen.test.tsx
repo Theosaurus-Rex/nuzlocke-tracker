@@ -126,6 +126,7 @@ describe("NewRunScreen", () => {
       "Emerald· Gen 3",
       "Diamond· Gen 4",
       "Pearl· Gen 4",
+      "Platinum· Gen 4",
       "HeartGold· Gen 4",
       "SoulSilver· Gen 4",
     ]);
