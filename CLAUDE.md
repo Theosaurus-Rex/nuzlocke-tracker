@@ -378,7 +378,7 @@ Consequences, all deliberate:
   keeps a form in its region (Alolan Sandshrew offers Alolan Sandslash). A base species offers
   every regional next stage too (Pikachu offers Alolan Raichu).
 
-**Scope: HeartGold, SoulSilver, FireRed, LeafGreen, Emerald, Ruby, Sapphire, Diamond, Pearl and Platinum for V1.** Each pair shares one dataset, and
+**Scope: HeartGold, SoulSilver, FireRed, LeafGreen, Emerald, Ruby, Sapphire, Diamond, Pearl, Platinum, Black and White for V1.** Each pair shares one dataset, and
 paired versions share data by registry entry. Every other game is a whole curated dataset, not a config flag. Build the ingest pipeline so a second game is additive.
 
 **Romhacks are a first-class future case, not an afterthought.** Theo intends to hand-author

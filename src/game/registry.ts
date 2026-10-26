@@ -7,6 +7,7 @@
 
 import type { GameId } from "@/domain/types";
 
+import { black, white } from "@/game/data/bw";
 import { diamond, pearl } from "@/game/data/dp";
 import { emerald } from "@/game/data/emerald";
 import { firered, leafgreen } from "@/game/data/frlg";
@@ -26,4 +27,6 @@ export const GAMES: Record<GameId, GameData> = {
   diamond,
   pearl,
   platinum,
+  black,
+  white,
 };

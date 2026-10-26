@@ -215,6 +215,48 @@ Not verified: that Fantina must be third (from the map and walkthrough, no scrip
 found), whether Routes 219 to 221 are reachable before the credits, and Barry's Spear Pillar
 partner turn, which is left out.
 
+## Black and White (`src/game/data/bw/`)
+
+One dataset for the pair, like Ruby and Sapphire. Sources are `routes/bl.txt`, `routes/wh.txt` and
+`leagues/bw.txt` from `domtronn/nuzlocke.data`. There is no pret-style decomp for these games, but
+`squiddonaut/pokeblack` (commit 67d91a78) commits the extracted Black ROM files. Its trainer and
+party tables were decoded to check every roster, and all of them match Bulbapedia, Serebii and
+upstream except the fixes below. The ROM gives rosters only, not scripts, so required fights, gifts
+and statics come from the Bulbapedia API walkthrough and Serebii. The Black ROM holds both
+Drayden and Iris and both N rosters, which is how the White side was checked.
+
+Routes are 33, shared, ending at N's Castle. Castelia City, every post-game place and the seven
+post-game fossils are out. Virizion is part of Pinwheel Forest, so there is no Rumination Field.
+Celestial Tower and Mistralton Cave move to match the walkthrough. Fights are 30 per version.
+Striaton is one fight with the three leaders' teams flattened, as the rivals are. Bianca (5),
+Cheren (7), every N fight and Ghetsis follow Theo's kind rules, and there is no Champion because
+Alder is post-game.
+
+Version split: 28 fights are shared. Black has `gym-drayden` and White has `gym-iris`, with the
+same team and the Legend Badge. N's Castle is `boss-n-castle` in both, leading with Zekrom in
+Black and Reshiram in White. The shared id is what lets one level cap table serve both versions.
+The catch at N's Castle is the other way round, Reshiram in Black and Zekrom in White.
+
+Level caps are Nuzlocke University's Black/White block and equal the aces. The four Elite Four
+members are separate milestones at 50, since they can be fought in any order. N's Castle (52) and
+Ghetsis (54) are the first boss fights to carry a cap. The rematch, Champion and Undella rows are
+post-game and left out.
+
+Badge sprites are 33 and 34, then 36 to 41. Sprite 35 is the Toxic Badge from Black 2 and White 2
+and is skipped. 42 is the Wave Badge, also from the sequels.
+
+Upstream fixes: Bianca's Driftveil fight has Musharna 26 (upstream Munna), Cheren's Striaton
+starters are level 8 (7), Shauntal's Jellicent is `jellicent-male`, and N at Nacrene City is a boss
+(upstream rival) and comes before Lenora. Upstream also repeats the Cheren Striaton block, puts
+his Twist Mountain fight on Route 7, mislabels two Elite Four rows, has typos ("Tranier's School",
+"Iccirus") and lists Reshiram and Zekrom at Dragonspiral Tower.
+
+Not verified: that Cheren's Striaton school fight is forced (no source calls it optional), that N
+at Nacrene comes before Lenora (Bulbapedia says so, Serebii says after), that the Nuvema fights
+are kept although they cannot be lost, that the gym order is fixed (from the map and walkthrough,
+no script gate was found), and which non-route places have no wild table (Bulbapedia location pages
+only, the ROM's wild data was not mapped).
+
 ## Gift-only and static-only routes (`only`)
 
 A route is flagged when nothing on it can be met in the wild. Any grass, surf, fishing, headbutt
@@ -262,3 +304,8 @@ Platinum:
   veilstone-city: gift (Porygon). snowpoint-city: gift (Medicham for Haunter trade).
   distortion-world: static (Giratina, Origin Forme). Floaroma Meadow stays untagged. Eterna City,
   Old Chateau and Iron Island have wild Pokemon, so their gifts do not flag them.
+
+Black and White:
+- nacrene-city: gift (Tirtouga or Archen fossil revival, Petilil or Cottonee trade). n-castle:
+  static (Reshiram in Black, Zekrom in White, a required catch). The Dreamyard monkeys, Route 18
+  egg, Cobalion, Virizion and Terrakion sit on routes with wild Pokemon, so none of them flag.
