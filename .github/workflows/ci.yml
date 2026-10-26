@@ -1,0 +1,202 @@
+name: ci
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+permissions:
+  contents: read
+
+jobs:
+  gate:
+    name: gate
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v7
+      - uses: pnpm/action-setup@v6
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 24
+          cache: pnpm
+      - name: Install
+        run: pnpm install --frozen-lockfile
+      - name: Install Playwright browser
+        run: pnpm exec playwright install --with-deps chromium
+      - name: Lint
+        run: pnpm lint
+      - name: Typecheck
+        run: pnpm typecheck
+      - name: Format check
+        run: pnpm format:check
+      - name: Unit tests
+        run: pnpm test
+      - name: Build
+        run: pnpm build
+      - name: End-to-end tests
+        run: pnpm test:e2e
+      - uses: actions/upload-artifact@v7
+        if: failure()
+        with:
+          name: playwright-report
+          path: playwright-report/
+          retention-days: 7
+
+  deploy:
+    name: deploy
+    needs: gate
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    concurrency:
+      group: netlify-production
+      cancel-in-progress: false
+    env:
+      NETLIFY_SITE_ID: ${{ secrets.NETLIFY_SITE_ID }}
+      NETLIFY_AUTH_TOKEN: ${{ secrets.NETLIFY_AUTH_TOKEN }}
+    steps:
+      - name: Check Netlify secrets
+        id: secrets
+        # Secrets are empty until the site exists. Skip the deploy then, so CI stays green.
+        run: |
+          if [ -n "$NETLIFY_SITE_ID" ] && [ -n "$NETLIFY_AUTH_TOKEN" ]; then
+            echo "present=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "present=false" >> "$GITHUB_OUTPUT"
+            echo "::notice::Netlify deploy skipped. NETLIFY_SITE_ID and NETLIFY_AUTH_TOKEN are not set yet."
+          fi
+      - uses: actions/checkout@v7
+        if: steps.secrets.outputs.present == 'true'
+      - uses: pnpm/action-setup@v6
+        if: steps.secrets.outputs.present == 'true'
+      - uses: actions/setup-node@v7
+        if: steps.secrets.outputs.present == 'true'
+        with:
+          node-version: 24
+          cache: pnpm
+      - name: Install
+        if: steps.secrets.outputs.present == 'true'
+        run: pnpm install --frozen-lockfile
+      - name: Build
+        if: steps.secrets.outputs.present == 'true'
+        run: pnpm build
+      - name: Check redirects are built
+        if: steps.secrets.outputs.present == 'true'
+        run: grep -qE '^/\*\s+/index\.html\s+200' dist/_redirects
+      - name: Install the Netlify CLI
+        if: steps.secrets.outputs.present == 'true'
+        run: npm install --global netlify-cli@27.14.2
+      - name: Deploy to Netlify
+        id: netlify
+        if: steps.secrets.outputs.present == 'true'
+        env:
+          COMMIT_SHA: ${{ github.sha }}
+        run: |
+          subject=$(git log -1 --format=%s)
+          status=0
+          netlify deploy --prod --no-build --dir=dist --json \
+            --site "$NETLIFY_SITE_ID" --auth "$NETLIFY_AUTH_TOKEN" \
+            --message "${COMMIT_SHA::7} $subject" > deploy.json || status=$?
+          cat deploy.json
+          [ "$status" -eq 0 ] || { echo "::error::netlify deploy exited with $status"; exit "$status"; }
+          url=$(jq -r '.url // .deploy_url // empty' deploy.json)
+          [ -n "$url" ] || { echo "::error::Netlify did not report a site URL"; exit 1; }
+          echo "url=$url" >> "$GITHUB_OUTPUT"
+      - name: Check the live site
+        if: steps.secrets.outputs.present == 'true'
+        env:
+          SITE_URL: ${{ steps.netlify.outputs.url }}
+        run: |
+          for path in "/" "/settings"; do
+            body=$(curl -fsS "$SITE_URL$path")
+            echo "$body" | grep -q '<div id="root">' || { echo "::error::$path did not return the app"; exit 1; }
+          done
+
+  preview:
+    name: preview
+    needs: gate
+    if: github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name == github.repository
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      contents: read
+      pull-requests: write
+    concurrency:
+      group: netlify-preview-${{ github.event.pull_request.number }}
+      cancel-in-progress: true
+    env:
+      NETLIFY_SITE_ID: ${{ secrets.NETLIFY_SITE_ID }}
+      NETLIFY_AUTH_TOKEN: ${{ secrets.NETLIFY_AUTH_TOKEN }}
+    steps:
+      - name: Check Netlify secrets
+        id: secrets
+        run: |
+          if [ -n "$NETLIFY_SITE_ID" ] && [ -n "$NETLIFY_AUTH_TOKEN" ]; then
+            echo "present=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "present=false" >> "$GITHUB_OUTPUT"
+            echo "::notice::Netlify preview skipped. NETLIFY_SITE_ID and NETLIFY_AUTH_TOKEN are not set yet."
+          fi
+      - uses: actions/checkout@v7
+        if: steps.secrets.outputs.present == 'true'
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+      - uses: pnpm/action-setup@v6
+        if: steps.secrets.outputs.present == 'true'
+      - uses: actions/setup-node@v7
+        if: steps.secrets.outputs.present == 'true'
+        with:
+          node-version: 24
+          cache: pnpm
+      - name: Install
+        if: steps.secrets.outputs.present == 'true'
+        run: pnpm install --frozen-lockfile
+      - name: Build
+        if: steps.secrets.outputs.present == 'true'
+        run: pnpm build
+      - name: Check redirects are built
+        if: steps.secrets.outputs.present == 'true'
+        run: grep -qE '^/\*\s+/index\.html\s+200' dist/_redirects
+      - name: Install the Netlify CLI
+        if: steps.secrets.outputs.present == 'true'
+        run: npm install --global netlify-cli@27.14.2
+      - name: Deploy preview to Netlify
+        id: netlify
+        if: steps.secrets.outputs.present == 'true'
+        env:
+          PR_NUMBER: ${{ github.event.pull_request.number }}
+          COMMIT_SHA: ${{ github.event.pull_request.head.sha }}
+        run: |
+          status=0
+          netlify deploy --no-build --dir=dist --json --alias "pr-$PR_NUMBER" \
+            --site "$NETLIFY_SITE_ID" --auth "$NETLIFY_AUTH_TOKEN" \
+            --message "PR #$PR_NUMBER ${COMMIT_SHA::7}" > deploy.json || status=$?
+          cat deploy.json
+          [ "$status" -eq 0 ] || { echo "::error::netlify deploy exited with $status"; exit "$status"; }
+          url=$(jq -r '.deploy_url // empty' deploy.json)
+          [ -n "$url" ] || { echo "::error::Netlify did not report a preview URL"; exit 1; }
+          echo "url=$url" >> "$GITHUB_OUTPUT"
+      - name: Check the preview
+        if: steps.secrets.outputs.present == 'true'
+        env:
+          PREVIEW_URL: ${{ steps.netlify.outputs.url }}
+        run: |
+          body=$(curl -fsS "$PREVIEW_URL/settings")
+          echo "$body" | grep -q '<div id="root">' || { echo "::error::/settings did not return the app"; exit 1; }
+      - name: Comment the preview URL on the pull request
+        if: steps.secrets.outputs.present == 'true'
+        env:
+          GH_TOKEN: ${{ github.token }}
+          PR_NUMBER: ${{ github.event.pull_request.number }}
+          COMMIT_SHA: ${{ github.event.pull_request.head.sha }}
+          PREVIEW_URL: ${{ steps.netlify.outputs.url }}
+        run: |
+          body=$(printf '<!-- netlify-preview -->\nPreview: %s\n\nCommit: %s' "$PREVIEW_URL" "${COMMIT_SHA::7}")
+          id=$(gh api "repos/${{ github.repository }}/issues/$PR_NUMBER/comments" --paginate \
+            --jq '[.[] | select(.body | contains("<!-- netlify-preview -->"))][0].id // empty' | head -n1)
+          if [ -n "$id" ]; then
+            gh api --method PATCH "repos/${{ github.repository }}/issues/comments/$id" -f body="$body"
+          else
+            gh pr comment "$PR_NUMBER" --repo "${{ github.repository }}" --body "$body"
+          fi
