@@ -12,6 +12,7 @@ function makeGame(routes: RouteDef[]): GameData {
     id: "heartgold",
     name: "Test Game",
     generation: 4,
+    released: "2009-09-12",
     routes,
     fights: [],
     levelCaps: [],

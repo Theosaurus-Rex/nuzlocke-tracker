@@ -8,6 +8,7 @@ import { useState, type ChangeEvent, type FormEvent, type ReactNode } from "reac
 import { Link, useNavigate } from "react-router";
 
 import { CHIP_SHAPE } from "@/components/chip";
+import { ComboboxField } from "@/features/encounters/combobox-field";
 import { ScreenHeader } from "@/components/screen-header";
 import { SquareCheckbox } from "@/components/square-checkbox";
 import { Typography } from "@/components/typography";
@@ -19,22 +20,32 @@ import {
   RANDOMISER_OFF,
   RANDOMISER_SUB_FIELDS,
 } from "@/domain/rules";
-import {
-  GAME_IDS,
-  type ClauseField,
-  type GameId,
-  type RandomiserSubField,
-  type Rules,
-} from "@/domain/types";
+import { type ClauseField, type GameId, type RandomiserSubField, type Rules } from "@/domain/types";
 import { monFields } from "@/game/fields";
+import { findGameByName, gamesInReleaseOrder, searchGames } from "@/game/release-order";
 import { GAMES } from "@/game/registry";
 import { cn } from "@/lib/utils";
 import { useCreateRun } from "@/storage/mutations";
 import { useRuns } from "@/storage/queries";
 
-const GAME_OPTIONS = Object.values(GAMES);
+const FIRST_GAME_ID: GameId | "" = gamesInReleaseOrder()[0]?.id ?? "";
 
-const FIRST_GAME_ID: GameId = GAME_IDS[0];
+function gameItem(id: GameId): { id: string; label: string; hint: string } {
+  const game = GAMES[id];
+  return { id, label: game.name, hint: `· Gen ${String(game.generation)}` };
+}
+
+function searchGameItems(query: string): { id: string; label: string; hint: string }[] {
+  return searchGames(query).map((game) => gameItem(game.id));
+}
+
+function resolveGame(text: string): string {
+  return findGameByName(text)?.id ?? "";
+}
+
+function gameName(id: string): string {
+  return GAMES[id as GameId].name;
+}
 
 const CLAUSE_LABELS: Record<ClauseField, string> = {
   dupesClause: "Dupes clause",
@@ -76,21 +87,22 @@ export function NewRunScreen(): ReactNode {
   const hasRuns = (runsQuery.data?.length ?? 0) > 0;
 
   const [name, setName] = useState("");
-  const [game, setGame] = useState<GameId>(FIRST_GAME_ID);
+  const [game, setGame] = useState<GameId | "">(FIRST_GAME_ID);
   const [rules, setRules] = useState<Rules>(DEFAULT_RULES);
   const [customClauseText, setCustomClauseText] = useState(DEFAULT_RULES.customClause ?? "");
   const [submitted, setSubmitted] = useState(false);
 
-  const hasShinies = monFields(GAMES[game]).shiny;
+  const hasShinies = game === "" ? true : monFields(GAMES[game]).shiny;
   const trimmedName = name.trim();
   const nameIsInvalid = submitted && trimmedName.length === 0;
+  const gameIsInvalid = submitted && game === "";
 
   function handleNameChange(event: ChangeEvent<HTMLInputElement>): void {
     setName(event.target.value);
   }
 
-  function handleGameChange(event: ChangeEvent<HTMLSelectElement>): void {
-    setGame(event.target.value as GameId);
+  function handleGameChange(id: string): void {
+    setGame(id as GameId | "");
   }
 
   function handleClauseToggle(key: ClauseField): void {
@@ -121,7 +133,7 @@ export function NewRunScreen(): ReactNode {
     event.preventDefault();
     setSubmitted(true);
 
-    if (trimmedName.length === 0) {
+    if (trimmedName.length === 0 || game === "") {
       return;
     }
 
@@ -197,18 +209,24 @@ export function NewRunScreen(): ReactNode {
             <Typography as="label" htmlFor="run-game" variant="eyebrow" className="mb-1 block">
               Game
             </Typography>
-            <select
+            <ComboboxField
               id="run-game"
               value={game}
               onChange={handleGameChange}
-              className="h-9 w-full border-[1.5px] border-border bg-background px-2.5 text-sm"
-            >
-              {GAME_OPTIONS.map((gameData) => (
-                <option key={gameData.id} value={gameData.id}>
-                  {gameData.name}
-                </option>
-              ))}
-            </select>
+              search={searchGameItems}
+              resolve={resolveGame}
+              displayName={gameName}
+              showAllOnEmpty
+              placeholder="Type to find a game"
+              aria-invalid={gameIsInvalid}
+              aria-describedby={gameIsInvalid ? "run-game-error" : undefined}
+              inputClassName="h-9 rounded-none border-border bg-background"
+            />
+            {gameIsInvalid && (
+              <Typography id="run-game-error" variant="body" tone="alert" className="mt-1">
+                Pick a game from the list.
+              </Typography>
+            )}
           </div>
 
           <fieldset className="space-y-2">

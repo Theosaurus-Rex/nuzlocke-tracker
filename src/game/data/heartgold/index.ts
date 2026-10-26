@@ -13,6 +13,8 @@ export const heartgold: GameData = {
   id: "heartgold",
   name: "HeartGold",
   generation: 4,
+  // Japan release, per Bulbapedia's Pokémon HeartGold and SoulSilver page.
+  released: "2009-09-12",
   routes,
   fights,
   levelCaps,

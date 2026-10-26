@@ -16,7 +16,6 @@ import type { Rules } from "@/domain/types";
 import type { StorageAdapter } from "@/storage/adapter";
 import { createMemoryAdapter } from "@/storage/memory-adapter";
 import { StorageProvider } from "@/storage/storage-context";
-import { GAMES } from "@/game/registry";
 import { overrideGame } from "@/test/override-game";
 
 import { NewRunScreen } from "./new-run-screen";
@@ -113,32 +112,76 @@ describe("NewRunScreen", () => {
     expect(run?.name).toBe("Test Run");
   });
 
-  it("populates the game picker from the GAMES registry, labelled and pre-selected", () => {
+  it("opens the game list in release order with the generation beside each", async () => {
+    renderScreen(createMemoryAdapter());
+
+    await userEvent.click(screen.getByLabelText("Game"));
+
+    const options = await screen.findAllByRole("option");
+    expect(options.map((option) => option.textContent)).toEqual([
+      "FireRed· Gen 3",
+      "LeafGreen· Gen 3",
+      "Emerald· Gen 3",
+      "HeartGold· Gen 4",
+      "SoulSilver· Gen 4",
+    ]);
+  });
+
+  it("starts on the earliest game, so an untouched submit creates a FireRed run", async () => {
     const adapter = createMemoryAdapter();
     renderScreen(adapter);
 
-    const select = screen.getByLabelText<HTMLSelectElement>("Game");
-    const expectedGames = Object.values(GAMES);
+    await userEvent.type(screen.getByLabelText("Run name"), "Default");
+    await userEvent.click(screen.getByRole("button", { name: "Start run" }));
 
-    const optionLabels = Array.from(select.options).map((option) => option.textContent);
-    const optionValues = Array.from(select.options).map((option) => option.value);
-
-    expect(optionLabels).toEqual(expectedGames.map((game) => game.name));
-    expect(optionValues).toEqual(expectedGames.map((game) => game.id));
-    expect(select.value).toBe(expectedGames[0]?.id);
+    await waitFor(async () => {
+      expect((await adapter.runs.getAll()).map((run) => run.game)).toEqual(["firered"]);
+    });
   });
 
-  it("creates a run for the game picked in the game picker", async () => {
+  it("finds a game by any word of its name and creates a run for the pick", async () => {
     const adapter = createMemoryAdapter();
     renderScreen(adapter);
 
     await userEvent.type(screen.getByLabelText("Run name"), "Silver Run");
-    await userEvent.selectOptions(screen.getByLabelText("Game"), "soulsilver");
+    await userEvent.clear(screen.getByLabelText("Game"));
+    await userEvent.type(screen.getByLabelText("Game"), "silver");
+    expect(screen.getAllByRole("option").map((o) => o.textContent)).toEqual(["SoulSilver· Gen 4"]);
+    await userEvent.click(screen.getByRole("option", { name: /SoulSilver/ }));
     await userEvent.click(screen.getByRole("button", { name: "Start run" }));
 
     await waitFor(async () => {
       expect((await adapter.runs.getAll()).map((run) => run.game)).toEqual(["soulsilver"]);
     });
+  });
+
+  it("picks a game from the keyboard alone", async () => {
+    const adapter = createMemoryAdapter();
+    renderScreen(adapter);
+
+    await userEvent.type(screen.getByLabelText("Run name"), "Keys");
+    await userEvent.clear(screen.getByLabelText("Game"));
+    await userEvent.type(screen.getByLabelText("Game"), "green{ArrowDown}{Enter}");
+    expect(screen.getByLabelText("Game")).toHaveValue("LeafGreen");
+    await userEvent.click(screen.getByRole("button", { name: "Start run" }));
+
+    await waitFor(async () => {
+      expect((await adapter.runs.getAll()).map((run) => run.game)).toEqual(["leafgreen"]);
+    });
+  });
+
+  it("leaves the game unset for an unknown name and refuses to create the run", async () => {
+    const adapter = createMemoryAdapter();
+    renderScreen(adapter);
+
+    await userEvent.type(screen.getByLabelText("Run name"), "Nope");
+    await userEvent.clear(screen.getByLabelText("Game"));
+    await userEvent.type(screen.getByLabelText("Game"), "Pokemon Zircon");
+    await userEvent.click(screen.getByRole("button", { name: "Start run" }));
+
+    expect(await screen.findByText("Pick a game from the list.")).toBeInTheDocument();
+    expect(screen.getByLabelText("Game")).toHaveAttribute("aria-invalid", "true");
+    expect(await adapter.runs.getAll()).toEqual([]);
   });
 
   it("creates the run with the given name and selected game, then navigates to its own screen", async () => {
@@ -157,7 +200,7 @@ describe("NewRunScreen", () => {
       throw new Error("Expected a run to have been created.");
     }
 
-    expect(run.game).toBe("heartgold");
+    expect(run.game).toBe("firered");
     expect(run.status).toBe("active");
 
     await waitFor(() => {
@@ -369,7 +412,7 @@ describe("NewRunScreen shiny clause by game", () => {
   });
 
   it("hides the shiny clause and saves it as off for a game without shinies", async () => {
-    restore = overrideGame("heartgold", { generation: 1 });
+    restore = overrideGame("firered", { generation: 1 });
     const adapter = createMemoryAdapter();
     renderScreen(adapter);
 

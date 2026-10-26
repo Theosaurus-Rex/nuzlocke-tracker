@@ -374,3 +374,34 @@ describe("ComboboxField picking", () => {
     expect(onChange).toHaveBeenCalledTimes(1);
   });
 });
+
+describe("ComboboxField empty query", () => {
+  function renderField(showAllOnEmpty?: boolean) {
+    render(
+      <ComboboxField
+        id="acid"
+        value=""
+        onChange={() => undefined}
+        search={() => ACID_ITEMS}
+        resolve={() => ""}
+        displayName={(id) => id}
+        showAllOnEmpty={showAllOnEmpty}
+      />,
+    );
+    return screen.getByRole("combobox");
+  }
+
+  it("lists nothing for an empty field by default", async () => {
+    const user = userEvent.setup();
+    await user.click(renderField());
+
+    expect(screen.queryAllByRole("option")).toEqual([]);
+  });
+
+  it("lists every item for an empty field when asked to", async () => {
+    const user = userEvent.setup();
+    await user.click(renderField(true));
+
+    expect(await screen.findAllByRole("option")).toHaveLength(ACID_ITEMS.length);
+  });
+});

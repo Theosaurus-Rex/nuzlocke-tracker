@@ -5,6 +5,8 @@ export async function createRun(page: Page, name: string): Promise<void> {
   await page.goto("/");
   await expect(page).toHaveURL(/\/runs\/new$/);
   await page.getByLabel("Run name").fill(name);
+  await page.getByLabel("Game").fill("HeartGold");
+  await page.getByRole("option", { name: /^HeartGold/ }).click();
   await page.getByRole("button", { name: "Start run" }).click();
   await expect(page.getByRole("heading", { name: "Encounter routes" })).toBeVisible();
 }

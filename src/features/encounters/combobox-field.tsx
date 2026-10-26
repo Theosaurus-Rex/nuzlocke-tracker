@@ -9,6 +9,8 @@ const MAX_RESULTS = 8;
 export interface ComboboxItem {
   id: string;
   label: string;
+  /** Muted text after the label in the list. Not part of the field value. */
+  hint?: string;
 }
 
 export interface ComboboxFieldProps {
@@ -27,6 +29,8 @@ export interface ComboboxFieldProps {
   icon?: (id: string) => ReactNode;
   /** Rendered under the input, outside the popup, which is hidden while it has no items. */
   notice?: ReactNode;
+  /** Lists every result while the field is empty or shows the current pick, instead of nothing. */
+  showAllOnEmpty?: boolean;
   inputClassName?: string;
   "aria-invalid"?: boolean;
   "aria-describedby"?: string;
@@ -57,13 +61,19 @@ export function ComboboxField({
   suffix,
   icon,
   notice,
+  showAllOnEmpty = false,
   inputClassName,
   "aria-invalid": ariaInvalid,
   "aria-describedby": ariaDescribedBy,
 }: ComboboxFieldProps): ReactNode {
   const [query, setQuery] = useState(value === "" ? "" : displayName(value));
   const [open, setOpen] = useState(false);
-  const results = query.trim() === "" ? [] : search(query).slice(0, MAX_RESULTS);
+  const showingChoice = value !== "" && query === displayName(value);
+  const listAll = showAllOnEmpty && (query.trim() === "" || showingChoice);
+  const results =
+    query.trim() === "" && !showAllOnEmpty
+      ? []
+      : search(listAll ? "" : query).slice(0, MAX_RESULTS);
 
   function handleTyping(text: string): void {
     setQuery(text);
@@ -130,6 +140,7 @@ export function ComboboxField({
                 >
                   {icon?.(item.id)}
                   {item.label}
+                  {item.hint && <span className="ml-2 text-muted-foreground">{item.hint}</span>}
                 </Autocomplete.Item>
               )}
             </Autocomplete.List>
