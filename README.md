@@ -224,6 +224,10 @@ second entry with its own `id` and `name`, and add the id to `GAME_IDS`. SoulSil
 `src/game/data/heartgold/index.ts`: its routes and boss rosters are HeartGold's, and only the
 wild encounters differ, which the app does not store.
 
+Set `only: "gift"` or `only: "static"` on a route where every Pokemon is a gift, egg, fossil, trade
+or static encounter, with no wild encounters at all. Any wild encounter means no flag. Add a one
+line comment naming the Pokemon.
+
 `src/game/game-data.test.ts` runs its invariants over every game in the registry: contiguous
 route orders, unique ids, and a valid level cap table. A new game gets them for free.
 

@@ -7,7 +7,8 @@
 import type { RouteDef } from "@/game/types";
 
 export const routes: RouteDef[] = [
-  { id: "starter", name: "Starter", order: 1, region: "johto" },
+  // Chikorita, Cyndaquil or Totodile gift only.
+  { id: "starter", name: "Starter", order: 1, region: "johto", only: "gift" },
   { id: "new-bark-town", name: "New Bark Town", order: 2, region: "johto" },
   { id: "route-29", name: "Route 29", order: 3, region: "johto" },
   { id: "route-46", name: "Route 46", order: 4, region: "johto" },
@@ -25,7 +26,8 @@ export const routes: RouteDef[] = [
   { id: "slowpoke-well", name: "Slowpoke Well", order: 16, region: "johto" },
   { id: "ilex-forest", name: "Ilex Forest", order: 17, region: "johto" },
   { id: "route-34", name: "Route 34", order: 18, region: "johto" },
-  { id: "goldenrod-city", name: "Goldenrod City", order: 19, region: "johto" },
+  // Eevee and Game Corner prizes and the Machop trade, no wild Pokemon.
+  { id: "goldenrod-city", name: "Goldenrod City", order: 19, region: "johto", only: "gift" },
   { id: "route-35", name: "Route 35", order: 20, region: "johto" },
   { id: "national-park", name: "National Park", order: 21, region: "johto" },
   { id: "route-36", name: "Route 36", order: 22, region: "johto" },
@@ -48,7 +50,8 @@ export const routes: RouteDef[] = [
   { id: "safari-zone", name: "Safari Zone", order: 39, region: "johto" },
   { id: "route-42", name: "Route 42", order: 40, region: "johto" },
   { id: "mt-mortar", name: "Mt. Mortar", order: 41, region: "johto" },
-  { id: "rocket-hideout", name: "Rocket Hideout", order: 42, region: "johto" },
+  // Electrode and Voltorb statics only.
+  { id: "rocket-hideout", name: "Rocket Hideout", order: 42, region: "johto", only: "static" },
   { id: "lake-of-rage", name: "Lake of Rage", order: 43, region: "johto" },
   { id: "route-43", name: "Route 43", order: 44, region: "johto" },
   { id: "route-44", name: "Route 44", order: 45, region: "johto" },
@@ -63,7 +66,8 @@ export const routes: RouteDef[] = [
   { id: "indigo-plateau", name: "Indigo Plateau", order: 54, region: "johto" },
   { id: "vermillion-city", name: "Vermillion City", order: 55, region: "kanto" },
   { id: "route-6", name: "Route 6", order: 56, region: "kanto" },
-  { id: "saffron-city", name: "Saffron City", order: 57, region: "kanto" },
+  // Raichu-for-Pikachu trade only, no wild Pokemon.
+  { id: "saffron-city", name: "Saffron City", order: 57, region: "kanto", only: "gift" },
   { id: "route-7", name: "Route 7", order: 58, region: "kanto" },
   { id: "celadon-city", name: "Celadon City", order: 59, region: "kanto" },
   { id: "route-16", name: "Route 16", order: 60, region: "kanto" },
@@ -78,7 +82,8 @@ export const routes: RouteDef[] = [
   { id: "route-5", name: "Route 5", order: 69, region: "kanto" },
   { id: "route-9", name: "Route 9", order: 70, region: "kanto" },
   { id: "route-10", name: "Route 10", order: 71, region: "kanto" },
-  { id: "power-plant", name: "Power Plant", order: 72, region: "kanto" },
+  // Zapdos static, plus the Magneton trade. No wild Pokemon inside.
+  { id: "power-plant", name: "Power Plant", order: 72, region: "kanto", only: "static" },
   { id: "route-24", name: "Route 24", order: 73, region: "kanto" },
   { id: "route-25", name: "Route 25", order: 74, region: "kanto" },
   { id: "cerulean-city", name: "Cerulean City", order: 75, region: "kanto" },

@@ -153,3 +153,24 @@ describe("emerald runs", () => {
     expect(typesIn(clefairy, emerald.generation)).toEqual(["normal"]);
   });
 });
+
+describe("emerald only-routes", () => {
+  test("exactly these routes are flagged", () => {
+    const flagged = Object.fromEntries(
+      emerald.routes.filter((r) => r.only !== undefined).map((r) => [r.id, r.only]),
+    );
+    expect(flagged).toEqual({
+      starter: "gift",
+      "rustboro-city": "gift",
+      "lavaridge-town": "gift",
+      "fortree-city": "gift",
+      "aqua-hideout": "static",
+      "terra-cave": "static",
+      "marine-cave": "static",
+    });
+  });
+
+  test("a route with wild encounters is not flagged", () => {
+    expect(emerald.routes.find((r) => r.id === "route-119")?.only).toBeUndefined();
+  });
+});

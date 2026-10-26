@@ -7,6 +7,7 @@ import { Typography } from "@/components/typography";
 import { canDeleteRoute } from "@/domain/routes";
 import type { RouteRow } from "@/domain/route-rows";
 import type { Encounter, Mon, Route } from "@/domain/types";
+import type { GameData } from "@/game/types";
 import { cn } from "@/lib/utils";
 
 import {
@@ -17,6 +18,7 @@ import {
   RowSpecies,
   RowSprite,
 } from "./route-presentation";
+import { RouteOnlyChip } from "./route-only-chip";
 import { RowEndAction } from "./row-end-action";
 
 function StatusCell({ row, onLogEncounter }: { row: RouteRow; onLogEncounter: () => void }) {
@@ -76,6 +78,7 @@ export interface RouteTableProps {
   rows: RouteRow[];
   encounters: readonly Encounter[];
   generation: number | undefined;
+  game?: GameData;
   onDelete: (route: Route) => void;
   deletePending: boolean;
   onLogEncounter: (route: Route) => void;
@@ -87,6 +90,7 @@ export function RouteTable({
   rows,
   encounters,
   generation,
+  game,
   onDelete,
   deletePending,
   onLogEncounter,
@@ -138,6 +142,7 @@ export function RouteTable({
             {routeRow.route.isCustom && (
               <span className={cn(CHIP_SHAPE, "text-muted-foreground ml-2")}>Custom</span>
             )}
+            <RouteOnlyChip game={game} route={routeRow.route} className="ml-2" />
           </div>
         );
       },

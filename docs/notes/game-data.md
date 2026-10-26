@@ -121,3 +121,33 @@ Not verified: whether Tabitha at Mt. Chimney and Shelly at the Weather Institute
 past. They are standing trainers, so both are kept. Moves, abilities and held items were not
 checked, since the data does not store them. Badge sprites 17 to 24 were matched by eye to the
 decomp's badge sheet.
+
+## Gift-only and static-only routes (`only`)
+
+A route is flagged when nothing on it can be met in the wild. Any grass, surf, fishing, headbutt
+or rock smash encounter means no flag. HeartGold and SoulSilver were judged from Serebii's
+location pages (https://www.serebii.net/pokearth/johto/ and /kanto/, with `4th/` pages for Gen IV)
+and PokeAPI's HGSS location areas. Bulbapedia was read through search snippets only.
+
+HeartGold and SoulSilver:
+- starter: gift. Chikorita, Cyndaquil or Totodile.
+- goldenrod-city: gift. Bill's Eevee, Game Corner prizes, Machop trade. Serebii lists no wild
+  Pokemon (https://www.serebii.net/pokearth/johto/goldenrodcity.shtml).
+- saffron-city: gift. Pikachu-for-Raichu trade only
+  (https://www.serebii.net/pokearth/kanto/4th/saffroncity.shtml).
+- rocket-hideout: static. Voltorb and Electrode, which PokeAPI lists as static.
+- power-plant: static. Zapdos once the Machine Part is back, plus the Magneton trade. Wild
+  Pokemon live outside the building per Bulbapedia's Kanto Power Plant page.
+- Not flagged because of wild encounters: new-bark-town, violet-city (fishing), cliff-edge-gate
+  (surf, https://www.serebii.net/pokearth/johto/cliffedgegate.shtml), bell-tower (Rattata and
+  Gastly), pewter-city (headbutt), cinnabar-island, celadon-city and the rest.
+- indigo-plateau has nothing obtainable, so neither tag fits.
+
+FireRed and LeafGreen (from the research notes, which checked each route against Serebii and
+PokeAPI):
+- starter: gift. saffron-city: gift (Hitmonlee or Hitmonchan). silph-co: gift (Lapras).
+
+Emerald:
+- starter: gift. rustboro-city: gift (fossil revival, Seedot trade). lavaridge-town: gift (Wynaut
+  egg). fortree-city: gift (Volbeat trade). aqua-hideout: static (Electrode). terra-cave: static
+  (Groudon). marine-cave: static (Kyogre).

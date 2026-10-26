@@ -7,6 +7,7 @@ import { Typography } from "@/components/typography";
 import { canDeleteRoute } from "@/domain/routes";
 import type { RouteRow } from "@/domain/route-rows";
 import type { Encounter, Mon, Route } from "@/domain/types";
+import type { GameData } from "@/game/types";
 import { cn } from "@/lib/utils";
 
 import {
@@ -18,6 +19,7 @@ import {
   RowSprite,
   STATUS_LABEL,
 } from "./route-presentation";
+import { RouteOnlyChip } from "./route-only-chip";
 import { RowEndAction } from "./row-end-action";
 
 function RouteCardSubtitle({ row }: { row: RouteRow }): ReactNode {
@@ -60,10 +62,12 @@ function RouteCardSubtitle({ row }: { row: RouteRow }): ReactNode {
 function RouteCardBadges({
   row,
   generation,
+  game,
   onLog,
 }: {
   row: RouteRow;
   generation: number | undefined;
+  game: GameData | undefined;
   onLog: () => void;
 }): ReactNode {
   const chip = chipForRouteRow(row);
@@ -88,6 +92,7 @@ function RouteCardBadges({
       {row.route.isCustom && (
         <span className={cn(CHIP_SHAPE, "text-muted-foreground")}>Custom</span>
       )}
+      <RouteOnlyChip game={game} route={row.route} />
     </div>
   );
 }
@@ -96,6 +101,7 @@ export interface RouteCardListProps {
   rows: RouteRow[];
   encounters: readonly Encounter[];
   generation: number | undefined;
+  game?: GameData;
   onDelete: (route: Route) => void;
   deletePending: boolean;
   onLogEncounter: (route: Route) => void;
@@ -107,6 +113,7 @@ export function RouteCardList({
   rows,
   encounters,
   generation,
+  game,
   onDelete,
   deletePending,
   onLogEncounter,
@@ -142,6 +149,7 @@ export function RouteCardList({
               <RouteCardBadges
                 row={row}
                 generation={generation}
+                game={game}
                 onLog={() => onLogEncounter(row.route)}
               />
               <div className="mt-1 min-w-0 break-words">

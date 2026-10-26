@@ -139,3 +139,20 @@ describe("firered runs", () => {
     expect(typesIn(clefairy, leafgreen.generation)).toEqual(["normal"]);
   });
 });
+
+describe("firered only-routes", () => {
+  test("exactly these routes are flagged", () => {
+    const flagged = Object.fromEntries(
+      firered.routes.filter((r) => r.only !== undefined).map((r) => [r.id, r.only]),
+    );
+    expect(flagged).toEqual({
+      starter: "gift",
+      "saffron-city": "gift",
+      "silph-co": "gift",
+    });
+  });
+
+  test("a route with wild encounters is not flagged", () => {
+    expect(firered.routes.find((r) => r.id === "celadon-city")?.only).toBeUndefined();
+  });
+});
