@@ -22,6 +22,8 @@ export const speciesDisplayNames: Readonly<Record<string, string>> = {
   "tauros-paldea-aqua-breed": "Paldean Tauros (Aqua Breed)",
   "frillish-male": "Frillish",
   "jellicent-male": "Jellicent",
+  "kyurem-black": "Black Kyurem",
+  "kyurem-white": "White Kyurem",
   "tornadus-incarnate": "Tornadus",
   "thundurus-incarnate": "Thundurus",
   "landorus-incarnate": "Landorus",

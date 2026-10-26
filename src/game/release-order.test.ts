@@ -21,6 +21,8 @@ describe("release order", () => {
       "soulsilver",
       "black",
       "white",
+      "black2",
+      "white2",
     ]);
   });
 
@@ -45,6 +47,7 @@ describe("game search", () => {
       "heartgold",
       "soulsilver",
       "white",
+      "white2",
     ]);
   });
 
