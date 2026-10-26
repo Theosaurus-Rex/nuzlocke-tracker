@@ -122,6 +122,40 @@ past. They are standing trainers, so both are kept. Moves, abilities and held it
 checked, since the data does not store them. Badge sprites 17 to 24 were matched by eye to the
 decomp's badge sheet.
 
+## Ruby and Sapphire (`src/game/data/rs/`)
+
+One directory for both versions. Routes and level caps are shared. The 18 fights the two games
+have in common are shared too, and each version adds six villain fights: Team Magma (Tabitha,
+Maxie, Courtney) in Ruby and Team Aqua (Matt, Archie, Shelly) in Sapphire. The bosses sit at
+their story positions in `order`, and each version's list is the shared fights plus its bosses
+sorted by that order. Sources are upstream's `routes/ruby.txt`, `routes/saph.txt` and
+`leagues/rs.txt`, checked against Serebii's Ruby and Sapphire pages and `pret/pokeruby`
+(`constants/version.inc` decides which trainer each version uses). `routes/ssaph.txt` is a
+romhack and is ignored.
+
+Routes are 61 core routes plus Sky Pillar after Victory Road, which is post-game in these
+games. The Lilycove hideout is one shared route, `lilycove-hideout`, tagged static for its two
+Electrode. Littleroot Town, Altering Cave, Desert Underpass, Mirage Tower, Mirage Island and
+Artisan Cave are Emerald areas and are left out. Mirage Island's Wynaut belong to Route 130.
+
+Fights are first-run only, 24 per version. The rival's optional Lilycove fight is left out. The
+rival is "May / Brendan" with identical teams, and Wally has two fights, both kind `rival`.
+
+Upstream fixes: Wally's Ralts is level 16 (upstream 17), Drake's Salamence is 55 (53),
+Steven's Skarmory is 57 (52), the Champion is kind `champion`, the hideout is added as a route,
+and the rival's Route 119 fight comes before the Weather Institute.
+
+Sources for the aces in `rs.test.ts`: the decomp's trainer tables and Serebii's gym and Elite
+Four pages agree on every ace. Level caps are Nuzlocke University's Ruby/Sapphire block and equal
+the aces, with Wallace at 43 as gym 8.
+
+Rosters resting on the decomp and upstream only: every rival fight, Wally, and every gym and
+Elite Four member below the ace. Bulbapedia's Wallace page showed only three of the five levels
+and Matt's hideout roster was not shown. Not verified: whether the five admin fights can be
+walked past. They are standing trainers that both Serebii and Bulbapedia describe as story
+fights, so all five are kept. Badge sprites 17 to 24 are the Emerald numbers, matched by eye to
+the decomp's badge sheet.
+
 ## Gift-only and static-only routes (`only`)
 
 A route is flagged when nothing on it can be met in the wild. Any grass, surf, fishing, headbutt
@@ -153,3 +187,8 @@ Emerald:
 - rustboro-city: gift (fossil revival, Seedot trade). lavaridge-town: gift (Wynaut
   egg). fortree-city: gift (Volbeat trade). aqua-hideout: static (Electrode). terra-cave: static
   (Groudon). marine-cave: static (Kyogre).
+
+Ruby and Sapphire:
+- rustboro-city: gift (fossil revival, Slakoth trade). lavaridge-town: gift (Wynaut egg).
+  fortree-city: gift (Pikachu for Skitty trade). lilycove-hideout: static (Electrode). Sky Pillar
+  and the Cave of Origin have wild Pokemon, so neither is flagged.

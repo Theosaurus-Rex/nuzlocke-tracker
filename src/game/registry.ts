@@ -10,6 +10,7 @@ import type { GameId } from "@/domain/types";
 import { emerald } from "@/game/data/emerald";
 import { firered, leafgreen } from "@/game/data/frlg";
 import { heartgold, soulsilver } from "@/game/data/heartgold";
+import { ruby, sapphire } from "@/game/data/rs";
 import type { GameData } from "@/game/types";
 
 export const GAMES: Record<GameId, GameData> = {
@@ -18,4 +19,6 @@ export const GAMES: Record<GameId, GameData> = {
   firered,
   leafgreen,
   emerald,
+  ruby,
+  sapphire,
 };
