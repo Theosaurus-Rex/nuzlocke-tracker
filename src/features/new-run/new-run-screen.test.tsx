@@ -129,6 +129,8 @@ describe("NewRunScreen", () => {
       "Platinum· Gen 4",
       "HeartGold· Gen 4",
       "SoulSilver· Gen 4",
+      "Black· Gen 5",
+      "White· Gen 5",
     ]);
   });
 
