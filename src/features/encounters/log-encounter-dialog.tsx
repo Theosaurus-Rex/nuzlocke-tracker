@@ -19,7 +19,7 @@ import type { CatchDetails } from "@/domain/transitions";
 import type { Encounter, Gender, Mon, Moveset, Route, Rules } from "@/domain/types";
 import { useEvolutionLine } from "@/game/pokeapi/queries";
 import { speciesDisplayName } from "@/game/pokeapi/resolve";
-import { useCatchShinyBonus, useLogEncounter } from "@/storage/mutations";
+import { useCatchBonus, useLogEncounter } from "@/storage/mutations";
 import { useRunFields, useRunGame } from "@/storage/queries";
 import { cn } from "@/lib/utils";
 
@@ -36,6 +36,8 @@ import {
 import { MovesetField } from "./moveset-field";
 import { PlacementField } from "./placement-field";
 import { SpeciesPicker } from "./species-picker";
+
+type DialogMode = "encounter" | "shiny-bonus" | "gift";
 
 type Outcome = "caught" | "missed" | "skipped";
 
@@ -63,12 +65,22 @@ function DupeNotice({ mon }: { mon: Mon }): ReactNode {
   );
 }
 
+const BONUS_SUBMIT: Partial<Record<DialogMode, string>> = {
+  "shiny-bonus": "Add shiny",
+  gift: "Add gift",
+};
+
+const BONUS_TITLE: Partial<Record<DialogMode, string>> = {
+  "shiny-bonus": "Add bonus shiny",
+  gift: "Add gift",
+};
+
 function levelFromText(text: string): number {
   return Number(text);
 }
 
 export interface LogEncounterDialogProps {
-  mode?: "encounter" | "shiny-bonus";
+  mode?: DialogMode;
   open: boolean;
   onOpenChange: (open: boolean) => void;
   runId: string;
@@ -102,8 +114,8 @@ export function LogEncounterDialog({
         )}
       >
         <EncounterDialogHeader
-          title={mode === "shiny-bonus" ? "Add bonus shiny" : (route?.name ?? "")}
-          tag={mode === "shiny-bonus" ? null : undefined}
+          title={BONUS_TITLE[mode] ?? route?.name ?? ""}
+          tag={mode === "encounter" ? undefined : null}
         />
         <LogEncounterForm
           runId={runId}
@@ -129,7 +141,7 @@ interface LogEncounterFormProps {
   mons: readonly Mon[];
   existingEncounters: readonly Encounter[];
   generation: number | undefined;
-  mode: "encounter" | "shiny-bonus";
+  mode: DialogMode;
   onDone: () => void;
 }
 
@@ -146,9 +158,10 @@ function LogEncounterForm({
 }: LogEncounterFormProps): ReactNode {
   const logEncounter = useLogEncounter();
   const fields = useRunFields(runId);
-  const catchShinyBonus = useCatchShinyBonus();
+  const catchBonus = useCatchBonus();
   const shinyBonus = mode === "shiny-bonus";
-  const saveMutation = shinyBonus ? catchShinyBonus : logEncounter;
+  const bonus = mode !== "encounter";
+  const saveMutation = bonus ? catchBonus : logEncounter;
 
   const [outcome, setOutcome] = useState<Outcome>("caught");
   const [speciesId, setSpeciesId] = useState("");
@@ -167,13 +180,13 @@ function LogEncounterForm({
   );
   const [submitted, setSubmitted] = useState(false);
   const [routeChoice, setRouteChoice] = useState("");
-  const routeError = shinyBonus && submitted && routeChoice === "";
+  const routeError = bonus && submitted && routeChoice === "";
 
   const evolutionLine = useEvolutionLine(
-    rules.dupesClause && !shinyBonus && speciesId !== "" ? speciesId : null,
+    rules.dupesClause && !bonus && speciesId !== "" ? speciesId : null,
   );
   const dupe =
-    rules.dupesClause && !shinyBonus && speciesId !== ""
+    rules.dupesClause && !bonus && speciesId !== ""
       ? findDupe({ line: evolutionLine ?? [speciesId], mons })
       : undefined;
 
@@ -211,7 +224,7 @@ function LogEncounterForm({
     event.preventDefault();
     setSubmitted(true);
 
-    if (shinyBonus && routeChoice === "") {
+    if (bonus && routeChoice === "") {
       return;
     }
 
@@ -219,8 +232,11 @@ function LogEncounterForm({
       return;
     }
 
-    if (shinyBonus) {
-      catchShinyBonus.mutate({ runId, routeId: routeChoice, details }, { onSuccess: onDone });
+    if (bonus) {
+      catchBonus.mutate(
+        { kind: shinyBonus ? "shiny" : "gift", runId, routeId: routeChoice, details },
+        { onSuccess: onDone },
+      );
       return;
     }
 
@@ -240,7 +256,7 @@ function LogEncounterForm({
   return (
     <form className="flex min-h-0 flex-1 flex-col" onSubmit={handleSubmit} noValidate>
       <div className="flex-1 space-y-4 overflow-y-auto p-4">
-        {shinyBonus && (
+        {bonus && (
           <div>
             <Typography
               as="label"
@@ -285,7 +301,7 @@ function LogEncounterForm({
           </div>
         )}
         <div className="flex items-center justify-between gap-2">
-          {shinyBonus ? (
+          {bonus ? (
             <span />
           ) : (
             <div
@@ -502,7 +518,7 @@ function LogEncounterForm({
             Cancel
           </Button>
           <Button type="submit" disabled={saveMutation.isPending}>
-            {saveMutation.isPending ? "Saving…" : shinyBonus ? "Add shiny" : "Save encounter"}
+            {saveMutation.isPending ? "Saving…" : (BONUS_SUBMIT[mode] ?? "Save encounter")}
           </Button>
         </div>
       </div>

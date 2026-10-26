@@ -2,6 +2,7 @@ import { describe, expect, test } from "vitest";
 
 import {
   amendMon,
+  catchBonus,
   catchEncounter,
   catchShinyBonus,
   clearFight,
@@ -266,6 +267,32 @@ describe("catchEncounter", () => {
     expect(error).toBeInstanceOf(Error);
     expect((error as Error).message).toContain("20");
     expect((error as Error).message).toContain("19");
+  });
+});
+
+describe("catchBonus as a gift", () => {
+  const gift = (details = catchDetails) =>
+    catchBonus({
+      kind: "gift",
+      runId: "run-1",
+      routeId: "route-42",
+      party: [],
+      box: [],
+      monId: "mon-1",
+      details,
+    });
+
+  test("builds a mon with no encounter, tied to the route", () => {
+    expect(gift()).toMatchObject({
+      encounterId: null,
+      caughtRouteId: "route-42",
+      shiny: false,
+      status: "party",
+    });
+  });
+
+  test("keeps the shiny flag the details carry", () => {
+    expect(gift({ ...catchDetails, shiny: true }).shiny).toBe(true);
   });
 });
 

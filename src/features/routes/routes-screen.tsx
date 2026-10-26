@@ -1,4 +1,5 @@
 import { useState, type FormEvent, type ReactNode } from "react";
+import { GiftIcon } from "lucide-react";
 import { Navigate, useParams } from "react-router";
 
 import { CHIP_SHAPE } from "@/components/chip";
@@ -117,7 +118,7 @@ export function RoutesScreen(): ReactNode {
   const [name, setName] = useState("");
   const [submitted, setSubmitted] = useState(false);
   const [logRoute, setLogRoute] = useState<Route | null>(null);
-  const [shinyOpen, setShinyOpen] = useState(false);
+  const [bonusMode, setBonusMode] = useState<"shiny-bonus" | "gift" | null>(null);
   const [editTarget, setEditTarget] = useState<{ route: Route; mon: Mon } | null>(null);
   const [resetTarget, setResetTarget] = useState<RouteRow | null>(null);
   const [addOpen, setAddOpen] = useState(false);
@@ -185,6 +186,7 @@ export function RoutesScreen(): ReactNode {
   const visibleRows = searchRouteRows(filterRouteRows(rows, activeFilters), search);
   const counters = summariseRouteRows(rows.filter((row) => !outOfTotals.has(row.route.id)));
   const trimmedSearch = search.trim();
+  const giftClause = rules.giftClause === true;
   const shinyClause = runQuery.data?.rules.shinyClause === true && fields.shiny;
 
   return (
@@ -198,12 +200,26 @@ export function RoutesScreen(): ReactNode {
                 type="button"
                 variant="outline"
                 aria-label="Add bonus shiny"
-                onClick={() => setShinyOpen(true)}
+                onClick={() => setBonusMode("shiny-bonus")}
                 className="size-10 shadow-none md:h-10 md:w-auto md:px-4"
               >
                 <span aria-hidden="true">✦</span>
                 <span aria-hidden="true" className="hidden md:inline">
                   Add bonus shiny
+                </span>
+              </Button>
+            )}
+            {giftClause && (
+              <Button
+                type="button"
+                variant="outline"
+                aria-label="Add gift"
+                onClick={() => setBonusMode("gift")}
+                className="size-10 shadow-none md:h-10 md:w-auto md:px-4"
+              >
+                <GiftIcon aria-hidden="true" />
+                <span aria-hidden="true" className="hidden md:inline">
+                  Add gift
                 </span>
               </Button>
             )}
@@ -354,14 +370,14 @@ export function RoutesScreen(): ReactNode {
         </DialogLoader>
       )}
 
-      {shinyOpen && (
+      {bonusMode !== null && (
         <DialogLoader>
           <LogEncounterDialog
             open
-            mode="shiny-bonus"
+            mode={bonusMode}
             onOpenChange={(nextOpen) => {
               if (!nextOpen) {
-                setShinyOpen(false);
+                setBonusMode(null);
               }
             }}
             runId={activeRunId}
