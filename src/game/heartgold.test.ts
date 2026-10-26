@@ -115,3 +115,22 @@ describe("heartgold shape", () => {
     expect(count((f) => f.kind === "rival")).toBe(7);
   });
 });
+
+describe("heartgold only-routes", () => {
+  test("exactly these routes are flagged", () => {
+    const flagged = Object.fromEntries(
+      heartgold.routes.filter((r) => r.only !== undefined).map((r) => [r.id, r.only]),
+    );
+    expect(flagged).toEqual({
+      starter: "gift",
+      "goldenrod-city": "gift",
+      "saffron-city": "gift",
+      "rocket-hideout": "static",
+      "power-plant": "static",
+    });
+  });
+
+  test("a route with wild encounters is not flagged", () => {
+    expect(heartgold.routes.find((r) => r.id === "new-bark-town")?.only).toBeUndefined();
+  });
+});

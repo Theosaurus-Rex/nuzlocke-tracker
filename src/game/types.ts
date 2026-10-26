@@ -37,6 +37,8 @@ export interface RouteDef {
   /** Traversal order among this game's routes. Unique and contiguous. */
   order: number;
   region: Region;
+  /** Every Pokemon on this route is a gift, egg, fossil, trade or static. No wild encounters. */
+  only?: "gift" | "static";
 }
 
 export interface MonFields {

@@ -9,8 +9,10 @@ import { render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { describe, expect, it, vi } from "vitest";
 
+import { firered } from "@/game/data/frlg";
 import { buildRouteRows } from "@/domain/route-rows";
 import type { Encounter, Mon, Route } from "@/domain/types";
+import type { GameData } from "@/game/types";
 import { makeEncounter, makeMon, makeRoute } from "@/test/factories";
 
 import { RouteTable } from "./route-table";
@@ -21,6 +23,7 @@ function renderTable(input: {
   routes: Route[];
   encounters: Encounter[];
   mons: Mon[];
+  game?: GameData;
   onDelete?: (route: Route) => void;
   onLogEncounter?: (route: Route) => void;
   onEditMon?: (route: Route, mon: Mon) => void;
@@ -40,6 +43,7 @@ function renderTable(input: {
         rows={rows}
         encounters={input.encounters}
         generation={HEARTGOLD_GENERATION}
+        game={input.game}
         onDelete={input.onDelete ?? vi.fn()}
         deletePending={false}
         onLogEncounter={input.onLogEncounter ?? vi.fn()}
@@ -444,5 +448,31 @@ describe("RouteTable encounter cell", () => {
 
     const row = screen.getByText("Route 29").closest("tr") as HTMLElement;
     expect(within(row).getAllByRole("cell")[1]).toHaveTextContent("not encountered yet");
+  });
+
+  it("shows a Gift chip for a flagged route, looked up by game route id", () => {
+    const route = makeRoute({ name: "Renamed", gameRouteId: "silph-co" });
+    renderTable({ routes: [route], encounters: [], mons: [], game: firered });
+    expect(screen.getByText("Gift")).toBeInTheDocument();
+    expect(screen.getByText("Renamed")).toBeInTheDocument();
+  });
+
+  it("shows no chip for an unflagged route", () => {
+    const route = makeRoute({ gameRouteId: "route-1" });
+    renderTable({ routes: [route], encounters: [], mons: [], game: firered });
+    expect(screen.queryByText("Gift")).not.toBeInTheDocument();
+    expect(screen.queryByText("Static")).not.toBeInTheDocument();
+  });
+
+  it("shows no chip for a custom route, even with a flagged game route id", () => {
+    const route = makeRoute({ isCustom: true, gameRouteId: "silph-co" });
+    renderTable({ routes: [route], encounters: [], mons: [], game: firered });
+    expect(screen.queryByText("Gift")).not.toBeInTheDocument();
+  });
+
+  it("shows no chip for a game route id the game does not have", () => {
+    const route = makeRoute({ gameRouteId: "nowhere" });
+    renderTable({ routes: [route], encounters: [], mons: [], game: firered });
+    expect(screen.queryByText("Gift")).not.toBeInTheDocument();
   });
 });

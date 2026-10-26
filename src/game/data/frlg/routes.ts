@@ -7,7 +7,8 @@
 import type { RouteDef } from "@/game/types";
 
 export const routes: RouteDef[] = [
-  { id: "starter", name: "Starter", order: 1, region: "kanto" },
+  // Bulbasaur, Charmander or Squirtle gift only.
+  { id: "starter", name: "Starter", order: 1, region: "kanto", only: "gift" },
   { id: "pallet-town", name: "Pallet Town", order: 2, region: "kanto" },
   { id: "route-1", name: "Route 1", order: 3, region: "kanto" },
   { id: "viridian-city", name: "Viridian City", order: 4, region: "kanto" },
@@ -34,9 +35,11 @@ export const routes: RouteDef[] = [
   { id: "route-8", name: "Route 8", order: 24, region: "kanto" },
   { id: "route-7", name: "Route 7", order: 25, region: "kanto" },
   { id: "celadon-city", name: "Celadon City", order: 26, region: "kanto" },
-  { id: "saffron-city", name: "Saffron City", order: 27, region: "kanto" },
+  // Hitmonlee or Hitmonchan gift only.
+  { id: "saffron-city", name: "Saffron City", order: 27, region: "kanto", only: "gift" },
   // Not in upstream. Added for the Lapras gift.
-  { id: "silph-co", name: "Silph Co.", order: 28, region: "kanto" },
+  // Lapras gift only.
+  { id: "silph-co", name: "Silph Co.", order: 28, region: "kanto", only: "gift" },
   { id: "route-16", name: "Route 16", order: 29, region: "kanto" },
   { id: "route-17", name: "Route 17", order: 30, region: "kanto" },
   { id: "route-18", name: "Route 18", order: 31, region: "kanto" },

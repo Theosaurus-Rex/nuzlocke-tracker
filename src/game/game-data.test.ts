@@ -3,6 +3,12 @@ import { describe, expect, test } from "vitest";
 import { GAMES } from "@/game/registry";
 
 describe.each(Object.values(GAMES))("$id game data", (game) => {
+  test("only is gift or static when present", () => {
+    for (const route of game.routes) {
+      expect([undefined, "gift", "static"]).toContain(route.only);
+    }
+  });
+
   test("registry key matches the game's own id", () => {
     expect(GAMES[game.id]).toBe(game);
   });

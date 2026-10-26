@@ -105,7 +105,8 @@ export function RoutesScreen(): ReactNode {
   const { runId } = useParams<{ runId: string }>();
   const runQuery = useRun(runId ?? "");
   const fields = useRunFields(runId ?? "");
-  const generation = useRunGame(runId ?? "")?.generation;
+  const game = useRunGame(runId ?? "");
+  const generation = game?.generation;
   const routesQuery = useRoutes(runId ?? "");
   const encountersQuery = useEncounters(runId);
   const monsQuery = useMons(runId);
@@ -305,6 +306,7 @@ export function RoutesScreen(): ReactNode {
               rows={visibleRows}
               encounters={encounters}
               generation={generation}
+              game={game}
               onDelete={handleDelete}
               deletePending={deleteRoute.isPending}
               onLogEncounter={setLogRoute}
@@ -317,6 +319,7 @@ export function RoutesScreen(): ReactNode {
               rows={visibleRows}
               encounters={encounters}
               generation={generation}
+              game={game}
               onDelete={handleDelete}
               deletePending={deleteRoute.isPending}
               onLogEncounter={setLogRoute}
