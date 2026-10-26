@@ -210,7 +210,9 @@ A game is its data directory under `src/game/data/`, one entry in `GAMES` in
 `src/game/registry.ts`, and one id in `GAME_IDS` in `src/domain/types.ts`. The registry is typed
 `Record<GameId, GameData>`, so `pnpm typecheck` fails if an id has no entry or an entry has no
 id. Nothing else names a game: screens read the run's game through `useRunGame`, and the new run
-screen lists whatever the registry holds.
+screen lists whatever the registry holds, in order of each game's `released` date. Set `released`
+to the first release date anywhere, as an ISO date, and note the source beside it. Games with the
+same date keep registry order.
 
 Which of nature, ability, held item, gender and shiny a game has comes from its `generation`, in
 `monFields` (`src/game/fields.ts`). Set `fields` on a game's `GameData` to differ from that, such as

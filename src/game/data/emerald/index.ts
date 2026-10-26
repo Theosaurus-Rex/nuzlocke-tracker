@@ -10,6 +10,8 @@ export const emerald: GameData = {
   id: "emerald",
   name: "Emerald",
   generation: 3,
+  // Japan release, per Bulbapedia's Pokémon Emerald page.
+  released: "2004-09-16",
   routes,
   fights,
   levelCaps,

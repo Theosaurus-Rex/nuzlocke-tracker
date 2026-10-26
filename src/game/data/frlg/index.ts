@@ -13,6 +13,8 @@ export const firered: GameData = {
   id: "firered",
   name: "FireRed",
   generation: 3,
+  // Japan release, per Bulbapedia's Pokémon FireRed and LeafGreen page.
+  released: "2004-01-29",
   routes,
   fights,
   levelCaps,

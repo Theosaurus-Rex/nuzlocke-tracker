@@ -13,6 +13,11 @@ describe.each(Object.values(GAMES))("$id game data", (game) => {
     expect(game.routes.find((r) => r.id === "starter")?.only).toBeUndefined();
   });
 
+  test("released is a valid ISO date", () => {
+    expect(game.released).toMatch(/^\d{4}-\d{2}-\d{2}$/);
+    expect(new Date(game.released).toISOString().slice(0, 10)).toBe(game.released);
+  });
+
   test("registry key matches the game's own id", () => {
     expect(GAMES[game.id]).toBe(game);
   });

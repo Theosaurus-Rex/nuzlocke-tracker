@@ -54,6 +54,8 @@ export interface GameData {
   name: string;
   /** The generation whose types and move stats this game's runs resolve against. */
   generation: number;
+  /** First release anywhere, as an ISO date. Hand-entered. */
+  released: string;
   /** Turns a field on or off where the game differs from its generation's default. */
   fields?: Partial<MonFields>;
   routes: RouteDef[];
