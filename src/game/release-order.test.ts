@@ -16,6 +16,7 @@ describe("release order", () => {
       "emerald",
       "diamond",
       "pearl",
+      "platinum",
       "heartgold",
       "soulsilver",
     ]);
