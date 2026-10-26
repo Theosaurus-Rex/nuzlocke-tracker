@@ -129,8 +129,10 @@ or rock smash encounter means no flag. HeartGold and SoulSilver were judged from
 location pages (https://www.serebii.net/pokearth/johto/ and /kanto/, with `4th/` pages for Gen IV)
 and PokeAPI's HGSS location areas. Bulbapedia was read through search snippets only.
 
+The starter route is never tagged in any game. A starter is a mandatory encounter, and a tag would
+grey it out under No gifts.
+
 HeartGold and SoulSilver:
-- starter: gift. Chikorita, Cyndaquil or Totodile.
 - goldenrod-city: gift. Bill's Eevee, Game Corner prizes, Machop trade. Serebii lists no wild
   Pokemon (https://www.serebii.net/pokearth/johto/goldenrodcity.shtml).
 - saffron-city: gift. Pikachu-for-Raichu trade only
@@ -145,9 +147,9 @@ HeartGold and SoulSilver:
 
 FireRed and LeafGreen (from the research notes, which checked each route against Serebii and
 PokeAPI):
-- starter: gift. saffron-city: gift (Hitmonlee or Hitmonchan). silph-co: gift (Lapras).
+- saffron-city: gift (Hitmonlee or Hitmonchan). silph-co: gift (Lapras).
 
 Emerald:
-- starter: gift. rustboro-city: gift (fossil revival, Seedot trade). lavaridge-town: gift (Wynaut
+- rustboro-city: gift (fossil revival, Seedot trade). lavaridge-town: gift (Wynaut
   egg). fortree-city: gift (Volbeat trade). aqua-hideout: static (Electrode). terra-cave: static
   (Groudon). marine-cave: static (Kyogre).

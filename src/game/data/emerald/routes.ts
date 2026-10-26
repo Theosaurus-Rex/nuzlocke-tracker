@@ -7,8 +7,7 @@
 import type { RouteDef } from "@/game/types";
 
 export const routes: RouteDef[] = [
-  // Treecko, Torchic or Mudkip gift only.
-  { id: "starter", name: "Starter", order: 1, region: "hoenn", only: "gift" },
+  { id: "starter", name: "Starter", order: 1, region: "hoenn" },
   { id: "route-101", name: "Route 101", order: 2, region: "hoenn" },
   { id: "route-103", name: "Route 103", order: 3, region: "hoenn" },
   { id: "route-102", name: "Route 102", order: 4, region: "hoenn" },

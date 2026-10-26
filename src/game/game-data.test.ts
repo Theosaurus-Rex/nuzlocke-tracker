@@ -9,6 +9,10 @@ describe.each(Object.values(GAMES))("$id game data", (game) => {
     }
   });
 
+  test("the starter route is never tagged, since it is a mandatory encounter", () => {
+    expect(game.routes.find((r) => r.id === "starter")?.only).toBeUndefined();
+  });
+
   test("registry key matches the game's own id", () => {
     expect(GAMES[game.id]).toBe(game);
   });

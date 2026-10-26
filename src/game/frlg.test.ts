@@ -146,7 +146,6 @@ describe("firered only-routes", () => {
       firered.routes.filter((r) => r.only !== undefined).map((r) => [r.id, r.only]),
     );
     expect(flagged).toEqual({
-      starter: "gift",
       "saffron-city": "gift",
       "silph-co": "gift",
     });

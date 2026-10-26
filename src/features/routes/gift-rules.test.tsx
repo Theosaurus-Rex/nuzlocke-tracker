@@ -5,7 +5,7 @@ import { beforeEach, describe, expect, it } from "vitest";
 import { MemoryRouter, Route, Routes } from "react-router";
 
 import { DEFAULT_RULES } from "@/domain/rules";
-import type { Rules } from "@/domain/types";
+import type { Rules, Run } from "@/domain/types";
 import { createMemoryAdapter } from "@/storage/memory-adapter";
 import { StorageProvider } from "@/storage/storage-context";
 import { POKEAPI_BASE } from "@/game/pokeapi/client";
@@ -28,23 +28,27 @@ beforeEach(() => {
 });
 
 const ROUTES = [
-  { name: "Starter", gameRouteId: "starter" },
+  { name: "Goldenrod City", gameRouteId: "goldenrod-city" },
   { name: "Route 29", gameRouteId: "route-29" },
   { name: "New Bark Town", gameRouteId: "new-bark-town" },
 ];
 
-export async function seedGiftRun(rules: Partial<Rules>) {
+export async function seedGiftRun(
+  rules: Partial<Rules>,
+  game: Run["game"] = "heartgold",
+  routeDefs = ROUTES,
+) {
   const adapter = createMemoryAdapter();
   await adapter.init();
   const run = await adapter.runs.put({
     name: "Run",
-    game: "heartgold",
+    game,
     status: "active",
     rules: { ...DEFAULT_RULES, ...rules },
     finishedAt: null,
   });
   const routes = [];
-  for (const [index, route] of ROUTES.entries()) {
+  for (const [index, route] of routeDefs.entries()) {
     routes.push(
       await adapter.routes.put({
         runId: run.id,
@@ -80,16 +84,43 @@ async function card(name: string): Promise<HTMLElement> {
   return within(list).getByText(name).closest("li") as HTMLElement;
 }
 
+const FIRERED_ROUTES = [
+  { name: "Starter", gameRouteId: "starter" },
+  { name: "Pallet Town", gameRouteId: "pallet-town" },
+  { name: "Route 1", gameRouteId: "route-1" },
+];
+
+describe("the starter route", () => {
+  it("stays loggable and counted under No gifts", async () => {
+    const { adapter, run } = await seedGiftRun({ noGifts: true }, "firered", FIRERED_ROUTES);
+    renderRoutes(adapter, run.id);
+
+    const starter = await card("Starter");
+    expect(within(starter).queryByText("No gifts")).toBeNull();
+    expect(starter).not.toHaveClass("opacity-50");
+    expect(within(starter).getByRole("button", { name: "Log encounter" })).toBeInTheDocument();
+    expect(screen.getByText("0 / 3")).toBeInTheDocument();
+  });
+
+  it("is counted as normal under the gift clause", async () => {
+    const { adapter, run } = await seedGiftRun({ giftClause: true }, "firered", FIRERED_ROUTES);
+    renderRoutes(adapter, run.id);
+
+    await card("Starter");
+    expect(screen.getByText("0 / 3")).toBeInTheDocument();
+  });
+});
+
 describe("No gifts", () => {
   it("greys a gift-only route, labels it and cannot log it", async () => {
     const { adapter, run } = await seedGiftRun({ noGifts: true });
     renderRoutes(adapter, run.id);
 
-    const starter = await card("Starter");
-    expect(within(starter).getByText("No gifts")).toBeInTheDocument();
-    expect(starter).toHaveClass("opacity-50");
-    expect(within(starter).queryByRole("button", { name: "Log encounter" })).toBeNull();
-    expect(screen.queryByRole("button", { name: "Log Starter" })).toBeNull();
+    const gift = await card("Goldenrod City");
+    expect(within(gift).getByText("No gifts")).toBeInTheDocument();
+    expect(gift).toHaveClass("opacity-50");
+    expect(within(gift).queryByRole("button", { name: "Log encounter" })).toBeNull();
+    expect(screen.queryByRole("button", { name: "Log Goldenrod City" })).toBeNull();
   });
 
   it("leaves a mixed route loggable", async () => {
@@ -106,7 +137,7 @@ describe("No gifts", () => {
     const { adapter, run } = await seedGiftRun({ noGifts: true });
     renderRoutes(adapter, run.id);
 
-    await card("Starter");
+    await card("Goldenrod City");
     expect(screen.getByText("0 / 2")).toBeInTheDocument();
   });
 
@@ -114,9 +145,9 @@ describe("No gifts", () => {
     const { adapter, run } = await seedGiftRun({});
     renderRoutes(adapter, run.id);
 
-    const starter = await card("Starter");
-    expect(within(starter).queryByText("No gifts")).toBeNull();
-    expect(within(starter).getByRole("button", { name: "Log encounter" })).toBeInTheDocument();
+    const gift = await card("Goldenrod City");
+    expect(within(gift).queryByText("No gifts")).toBeNull();
+    expect(within(gift).getByRole("button", { name: "Log encounter" })).toBeInTheDocument();
     expect(screen.getByText("0 / 3")).toBeInTheDocument();
   });
 });
@@ -134,7 +165,7 @@ describe("Gift clause", () => {
   it("offers Add gift only while the clause is on", async () => {
     const off = await seedGiftRun({});
     const view = renderRoutes(off.adapter, off.run.id);
-    await card("Starter");
+    await card("Goldenrod City");
     expect(screen.queryByRole("button", { name: "Add gift" })).toBeNull();
     view.unmount();
 
@@ -174,17 +205,17 @@ describe("Gift clause", () => {
     const { adapter, run } = await seedGiftRun({ giftClause: true });
     renderRoutes(adapter, run.id);
 
-    await card("Starter");
+    await card("Goldenrod City");
     expect(screen.getByText("0 / 2")).toBeInTheDocument();
 
-    await addGift(user, "Starter");
+    await addGift(user, "Goldenrod City");
 
     await waitFor(async () => {
       expect(await adapter.mons.getAll()).toHaveLength(1);
     });
     expect(screen.getByText("0 / 2")).toBeInTheDocument();
-    const starter = await card("Starter");
-    expect(within(starter).getByRole("button", { name: "Log encounter" })).toBeInTheDocument();
+    const gift = await card("Goldenrod City");
+    expect(within(gift).getByRole("button", { name: "Log encounter" })).toBeInTheDocument();
   });
 
   it("counts a gift-only route again once it has an encounter", async () => {
@@ -200,7 +231,7 @@ describe("Gift clause", () => {
     });
     renderRoutes(adapter, run.id);
 
-    await card("Starter");
+    await card("Goldenrod City");
     expect(screen.getByText("1 / 3")).toBeInTheDocument();
   });
 
@@ -209,7 +240,7 @@ describe("Gift clause", () => {
     const { adapter, run } = await seedGiftRun({ giftClause: true, dupesClause: true });
     renderRoutes(adapter, run.id);
 
-    await addGift(user, "Starter");
+    await addGift(user, "Goldenrod City");
     await waitFor(async () => {
       expect(await adapter.mons.getAll()).toHaveLength(1);
     });

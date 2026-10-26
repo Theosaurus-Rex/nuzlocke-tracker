@@ -7,8 +7,7 @@
 import type { RouteDef } from "@/game/types";
 
 export const routes: RouteDef[] = [
-  // Bulbasaur, Charmander or Squirtle gift only.
-  { id: "starter", name: "Starter", order: 1, region: "kanto", only: "gift" },
+  { id: "starter", name: "Starter", order: 1, region: "kanto" },
   { id: "pallet-town", name: "Pallet Town", order: 2, region: "kanto" },
   { id: "route-1", name: "Route 1", order: 3, region: "kanto" },
   { id: "viridian-city", name: "Viridian City", order: 4, region: "kanto" },

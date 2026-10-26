@@ -7,8 +7,7 @@
 import type { RouteDef } from "@/game/types";
 
 export const routes: RouteDef[] = [
-  // Chikorita, Cyndaquil or Totodile gift only.
-  { id: "starter", name: "Starter", order: 1, region: "johto", only: "gift" },
+  { id: "starter", name: "Starter", order: 1, region: "johto" },
   { id: "new-bark-town", name: "New Bark Town", order: 2, region: "johto" },
   { id: "route-29", name: "Route 29", order: 3, region: "johto" },
   { id: "route-46", name: "Route 46", order: 4, region: "johto" },
