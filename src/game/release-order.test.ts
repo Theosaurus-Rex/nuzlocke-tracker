@@ -25,6 +25,8 @@ describe("release order", () => {
       "white2",
       "x",
       "y",
+      "omegaruby",
+      "alphasapphire",
     ]);
   });
 
@@ -50,6 +52,8 @@ describe("game search", () => {
       "soulsilver",
       "white",
       "white2",
+      "omegaruby",
+      "alphasapphire",
     ]);
   });
 

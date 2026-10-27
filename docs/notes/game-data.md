@@ -353,6 +353,55 @@ Labs cannot be bypassed, that the gym order is fixed (map and walkthrough, no sc
 and whether Shalour opens before the Cyllage badge is unconfirmed), and which non-route places have
 no wild table (Bulbapedia location pages).
 
+## Omega Ruby and Alpha Sapphire (`src/game/data/oras/`)
+
+One dataset for the pair with two real differences. Fights are shared except eight villain fights,
+Team Magma in Omega Ruby and Team Aqua in Alpha Sapphire. Routes are shared with one id, and
+`lilycove-hideout` is named Magma Hideout in Omega Ruby and Aqua Hideout in Alpha Sapphire. The
+sources are `routes/or.txt`, `routes/as.txt` and `leagues/oras.txt` from `domtronn/nuzlocke.data`.
+No ROM data exists for Gen 6, so rosters were checked against Bulbapedia's walkthrough and
+character pages and against Serebii. Serebii has tables for the gyms, the Elite Four, Steven, the
+rival, Wally and every Magma and Aqua fight. Its Team page lists only the Admin for a multi battle,
+so the grunt halves of the Meteor Falls and Southern Island fights rest on Bulbapedia and upstream.
+
+Routes are 69, in the walkthrough order. New Mauville sits after the Cave of Origin because it needs
+Mauville Hills, which opens after the eighth gym. Fishing and Surf count as wild, so towns with only
+water encounters are untagged routes. Castform (Weather Institute) maps to Route 119, the cosplay
+Pikachu to Slateport City, and the Regis and Regigigas to Routes 105, 111 and 120 as in Emerald.
+Sea Mauville and the Scorched Slab are kept, since both come before the League. The Latios or
+Latias, Groudon or Kyogre and Ho-Oh or Lugia catches differ by version but sit on the same routes.
+Five soaring and mirage spots are static routes (Trackless Forest, Nameless Cavern, Pathless Plain,
+Fabled Cave, Crescent Isle) and the soaring flocks are one untagged route, all after the Scorched
+Slab. Each needs a party condition that the app does not model. Gnarled Den, Giratina and Landorus
+need a trade, so they are out.
+
+Fights are 27 per version: 8 gyms in a fixed order, 6 rival, 8 boss, the Elite Four and Steven as
+champion. The rival fights are May or Brendan four times (Route 103, Route 110, Route 119 and
+Lilycove City) and Wally twice. The starter variants and both genders are listed together. The
+Lilycove rival fight was optional in Ruby, Sapphire and Emerald, but both sources describe it as a
+scripted catch-up here, so it is kept. The boss fights are Tabitha or Shelly three times, Maxie or
+Archie twice and Courtney or Matt three times. Meteor Falls and Southern Island are multi battles,
+so each is one fight with both opponents' Pokemon. Left out are Aarune, the Winstrates, unnamed
+Admins and Grunts, Maxie and Archie at the Oceanic Museum (no battle), and the Delta Episode,
+Battle Resort, S.S. Tidal and every rematch.
+
+Level caps are Nuzlocke University's block and equal the aces. The Elite Four is a fixed order, so
+each member has a cap (52, 53, 54, 55), then Steven at 59. No boss or rival exceeds the cap in force
+when met. Badge sprites are 17 to 24, in gym order, and were matched by badge name and the Ruby
+precedent. Mega Evolution is not modelled, so Steven's Metagross, Wally's Gallade and the Camerupt
+and Sharpedo fights are the base species.
+
+Upstream fixes: Matt at the Aqua Hideout has Sharpedo at 39 not 38. Steven is a champion, not an
+elite-four. Aarune is dropped. Beldum at Mossdeep is dropped, because Steven leaves it only after
+the Hall of Fame. New Mauville moves after the eighth gym. The post-game and conditional place rows
+(Sky Pillar, Edge of Space, S.S. Tidal, Battle Resort, the Mirage caves and Gnarled Den) are dropped
+or rebuilt as the soaring spots. The Gen 3 Wynaut row at Mirage Island is dropped.
+
+Not verified: the grunt rosters at Meteor Falls and Southern Island (Bulbapedia only), that the
+Weather Institute, Mt. Pyre and the Lilycove rival fights cannot be skipped (wording only), that the
+Elite Four order is fixed (Bulbapedia wording), the badge images (matched by name, not against a
+reference sheet), and the Pacifidlog Corsola trade level (Serebii only).
+
 ## Gift-only and static-only routes (`only`)
 
 A route is flagged when nothing on it can be met in the wild. Any grass, surf, fishing, headbutt
@@ -415,3 +464,11 @@ X and Y:
   gift (Lucario). snowbelle-city: gift (Bisharp trade). team-flare-secret-hq: static (Xerneas in X,
   Yveltal in Y, a required catch). Lapras, Snorlax, the fossils and the Steelix trade sit on routes
   with wild Pokemon, so none of them flag.
+
+Omega Ruby and Alpha Sapphire:
+- rustboro-city: gift (fossil revival, Makuhita trade). lavaridge-town: gift (Wynaut and Togepi eggs,
+  Kecleon). southern-island: gift (Latios in Omega Ruby, Latias in Alpha Sapphire). fortree-city:
+  gift (Skitty trade). trackless-forest, nameless-cavern, pathless-plain, fabled-cave, crescent-isle:
+  static (the soaring and mirage legendaries). The starter, Slateport City (cosplay Pikachu),
+  Route 119 (Castform), the hideout (Electrode), Sea Mauville and the Scorched Slab all have wild
+  Pokemon, so none of them flag.
