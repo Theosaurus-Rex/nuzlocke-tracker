@@ -11,6 +11,7 @@ describe("release order", () => {
     expect(ids(gamesInReleaseOrder())).toEqual([
       "red",
       "blue",
+      "yellow",
       "ruby",
       "sapphire",
       "firered",
@@ -48,6 +49,7 @@ describe("game search", () => {
       "emerald",
       "red",
       "blue",
+      "yellow",
       "sapphire",
       "firered",
       "leafgreen",

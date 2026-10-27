@@ -438,6 +438,42 @@ Silph Co. is added for the Lapras gift. Vermillion and Fuschia are spelled corre
 Not verified: that the Silph Co. rival fight cannot be bypassed by the elevator (script reading
 only).
 
+## Yellow (`src/game/data/yellow/`)
+
+A single game, with its own folder. Routes are copied from Red and Blue rather than imported, so
+Yellow can be edited alone. The sources are `routes/yel.txt` and `leagues/yel.txt` from
+`domtronn/nuzlocke.data`, checked against pret/pokeyellow at commit
+`31b7c2ea2ba6c8c64ed083723fbaa8cbb74669cb`, Serebii and Bulbapedia. The Red and Blue rosters were
+not reused. Every gym, both Giovanni story fights, the rival and the Champion differ. Only the
+Elite Four match.
+
+Routes are the same 45 as Red and Blue, in the same order. Pikachu is the starter and is never
+tagged. Bulbasaur, Charmander and Squirtle are gifts, mapped to Cerulean City, Route 24 and
+Vermilion City, which already have wild or fishing encounters, so no route is added and none is
+tagged. The Bulbasaur gift needs Pikachu's friendship at 147 and the Squirtle gift needs the
+Thunder Badge, and the app models neither. Wild tables, Game Corner prizes and the seven trades
+in use are not stored. Pikachu's Beach and the Pokémon Fan Club give no Pokémon.
+
+Fights are 25: 8 gyms, 6 rival, 6 boss, the Elite Four and Blue as champion. The bosses are
+Giovanni at the Rocket Hideout and Silph Co., and Jessie and James at Mt. Moon, the Rocket
+Hideout, Pokémon Tower and Silph Co. Each Jessie and James fight is one team of three. Only the
+Mt. Moon one is not proven forced. The rival's Eevee evolution depends on the Oak's Lab result and
+the optional first Route 22 battle, so every rival roster lists Jolteon, Flareon and Vaporeon
+together. That first Route 22 battle ends when Brock is beaten, so it is left out.
+
+Level caps are Nuzlocke University's block and equal the aces: 12, 21, 28, 32, 50, 50, 54, 55,
+then the Elite Four at 56, 58, 60, 62 and Blue at 65. The table never drops. Badge sprites are 1
+to 8, with Koga's Soul Badge as 5 and Sabrina's Marsh Badge as 6. The release date is the North
+American one, as for Red and Blue.
+
+Upstream fixes: the final Route 22 rival has its Eevee evolution at 53, where upstream says 40
+and Serebii says 50, and pokeyellow and Bulbapedia agree on 53. The Champion is a champion, not an
+elite-four. The Cerulean rival sits under Cerulean City, not Route 24. Cerulean Cave is dropped,
+and Silph Co. is added for the Lapras gift.
+
+Not verified: that the Silph Co. rival fight cannot be bypassed by the elevator, and that the Mt.
+Moon Jessie and James fight cannot be skipped (script reading only).
+
 ## Gift-only and static-only routes (`only`)
 
 A route is flagged when nothing on it can be met in the wild. Any grass, surf, fishing, headbutt
@@ -468,6 +504,10 @@ PokeAPI):
 Red and Blue:
 - saffron-city: gift (Hitmonlee or Hitmonchan). silph-co: gift (Lapras). Cinnabar Island
   and Celadon City have fishing, so neither is flagged despite the fossils and prizes.
+
+Yellow:
+- The same two as Red and Blue. Cerulean City, Route 24 and Vermilion City carry the Kanto
+  starter gifts but have wild or fishing encounters, so none is flagged.
 
 Emerald:
 - rustboro-city: gift (fossil revival, Seedot trade). lavaridge-town: gift (Wynaut
