@@ -73,6 +73,13 @@ function renderScreen(adapter: StorageAdapter) {
 }
 
 describe("NewRunScreen", () => {
+  let restore: (() => void) | undefined;
+
+  afterEach(() => {
+    restore?.();
+    restore = undefined;
+  });
+
   it("rejects an empty name: shows a validation message tied to the field, and writes nothing", async () => {
     const adapter = createMemoryAdapter();
     renderScreen(adapter);
@@ -119,6 +126,8 @@ describe("NewRunScreen", () => {
 
     const options = await screen.findAllByRole("option");
     expect(options.map((option) => option.textContent)).toEqual([
+      "Red· Gen 1",
+      "Blue· Gen 1",
       "Ruby· Gen 3",
       "Sapphire· Gen 3",
       "FireRed· Gen 3",
@@ -140,7 +149,7 @@ describe("NewRunScreen", () => {
     ]);
   });
 
-  it("starts on the earliest game, so an untouched submit creates a Ruby run", async () => {
+  it("starts on the earliest game, so an untouched submit creates a Red run", async () => {
     const adapter = createMemoryAdapter();
     renderScreen(adapter);
 
@@ -148,7 +157,7 @@ describe("NewRunScreen", () => {
     await userEvent.click(screen.getByRole("button", { name: "Start run" }));
 
     await waitFor(async () => {
-      expect((await adapter.runs.getAll()).map((run) => run.game)).toEqual(["ruby"]);
+      expect((await adapter.runs.getAll()).map((run) => run.game)).toEqual(["red"]);
     });
   });
 
@@ -213,7 +222,7 @@ describe("NewRunScreen", () => {
       throw new Error("Expected a run to have been created.");
     }
 
-    expect(run.game).toBe("ruby");
+    expect(run.game).toBe("red");
     expect(run.status).toBe("active");
 
     await waitFor(() => {
@@ -223,6 +232,7 @@ describe("NewRunScreen", () => {
   });
 
   it("seeds the rules form from DEFAULT_RULES, so an untouched submit persists exactly DEFAULT_RULES", async () => {
+    restore = overrideGame("red", { generation: 3 });
     const adapter = createMemoryAdapter();
     renderScreen(adapter);
 
@@ -242,6 +252,7 @@ describe("NewRunScreen", () => {
   });
 
   it("persists exactly the rules configured on the form, not DEFAULT_RULES", async () => {
+    restore = overrideGame("red", { generation: 3 });
     const adapter = createMemoryAdapter();
     renderScreen(adapter);
 
@@ -425,7 +436,6 @@ describe("NewRunScreen shiny clause by game", () => {
   });
 
   it("hides the shiny clause and saves it as off for a game without shinies", async () => {
-    restore = overrideGame("ruby", { generation: 1 });
     const adapter = createMemoryAdapter();
     renderScreen(adapter);
 
@@ -444,6 +454,7 @@ describe("NewRunScreen shiny clause by game", () => {
   });
 
   it("offers the shiny clause for a game with shinies", () => {
+    restore = overrideGame("red", { generation: 3 });
     renderScreen(createMemoryAdapter());
 
     expect(screen.getByLabelText("Shiny clause")).toBeInTheDocument();

@@ -9,6 +9,8 @@ const ids = (games: GameData[]): string[] => games.map((game) => game.id);
 describe("release order", () => {
   it("lists games by release date, pairs in registry order", () => {
     expect(ids(gamesInReleaseOrder())).toEqual([
+      "red",
+      "blue",
       "ruby",
       "sapphire",
       "firered",
@@ -44,6 +46,8 @@ describe("game search", () => {
     expect(ids(searchGames("green"))).toEqual(["leafgreen"]);
     expect(ids(searchGames("e"))).toEqual([
       "emerald",
+      "red",
+      "blue",
       "sapphire",
       "firered",
       "leafgreen",
