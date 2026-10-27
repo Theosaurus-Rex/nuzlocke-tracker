@@ -257,6 +257,49 @@ are kept although they cannot be lost, that the gym order is fixed (from the map
 no script gate was found), and which non-route places have no wild table (Bulbapedia location pages
 only, the ROM's wild data was not mapped).
 
+## Black 2 and White 2 (`src/game/data/b2w2/`)
+
+Normal mode only. Challenge Mode rosters and levels are ignored, and Easy Mode is a run-time
+level offset with no data. One dataset for the pair. Sources are `routes/bl2.txt`, `routes/wh2.txt`
+and `leagues/b2w2.txt` from `domtronn/nuzlocke.data`. Rosters were checked against the trainer and
+party tables in `nds197/pokeblack2` (commit 7e46b2eb), which commits the extracted ROM files for
+both versions, and against Bulbapedia and Serebii. Both versions read one trainer table. The ROM
+gives rosters only, so required fights, gifts and statics come from Bulbapedia and Serebii.
+
+Routes are 39, shared, in the file's order with Relic Passage after Driftveil City. Aspertia City
+and Virbank City stay because Surf Pokemon can be met there. The Super Rod is post-game, so no fish
+count. Floccesy Town and the 23 post-game places are out. Fights are 29 per version, 8 gyms in a
+fixed order, Hugh (4), 12 bosses, the Elite Four and Iris as champion. Hugh's starter variants are
+flattened as the rivals are in Black and White. Drayden is the seventh gym and Marlon the eighth.
+
+Version split: 28 fights are shared. `boss-kyurem-giant-chasm` is Black Kyurem at 55 in Black 2 and
+White Kyurem at 55 in White 2, under one id so one level cap table serves both. It cannot be
+caught, and the level rests on Bulbapedia alone because the trainer table has no row for it.
+
+Left out, and why:
+- The first Driftveil tournament (Hugh, Cheren, Colress at 25): not in the trainer table and not
+  on Serebii, items are banned and a loss does not black out.
+- Rood: optional, nothing in the story needs his building. The Zorua gift stays on Driftveil City.
+- Charles, Ingo and Emmet: forced, but ordinary trainers.
+- Hugh and Cheren as partners, N, Alder and every rematch: not opponents, or post-game.
+
+Level caps are Nuzlocke University's Black/White 2 block and equal the aces. The Elite Four are
+separate milestones at 58, then Iris at 59. No boss fight has a cap, since each is met under the
+current cap. The rematch rows are post-game.
+
+Badge sprites are 34 to 39, 41 and 42. Sprite 33 (Trio) and 40 (Freeze) are Black and White badges.
+
+Upstream fixes: 23 post-game place rows and Floccesy Town are dropped, Aspertia and Virbank lose
+their Super Rod fish, the Kyurem fight is added (upstream has it only as a wild species), Iris is
+a champion not an Elite Four member, the Pokemon World Tournament and Ingo and Emmet rows were
+mislabelled as rivals and are out, and Zinzolin at Lacunosa and the Command Center no longer
+carries his partner Grunt's Pokemon. Marlon's Jellicent is `jellicent-male`.
+
+Not verified: the Kyurem level (Bulbapedia only), Zinzolin in Kyurem's room (ROM and Bulbapedia,
+no Serebii table), that Colress at Route 4 cannot be walked past (Bulbapedia's location page
+only), that the gym order is fixed (map and walkthrough, no script gate found), and which non-route
+places have no wild table (Bulbapedia location pages, the ROM's wild data was not mapped).
+
 ## Gift-only and static-only routes (`only`)
 
 A route is flagged when nothing on it can be met in the wild. Any grass, surf, fishing, headbutt
@@ -309,3 +352,7 @@ Black and White:
 - nacrene-city: gift (Tirtouga or Archen fossil revival, Petilil or Cottonee trade). n-castle:
   static (Reshiram in Black, Zekrom in White, a required catch). The Dreamyard monkeys, Route 18
   egg, Cobalion, Virizion and Terrakion sit on routes with wild Pokemon, so none of them flag.
+
+Black 2 and White 2:
+- driftveil-city: gift (Zorua from Rood). Every other gift, trade and legendary sits on a route with
+  wild Pokemon, so none of them flag.
