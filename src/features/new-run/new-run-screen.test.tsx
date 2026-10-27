@@ -133,6 +133,8 @@ describe("NewRunScreen", () => {
       "White· Gen 5",
       "Black 2· Gen 5",
       "White 2· Gen 5",
+      "X· Gen 6",
+      "Y· Gen 6",
     ]);
   });
 

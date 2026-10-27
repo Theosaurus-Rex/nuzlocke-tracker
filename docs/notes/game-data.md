@@ -300,6 +300,59 @@ no Serebii table), that Colress at Route 4 cannot be walked past (Bulbapedia's l
 only), that the gym order is fixed (map and walkthrough, no script gate found), and which non-route
 places have no wild table (Bulbapedia location pages, the ROM's wild data was not mapped).
 
+## X and Y (`src/game/data/xy/`)
+
+One dataset for the pair. Routes, fights and caps are identical in both versions, so `y` is `x`
+with its own id and name. The only real difference is Xerneas in X and Yveltal in Y at the Team
+Flare Secret HQ, which is one route either way. The source is `routes/xy.txt` and `leagues/xy.txt`
+from `domtronn/nuzlocke.data`. No ROM data exists for Gen 6, so rosters were checked against
+Bulbapedia's walkthrough and character pages and against Serebii. Serebii has tables for the gyms,
+the Elite Four, Diantha and Lysandre's last fight only. Every other roster rests on Bulbapedia and
+upstream, which agree.
+
+Routes are 43, shared. Route 22 sits early after Santalune City, Parfum Palace stays for its
+fishing pond, and Terminus Cave follows Route 18. Santalune City (Farfetch'd trade), Snowbelle
+City (Bisharp trade), Lumiose City (Kanto starter), Tower of Mastery (Lucario) and the Team Flare
+Secret HQ (Xerneas or Yveltal) are added as routes. Lapras is on Route 12, Snorlax on Route 7 and
+the fossils at Ambrette Town. The hotel trades get no route. Aquacorde Town, the Battle Chateau,
+the second Route 22, Sea Spirit's Den and Friend Safari are out.
+
+Fights are 39 per version: 8 gyms in a fixed order, 15 rival, 11 boss, the Elite Four and Diantha
+as champion. The rival fights are the friends (Calem or Serena, Shauna, Tierno, Trevor), Sycamore
+and Korrina's two non-gym fights. The starter variants and both genders are listed together.
+The boss fights are the 11 named Team Flare fights: Lysandre three times, Xerosic once, Aliana and
+Mable twice each, Celosia and Bryony once each in the Lysandre Labs and together at the Poké Ball
+Factory. That Factory fight and Trevor and Tierno on Route 7 are multi battles, so each is one
+fight with both teams.
+
+Left out, and why:
+- Unnamed Admins and Grunts: ordinary trainers.
+- Calem or Serena as a partner: not an opponent.
+- AZ: after the Hall of Fame.
+- Everything optional or post-game, including the Battle Maison and every rematch.
+
+Level caps are Nuzlocke University's X/Y block and equal the aces. The Elite Four are separate
+milestones at 65, then Diantha at 68. No boss fight has a cap. Several bosses and rivals exceed the
+cap in force by 1 to 6 levels, such as Mable at 48 under a cap of 42. That is how Kalos is, not a
+data error. Badge sprites are 43 to 50, in gym order.
+
+Forms: the rival's Meowstic is `meowstic-male` in all five fights, Olympia's is `meowstic-female`.
+Pyroar is `pyroar-male` everywhere because PokeAPI has no female form. Diantha's Gourgeist is
+`gourgeist-average`. Mega Evolution is not modelled, so Lysandre's Gyarados, Korrina's Lucario and
+Diantha's Gardevoir are recorded as the base species.
+
+Upstream fixes: Korrina at the Tower of Mastery is level 32 not 25, the Victory Road starters are
+61 not 46, Diantha is a champion with `gourgeist-average` not `gourgeist-large`, Malva's `pyroar`
+is `pyroar-male`, the duplicate Route 22 and the post-game rows are dropped, and the label typos
+(Tower of Mystery, Victory Roa) are corrected.
+
+Not verified: the rosters that have no Serebii table, Diantha's Gourgeist form (Bulbapedia only),
+that Tierno on Route 5, the Route 7 multi battle, Calem or Serena at Coumarine City and the Route
+19 trio cannot be walked past (Bulbapedia wording only), that Celosia and Bryony in the Lysandre
+Labs cannot be bypassed, that the gym order is fixed (map and walkthrough, no script gate found,
+and whether Shalour opens before the Cyllage badge is unconfirmed), and which non-route places have
+no wild table (Bulbapedia location pages).
+
 ## Gift-only and static-only routes (`only`)
 
 A route is flagged when nothing on it can be met in the wild. Any grass, surf, fishing, headbutt
@@ -356,3 +409,9 @@ Black and White:
 Black 2 and White 2:
 - driftveil-city: gift (Zorua from Rood). Every other gift, trade and legendary sits on a route with
   wild Pokemon, so none of them flag.
+
+X and Y:
+- santalune-city: gift (Farfetch'd trade). lumiose-city: gift (Kanto starter). tower-of-mastery:
+  gift (Lucario). snowbelle-city: gift (Bisharp trade). team-flare-secret-hq: static (Xerneas in X,
+  Yveltal in Y, a required catch). Lapras, Snorlax, the fossils and the Steelix trade sit on routes
+  with wild Pokemon, so none of them flag.

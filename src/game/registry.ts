@@ -15,6 +15,7 @@ import { firered, leafgreen } from "@/game/data/frlg";
 import { heartgold, soulsilver } from "@/game/data/heartgold";
 import { platinum } from "@/game/data/platinum";
 import { ruby, sapphire } from "@/game/data/rs";
+import { x, y } from "@/game/data/xy";
 import type { GameData } from "@/game/types";
 
 export const GAMES: Record<GameId, GameData> = {
@@ -32,4 +33,6 @@ export const GAMES: Record<GameId, GameData> = {
   white,
   black2,
   white2,
+  x,
+  y,
 };
