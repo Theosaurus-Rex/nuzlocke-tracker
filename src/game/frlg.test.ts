@@ -115,6 +115,11 @@ describe("firered shape", () => {
     expect(abra?.level).toBe(16);
   });
 
+  test("Giovanni's ace is Rhydon at 50", () => {
+    const ace = byId.get("gym-giovanni")?.roster.reduce((a, b) => (b.level > a.level ? b : a));
+    expect(ace).toEqual({ species: "rhydon", level: 50 });
+  });
+
   test("every fight is in Kanto", () => {
     expect(firered.fights.every((f) => f.region === "kanto")).toBe(true);
   });

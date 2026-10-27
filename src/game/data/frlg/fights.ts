@@ -276,7 +276,7 @@ export const fights: FightDef[] = [
       { species: "dugtrio", level: 42 },
       { species: "nidoqueen", level: 44 },
       { species: "nidoking", level: 45 },
-      { species: "rhyhorn", level: 50 },
+      { species: "rhydon", level: 50 },
     ],
   },
   {
