@@ -402,6 +402,42 @@ Weather Institute, Mt. Pyre and the Lilycove rival fights cannot be skipped (wor
 Elite Four order is fixed (Bulbapedia wording), the badge images (matched by name, not against a
 reference sheet), and the Pacifidlog Corsola trade level (Serebii only).
 
+## Red and Blue (`src/game/data/rb/`)
+
+One dataset for the pair, like FireRed and LeafGreen. Trainers, trades and gifts do not differ
+between the versions, only the wild tables and the Game Corner prizes do, and neither is stored.
+The sources are `routes/red.txt`, `routes/blue.txt` and `leagues/rb.txt` from
+`domtronn/nuzlocke.data`, checked against pret/pokered at commit
+`171e2c204f9c1ff8e577ca387a4bbb009e130843` and against Serebii. Every roster species and level
+agrees across all three. The FireRed and LeafGreen rosters were not reused, since Gen 1 differs
+in the Cerulean rival, every later rival level, all four Elite Four aces and the Champion.
+
+Routes are 45 in traversal order: FireRed's Kanto list plus Route 21, Route 23 and Victory Road.
+Cerulean Cave is post-game and left out. Fishing and Surf count as wild, so towns with only water
+encounters stay untagged. The gifts sit as follows: Magikarp on Route 4, the fossils and four
+trades on Cinnabar Island, Eevee and the Game Corner prizes on Celadon City, the Hitmons on
+Saffron City and Lapras on Silph Co. Safari Zone, Pokémon Tower, Seafoam Islands, Mt. Moon and
+Pokémon Mansion are one route each.
+
+Fights are 21: 8 gyms, 6 rival, 2 boss, the Elite Four and Blue as champion. The rival fights are
+Oak's Lab, Cerulean, the S.S. Anne, Pokémon Tower, Silph Co. and the final Route 22 battle, with
+all three starter variants listed together. The first Route 22 battle is optional and ends when
+Brock is beaten, so it is left out. The bosses are Giovanni at the Rocket Hideout and at Silph Co.
+Left out are the unnamed Rockets, the Karate Master and any rematch, since Gen 1 has none.
+
+Level caps are Nuzlocke University's block and equal the aces. The Elite Four is a fixed order, so
+each member has a cap (56, 58, 60, 62), then Blue at 65. Gyms 5 and 6 share a cap of 43, so the
+table never drops whatever order the gyms are done in. Badge sprites are 1 to 8, with Koga's Soul
+Badge as 5 and Sabrina's Marsh Badge as 6. The release date is the North American one, since the
+Japanese Red and Green are a different pair.
+
+Upstream fixes: the Champion is a champion, not an elite-four. The Cerulean rival is marked
+optional, but its script fires on the only way north, so it is kept. Cerulean Cave is dropped, and
+Silph Co. is added for the Lapras gift. Vermillion and Fuschia are spelled correctly.
+
+Not verified: that the Silph Co. rival fight cannot be bypassed by the elevator (script reading
+only).
+
 ## Gift-only and static-only routes (`only`)
 
 A route is flagged when nothing on it can be met in the wild. Any grass, surf, fishing, headbutt
@@ -428,6 +464,10 @@ HeartGold and SoulSilver:
 FireRed and LeafGreen (from the research notes, which checked each route against Serebii and
 PokeAPI):
 - saffron-city: gift (Hitmonlee or Hitmonchan). silph-co: gift (Lapras).
+
+Red and Blue:
+- saffron-city: gift (Hitmonlee or Hitmonchan). silph-co: gift (Lapras). Cinnabar Island
+  and Celadon City have fishing, so neither is flagged despite the fossils and prizes.
 
 Emerald:
 - rustboro-city: gift (fossil revival, Seedot trade). lavaridge-town: gift (Wynaut

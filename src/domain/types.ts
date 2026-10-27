@@ -20,6 +20,8 @@ export type Draft<T extends Timestamped> = Omit<T, "id" | "createdAt" | "updated
   Partial<Pick<T, "id" | "createdAt" | "updatedAt">>;
 
 export const GAME_IDS = [
+  "red",
+  "blue",
   "heartgold",
   "soulsilver",
   "firered",
