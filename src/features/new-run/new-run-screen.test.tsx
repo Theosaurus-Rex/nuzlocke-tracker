@@ -128,6 +128,7 @@ describe("NewRunScreen", () => {
     expect(options.map((option) => option.textContent)).toEqual([
       "Red· Gen 1",
       "Blue· Gen 1",
+      "Yellow· Gen 1",
       "Ruby· Gen 3",
       "Sapphire· Gen 3",
       "FireRed· Gen 3",

@@ -22,6 +22,7 @@ export type Draft<T extends Timestamped> = Omit<T, "id" | "createdAt" | "updated
 export const GAME_IDS = [
   "red",
   "blue",
+  "yellow",
   "heartgold",
   "soulsilver",
   "firered",
