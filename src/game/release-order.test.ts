@@ -23,6 +23,8 @@ describe("release order", () => {
       "white",
       "black2",
       "white2",
+      "x",
+      "y",
     ]);
   });
 

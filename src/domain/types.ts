@@ -34,6 +34,8 @@ export const GAME_IDS = [
   "white",
   "black2",
   "white2",
+  "x",
+  "y",
 ] as const;
 
 export type GameId = (typeof GAME_IDS)[number];

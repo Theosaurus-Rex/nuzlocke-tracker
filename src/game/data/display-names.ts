@@ -32,6 +32,7 @@ export const speciesDisplayNames: Readonly<Record<string, string>> = {
   "pyroar-male": "Pyroar",
   flabebe: "Flabébé",
   "meowstic-male": "Meowstic",
+  "meowstic-female": "Meowstic",
   "aegislash-shield": "Aegislash",
   "pumpkaboo-average": "Pumpkaboo",
   "gourgeist-average": "Gourgeist",
