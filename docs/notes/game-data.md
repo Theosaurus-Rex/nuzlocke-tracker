@@ -428,8 +428,8 @@ Left out are the unnamed Rockets, the Karate Master and any rematch, since Gen 1
 Level caps are Nuzlocke University's block and equal the aces. The Elite Four is a fixed order, so
 each member has a cap (56, 58, 60, 62), then Blue at 65. Gyms 5 and 6 share a cap of 43, so the
 table never drops whatever order the gyms are done in. Badge sprites are 1 to 8, with Koga's Soul
-Badge as 5 and Sabrina's Marsh Badge as 6. The release date is the North American one, since the
-Japanese Red and Green are a different pair.
+Badge as 5 and Sabrina's Marsh Badge as 6. The release date is the Japanese one, like every other
+game. Red and Blue use the Japanese Red and Green date, 1996-02-27.
 
 Upstream fixes: the Champion is a champion, not an elite-four. The Cerulean rival is marked
 optional, but its script fires on the only way north, so it is kept. Cerulean Cave is dropped, and
@@ -463,8 +463,8 @@ together. That first Route 22 battle ends when Brock is beaten, so it is left ou
 
 Level caps are Nuzlocke University's block and equal the aces: 12, 21, 28, 32, 50, 50, 54, 55,
 then the Elite Four at 56, 58, 60, 62 and Blue at 65. The table never drops. Badge sprites are 1
-to 8, with Koga's Soul Badge as 5 and Sabrina's Marsh Badge as 6. The release date is the North
-American one, as for Red and Blue.
+to 8, with Koga's Soul Badge as 5 and Sabrina's Marsh Badge as 6. The release date is the Japanese
+one, 1998-09-12.
 
 Upstream fixes: the final Route 22 rival has its Eevee evolution at 53, where upstream says 40
 and Serebii says 50, and pokeyellow and Bulbapedia agree on 53. The Champion is a champion, not an
@@ -473,6 +473,44 @@ and Silph Co. is added for the Lapras gift.
 
 Not verified: that the Silph Co. rival fight cannot be bypassed by the elevator, and that the Mt.
 Moon Jessie and James fight cannot be skipped (script reading only).
+
+## Gold, Silver and Crystal (`src/game/data/gsc/`)
+
+One folder for three games. Gold and Silver are a pair and share everything. Crystal shares the
+fights and level caps and differs only in its routes and release date. The sources are
+`routes/gold.txt`, `routes/silv.txt`, `routes/crys.txt` and `leagues/gsc.txt` from
+`domtronn/nuzlocke.data`, checked against pret/pokegold at commit
+`fc702b6d922aecce274782d68bba8639936a1182`, pret/pokecrystal at commit
+`5c877ef55197039c9676e8e3eec6d254b1c40fe8`, Serebii and Bulbapedia. Every gym, Elite Four, Lance,
+Red, Silver and Rocket executive roster is the same in both decompilations.
+
+Routes are 84 for Gold and Silver and 85 for Crystal, which adds the Power Plant for the Magneton
+trade. The order follows HeartGold, with Tin Tower after Lake of Rage. Mahogany Town is left out,
+since its Headbutt table is a leftover on a map with no trees. Azalea Town stays for its Headbutt
+trees. The two ports are folded into Olivine City and Vermilion City. Gifts and statics sit on the
+nearest route with wild encounters, and the roaming beasts have no route. Pewter City has no wild
+encounters, only the Gloom trade, so it is a gift route.
+
+Fights are 31: 16 gyms, 4 Elite Four, Lance as champion, 5 rival and 5 boss. The rivals are four
+Silver fights (Cherrygrove City, Azalea Town, the Goldenrod Underground and Victory Road) and Red,
+with all three starter lines listed together. The Burned Tower and Mt. Moon fights are skippable,
+and the Indigo Plateau rematch is a weekday rematch, so all three are left out. The bosses are the
+five forced Rocket executive fights, under their HeartGold names: Petrel and Ariana at the Rocket
+Hideout, Petrel as the fake Director, Proton on Radio Tower 4F and Archer. The second Ariana on
+Radio Tower 5F is probably optional and is left out. Eusine is Crystal only and optional, so he is
+left out and the three games share one fights list.
+
+Level caps are Nuzlocke University's block and equal the aces, except Pryce at 35 instead of 31,
+so the table never drops. Lance caps at 50. The first seven Kanto gyms are held at 50, since their
+aces sit at or below Lance's, then Blue at 58 and Red at 81. Badge sprites are 9 to 16 for Johto
+and 1 to 8 for Kanto, as in HeartGold. Release dates are the Japanese ones, 1999-11-21 and
+2000-12-14.
+
+Upstream fixes: the Silver Goldenrod Underground ace is 32, where upstream says 34. Lance is a
+champion, not an elite-four. Lt. Surge's Electabuzz is 46, where Serebii and Nuzlocke University
+say 45 and the decompilations say 46. Vermilion and Fuchsia are spelled correctly.
+
+Not verified: that Radio Tower Ariana and Eusine cannot be skipped (script reading only).
 
 ## Gift-only and static-only routes (`only`)
 
@@ -508,6 +546,11 @@ Red and Blue:
 Yellow:
 - The same two as Red and Blue. Cerulean City, Route 24 and Vermilion City carry the Kanto
   starter gifts but have wild or fishing encounters, so none is flagged.
+
+Gold, Silver and Crystal:
+- goldenrod-city: gift (Game Corner prizes, Eevee, the Machop trade). pewter-city: gift (the Gloom
+  trade). rocket-hideout: static (Voltorb, Geodude, Koffing, Electrode). Crystal adds
+  power-plant: gift (the Magneton trade).
 
 Emerald:
 - rustboro-city: gift (fossil revival, Seedot trade). lavaridge-town: gift (Wynaut

@@ -12,6 +12,9 @@ describe("release order", () => {
       "red",
       "blue",
       "yellow",
+      "gold",
+      "silver",
+      "crystal",
       "ruby",
       "sapphire",
       "firered",
@@ -43,13 +46,14 @@ describe("release order", () => {
 
 describe("game search", () => {
   it("matches any word, with prefix matches first", () => {
-    expect(ids(searchGames("silver"))).toEqual(["soulsilver"]);
+    expect(ids(searchGames("silver"))).toEqual(["silver", "soulsilver"]);
     expect(ids(searchGames("green"))).toEqual(["leafgreen"]);
     expect(ids(searchGames("e"))).toEqual([
       "emerald",
       "red",
       "blue",
       "yellow",
+      "silver",
       "sapphire",
       "firered",
       "leafgreen",

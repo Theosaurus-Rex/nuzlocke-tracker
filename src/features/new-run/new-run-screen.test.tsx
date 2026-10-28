@@ -129,6 +129,9 @@ describe("NewRunScreen", () => {
       "Red· Gen 1",
       "Blue· Gen 1",
       "Yellow· Gen 1",
+      "Gold· Gen 2",
+      "Silver· Gen 2",
+      "Crystal· Gen 2",
       "Ruby· Gen 3",
       "Sapphire· Gen 3",
       "FireRed· Gen 3",
@@ -169,7 +172,10 @@ describe("NewRunScreen", () => {
     await userEvent.type(screen.getByLabelText("Run name"), "Silver Run");
     await userEvent.clear(screen.getByLabelText("Game"));
     await userEvent.type(screen.getByLabelText("Game"), "silver");
-    expect(screen.getAllByRole("option").map((o) => o.textContent)).toEqual(["SoulSilver· Gen 4"]);
+    expect(screen.getAllByRole("option").map((o) => o.textContent)).toEqual([
+      "Silver· Gen 2",
+      "SoulSilver· Gen 4",
+    ]);
     await userEvent.click(screen.getByRole("option", { name: /SoulSilver/ }));
     await userEvent.click(screen.getByRole("button", { name: "Start run" }));
 

@@ -13,8 +13,8 @@ export const red: GameData = {
   id: "red",
   name: "Red",
   generation: 1,
-  // North America release, per Bulbapedia's Pokémon Red and Blue Versions page.
-  released: "1998-09-28",
+  // Japan release, per Bulbapedia's Pokémon Red and Green Versions page.
+  released: "1996-02-27",
   routes,
   fights,
   levelCaps,

@@ -146,10 +146,10 @@ describe("SoulSilver runs", () => {
     await source.runs.put(makeRunDraft({ game: "soulsilver" }));
     const text = serializeBundle(await exportBundle(source)).replace(
       '"game": "soulsilver"',
-      '"game": "crystal"',
+      '"game": "not-a-game"',
     );
 
-    expect(text).toContain("crystal");
+    expect(text).toContain("not-a-game");
     expect(parseBundle(text).ok).toBe(false);
   });
 });
