@@ -12,6 +12,7 @@ import { black, white } from "@/game/data/bw";
 import { diamond, pearl } from "@/game/data/dp";
 import { emerald } from "@/game/data/emerald";
 import { firered, leafgreen } from "@/game/data/frlg";
+import { crystal, gold, silver } from "@/game/data/gsc";
 import { heartgold, soulsilver } from "@/game/data/heartgold";
 import { alphaSapphire, omegaRuby } from "@/game/data/oras";
 import { platinum } from "@/game/data/platinum";
@@ -25,6 +26,9 @@ export const GAMES: Record<GameId, GameData> = {
   red,
   blue,
   yellow,
+  gold,
+  silver,
+  crystal,
   heartgold,
   soulsilver,
   firered,

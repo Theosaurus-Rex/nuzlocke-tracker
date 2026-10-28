@@ -138,7 +138,7 @@ describe.each(games)("$id shape", (game) => {
     expect(game.routes.every((r) => r.region === "kanto")).toBe(true);
     expect(game.fights.every((f) => f.region === "kanto")).toBe(true);
     expect(game.generation).toBe(1);
-    expect(game.released).toBe("1998-09-28");
+    expect(game.released).toBe("1996-02-27");
   });
 
   test("the route order has the starter first and leaves post-game places out", () => {

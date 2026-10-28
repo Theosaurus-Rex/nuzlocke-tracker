@@ -149,7 +149,7 @@ describe("yellow shape", () => {
     expect(yellow.routes.every((r) => r.region === "kanto")).toBe(true);
     expect(yellow.fights.every((f) => f.region === "kanto")).toBe(true);
     expect(yellow.generation).toBe(1);
-    expect(yellow.released).toBe("1999-10-18");
+    expect(yellow.released).toBe("1998-09-12");
   });
 
   test("the route order has the starter first and leaves post-game places out", () => {

@@ -10,8 +10,8 @@ export const yellow: GameData = {
   id: "yellow",
   name: "Yellow",
   generation: 1,
-  // North America release, per Bulbapedia's Pokémon Yellow Version page.
-  released: "1999-10-18",
+  // Japan release, per Bulbapedia's Pokémon Yellow Version page.
+  released: "1998-09-12",
   routes,
   fights,
   levelCaps,
