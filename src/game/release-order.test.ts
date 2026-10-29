@@ -33,6 +33,8 @@ describe("release order", () => {
       "y",
       "omegaruby",
       "alphasapphire",
+      "sun",
+      "moon",
     ]);
   });
 

@@ -57,7 +57,6 @@ describe.each(Object.values(GAMES))("$id game data", (game) => {
   test("level cap badge milestones strictly increase and fit the game's badge count", () => {
     const badgeCount = game.fights.filter((f) => f.grantsBadge).length;
     const counts = game.levelCaps.flatMap(({ until }) => ("badges" in until ? [until.badges] : []));
-    expect(counts.length).toBeGreaterThan(0);
     counts.forEach((n, i) => {
       expect(Number.isInteger(n) && n >= 1 && n <= badgeCount, `badges ${String(n)}`).toBe(true);
       if (i > 0) expect(n).toBeGreaterThan(counts[i - 1] ?? Infinity);
@@ -76,10 +75,11 @@ describe.each(Object.values(GAMES))("$id game data", (game) => {
     }
   });
 
-  test("a fight has a badge sprite only if it grants a badge", () => {
+  test("a fight has a badge only if it grants one, and badge sprites are all or nothing", () => {
+    const hasSprites = game.fights.some((f) => f.badgeSprite !== null);
     for (const fight of game.fights) {
-      expect(fight.badgeSprite !== null, fight.id).toBe(fight.grantsBadge);
       expect(fight.badge !== null, fight.id).toBe(fight.grantsBadge);
+      expect(fight.badgeSprite !== null, fight.id).toBe(hasSprites && fight.grantsBadge);
     }
   });
 });

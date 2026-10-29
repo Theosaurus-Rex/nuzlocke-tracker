@@ -44,6 +44,8 @@ export const GAME_IDS = [
   "y",
   "omegaruby",
   "alphasapphire",
+  "sun",
+  "moon",
 ] as const;
 
 export type GameId = (typeof GAME_IDS)[number];
