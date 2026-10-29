@@ -512,6 +512,44 @@ say 45 and the decompilations say 46. Vermilion and Fuchsia are spelled correctl
 
 Not verified: that Radio Tower Ariana and Eusine cannot be skipped (script reading only).
 
+## Sun and Moon (`src/game/data/sm/`)
+
+One folder for both games. They share the fights and level caps. The only difference is the name
+of the Altar route, Altar of the Sunne in Sun and Altar of the Moone in Moon. The sources are
+`routes/sun.txt`, `routes/moon.txt` and `leagues/sm.txt` from `domtronn/nuzlocke.data` (the `main`
+branch, since `master` is stale), checked against Bulbapedia's walkthrough and trainer pages and
+Serebii. Where they disagree on a level that is not an ace, Bulbapedia is used.
+
+Routes are 54 for both. The order follows the walkthrough, so Route 1 comes before Hau'oli
+Outskirts, which is the reverse of upstream. Regions are the four islands, `melemele`, `akala`,
+`ula'ula` and `poni`. Every post-game place is out: the Ultra Beasts, Porygon, Cosmog, the four
+Ruins, Haina Desert and the Poni Gauntlet. The Zygarde and fossil side quests are out too.
+Upstream's Berry Fields is a berry pile on Route 2, so it is not a route. The Melemele Sea and
+other water routes stay, since the Lapras Paddle comes mid-story.
+
+Fights are 37: 7 Totem trials and 4 grand trials as gyms, 12 rival, 9 boss, 4 Elite Four and Kukui
+as champion. Alola has no badges, so each trial grants the Z-Crystal it awards, with no badge
+sprite, and the fights header reads "N of 11 badges". A trial is one fight, the Totem plus its
+allies. Hau, Gladion, Dexio and Sina, Molayne and Ilima's forced marina fight are rivals. Guzma,
+Plumeria, Faba and Lusamine are bosses. Ilima's Totem fight is "Totem Gumshoos / Raticate" and the
+Dexio and Sina fight is one fight, with each version's team listed together, as are the starter
+variants. Plumeria's first fight is named for Akala Outskirts, as in Bulbapedia. Left out are
+Ilima's school battle, the captain battles after each trial, the Battle Royal Dome practice and
+every post-game fight.
+
+Level caps are derived, since Nuzlocke University lists none for Sun and Moon. Each Totem and grand
+trial caps at its ace, the Elite Four is four milestones at 55 in any order, then Kukui at 58.
+Sophocles is held at 30 for Molayne and Kommo-o at 48 so the cap never goes down. Lusamine in
+Ultra Space, Hau and Gladion at Mount Lanakila get rows so their level never sits above the cap
+shown. The release date is the Japanese one, 2016-11-18.
+
+Upstream fixes: Kukui is a champion, not an elite-four. The Battle Royal Dome fight and Ilima's
+optional school battle are dropped. Post-game Ultra Beasts under the routes are dropped.
+
+Not verified: moves, abilities and Z-Crystal held items for any fight. Serebii has one Charjabug
+ally at 27 for Sophocles where Bulbapedia has two at 28, and 11 for Ilima's ally where Bulbapedia
+has 10. Neither changes an ace.
+
 ## Gift-only and static-only routes (`only`)
 
 A route is flagged when nothing on it can be met in the wild. Any grass, surf, fishing, headbutt
@@ -595,3 +633,8 @@ Omega Ruby and Alpha Sapphire:
   static (the soaring and mirage legendaries). The starter, Slateport City (cosplay Pikachu),
   Route 119 (Castform), the hideout (Electrode), Sea Mauville and the Scorched Slab all have wild
   Pokemon, so none of them flag.
+
+Sun and Moon:
+- konikoni-city: gift (the Poliwhirl trade). altar-of-the-sunne: static (Solgaleo in Sun, Lunala in
+  Moon, a required catch). Every other trade and gift sits on a place with wild Pokemon, so none of
+  them flag.

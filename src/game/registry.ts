@@ -18,6 +18,7 @@ import { alphaSapphire, omegaRuby } from "@/game/data/oras";
 import { platinum } from "@/game/data/platinum";
 import { blue, red } from "@/game/data/rb";
 import { ruby, sapphire } from "@/game/data/rs";
+import { moon, sun } from "@/game/data/sm";
 import { x, y } from "@/game/data/xy";
 import { yellow } from "@/game/data/yellow";
 import type { GameData } from "@/game/types";
@@ -47,4 +48,6 @@ export const GAMES: Record<GameId, GameData> = {
   y,
   omegaruby: omegaRuby,
   alphasapphire: alphaSapphire,
+  sun,
+  moon,
 };
