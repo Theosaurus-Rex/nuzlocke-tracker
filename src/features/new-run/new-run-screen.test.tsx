@@ -152,6 +152,8 @@ describe("NewRunScreen", () => {
       "Alpha Sapphire· Gen 6",
       "Sun· Gen 7",
       "Moon· Gen 7",
+      "Ultra Sun· Gen 7",
+      "Ultra Moon· Gen 7",
     ]);
   });
 

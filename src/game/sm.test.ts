@@ -267,13 +267,13 @@ describe("sun shape", () => {
 });
 
 describe("routes", () => {
-  test("both versions have 54 routes in unique increasing order, with the starter first", () => {
+  test("both versions have 55 routes in unique increasing order, with the starter first", () => {
     for (const game of [sun, moon]) {
-      expect(game.routes).toHaveLength(54);
-      expect(game.routes.map((r) => r.order)).toEqual(Array.from({ length: 54 }, (_, i) => i + 1));
+      expect(game.routes).toHaveLength(55);
+      expect(game.routes.map((r) => r.order)).toEqual(Array.from({ length: 55 }, (_, i) => i + 1));
       expect(game.routes[0]?.id).toBe("starter");
       expect(game.routes[0]?.only).toBeUndefined();
-      expect(new Set(game.routes.map((r) => r.id)).size).toBe(54);
+      expect(new Set(game.routes.map((r) => r.id)).size).toBe(55);
     }
   });
 
@@ -301,15 +301,17 @@ describe("routes", () => {
   test("Route 1 comes before Hau'oli Outskirts and post-game places are not routes", () => {
     const ids = sun.routes.map((r) => r.id);
     expect(ids.indexOf("route-1")).toBeLessThan(ids.indexOf("hauoli-outskirts"));
-    for (const id of [
-      "haina-desert",
-      "poni-grove",
-      "resolution-cave",
-      "berry-fields",
-      "aether-house",
-    ]) {
+    for (const id of ["poni-grove", "resolution-cave", "berry-fields", "aether-house"]) {
       expect(ids, id).not.toContain(id);
     }
+  });
+
+  test("Haina Desert opens after the Thrifty Megamart trial, so it sits right after it", () => {
+    const ids = sun.routes.map((r) => r.id);
+    expect(ids.indexOf("haina-desert")).toBe(ids.indexOf("thrifty-megamart") + 1);
+    expect(ids.indexOf("route-16")).toBe(ids.indexOf("haina-desert") + 1);
+    expect(sun.routes.find((r) => r.id === "haina-desert")?.region).toBe("ula'ula");
+    expect(sun.routes.find((r) => r.id === "haina-desert")?.only).toBeUndefined();
   });
 });
 

@@ -35,6 +35,8 @@ describe("release order", () => {
       "alphasapphire",
       "sun",
       "moon",
+      "ultrasun",
+      "ultramoon",
     ]);
   });
 

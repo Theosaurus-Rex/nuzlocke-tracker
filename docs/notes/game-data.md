@@ -520,10 +520,11 @@ of the Altar route, Altar of the Sunne in Sun and Altar of the Moone in Moon. Th
 branch, since `master` is stale), checked against Bulbapedia's walkthrough and trainer pages and
 Serebii. Where they disagree on a level that is not an ace, Bulbapedia is used.
 
-Routes are 54 for both. The order follows the walkthrough, so Route 1 comes before Hau'oli
+Routes are 55 for both. The order follows the walkthrough, so Route 1 comes before Hau'oli
 Outskirts, which is the reverse of upstream. Regions are the four islands, `melemele`, `akala`,
 `ula'ula` and `poni`. Every post-game place is out: the Ultra Beasts, Porygon, Cosmog, the four
-Ruins, Haina Desert and the Poni Gauntlet. The Zygarde and fossil side quests are out too.
+Ruins and the Poni Gauntlet. Haina Desert is in, right after the Thrifty Megamart trial, because
+Bulbapedia's Route 13 page says the barricade opens then. The Zygarde and fossil side quests are out too.
 Upstream's Berry Fields is a berry pile on Route 2, so it is not a route. The Melemele Sea and
 other water routes stay, since the Lapras Paddle comes mid-story.
 
@@ -549,6 +550,42 @@ optional school battle are dropped. Post-game Ultra Beasts under the routes are 
 Not verified: moves, abilities and Z-Crystal held items for any fight. Serebii has one Charjabug
 ally at 27 for Sophocles where Bulbapedia has two at 28, and 11 for Ilima's ally where Bulbapedia
 has 10. Neither changes an ace.
+
+## Ultra Sun and Ultra Moon (`src/game/data/usum/`)
+
+One folder for both games, with identical routes, fights and level caps. The sources are
+`routes/usun.txt`, `routes/umoon.txt` and `leagues/usum.txt` from `domtronn/nuzlocke.data` (the
+`main` branch), checked against Bulbapedia's walkthrough and trainer pages and Serebii. Where they
+disagree on a level that is not an ace, Bulbapedia is used.
+
+Routes are 61. There is no altar route, because the Necrozma fought at the altar cannot be caught.
+Nebby, now Solgaleo or Lunala at level 60, is caught on Mahalo Trail instead. That route is static
+and sits right after Mount Lanakila. Secluded Shore is now Ula'ula Beach. New places are Heahea Beach,
+Heahea City, Royal Avenue, Sandy Cave, Dividing Peak Tunnel, Haina Desert, Ultra Megalopolis and
+Mahalo Trail. Heahea Beach (Totem Stickers) and Heahea City (Surfing Pikachu) are optional side
+quests, kept as gift routes. Regions are the four islands. Every post-game place is out, including
+the Ultra Wormhole, Team Rainbow Rocket and the four Ruins.
+
+Fights are 47: 8 Totem trials and 4 grand trials as gyms, 20 rival, 10 boss, 4 Elite Four and Hau
+as champion. Alola has no badges, so each trial grants its Z-Crystal with no badge sprite, and the
+fights header reads "N of 12 badges". Teacher Emily, the four Ultra Recon Squad duels, Hau, Gladion
+and the forced captain fights after Mina are rivals. Team Skull, Aether and both Necrozma fights
+are bosses, with PokeAPI's `necrozma-dusk`, `necrozma-dawn` and `necrozma-ultra`. Version-only
+fights are one fight named "A / B", with both teams listed, so Sophocles and Nanu show Nanu's
+higher Persian-Alola (53 in Bulbapedia, 52 upstream). Left out are Ilima's school battle, Ryuki's
+optional gym, the Battle Royal Dome, wild Jangmo-o and Hakamo-o, and every post-game fight.
+
+Level caps come from Nuzlocke University, and every number on its list equals a verified ace. The
+list falls from 60 at Ultra Necrozma to 55 for Mina and Hapu, so the cap is held at 60 until the
+Champion to keep it from going down. Dusk Mane and Dawn Wings Necrozma get a 50 row so the cap
+shown is never below its ace. The release date is the Japanese one, 2017-11-17.
+
+Upstream fixes: Hau as Champion is a champion, and the captain fights are rivals, not gym leaders.
+Gladion's Lucario is 55 for a Litten player and Hau's Eevee in Paniola Town is 14, both as
+Bulbapedia has them.
+
+Not verified: moves, abilities and Z-Crystal held items for any fight. Serebii has no levels for
+the post-Mina captains or the first Faba fight.
 
 ## Gift-only and static-only routes (`only`)
 
@@ -638,3 +675,9 @@ Sun and Moon:
 - konikoni-city: gift (the Poliwhirl trade). altar-of-the-sunne: static (Solgaleo in Sun, Lunala in
   Moon, a required catch). Every other trade and gift sits on a place with wild Pokemon, so none of
   them flag.
+
+Ultra Sun and Ultra Moon:
+- heahea-beach: gift (Totem Sticker rewards). heahea-city: gift (Surfing Pikachu). royal-avenue:
+  gift (the Barboach trade). ultra-megalopolis: gift (Poipole). konikoni-city: static (the Ditto
+  Five). mahalo-trail: static (Solgaleo in Ultra Sun, Lunala in Ultra Moon). Every other trade and
+  gift sits on a place with wild Pokemon, so none of them flag.
