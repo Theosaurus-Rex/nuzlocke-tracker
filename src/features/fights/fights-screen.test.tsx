@@ -137,6 +137,36 @@ describe("FightsScreen", () => {
     expect(table.getByText("Will")).toBeInTheDocument();
   });
 
+  it("heads the cup with the game's league name", async () => {
+    const adapter = createMemoryAdapter();
+    const run = await adapter.runs.put({
+      name: "Galar Run",
+      game: "sword",
+      status: "active",
+      rules: DEFAULT_RULES,
+      finishedAt: null,
+    });
+    await adapter.fights.put(
+      fightDraft(run.id, { gameFightId: "gym-milo", name: "Milo", order: 1 }),
+    );
+    await adapter.fights.put(
+      fightDraft(run.id, {
+        gameFightId: "elite-four-marnie",
+        name: "Marnie",
+        kind: "elite_four",
+        order: 2,
+        grantsBadge: false,
+      }),
+    );
+    renderScreen(adapter, run.id);
+
+    const table = await findTable();
+    const headers = table.getAllByRole("columnheader", {
+      name: /^(Galar|Champion Cup|Elite Four)$/,
+    });
+    expect(headers.map((h) => h.textContent)).toEqual(["Galar", "Champion Cup"]);
+  });
+
   it("marks a cleared fight as cleared and no other", async () => {
     const adapter = createMemoryAdapter();
     const { run } = await seed(adapter);

@@ -19,6 +19,7 @@ import { platinum } from "@/game/data/platinum";
 import { blue, red } from "@/game/data/rb";
 import { ruby, sapphire } from "@/game/data/rs";
 import { moon, sun } from "@/game/data/sm";
+import { shield, sword } from "@/game/data/swsh";
 import { ultraMoon, ultraSun } from "@/game/data/usum";
 import { x, y } from "@/game/data/xy";
 import { yellow } from "@/game/data/yellow";
@@ -53,4 +54,6 @@ export const GAMES: Record<GameId, GameData> = {
   moon,
   ultrasun: ultraSun,
   ultramoon: ultraMoon,
+  sword,
+  shield,
 };

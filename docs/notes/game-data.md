@@ -587,6 +587,43 @@ Bulbapedia has them.
 Not verified: moves, abilities and Z-Crystal held items for any fight. Serebii has no levels for
 the post-Mina captains or the first Faba fight.
 
+## Sword and Shield (`src/game/data/swsh/`)
+
+One folder for both games. The sources are `routes/sw.txt`, `routes/sh.txt` and `leagues/swsh.txt`
+from `domtronn/nuzlocke.data` (the `main` branch), checked against Bulbapedia's walkthrough and
+trainer pages and Serebii. Where they disagree on a level that is not an ace, Bulbapedia is used.
+
+Routes are 46 for both, all in the `galar` region. The Wild Area is one route per named area,
+with the eight open from the first visit first and the northern ones after the Fire Badge.
+Lake of Outrage and Axew's Eye need Rotom Bike Water Mode, so they sit after Route 9, where
+upstream puts them too early or too late. Slumbering Weald is last, because nothing can be caught
+there until the second visit. Steamdrift Way, Circhester Bay and Outer Spikemuth are their own
+routes, where upstream folds them into Routes 8 and 9. Max Raid dens, Wedgehurst's Slowpoke, the
+Let's Go Pikachu and Eevee gift, the DLC and every post-game place are out.
+
+Fights are 30 per version: 8 gyms, 12 rival, 6 Champion Cup duels as Elite Four, Oleana, Rose and
+Eternatus as bosses, and Leon as champion. Hop, Bede and Marnie are rivals. Starter variants are
+listed together and Gigantamax is recorded as the base species. Three fights differ by version,
+the Stow-on-Side gym (Bea in Sword, Allister in Shield), the Circhester gym (Gordie, Melony) and
+the Champion Cup duel with Bea or Allister. Each keeps one id in both versions, so the level cap
+table is shared. Only the name, badge, badge sprite and roster differ. Badge sprites are 51 to 60,
+with Fighting 54 and Rock 57 in Sword and Ghost 55 and Ice 58 in Shield. The fights screen heads the
+cup "Champion Cup" through `GameData.league`, so Rose and Eternatus show as a Galar section between
+two cup sections. Left out are the unnamed Team Yell grunts, the Macro Cosmos multi battles, and
+every post-game and DLC fight.
+
+Level caps come from Nuzlocke University, and every number on its list equals a verified ace. The
+table never falls, and Oleana, Rose and Eternatus have no row, so the cap before Leon is 65. The
+release date is the worldwide one, 2019-11-15.
+
+Upstream fixes: Leon is a champion, Allister's Yamask is `yamask-galar`, the Eternatus fight is
+added, and Hop's Cramorant at Stow-on-Side is 29, as in two of the three starter variants.
+PokeAPI slugs are `morpeko-full-belly`, `eiscue-ice`, `aegislash-shield` and
+`darmanitan-galar-standard`.
+
+Not verified: moves, abilities and held items for any fight. The Turffield and Ballonlea trade
+timing rests on Serebii.
+
 ## Gift-only and static-only routes (`only`)
 
 A route is flagged when nothing on it can be met in the wild. Any grass, surf, fishing, headbutt
@@ -681,3 +718,10 @@ Ultra Sun and Ultra Moon:
   gift (the Barboach trade). ultra-megalopolis: gift (Poipole). konikoni-city: static (the Ditto
   Five). mahalo-trail: static (Solgaleo in Ultra Sun, Lunala in Ultra Moon). Every other trade and
   gift sits on a place with wild Pokemon, so none of them flag.
+
+Sword and Shield:
+- turffield: gift (the Meowth trade). hammerlocke: gift (the Togepi trade). stow-on-side: gift
+  (Hatenna or Impidimp for Maractus). ballonlea: gift (the Yamask trade). circhester: gift (Throh
+  or Sawk for Vanillish). spikemuth: gift (the Mr. Mime trade). wyndon: gift (the Duraludon
+  trade). energy-plant: static (Eternatus). Every other trade and gift sits on a place with wild
+  Pokemon, so none of them flag.
