@@ -58,6 +58,20 @@ describe("buildFightSections", () => {
     expect(ids(sections)).toEqual([["a"], ["e", "l"], ["k"]]);
   });
 
+  test("a custom league heading replaces Elite Four", () => {
+    const sections = buildFightSections(
+      [
+        makeFight({ id: "a", gameFightId: "j1", order: 1 }),
+        makeFight({ id: "e", gameFightId: "e1", kind: "elite_four", order: 2 }),
+        makeFight({ id: "l", gameFightId: "l1", kind: "champion", order: 3 }),
+      ],
+      lookup,
+      [],
+      "Champion Cup",
+    );
+    expect(sections.map((s) => s.label)).toEqual(["Johto", "Champion Cup"]);
+  });
+
   test("a boss fight sits in its region's section, not the league's", () => {
     const sections = buildFightSections(
       [

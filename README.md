@@ -1,6 +1,6 @@
 # Nuzlocke Tracker
 
-A personal Pokémon Nuzlocke run tracker. Local-first React app, HeartGold, SoulSilver, FireRed, LeafGreen, Emerald, Ruby, Sapphire, Diamond, Pearl, Platinum, Black, White, Black 2, White 2, X, Y, Omega Ruby, Alpha Sapphire, Red, Blue, Yellow, Gold, Silver, Crystal, Sun, Moon, Ultra Sun and Ultra Moon at V1,
+A personal Pokémon Nuzlocke run tracker. Local-first React app, HeartGold, SoulSilver, FireRed, LeafGreen, Emerald, Ruby, Sapphire, Diamond, Pearl, Platinum, Black, White, Black 2, White 2, X, Y, Omega Ruby, Alpha Sapphire, Red, Blue, Yellow, Gold, Silver, Crystal, Sun, Moon, Ultra Sun, Ultra Moon, Sword and Shield at V1,
 installable as a mobile app later via Capacitor.
 
 There is no backend and no account system. Your data lives in your browser, and the JSON
@@ -125,7 +125,7 @@ Every commit in the history passes the whole gate.
 src/
   domain/        entity types and pure state transitions, imports nothing
   storage/       adapter interface, Dexie + in-memory implementations, query layer
-  game/          HeartGold, SoulSilver, FireRed, LeafGreen, Emerald, Ruby, Sapphire, Diamond, Pearl, Platinum, Black, White, Black 2, White 2, X, Y, Omega Ruby, Alpha Sapphire, Red, Blue, Yellow, Gold, Silver, Crystal, Sun, Moon, Ultra Sun and Ultra Moon routes and bosses, natures, and the live PokéAPI client
+  game/          HeartGold, SoulSilver, FireRed, LeafGreen, Emerald, Ruby, Sapphire, Diamond, Pearl, Platinum, Black, White, Black 2, White 2, X, Y, Omega Ruby, Alpha Sapphire, Red, Blue, Yellow, Gold, Silver, Crystal, Sun, Moon, Ultra Sun, Ultra Moon, Sword and Shield routes and bosses, natures, and the live PokéAPI client
   game/pokeapi/  fetch, map and resolve species and move data from PokéAPI, cached by TanStack Query
   features/      screens, one directory each
   app/           routing, the responsive shell, and lazy loading of each screen
@@ -140,7 +140,7 @@ docs/            design specs, the visual direction, the wireframes and longer n
 
 Dependencies point one way: `features → storage → domain`. `domain/` imports from none of
 the others, which is what makes the game rules testable without a database. `game/` is a leaf
-holding the HeartGold, SoulSilver, FireRed, LeafGreen, Emerald, Ruby, Sapphire, Diamond, Pearl, Platinum, Black, White, Black 2, White 2, X, Y, Omega Ruby, Alpha Sapphire, Red, Blue, Yellow, Gold, Silver, Crystal, Sun, Moon, Ultra Sun and Ultra Moon routes and bosses plus the live PokéAPI
+holding the HeartGold, SoulSilver, FireRed, LeafGreen, Emerald, Ruby, Sapphire, Diamond, Pearl, Platinum, Black, White, Black 2, White 2, X, Y, Omega Ruby, Alpha Sapphire, Red, Blue, Yellow, Gold, Silver, Crystal, Sun, Moon, Ultra Sun, Ultra Moon, Sword and Shield routes and bosses plus the live PokéAPI
 client. Both `features/` and `storage/` read it, and it imports only from `domain/`. `components/` and `lib/` are shared by
 `features/` and never import from it or from `storage/`. `app/` sits on top and loads the screens.
 

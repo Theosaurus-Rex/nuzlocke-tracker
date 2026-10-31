@@ -27,14 +27,14 @@ export interface FightSection {
 
 export const FIGHT_ORDER_STEP = 100;
 
-const LEAGUE_LABEL = "Elite Four";
+const DEFAULT_LEAGUE = "Elite Four";
 
 function regionLabel(region: string): string {
   return region.charAt(0).toUpperCase() + region.slice(1);
 }
 
-function labelFor(fight: Fight, meta: FightMeta | undefined): string | null {
-  if (fight.kind === "elite_four" || fight.kind === "champion") return LEAGUE_LABEL;
+function labelFor(fight: Fight, meta: FightMeta | undefined, league: string): string | null {
+  if (fight.kind === "elite_four" || fight.kind === "champion") return league;
   return meta ? regionLabel(meta.region) : null;
 }
 
@@ -42,13 +42,14 @@ export function buildFightSections(
   fights: Fight[],
   lookup: FightLookup,
   deaths: Death[],
+  league = DEFAULT_LEAGUE,
 ): FightSection[] {
   const sorted = [...fights].sort((a, b) => a.order - b.order);
   const nextId = sorted.find((f) => f.status !== "cleared")?.id;
 
   const labelled = sorted.map((fight) => {
     const meta = fight.gameFightId ? lookup(fight.gameFightId) : undefined;
-    return { fight, meta, label: labelFor(fight, meta) };
+    return { fight, meta, label: labelFor(fight, meta, league) };
   });
   const firstLabel = labelled.find((l) => l.label !== null)?.label ?? "";
 

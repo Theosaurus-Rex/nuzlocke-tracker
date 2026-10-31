@@ -47,7 +47,7 @@ export function FightsScreen(): ReactNode {
       { ...def, ace: Math.max(...def.roster.map((mon) => mon.level)) },
     ]),
   );
-  const sections = buildFightSections(fights, (id) => defs.get(id), deaths);
+  const sections = buildFightSections(fights, (id) => defs.get(id), deaths, game?.league);
   const monsById = new Map((monsQuery.data ?? []).map((mon) => [mon.id, mon]));
   const { earned, total } = badgeCount(fights);
   const cap = run?.rules.levelCaps ? tableCap : null;
