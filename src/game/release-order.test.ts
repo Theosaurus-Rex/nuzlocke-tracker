@@ -37,6 +37,8 @@ describe("release order", () => {
       "moon",
       "ultrasun",
       "ultramoon",
+      "sword",
+      "shield",
     ]);
   });
 
@@ -68,6 +70,7 @@ describe("game search", () => {
       "white2",
       "omegaruby",
       "alphasapphire",
+      "shield",
     ]);
   });
 

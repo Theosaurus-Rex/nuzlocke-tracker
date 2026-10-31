@@ -56,6 +56,8 @@ export interface GameData {
   generation: number;
   /** First release anywhere, as an ISO date. Hand-entered. */
   released: string;
+  /** The heading for elite_four and champion fights. "Elite Four" when unset. */
+  league?: string;
   /** Turns a field on or off where the game differs from its generation's default. */
   fields?: Partial<MonFields>;
   routes: RouteDef[];
