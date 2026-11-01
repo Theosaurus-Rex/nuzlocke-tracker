@@ -18,10 +18,7 @@ function slot(n: number, type: string) {
 
 const SPRITES = "https://sprites.test";
 
-function sprites(
-  id: number,
-  parts: { shiny?: boolean; icon?: boolean; icon8?: boolean; icon9?: boolean },
-) {
+function sprites(id: number, parts: { shiny?: boolean; icon?: boolean; icon8?: boolean }) {
   const n = String(id);
   return {
     front_default: `${SPRITES}/still/${n}.png`,
@@ -32,11 +29,6 @@ function sprites(
       },
       "generation-viii": {
         icons: { front_default: parts.icon8 ? `${SPRITES}/icon8/${n}.png` : null },
-      },
-      "generation-ix": {
-        "scarlet-violet": {
-          icons: { front_default: parts.icon9 ? `${SPRITES}/icon9/${n}.png` : null },
-        },
       },
     },
   };
@@ -108,13 +100,6 @@ export const pokemonFixtures: Record<string, RawPokemon> = {
     types: [slot(1, "normal"), slot(2, "flying")],
     past_types: [],
     sprites: sprites(16, { icon8: true }),
-  },
-  sprigatito: {
-    id: 906,
-    name: "sprigatito",
-    types: [slot(1, "grass")],
-    past_types: [],
-    sprites: sprites(906, { icon9: true }),
   },
   geodude: { id: 74, name: "geodude", types: [slot(1, "rock"), slot(2, "ground")], past_types: [] },
   gyarados: {

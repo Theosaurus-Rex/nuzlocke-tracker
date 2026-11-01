@@ -285,7 +285,7 @@ The check before keeping one: read it, then imagine it deleted. If nothing is lo
 No single source covers this. Two are combined:
 
 - **PokéAPI**: species and move data, fetched at runtime through `src/game/pokeapi/` and cached
-  by TanStack Query. It is never copied into the repo. Gen 8 is incomplete. Gen 9 species, types, moves and still sprites are served, and box icons live under `generation-ix/scarlet-violet`. Gen
+  by TanStack Query. It is never copied into the repo. Gen 8 is incomplete. Gen 9 species, types, moves and still sprites are served. Gen 9 has no pixel box icon, so the routes screens scale its still sprite down. Gen
   2–5 is decent but has had real bugs. Spot-check anything level-cap-sensitive against a
   walkthrough.
 - **`domtronn/nuzlocke.data`** — `routes/*.txt` for route order, `leagues/*.txt` for gym,

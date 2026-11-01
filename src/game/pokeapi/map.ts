@@ -44,7 +44,6 @@ export interface RawPokemon {
     versions?: {
       "generation-vii"?: { icons?: RawSpritePair };
       "generation-viii"?: { icons?: RawSpritePair };
-      "generation-ix"?: { "scarlet-violet"?: { icons?: RawSpritePair } };
     };
   };
 }
@@ -124,7 +123,6 @@ export function toSpecies(raw: RawPokemon): Species {
       icon:
         raw.sprites?.versions?.["generation-vii"]?.icons?.front_default ??
         raw.sprites?.versions?.["generation-viii"]?.icons?.front_default ??
-        raw.sprites?.versions?.["generation-ix"]?.["scarlet-violet"]?.icons?.front_default ??
         null,
     },
   };

@@ -69,12 +69,6 @@ describe("toSpecies", () => {
     );
   });
 
-  it("uses the Scarlet and Violet icon when there is no Gen 7 or Gen 8 one", () => {
-    expect(toSpecies(pokemonFixtures.sprigatito!).sprites.icon).toBe(
-      "https://sprites.test/icon9/906.png",
-    );
-  });
-
   it("reads the still sprites and prefers the Gen 7 icon", () => {
     expect(toSpecies(pokemonFixtures.chikorita!).sprites).toEqual({
       still: "https://sprites.test/still/152.png",
