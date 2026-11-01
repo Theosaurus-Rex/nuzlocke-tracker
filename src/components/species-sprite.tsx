@@ -52,8 +52,10 @@ export function SpeciesSprite({
     );
   }
 
-  // Icons are drawn at 1x from the bottom, not scaled. Gen 8 ones sit low on a padded canvas.
-  const fit = src === species.data?.sprites.icon ? "object-none object-bottom" : "object-contain";
+  // Pixel icons are drawn at 1x from the bottom. Gen 9 icons are smooth art, so they scale.
+  const isIcon = src === species.data?.sprites.icon;
+  const smooth = src.includes("/generation-ix/");
+  const fit = isIcon && !smooth ? "object-none object-bottom" : "object-contain";
   return (
     <img
       src={src}
@@ -62,7 +64,7 @@ export function SpeciesSprite({
       loading="lazy"
       style={box}
       onError={() => setFailed((current) => [...current, src])}
-      className={cn("block shrink-0 [image-rendering:pixelated]", fit, className)}
+      className={cn("block shrink-0", !smooth && "[image-rendering:pixelated]", fit, className)}
     />
   );
 }

@@ -8,7 +8,7 @@ import { useQuery, type QueryClient, type UseQueryResult } from "@tanstack/react
 
 import { withRuleDefaults } from "@/domain/rules";
 import { compareRoutes } from "@/domain/routes";
-import { currentLevelCap } from "@/domain/rules-summary";
+import { currentLevelCap, currentLevelCaps, type PathCap } from "@/domain/rules-summary";
 import { ALL_FIELDS, monFields } from "@/game/fields";
 import { GAMES } from "@/game/registry";
 import type { GameData, MonFields } from "@/game/types";
@@ -63,6 +63,14 @@ export function useCurrentLevelCap(runId: string): number | null {
   if (game === undefined || fights === undefined) return null;
   const badgeFightIds = new Set(game.fights.filter((f) => f.grantsBadge).map((f) => f.id));
   return currentLevelCap(fights, game.levelCaps, badgeFightIds);
+}
+
+export function useCurrentLevelCaps(runId: string): PathCap[] {
+  const game = useRunGame(runId);
+  const fights = useFights(runId).data;
+  if (game === undefined || fights === undefined) return [];
+  const badgeFightIds = new Set(game.fights.filter((f) => f.grantsBadge).map((f) => f.id));
+  return currentLevelCaps(fights, game.levelCaps, badgeFightIds);
 }
 
 export function useRoutes(runId: string): UseQueryResult<Route[]> {

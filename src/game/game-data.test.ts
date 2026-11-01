@@ -63,10 +63,22 @@ describe.each(Object.values(GAMES))("$id game data", (game) => {
     });
   });
 
-  test("level caps never decrease from one milestone to the next", () => {
-    game.levelCaps.forEach(({ cap }, i) => {
-      if (i > 0) expect(cap).toBeGreaterThanOrEqual(game.levelCaps[i - 1]?.cap ?? 0);
-    });
+  test("level caps never decrease within a path, or among milestones with no path", () => {
+    const paths = new Set(game.levelCaps.map(({ path }) => path));
+    for (const path of paths) {
+      const caps = game.levelCaps.filter((m) => m.path === path).map(({ cap }) => cap);
+      caps.forEach((cap, i) => {
+        if (i > 0) expect(cap, String(path)).toBeGreaterThanOrEqual(caps[i - 1] ?? 0);
+      });
+    }
+  });
+
+  test("pathed level cap milestones all come before the ones with no path", () => {
+    const firstUnpathed = game.levelCaps.findIndex(({ path }) => path === undefined);
+    if (firstUnpathed === -1) return;
+    for (const { path } of game.levelCaps.slice(firstUnpathed)) {
+      expect(path).toBeUndefined();
+    }
   });
 
   test("level caps are positive integers", () => {

@@ -1,9 +1,10 @@
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import { describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it } from "vitest";
 import { MemoryRouter, Route, Routes } from "react-router";
 
+import { GAMES } from "@/game/registry";
 import { DEFAULT_RULES } from "@/domain/rules";
 import type { Fight, Rules } from "@/domain/types";
 import type { StorageAdapter } from "@/storage/adapter";
@@ -206,6 +207,37 @@ describe("FightsScreen", () => {
     await findTable();
     expect(screen.getAllByText("1 of 2 badges").length).toBeGreaterThan(0);
     expect(screen.getByText("Cap L17")).toBeInTheDocument();
+  });
+
+  describe("with parallel level cap paths", () => {
+    const original = GAMES.heartgold;
+    afterEach(() => {
+      GAMES.heartgold = original;
+    });
+
+    it("lists every path's cap in the header", async () => {
+      GAMES.heartgold = {
+        ...original,
+        levelCaps: [
+          { cap: 24, until: { badges: 2 }, path: "Gyms" },
+          { cap: 29, until: { fight: "gym-bugsy" }, path: "Titans" },
+          { cap: 36, until: { fight: "elite-four-will" }, path: "Star" },
+          { cap: 60, until: { badges: 3 } },
+        ],
+      };
+      const adapter = createMemoryAdapter();
+      const { run } = await seed(adapter);
+      renderScreen(adapter, run.id);
+
+      await findTable();
+      expect(screen.getByText("Gyms L24")).toBeInTheDocument();
+      expect(screen.getByText("Titans L29")).toBeInTheDocument();
+      expect(screen.getByText("Star L36")).toBeInTheDocument();
+      expect(
+        screen.getByText("1 of 2 badges · Gyms L24 · Titans L29 · Star L36"),
+      ).toBeInTheDocument();
+      expect(screen.queryByText(/Cap L/)).not.toBeInTheDocument();
+    });
   });
 
   it("shows a built-in fight's ace level, not its stored cap", async () => {

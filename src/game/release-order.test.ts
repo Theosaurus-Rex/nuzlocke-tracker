@@ -41,6 +41,8 @@ describe("release order", () => {
       "shield",
       "brilliantdiamond",
       "shiningpearl",
+      "scarlet",
+      "violet",
     ]);
   });
 
@@ -74,6 +76,8 @@ describe("game search", () => {
       "alphasapphire",
       "shield",
       "shiningpearl",
+      "scarlet",
+      "violet",
     ]);
   });
 

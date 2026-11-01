@@ -285,7 +285,7 @@ The check before keeping one: read it, then imagine it deleted. If nothing is lo
 No single source covers this. Two are combined:
 
 - **PokéAPI**: species and move data, fetched at runtime through `src/game/pokeapi/` and cached
-  by TanStack Query. It is never copied into the repo. Gen 8 is incomplete and Gen 9 absent. Gen
+  by TanStack Query. It is never copied into the repo. Gen 8 is incomplete. Gen 9 species, types, moves and still sprites are served, and box icons live under `generation-ix/scarlet-violet`. Gen
   2–5 is decent but has had real bugs. Spot-check anything level-cap-sensitive against a
   walkthrough.
 - **`domtronn/nuzlocke.data`** — `routes/*.txt` for route order, `leagues/*.txt` for gym,
@@ -378,7 +378,7 @@ Consequences, all deliberate:
   keeps a form in its region (Alolan Sandshrew offers Alolan Sandslash). A base species offers
   every regional next stage too (Pikachu offers Alolan Raichu).
 
-**Scope: HeartGold, SoulSilver, FireRed, LeafGreen, Emerald, Ruby, Sapphire, Diamond, Pearl, Platinum, Black, White, Black 2, White 2, X, Y, Omega Ruby, Alpha Sapphire, Red, Blue, Yellow, Gold, Silver, Crystal, Sun, Moon, Ultra Sun, Ultra Moon, Sword, Shield, Brilliant Diamond and Shining Pearl for V1.** Black 2 and White 2 are Normal mode only. Each pair shares one dataset, and
+**Scope: HeartGold, SoulSilver, FireRed, LeafGreen, Emerald, Ruby, Sapphire, Diamond, Pearl, Platinum, Black, White, Black 2, White 2, X, Y, Omega Ruby, Alpha Sapphire, Red, Blue, Yellow, Gold, Silver, Crystal, Sun, Moon, Ultra Sun, Ultra Moon, Sword, Shield, Brilliant Diamond, Shining Pearl, Scarlet and Violet for V1.** Black 2 and White 2 are Normal mode only. Each pair shares one dataset, and
 paired versions share data by registry entry. Every other game is a whole curated dataset, not a config flag. Build the ingest pipeline so a second game is additive.
 
 **Romhacks are a first-class future case, not an afterthought.** Theo intends to hand-author
