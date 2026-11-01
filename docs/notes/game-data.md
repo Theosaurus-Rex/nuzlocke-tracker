@@ -624,6 +624,36 @@ PokeAPI slugs are `morpeko-full-belly`, `eiscue-ice`, `aegislash-shield` and
 Not verified: moves, abilities and held items for any fight. The Turffield and Ballonlea trade
 timing rests on Serebii.
 
+## Brilliant Diamond and Shining Pearl (`src/game/data/bdsp/`)
+
+One folder for both games, so Shining Pearl is a spread of Brilliant Diamond. Upstream has one
+league file, `leagues/bdsp.txt`, and its `routes/bdsp.txt` is a stale combined list, so routes
+were built from Diamond and Pearl's and checked against Bulbapedia's per-location tables and
+Serebii. Rosters were checked against Bulbapedia's trainer pages, Serebii and upstream, which agree.
+
+Routes are 58, in Diamond and Pearl's order and ids, with the same Route 207, Lake Valor and
+Trophy Garden positions. The only addition is the Grand Underground, placed after Eterna City,
+where the Explorer Kit is given. Its 17 Hideaway types are one route, since each is a
+symbol-encounter pool shared across caves and zones, and one catch covers the whole feature.
+Hideaway Pokemon run above the badge caps, up to 3 levels over, so the cap is not a guide there.
+Left out are the Mew and Jirachi gifts (they need Let's Go and Sword or Shield saves), Snowpoint
+Temple, Ramanas Park, the Battle Zone, Bebe's Eevee, Rotom, and the Spiritomb gift at Hallowed
+Tower, which sits on Route 209 and needs no route of its own.
+
+Fights are the same 26 as Diamond and Pearl. Every roster is identical except Barry at Pastoria
+(ace 31), at the Canalave drawbridge (37) and at the League (55), which are higher. Bulbapedia's
+walkthrough still shows the Diamond and Pearl levels for the Pastoria fight, but its own Barry
+page, Serebii and upstream agree on the new ones. Mars's Golbat at Spear Pillar is 42 (the
+walkthrough says 41). Badge sprites reuse 25 to 32, since PokeAPI has no BDSP images.
+
+Level caps are Nuzlocke University's Diamond/Pearl block. It has no Brilliant Diamond or Shining
+Pearl list, and every gym and league ace here equals Diamond and Pearl's. Barry at Pastoria
+(31) is one over the cap only if he is met with 3 badges, which needs Pastoria before Veilstone.
+In story order the player holds 4, so the table is unchanged. The release date is the worldwide one, 2021-11-19.
+
+Not verified: moves, abilities and held items for any fight, and whether PokeAPI's Gen 8 Sinnoh
+movepools follow BDSP.
+
 ## Gift-only and static-only routes (`only`)
 
 A route is flagged when nothing on it can be met in the wild. Any grass, surf, fishing, headbutt
@@ -725,3 +755,8 @@ Sword and Shield:
   or Sawk for Vanillish). spikemuth: gift (the Mr. Mime trade). wyndon: gift (the Duraludon
   trade). energy-plant: static (Eternatus). Every other trade and gift sits on a place with wild
   Pokemon, so none of them flag.
+
+Brilliant Diamond and Shining Pearl:
+- oreburgh-city: gift (Abra for Machop trade, fossil revival). hearthome-city: gift (Happiny egg).
+  snowpoint-city: gift (Haunter for Medicham trade). spear-pillar: static (Dialga or Palkia).
+  Eterna City, Iron Island and Old Chateau have wild Pokemon, so their gifts do not flag them.

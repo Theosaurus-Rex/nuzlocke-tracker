@@ -156,6 +156,8 @@ describe("NewRunScreen", () => {
       "Ultra Moon· Gen 7",
       "Sword· Gen 8",
       "Shield· Gen 8",
+      "Brilliant Diamond· Gen 8",
+      "Shining Pearl· Gen 8",
     ]);
   });
 

@@ -50,6 +50,8 @@ export const GAME_IDS = [
   "ultramoon",
   "sword",
   "shield",
+  "brilliantdiamond",
+  "shiningpearl",
 ] as const;
 
 export type GameId = (typeof GAME_IDS)[number];

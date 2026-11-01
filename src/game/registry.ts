@@ -16,6 +16,7 @@ import { crystal, gold, silver } from "@/game/data/gsc";
 import { heartgold, soulsilver } from "@/game/data/heartgold";
 import { alphaSapphire, omegaRuby } from "@/game/data/oras";
 import { platinum } from "@/game/data/platinum";
+import { brilliantDiamond, shiningPearl } from "@/game/data/bdsp";
 import { blue, red } from "@/game/data/rb";
 import { ruby, sapphire } from "@/game/data/rs";
 import { moon, sun } from "@/game/data/sm";
@@ -56,4 +57,6 @@ export const GAMES: Record<GameId, GameData> = {
   ultramoon: ultraMoon,
   sword,
   shield,
+  brilliantdiamond: brilliantDiamond,
+  shiningpearl: shiningPearl,
 };
