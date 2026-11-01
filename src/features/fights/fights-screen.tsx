@@ -13,7 +13,7 @@ import {
   useMons,
   useRun,
   useRunGame,
-  useCurrentLevelCap,
+  useCurrentLevelCaps,
 } from "@/storage/queries";
 
 import { AddFightDialog } from "./add-fight-dialog";
@@ -27,7 +27,7 @@ export function FightsScreen(): ReactNode {
   const runQuery = useRun(runId ?? "");
   const game = useRunGame(runId ?? "");
   const fightsQuery = useFights(runId ?? "");
-  const tableCap = useCurrentLevelCap(runId ?? "");
+  const tableCaps = useCurrentLevelCaps(runId ?? "");
   const deathsQuery = useDeaths(runId ?? "");
   const monsQuery = useMons(runId);
   const [adding, setAdding] = useState(false);
@@ -50,7 +50,10 @@ export function FightsScreen(): ReactNode {
   const sections = buildFightSections(fights, (id) => defs.get(id), deaths, game?.league);
   const monsById = new Map((monsQuery.data ?? []).map((mon) => [mon.id, mon]));
   const { earned, total } = badgeCount(fights);
-  const cap = run?.rules.levelCaps ? tableCap : null;
+  const caps = run?.rules.levelCaps ? tableCaps : [];
+  const capLabels = caps.map(({ path, cap }) =>
+    path === null ? `Cap L${String(cap)}` : `${path} L${String(cap)}`,
+  );
   const onLog = (fight: Fight, label: string): void => setLogging({ fight, label });
   const allRows = sections.flatMap((section) => section.rows);
   const labels = numberedFightLabels(
@@ -69,7 +72,11 @@ export function FightsScreen(): ReactNode {
           <div className="flex items-center gap-2">
             <div className="hidden items-center gap-2 md:flex">
               <StatusChip status="caught">{badges}</StatusChip>
-              {cap !== null && <StatusChip status="pending">{`Cap L${String(cap)}`}</StatusChip>}
+              {capLabels.map((label) => (
+                <StatusChip key={label} status="pending">
+                  {label}
+                </StatusChip>
+              ))}
             </div>
             <Button
               type="button"
@@ -88,7 +95,7 @@ export function FightsScreen(): ReactNode {
         }
       >
         <Typography as="p" variant="body" tone="muted" className="md:hidden">
-          {cap === null ? badges : `${badges} · cap L${String(cap)}`}
+          {[badges, ...capLabels.map((label) => label.replace(/^Cap/, "cap"))].join(" · ")}
         </Typography>
       </ScreenHeader>
       {loaded && sections.length === 0 && (

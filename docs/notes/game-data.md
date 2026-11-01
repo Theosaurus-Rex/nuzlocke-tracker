@@ -34,6 +34,10 @@ cap follows badges held and never drops. The source has Pryce at 34 after Jasmin
 the cap at 35 for Pryce so it never goes down. His verified ace stays 34.
 Red's 88 is the source's number and his top level in our roster.
 
+A milestone may carry a `path` name for games with parallel story paths. Each path advances on its
+own and shows its own cap. The party and rules checks use the highest of them. Milestones with no
+path come after all paths and apply only once every path is done.
+
 ## Verified ace levels (`heartgold.test.ts`)
 
 `VERIFIED_ACE_LEVELS` is the ace (highest-level) Pokemon for each gym leader, Elite Four member
@@ -654,6 +658,45 @@ In story order the player holds 4, so the table is unchanged. The release date i
 Not verified: moves, abilities and held items for any fight, and whether PokeAPI's Gen 8 Sinnoh
 movepools follow BDSP.
 
+## Scarlet and Violet (`src/game/data/sv/`)
+
+One folder for both games, so Violet is a spread of Scarlet. Routes came from `routes/sc.txt` and
+`routes/vi.txt` in `domtronn/nuzlocke.data`, rosters from Bulbapedia's trainer pages and Serebii,
+and the league file `leagues/sv.txt` agrees on every ace except Poppy. Where they disagree on a
+level that is not an ace, Bulbapedia is used. Serebii's "Harrison" at Ruchbah has no Bulbapedia
+page and is left out.
+
+Routes are 37, all in the `paldea` region. Paldea has no numbered routes, so the order is
+Bulbapedia's suggested walkthrough, and the four seas come just before the League. Upstream puts
+South Province (Area Four) and (Area Five) far too early, and Glaseado Mountain is one route
+where it splits North and South. Added are Cabo Poco (four fixed spawns on a later visit),
+Colonnade Hollow, and the Naranja / Uva Academy gift. Area Zero is the last route, since it is the
+final story stage and the only home of the Paradox Pokemon. Koraidon and Miraidon are a ride and
+get no route. The DLC, the Academy Ace Tournament and every post-credits place are out.
+
+Fights are 34 for both versions: 8 gyms, 5 Titans, 5 Team Star bosses with Clavell and Penny as
+bosses, 4 Elite Four members, Geeta as champion, 8 Nemona and Arven fights as rivals, and the AI
+professor. They are in the walkthrough order. Nemona's open-order fights are named for the Gym
+she is met after, not a town. Two fights differ by version but share an ace, so each is one fight
+named for both, the Quaking Earth Titan (Great Tusk or Iron Treads, 45) and the Zero Lab AI
+professor (Sada or Turo, 67). Poppy's Tinkaton is 59, one above upstream. Slugs are
+`dudunsparce-two-segment` and `tatsugiri-curly`, which are PokeAPI's default forms, and
+Bulbapedia names neither form. Starter variants are listed together. The Starmobile Revavroom
+is a roster member of each Team Star boss. Titans and Team Star have no badge image in PokeAPI,
+so only the eight gyms grant a badge, with sprites 70 to 77.
+
+Level caps use three paths, which the fights screen lists side by side. "Gyms" holds the eight
+badge caps and then the league and Nemona's last fight, so the league cap shows even while the
+other paths are unfinished. "Titans" and "Team Star" have one row per boss. The source lists
+Arven's partner levels for the Titans (19, 28, 44, 55), so the Titan rows use the Titans' own
+levels instead (20, 29, 45, 57). The Titans path ends on Arven's last fight at 63. The Team Star
+path ends on Clavell at 61 and Penny at 63. The Zero Lab fight at 67 has no path, so it applies
+only once all three are done. Nemona at the fifth Gym (ace 37) is one over the cap of 36 if she
+is met with four badges. Bulbapedia puts her after Larry, Serebii after the fourth Gym.
+
+Not verified: moves, abilities, held items and Tera types for any fight, and whether each Team
+Star base has a forced unnamed trainer before its boss.
+
 ## Gift-only and static-only routes (`only`)
 
 A route is flagged when nothing on it can be met in the wild. Any grass, surf, fishing, headbutt
@@ -760,3 +803,9 @@ Brilliant Diamond and Shining Pearl:
 - oreburgh-city: gift (Abra for Machop trade, fossil revival). hearthome-city: gift (Happiny egg).
   snowpoint-city: gift (Haunter for Medicham trade). spear-pillar: static (Dialga or Palkia).
   Eterna City, Iron Island and Old Chateau have wild Pokemon, so their gifts do not flag them.
+
+Scarlet and Violet:
+- cortondo: gift (Flabebe for Snom trade). levincia: gift (Pincurchin for Haunter trade).
+  cascarrafa: gift (Paldean Wooper for Wooper trade). naranja-uva-academy: gift (Galarian Meowth
+  from Salvatore). Koraidon and Miraidon have no route. Titan re-battles and the Ruinous quartet
+  sit on wild routes, so they do not flag.
