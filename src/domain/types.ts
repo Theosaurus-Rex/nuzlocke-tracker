@@ -50,6 +50,10 @@ export const GAME_IDS = [
   "ultramoon",
   "sword",
   "shield",
+  "brilliantdiamond",
+  "shiningpearl",
+  "scarlet",
+  "violet",
 ] as const;
 
 export type GameId = (typeof GAME_IDS)[number];
@@ -186,6 +190,8 @@ export type Death = Timestamped & {
 export interface LevelCapMilestone {
   cap: number;
   until: { badges: number } | { fight: string };
+  /** Display name of a parallel story path. Paths advance independently until all are done. */
+  path?: string;
 }
 
 export type Fight = Timestamped & {

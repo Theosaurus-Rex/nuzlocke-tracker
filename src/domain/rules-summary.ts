@@ -5,11 +5,16 @@ export interface RuleChip {
   tone: "neutral" | "flag";
 }
 
-export function currentLevelCap(
+export interface PathCap {
+  path: string | null;
+  cap: number;
+}
+
+export function currentLevelCaps(
   fights: readonly Fight[],
   milestones: readonly LevelCapMilestone[],
   badgeFightIds: ReadonlySet<string>,
-): number | null {
+): PathCap[] {
   const builtIn = new Map<string, Fight>();
   for (const fight of fights) {
     if (fight.gameFightId !== null) builtIn.set(fight.gameFightId, fight);
@@ -18,30 +23,55 @@ export function currentLevelCap(
     (fight) => fight.status === "cleared" && badgeFightIds.has(fight.gameFightId ?? ""),
   ).length;
 
-  const milestone = milestones.find(({ until }) =>
-    "badges" in until ? badges < until.badges : builtIn.get(until.fight)?.status === "pending",
-  );
-  if (milestone === undefined) return null;
+  const unmet = ({ until }: LevelCapMilestone): boolean =>
+    "badges" in until ? badges < until.badges : builtIn.get(until.fight)?.status === "pending";
 
   const nextBadgeOrder = Math.min(
     ...[...builtIn.values()]
       .filter((fight) => fight.status !== "cleared" && badgeFightIds.has(fight.gameFightId ?? ""))
       .map((fight) => fight.order),
   );
-  const anchorOrder =
-    "fight" in milestone.until
-      ? (builtIn.get(milestone.until.fight)?.order ?? Infinity)
-      : nextBadgeOrder;
-  const overrides = fights
-    .filter(
-      (fight) =>
-        fight.gameFightId === null &&
-        fight.status !== "cleared" &&
-        fight.levelCap !== null &&
-        fight.order < anchorOrder,
-    )
-    .map((fight) => fight.levelCap ?? Infinity);
-  return Math.min(milestone.cap, ...overrides);
+  const capFor = (milestone: LevelCapMilestone): number => {
+    const anchorOrder =
+      "fight" in milestone.until
+        ? (builtIn.get(milestone.until.fight)?.order ?? Infinity)
+        : nextBadgeOrder;
+    const overrides = fights
+      .filter(
+        (fight) =>
+          fight.gameFightId === null &&
+          fight.status !== "cleared" &&
+          fight.levelCap !== null &&
+          fight.order < anchorOrder,
+      )
+      .map((fight) => fight.levelCap ?? Infinity);
+    return Math.min(milestone.cap, ...overrides);
+  };
+
+  const firstUnmet = new Map<string, LevelCapMilestone | undefined>();
+  for (const milestone of milestones) {
+    if (milestone.path === undefined) continue;
+    if (!firstUnmet.has(milestone.path)) firstUnmet.set(milestone.path, undefined);
+    if (firstUnmet.get(milestone.path) === undefined && unmet(milestone)) {
+      firstUnmet.set(milestone.path, milestone);
+    }
+  }
+  const pathCaps = [...firstUnmet].flatMap(([path, milestone]) =>
+    milestone === undefined ? [] : [{ path, cap: capFor(milestone) }],
+  );
+  if (pathCaps.length > 0) return pathCaps;
+
+  const league = milestones.find((milestone) => milestone.path === undefined && unmet(milestone));
+  return league === undefined ? [] : [{ path: null, cap: capFor(league) }];
+}
+
+export function currentLevelCap(
+  fights: readonly Fight[],
+  milestones: readonly LevelCapMilestone[],
+  badgeFightIds: ReadonlySet<string>,
+): number | null {
+  const caps = currentLevelCaps(fights, milestones, badgeFightIds);
+  return caps.length === 0 ? null : Math.max(...caps.map(({ cap }) => cap));
 }
 
 export function isOverCap(level: number, cap: number | null): boolean {

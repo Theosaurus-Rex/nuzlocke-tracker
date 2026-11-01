@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 
 import { DEFAULT_RULES } from "./rules";
-import { currentLevelCap, isOverCap, ruleChips } from "./rules-summary";
+import { currentLevelCap, currentLevelCaps, isOverCap, ruleChips } from "./rules-summary";
 import type { Fight, LevelCapMilestone } from "./types";
 
 function fight(overrides: Partial<Fight>): Fight {
@@ -196,5 +196,81 @@ describe("ruleChips", () => {
   it("shows Randomised from the randomiser switch", () => {
     const rules = { ...ALL_OFF, randomiser: { ...ALL_OFF.randomiser, enabled: true } };
     expect(ruleChips(rules, null).map((chip) => chip.label)).toEqual(["Randomised"]);
+  });
+});
+
+describe("level cap paths", () => {
+  const PATHED: LevelCapMilestone[] = [
+    { cap: 20, until: { badges: 1 }, path: "Gyms" },
+    { cap: 30, until: { badges: 2 }, path: "Gyms" },
+    { cap: 25, until: { fight: "t1" }, path: "Titans" },
+    { cap: 35, until: { fight: "t2" }, path: "Titans" },
+    { cap: 40, until: { fight: "s1" }, path: "Star" },
+    { cap: 50, until: { fight: "champ" } },
+  ];
+  const IDS = ["g1", "g2", "t1", "t2", "s1", "champ"];
+
+  function caps(cleared: string[], extra: Fight[] = []) {
+    const fights = [
+      ...IDS.map((id, i) =>
+        built(id, (i + 1) * 100, cleared.includes(id), { grantsBadge: id.startsWith("g") }),
+      ),
+      ...extra,
+    ];
+    return {
+      all: currentLevelCaps(fights, PATHED, BADGE_IDS),
+      top: currentLevelCap(fights, PATHED, BADGE_IDS),
+    };
+  }
+
+  it("lists each path's first unmet cap in the order the paths first appear", () => {
+    expect(caps([]).all).toEqual([
+      { path: "Gyms", cap: 20 },
+      { path: "Titans", cap: 25 },
+      { path: "Star", cap: 40 },
+    ]);
+  });
+
+  it("advances each path on its own", () => {
+    expect(caps(["g1", "t1"]).all).toEqual([
+      { path: "Gyms", cap: 30 },
+      { path: "Titans", cap: 35 },
+      { path: "Star", cap: 40 },
+    ]);
+  });
+
+  it("drops a finished path from the list", () => {
+    expect(caps(["s1"]).all.map(({ path }) => path)).toEqual(["Gyms", "Titans"]);
+  });
+
+  it("ignores the league while any path is unfinished", () => {
+    const { all } = caps(["g1", "g2", "t1", "t2"]);
+    expect(all).toEqual([{ path: "Star", cap: 40 }]);
+  });
+
+  it("falls through to the league once every path is done", () => {
+    expect(caps(["g1", "g2", "t1", "t2", "s1"]).all).toEqual([{ path: null, cap: 50 }]);
+    expect(caps(["g1", "g2", "t1", "t2", "s1", "champ"]).all).toEqual([]);
+  });
+
+  it("uses the highest path cap as the single cap", () => {
+    expect(caps([]).top).toBe(40);
+    expect(caps(["s1"]).top).toBe(25);
+  });
+
+  it("lowers a path cap for a custom fight that comes before its anchor", () => {
+    const custom = fight({ id: "c", order: 150, levelCap: 22 });
+    expect(caps([], [custom]).all).toEqual([
+      { path: "Gyms", cap: 20 },
+      { path: "Titans", cap: 22 },
+      { path: "Star", cap: 22 },
+    ]);
+  });
+
+  it("returns one unnamed cap for a game with no paths", () => {
+    expect(currentLevelCaps(world([]), MILESTONES, BADGE_IDS)).toEqual([{ path: null, cap: 10 }]);
+    expect(
+      currentLevelCaps(world(["g1", "g2", "g3", "e4", "champ"]), MILESTONES, BADGE_IDS),
+    ).toEqual([]);
   });
 });

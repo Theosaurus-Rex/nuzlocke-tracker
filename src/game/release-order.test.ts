@@ -39,6 +39,10 @@ describe("release order", () => {
       "ultramoon",
       "sword",
       "shield",
+      "brilliantdiamond",
+      "shiningpearl",
+      "scarlet",
+      "violet",
     ]);
   });
 
@@ -71,6 +75,9 @@ describe("game search", () => {
       "omegaruby",
       "alphasapphire",
       "shield",
+      "shiningpearl",
+      "scarlet",
+      "violet",
     ]);
   });
 
