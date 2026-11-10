@@ -18,13 +18,14 @@ import {
 import { useState, type ReactNode } from "react";
 import { Navigate, useParams } from "react-router";
 
+import { Button } from "@/components/ui/button";
 import { ScreenHeader } from "@/components/screen-header";
 import { Typography } from "@/components/typography";
 import { StatusChip } from "@/components/status-chip";
 import { isOverCap } from "@/domain/rules-summary";
-import { MAX_PARTY_SIZE } from "@/domain/transitions";
+import { levelPartyToCap, MAX_PARTY_SIZE } from "@/domain/transitions";
 import type { Mon } from "@/domain/types";
-import { useReorderParty } from "@/storage/mutations";
+import { useLevelParty, useReorderParty } from "@/storage/mutations";
 import {
   useCurrentLevelCap,
   useMons,
@@ -112,6 +113,8 @@ export function PartyScreen(): ReactNode {
   );
 
   const reorder = useReorderParty();
+  const levelParty = useLevelParty();
+  const [levelFailed, setLevelFailed] = useState(false);
   const [override, setOverride] = useState<string[] | null>(null);
   const [saveFailed, setSaveFailed] = useState(false);
   const [picking, setPicking] = useState(false);
@@ -133,6 +136,10 @@ export function PartyScreen(): ReactNode {
     overCount > 0 ? (
       <StatusChip status="pending">{`${String(overCount)} over cap`}</StatusChip>
     ) : null;
+  const showLevelButton = runQuery.data?.rules.levelCaps && runQuery.data.rules.freeLevelling;
+  const belowCap = cap === null ? 0 : levelPartyToCap(party, cap).length;
+  const levelBlockedReason =
+    cap === null ? "No level cap yet." : belowCap === 0 ? "No party mon is below the cap." : null;
   const boxed = boxedMons(monsQuery.data ?? []);
   const freeSlots = Math.max(0, MAX_PARTY_SIZE - party.length);
   const routeNames = new Map((routesQuery.data ?? []).map((route) => [route.id, route.name]));
@@ -154,6 +161,14 @@ export function PartyScreen(): ReactNode {
     );
   };
 
+  const handleLevelParty = (): void => {
+    if (cap === null) {
+      return;
+    }
+    setLevelFailed(false);
+    levelParty.mutate({ runId, cap }, { onError: () => setLevelFailed(true) });
+  };
+
   return (
     <div>
       <ScreenHeader
@@ -170,6 +185,17 @@ export function PartyScreen(): ReactNode {
               )}
             </div>
             <div className="md:hidden">{overCapChip}</div>
+            {showLevelButton && !monsQuery.isPending && (
+              <Button
+                type="button"
+                variant="outline"
+                disabled={levelBlockedReason !== null || levelParty.isPending}
+                onClick={handleLevelParty}
+                className="h-10 px-4 shadow-none"
+              >
+                Level party to cap
+              </Button>
+            )}
           </>
         }
       >
@@ -177,6 +203,11 @@ export function PartyScreen(): ReactNode {
           <Typography variant="body" tone="muted">
             {party.length} of {MAX_PARTY_SIZE}
             {cap !== null && <span className="md:hidden">{` · cap L${String(cap)}`}</span>}
+          </Typography>
+        )}
+        {showLevelButton && !monsQuery.isPending && levelBlockedReason !== null && (
+          <Typography variant="body" tone="muted">
+            {levelBlockedReason}
           </Typography>
         )}
       </ScreenHeader>
@@ -216,6 +247,11 @@ export function PartyScreen(): ReactNode {
       {saveFailed && (
         <Typography role="alert" variant="body" tone="alert" className="px-4">
           Could not save the new order. Nothing was changed.
+        </Typography>
+      )}
+      {levelFailed && (
+        <Typography role="alert" variant="body" tone="alert" className="px-4">
+          Could not level the party. Nothing was changed.
         </Typography>
       )}
       {party.length > 0 && (

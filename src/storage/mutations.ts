@@ -15,6 +15,7 @@ import {
   type BonusKind,
   evolveMon,
   killMon,
+  levelPartyToCap,
   missEncounter,
   moveMonToBox,
   moveMonToParty,
@@ -763,6 +764,23 @@ export async function persistReorderParty(
   });
 }
 
+export interface LevelPartyInput {
+  runId: string;
+  cap: number;
+}
+
+export async function persistLevelParty(
+  adapter: StorageAdapter,
+  input: LevelPartyInput,
+): Promise<void> {
+  await adapter.transaction(async (tx) => {
+    const runMons = await tx.mons.where("runId", input.runId);
+    for (const mon of levelPartyToCap(runMons, input.cap)) {
+      await tx.mons.put(mon);
+    }
+  });
+}
+
 export interface MoveBoxedMonInput {
   runId: string;
   monId: string;
@@ -860,6 +878,18 @@ export function useReorderParty(): UseMutationResult<void, Error, ReorderPartyIn
 
   return useMutation({
     mutationFn: (input: ReorderPartyInput) => persistReorderParty(adapter, input),
+    onSuccess: async (_, input) => {
+      await invalidateRun(queryClient, input.runId);
+    },
+  });
+}
+
+export function useLevelParty(): UseMutationResult<void, Error, LevelPartyInput> {
+  const adapter = useStorage();
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: (input: LevelPartyInput) => persistLevelParty(adapter, input),
     onSuccess: async (_, input) => {
       await invalidateRun(queryClient, input.runId);
     },

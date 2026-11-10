@@ -16,6 +16,7 @@ export const CLAUSE_FIELDS = [
   "noGifts",
   "nicknamesRequired",
   "levelCaps",
+  "freeLevelling",
   "setMode",
   "hardcore",
 ] as const satisfies readonly ClauseField[];
@@ -24,6 +25,7 @@ export const CLAUSE_FIELDS = [
 export const DEFAULTED_CLAUSE_FIELDS = [
   "giftClause",
   "noGifts",
+  "freeLevelling",
 ] as const satisfies readonly ClauseField[];
 
 export function withDefaultedClauses(rules: Rules): Rules {
@@ -101,6 +103,7 @@ export const DEFAULT_RULES: Rules = {
   noGifts: false,
   nicknamesRequired: false,
   levelCaps: true,
+  freeLevelling: false,
   setMode: false,
   hardcore: false,
   randomiser: RANDOMISER_OFF,

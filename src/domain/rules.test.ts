@@ -42,3 +42,21 @@ describe("gift rules", () => {
     expect(filled.noGifts).toBe(false);
   });
 });
+
+describe("free levelling rule", () => {
+  it("starts off", () => {
+    expect(DEFAULT_RULES.freeLevelling).toBe(false);
+  });
+
+  it("fills a missing value as off", () => {
+    const old: Partial<Rules> = { ...DEFAULT_RULES, freeLevelling: true };
+    delete old.freeLevelling;
+    expect(withDefaultedClauses(old as Rules).freeLevelling).toBe(false);
+  });
+
+  it("keeps a stored value", () => {
+    expect(withDefaultedClauses({ ...DEFAULT_RULES, freeLevelling: true }).freeLevelling).toBe(
+      true,
+    );
+  });
+});

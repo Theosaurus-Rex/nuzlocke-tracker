@@ -8,6 +8,7 @@ import {
   clearFight,
   evolveMon,
   killMon,
+  levelPartyToCap,
   missEncounter,
   moveMonToBox,
   moveMonToParty,
@@ -1160,5 +1161,33 @@ describe("reorderParty", () => {
     expect(() => reorderParty(partyInSlots([0, 1]), ["party-mon-0", "party-mon-0"])).toThrow(
       /exactly once/,
     );
+  });
+});
+
+describe("levelPartyToCap", () => {
+  const mons = [
+    makeMon({ id: "low", status: "party", partySlot: 0, level: 10 }),
+    makeMon({ id: "at-cap", status: "party", partySlot: 2, level: 20 }),
+    makeMon({ id: "over", status: "party", partySlot: 4, level: 25 }),
+    makeMon({ id: "gap-low", status: "party", partySlot: 5, level: 19 }),
+    makeMon({ id: "boxed", status: "box", partySlot: null, boxOrder: 0, level: 5 }),
+    makeMon({ id: "dead", status: "dead", partySlot: null, level: 5 }),
+  ];
+
+  test("raises only living party mons below the cap, to exactly the cap", () => {
+    const changed = levelPartyToCap(mons, 20);
+    expect(changed.map((mon) => [mon.id, mon.level])).toEqual([
+      ["low", 20],
+      ["gap-low", 20],
+    ]);
+  });
+
+  test("changes nothing else about a raised mon", () => {
+    const [low] = levelPartyToCap(mons, 20);
+    expect(low).toEqual({ ...mons[0], level: 20 });
+  });
+
+  test("returns nothing when every party mon is at or over the cap", () => {
+    expect(levelPartyToCap(mons, 5)).toEqual([]);
   });
 });

@@ -91,6 +91,7 @@ export function ruleChips(rules: Rules, levelCap: number | null): RuleChip[] {
   add(rules.noGifts, "No gifts");
   add(rules.nicknamesRequired, "Nicknames");
   add(rules.levelCaps, levelCap === null ? "Caps" : `Cap L${String(levelCap)}`, "flag");
+  add(rules.freeLevelling, "Free levelling");
   add(rules.setMode, "Set mode");
   add(rules.hardcore, "Hardcore");
   add(rules.randomiser.enabled, "Randomised");

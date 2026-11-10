@@ -27,6 +27,7 @@ const CLAUSE_LABELS = [
   "Shiny clause",
   "Nicknames required",
   "Level caps by badge",
+  "Free levelling to cap",
   "Set mode",
   "Hardcore",
 ] as const;
@@ -304,6 +305,7 @@ describe("NewRunScreen", () => {
       noGifts: DEFAULT_RULES.noGifts,
       nicknamesRequired: !DEFAULT_RULES.nicknamesRequired,
       levelCaps: !DEFAULT_RULES.levelCaps,
+      freeLevelling: !DEFAULT_RULES.freeLevelling,
       setMode: !DEFAULT_RULES.setMode,
       hardcore: !DEFAULT_RULES.hardcore,
       randomiser: {
