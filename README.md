@@ -39,7 +39,7 @@ What it covers today:
 
 | | |
 |---|---|
-| Node | 20 or newer (built on 24) |
+| Node | 22.18 or newer (built on 24) |
 | pnpm | 9.15.9 — pinned in `packageManager` |
 
 pnpm is pinned, so let corepack pick the right version rather than relying on a global install:
