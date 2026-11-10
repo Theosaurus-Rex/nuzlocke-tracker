@@ -16,6 +16,7 @@ export function makeRules(overrides: Partial<Rules> = {}): Rules {
     noGifts: false,
     nicknamesRequired: false,
     levelCaps: false,
+    freeLevelling: false,
     setMode: false,
     hardcore: false,
     randomiser: {

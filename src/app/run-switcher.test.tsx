@@ -47,6 +47,7 @@ const RUN_A: Run = {
     noGifts: false,
     nicknamesRequired: false,
     levelCaps: false,
+    freeLevelling: false,
     setMode: false,
     hardcore: false,
     randomiser: {

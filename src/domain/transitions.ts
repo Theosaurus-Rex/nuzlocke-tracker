@@ -466,6 +466,13 @@ export function amendMon({ mon, amendments }: { mon: Mon; amendments: MonAmendme
   };
 }
 
+/** Returns only the living party mons below the cap, each raised to it. */
+export function levelPartyToCap(mons: readonly Mon[], cap: number): Mon[] {
+  return mons
+    .filter((mon) => mon.status === "party" && mon.level < cap)
+    .map((mon) => ({ ...mon, level: cap }));
+}
+
 export function evolveMon({ mon, speciesId }: { mon: Mon; speciesId: string }): Mon {
   if (speciesId.trim() === "") {
     throw new Error("A mon cannot evolve into an empty species.");

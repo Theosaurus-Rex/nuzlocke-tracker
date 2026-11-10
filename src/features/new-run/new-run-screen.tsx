@@ -54,6 +54,7 @@ const CLAUSE_LABELS: Record<ClauseField, string> = {
   noGifts: "No gifts",
   nicknamesRequired: "Nicknames required",
   levelCaps: "Level caps by badge",
+  freeLevelling: "Free levelling to cap",
   setMode: "Set mode",
   hardcore: "Hardcore",
 };
