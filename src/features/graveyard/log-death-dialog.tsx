@@ -24,7 +24,7 @@ import {
 import { boxLayout } from "@/domain/box-slots";
 import { countByMonStatus } from "@/domain/derive";
 import { MAX_PARTY_SIZE } from "@/domain/transitions";
-import type { Death, Mon, Route, StatusCause } from "@/domain/types";
+import type { Death, Fight, Mon, Route, StatusCause } from "@/domain/types";
 import { EncounterDialogHeader } from "@/features/encounters/encounter-dialog-header";
 import { monTitle } from "@/features/encounters/mon-title";
 import { PlacementField, type Placement } from "@/features/encounters/placement-field";
@@ -33,13 +33,14 @@ import { genderSymbol } from "@/lib/gender";
 import { joinPresent } from "@/lib/join-present";
 import { cn } from "@/lib/utils";
 import { useEditDeath, useLogDeath, useUndoDeath } from "@/storage/mutations";
-import { useMons, useRoutes, useRunGame } from "@/storage/queries";
+import { useFights, useMons, useRoutes, useRunGame } from "@/storage/queries";
 
 import { AttackerFields } from "./attacker-fields";
 import { titleCase } from "./cause-text";
 
 const UNKNOWN_ROUTE = "unknown";
 const UNKNOWN_ROUTE_ITEM = { value: UNKNOWN_ROUTE, label: "Unknown" };
+const OTHER_TRAINER = "other-trainer";
 const STATUS_ITEMS = STATUS_CAUSES.map((status) => ({ value: status, label: titleCase(status) }));
 
 function livingMons(mons: readonly Mon[]): Mon[] {
@@ -67,6 +68,7 @@ function initialValuesFrom(death: Death | undefined) {
     move: cause !== undefined && "move" in cause ? (cause.move ?? "") : "",
     status: cause?.type === "status" ? cause.status : "poison",
     detail: cause?.type === "other" ? cause.detail : "",
+    fightChoice: (cause?.type === "trainer" ? cause.fightId : null) ?? OTHER_TRAINER,
     trainerName: cause?.type === "trainer" ? (cause.trainerName ?? "") : "",
     routeChoice: death === undefined ? null : (death.routeId ?? UNKNOWN_ROUTE),
     notes: death?.notes ?? "",
@@ -96,6 +98,7 @@ export function LogDeathDialog({
 }: LogDeathDialogProps): ReactNode {
   const monsQuery = useMons(runId);
   const routesQuery = useRoutes(runId);
+  const fightsQuery = useFights(runId);
   const generation = useRunGame(runId)?.generation;
   const allMons = monsQuery.data ?? [];
   const deadMon = death && allMons.find((mon) => mon.id === death.monId);
@@ -116,6 +119,7 @@ export function LogDeathDialog({
             mons={choices}
             death={death}
             routes={routesQuery.data ?? []}
+            fights={fightsQuery.data ?? []}
             generation={generation}
             partyFull={countByMonStatus(allMons).party >= MAX_PARTY_SIZE}
             onDone={() => onOpenChange(false)}
@@ -130,6 +134,7 @@ interface LogDeathFormProps {
   mons: readonly Mon[];
   death: Death | undefined;
   routes: readonly Route[];
+  fights: readonly Fight[];
   generation: number | undefined;
   partyFull: boolean;
   onDone: () => void;
@@ -139,6 +144,7 @@ function LogDeathForm({
   mons,
   death,
   routes,
+  fights,
   generation,
   partyFull,
   onDone,
@@ -155,6 +161,7 @@ function LogDeathForm({
   const [move, setMove] = useState(initial.move);
   const [status, setStatus] = useState<StatusCause>(initial.status);
   const [detail, setDetail] = useState(initial.detail);
+  const [fightChoice, setFightChoice] = useState(initial.fightChoice);
   const [trainerName, setTrainerName] = useState(initial.trainerName);
   const [routeChoice, setRouteChoice] = useState<string | null>(initial.routeChoice);
   const [notes, setNotes] = useState(initial.notes);
@@ -166,11 +173,25 @@ function LogDeathForm({
   const routeName = (id: string | null): string | null =>
     routes.find((route) => route.id === id)?.name ?? null;
 
-  const values = { type, speciesId, level: Number(levelText), move, trainerName, status, detail };
+  const fightId = fightChoice === OTHER_TRAINER ? null : fightChoice;
+  const values = {
+    type,
+    speciesId,
+    level: Number(levelText),
+    move,
+    fightId,
+    trainerName,
+    status,
+    detail,
+  };
   const errors: Partial<Record<DeathField, string>> = submitted ? validateDeath(values) : {};
   const attacker = type === "trainer" || type === "wild";
 
   const monItems = mons.map((m) => ({ value: m.id, label: monLabel(m) }));
+  const fightItems = [
+    { value: OTHER_TRAINER, label: "Other trainer" },
+    ...[...fights].sort((a, b) => a.order - b.order).map((f) => ({ value: f.id, label: f.name })),
+  ];
   const routeItems = [
     UNKNOWN_ROUTE_ITEM,
     ...routes.map((route) => ({ value: route.id, label: route.name })),
@@ -181,15 +202,7 @@ function LogDeathForm({
     setSubmitted(true);
     if (Object.keys(validateDeath(values)).length > 0) return;
 
-    const built = buildCause(values);
-    const previous = death?.cause;
-    const cause =
-      built.type === "trainer" &&
-      built.trainerName === null &&
-      previous?.type === "trainer" &&
-      previous.fightId !== null
-        ? { ...built, fightId: previous.fightId }
-        : built;
+    const cause = buildCause(values);
     const routeId = routeValue === UNKNOWN_ROUTE ? null : routeValue;
     const trimmedNotes = notes.trim() === "" ? null : notes.trim();
 
@@ -352,10 +365,39 @@ function LogDeathForm({
               <Typography
                 as="label"
                 variant="eyebrow"
+                htmlFor="log-death-fight"
+                className="mb-1 block"
+              >
+                Trainer
+              </Typography>
+              <Select
+                items={fightItems}
+                value={fightChoice}
+                onValueChange={(next) => setFightChoice(next ?? OTHER_TRAINER)}
+              >
+                <SelectTrigger id="log-death-fight" className="w-full">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent alignItemWithTrigger={false}>
+                  {fightItems.map((item) => (
+                    <SelectItem key={item.value} value={item.value}>
+                      {item.label}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+          )}
+
+          {type === "trainer" && fightId === null && (
+            <div>
+              <Typography
+                as="label"
+                variant="eyebrow"
                 htmlFor="log-death-trainer"
                 className="mb-1 block"
               >
-                Trainer (optional)
+                Trainer name (optional)
               </Typography>
               <Input
                 id="log-death-trainer"

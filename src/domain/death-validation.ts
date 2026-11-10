@@ -25,6 +25,7 @@ export interface DeathFormValues {
   speciesId: string;
   level: number;
   move: string;
+  fightId: string | null;
   trainerName: string;
   status: StatusCause;
   detail: string;
@@ -57,10 +58,10 @@ function blankToNull(text: string): string | null {
 export function buildCause(values: DeathFormValues): Cause {
   switch (values.type) {
     case "trainer": {
-      const trainerName = values.trainerName.trim();
+      const trainerName = values.fightId === null ? values.trainerName.trim() : "";
       return {
         type: "trainer",
-        fightId: null,
+        fightId: values.fightId,
         trainerName: trainerName === "" ? null : trainerName,
         species: values.speciesId,
         level: values.level,
