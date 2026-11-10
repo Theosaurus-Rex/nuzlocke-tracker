@@ -64,6 +64,14 @@ function renderDialog(overrides: {
   return { ...view, adapter, route, mon };
 }
 
+// Base UI moves focus to Close a frame after the dialog opens.
+// Typing before then sends keystrokes to the Close button.
+async function renderSettledDialog(overrides: Parameters<typeof renderDialog>[0]) {
+  const view = renderDialog(overrides);
+  await waitFor(() => expect(screen.getByRole("button", { name: "Close" })).toHaveFocus());
+  return view;
+}
+
 describe("EditMonDialog", () => {
   it("shows the route name as the dialog title", () => {
     renderDialog({ route: makeRoute({ ...SPROUT_TOWER, name: "New Bark Town" }) });
@@ -114,7 +122,7 @@ describe("EditMonDialog", () => {
 
   it("saves changed moves onto the mon", async () => {
     const user = userEvent.setup();
-    const { adapter, mon } = renderDialog({
+    const { adapter, mon } = await renderSettledDialog({
       mon: makeMon({ ...FILLED_MON, moves: padMoveset(["vine-whip", "growth"]) }),
     });
 
@@ -131,7 +139,7 @@ describe("EditMonDialog", () => {
 
   it("keeps a cleared move's slot empty through save and reopen", async () => {
     const user = userEvent.setup();
-    const { adapter, mon, unmount } = renderDialog({
+    const { adapter, mon, unmount } = await renderSettledDialog({
       mon: makeMon({
         ...FILLED_MON,
         moves: ["vine-whip", "growth", "tackle", "leech-seed"],
@@ -148,7 +156,7 @@ describe("EditMonDialog", () => {
     });
 
     unmount();
-    renderDialog({ adapter, mon: saved });
+    await renderSettledDialog({ adapter, mon: saved });
     expect(screen.getAllByPlaceholderText("+ move")).toHaveLength(1);
     const grid = screen.getByText("Moveset").nextElementSibling;
     const order = Array.from(grid?.querySelectorAll('input[placeholder="+ move"], span') ?? []).map(
@@ -159,7 +167,9 @@ describe("EditMonDialog", () => {
 
   it("shows species and level caught, read-only", async () => {
     const user = userEvent.setup();
-    renderDialog({ mon: makeMon({ ...FILLED_MON, speciesId: "bellsprout", levelCaught: 6 }) });
+    await renderSettledDialog({
+      mon: makeMon({ ...FILLED_MON, speciesId: "bellsprout", levelCaught: 6 }),
+    });
 
     const species = screen.getByLabelText("Species");
     const levelCaught = screen.getByLabelText("Level caught");
@@ -178,7 +188,7 @@ describe("EditMonDialog", () => {
 
   it("keeps only digits typed into the current level", async () => {
     const user = userEvent.setup();
-    renderDialog({});
+    await renderSettledDialog({});
 
     const level = screen.getByLabelText("Current level");
     await user.clear(level);
@@ -189,7 +199,7 @@ describe("EditMonDialog", () => {
 
   it("saves a new nickname", async () => {
     const user = userEvent.setup();
-    const { adapter, mon } = renderDialog({});
+    const { adapter, mon } = await renderSettledDialog({});
 
     const nickname = screen.getByLabelText("Nickname");
     await user.clear(nickname);
@@ -204,7 +214,7 @@ describe("EditMonDialog", () => {
 
   it("saves a new gender", async () => {
     const user = userEvent.setup();
-    const { adapter, mon } = renderDialog({});
+    const { adapter, mon } = await renderSettledDialog({});
 
     await user.click(screen.getByRole("radio", { name: "Female" }));
     await user.click(screen.getByRole("button", { name: "Save changes" }));
@@ -217,7 +227,7 @@ describe("EditMonDialog", () => {
 
   it("saves a new current level", async () => {
     const user = userEvent.setup();
-    const { adapter, mon } = renderDialog({});
+    const { adapter, mon } = await renderSettledDialog({});
 
     const level = screen.getByLabelText("Current level");
     await user.clear(level);
@@ -232,7 +242,7 @@ describe("EditMonDialog", () => {
 
   it("saves a new nature", async () => {
     const user = userEvent.setup();
-    const { adapter, mon } = renderDialog({});
+    const { adapter, mon } = await renderSettledDialog({});
 
     await user.click(screen.getByLabelText("Nature"));
     await user.click(await screen.findByRole("option", { name: "Adamant" }));
@@ -246,7 +256,7 @@ describe("EditMonDialog", () => {
 
   it("saves a new ability", async () => {
     const user = userEvent.setup();
-    const { adapter, mon } = renderDialog({});
+    const { adapter, mon } = await renderSettledDialog({});
 
     const ability = screen.getByLabelText("Ability");
     await user.clear(ability);
@@ -262,7 +272,7 @@ describe("EditMonDialog", () => {
 
   it("saves null when the ability is cleared", async () => {
     const user = userEvent.setup();
-    const { adapter, mon } = renderDialog({});
+    const { adapter, mon } = await renderSettledDialog({});
     await adapter.mons.put(mon);
 
     await user.clear(screen.getByLabelText("Ability"));
@@ -275,7 +285,7 @@ describe("EditMonDialog", () => {
 
   it("saves a new held item", async () => {
     const user = userEvent.setup();
-    const { adapter, mon } = renderDialog({});
+    const { adapter, mon } = await renderSettledDialog({});
 
     const heldItem = screen.getByLabelText("Held item");
     await user.clear(heldItem);
@@ -291,7 +301,7 @@ describe("EditMonDialog", () => {
 
   it("saves null when the held item is cleared", async () => {
     const user = userEvent.setup();
-    const { adapter, mon } = renderDialog({});
+    const { adapter, mon } = await renderSettledDialog({});
     await adapter.mons.put(mon);
 
     await user.clear(screen.getByLabelText("Held item"));
@@ -306,7 +316,10 @@ describe("EditMonDialog", () => {
     const user = userEvent.setup();
     const adapter = createMemoryAdapter();
     const putSpy = vi.spyOn(adapter.mons, "put");
-    renderDialog({ adapter, mon: makeMon({ ...FILLED_MON, levelCaught: 6, level: 18 }) });
+    await renderSettledDialog({
+      adapter,
+      mon: makeMon({ ...FILLED_MON, levelCaught: 6, level: 18 }),
+    });
 
     const level = screen.getByLabelText("Current level");
     await user.clear(level);
@@ -324,7 +337,7 @@ describe("EditMonDialog", () => {
     const user = userEvent.setup();
     const adapter = createMemoryAdapter();
     const putSpy = vi.spyOn(adapter.mons, "put");
-    renderDialog({ adapter, rules: { ...DEFAULT_RULES, nicknamesRequired: true } });
+    await renderSettledDialog({ adapter, rules: { ...DEFAULT_RULES, nicknamesRequired: true } });
 
     const nickname = screen.getByLabelText(/^Nickname/);
     await user.clear(nickname);
@@ -336,7 +349,7 @@ describe("EditMonDialog", () => {
 
   it("accepts a blank nickname when the clause is off", async () => {
     const user = userEvent.setup();
-    const { adapter, mon } = renderDialog({
+    const { adapter, mon } = await renderSettledDialog({
       mon: makeMon({ ...FILLED_MON, nickname: "Sprig" }),
       rules: { ...DEFAULT_RULES, nicknamesRequired: false },
     });
@@ -353,7 +366,7 @@ describe("EditMonDialog", () => {
 
   it("saves an edit to a dead mon and leaves it dead", async () => {
     const user = userEvent.setup();
-    const { adapter, mon } = renderDialog({
+    const { adapter, mon } = await renderSettledDialog({
       mon: makeMon({ ...FILLED_MON, status: "dead", partySlot: null }),
     });
 
@@ -381,7 +394,7 @@ describe("EditMonDialog", () => {
       transaction: (fn) => fn(failingAdapter),
     };
 
-    renderDialog({ adapter: failingAdapter });
+    await renderSettledDialog({ adapter: failingAdapter });
 
     await user.click(screen.getByRole("button", { name: "Save changes" }));
 
@@ -396,7 +409,9 @@ describe("EditMonDialog", () => {
 
   it("toggles shiny and saves the new value", async () => {
     const user = userEvent.setup();
-    const { adapter, mon } = renderDialog({ mon: makeMon({ ...FILLED_MON, shiny: false }) });
+    const { adapter, mon } = await renderSettledDialog({
+      mon: makeMon({ ...FILLED_MON, shiny: false }),
+    });
 
     const toggle = screen.getByLabelText("Shiny");
     expect(toggle).toHaveAttribute("aria-pressed", "false");
@@ -415,7 +430,7 @@ describe("EditMonDialog", () => {
   it("evolves on save", async () => {
     stubPokeApiWithEvolutions();
     const user = userEvent.setup();
-    const { adapter, mon } = renderDialog({});
+    const { adapter, mon } = await renderSettledDialog({});
 
     await user.click(await findMenuTrigger());
     await user.click(await screen.findByRole("menuitem", { name: "Weepinbell" }));
@@ -437,7 +452,7 @@ describe("EditMonDialog", () => {
     const user = userEvent.setup();
     const adapter = createMemoryAdapter();
     const putSpy = vi.spyOn(adapter.mons, "put");
-    const { mon } = renderDialog({ adapter });
+    const { mon } = await renderSettledDialog({ adapter });
 
     await user.click(await findMenuTrigger());
     await user.click(await screen.findByRole("menuitem", { name: "Weepinbell" }));
@@ -461,7 +476,7 @@ describe("EditMonDialog", () => {
     const adapter = createMemoryAdapter();
     const mon = makeMon(FILLED_MON);
     await adapter.mons.put(mon);
-    renderDialog({ adapter, mon });
+    await renderSettledDialog({ adapter, mon });
 
     await user.click(await findMenuTrigger());
     await user.click(await screen.findByRole("menuitem", { name: "Weepinbell" }));
@@ -476,7 +491,10 @@ describe("EditMonDialog", () => {
     const user = userEvent.setup();
     const adapter = createMemoryAdapter();
     const putSpy = vi.spyOn(adapter.mons, "put");
-    renderDialog({ adapter, mon: makeMon({ ...FILLED_MON, levelCaught: 6, level: 18 }) });
+    await renderSettledDialog({
+      adapter,
+      mon: makeMon({ ...FILLED_MON, levelCaught: 6, level: 18 }),
+    });
 
     await user.click(await findMenuTrigger());
     await user.click(await screen.findByRole("menuitem", { name: "Weepinbell" }));
@@ -495,7 +513,7 @@ describe("EditMonDialog", () => {
   it("steps twice and undoes to the original", async () => {
     stubPokeApiWithEvolutions();
     const user = userEvent.setup();
-    renderDialog({});
+    await renderSettledDialog({});
 
     await user.click(await findMenuTrigger());
     await user.click(await screen.findByRole("menuitem", { name: "Weepinbell" }));
@@ -513,7 +531,7 @@ describe("EditMonDialog", () => {
 
   it("shows the full species picker in a randomised run", async () => {
     const user = userEvent.setup();
-    const { adapter, mon } = renderDialog({ rules: RANDOMISED_RULES });
+    const { adapter, mon } = await renderSettledDialog({ rules: RANDOMISED_RULES });
 
     await user.click(screen.getByRole("button", { name: "Evolve" }));
 
@@ -531,7 +549,7 @@ describe("EditMonDialog", () => {
 
   it("opens the suggestion list while typing and saves the picked option", async () => {
     const user = userEvent.setup();
-    const { adapter, mon } = renderDialog({ rules: RANDOMISED_RULES });
+    const { adapter, mon } = await renderSettledDialog({ rules: RANDOMISED_RULES });
 
     await user.click(screen.getByRole("button", { name: "Evolve" }));
 
@@ -552,7 +570,7 @@ describe("EditMonDialog", () => {
     const user = userEvent.setup();
     const adapter = createMemoryAdapter();
     const putSpy = vi.spyOn(adapter.mons, "put");
-    renderDialog({ adapter, rules: RANDOMISED_RULES });
+    await renderSettledDialog({ adapter, rules: RANDOMISED_RULES });
 
     await user.click(screen.getByRole("button", { name: "Evolve" }));
 
@@ -570,7 +588,7 @@ describe("EditMonDialog", () => {
 
   it("offers Undo after a blocked save so the player is never stuck picking", async () => {
     const user = userEvent.setup();
-    renderDialog({ rules: RANDOMISED_RULES });
+    await renderSettledDialog({ rules: RANDOMISED_RULES });
 
     await user.click(screen.getByRole("button", { name: "Evolve" }));
 
@@ -591,7 +609,7 @@ describe("EditMonDialog", () => {
 
   it("undoes a randomised pick back to the read-only field", async () => {
     const user = userEvent.setup();
-    renderDialog({ rules: RANDOMISED_RULES });
+    await renderSettledDialog({ rules: RANDOMISED_RULES });
 
     await user.click(screen.getByRole("button", { name: "Evolve" }));
 
@@ -611,7 +629,7 @@ describe("EditMonDialog", () => {
   it("returns focus to the species field after Undo", async () => {
     stubPokeApiWithEvolutions();
     const user = userEvent.setup();
-    renderDialog({});
+    await renderSettledDialog({});
 
     await user.click(await findMenuTrigger());
     await user.click(await screen.findByRole("menuitem", { name: "Weepinbell" }));
@@ -623,7 +641,7 @@ describe("EditMonDialog", () => {
   it("ties the evolved note to the species field for assistive tech", async () => {
     stubPokeApiWithEvolutions();
     const user = userEvent.setup();
-    renderDialog({});
+    await renderSettledDialog({});
 
     await user.click(await findMenuTrigger());
     await user.click(await screen.findByRole("menuitem", { name: "Weepinbell" }));
@@ -633,7 +651,7 @@ describe("EditMonDialog", () => {
 
   it("ties the evolved note to the picker field in a randomised run", async () => {
     const user = userEvent.setup();
-    renderDialog({ rules: RANDOMISED_RULES });
+    await renderSettledDialog({ rules: RANDOMISED_RULES });
 
     await user.click(screen.getByRole("button", { name: "Evolve" }));
 
@@ -648,7 +666,7 @@ describe("EditMonDialog", () => {
   it("ignores the evolutions sub-toggle while the randomiser itself is off", async () => {
     stubPokeApiWithEvolutions();
     const user = userEvent.setup();
-    renderDialog({
+    await renderSettledDialog({
       rules: {
         ...DEFAULT_RULES,
         randomiser: { ...DEFAULT_RULES.randomiser, enabled: false, evolutions: true },
@@ -662,7 +680,7 @@ describe("EditMonDialog", () => {
   it("keeps the read-only field when the randomiser is on but evolutions are not", async () => {
     stubPokeApiWithEvolutions();
     const user = userEvent.setup();
-    renderDialog({
+    await renderSettledDialog({
       rules: {
         ...DEFAULT_RULES,
         randomiser: { ...DEFAULT_RULES.randomiser, enabled: true, evolutions: false },
@@ -678,7 +696,7 @@ describe("EditMonDialog", () => {
 describe("EditMonDialog moveset focus", () => {
   it("moves focus to the next control after the fourth move is picked", async () => {
     const user = userEvent.setup();
-    renderDialog({
+    await renderSettledDialog({
       mon: makeMon({ ...FILLED_MON, moves: padMoveset(["vine-whip", "growth", "growl"]) }),
     });
 
@@ -715,7 +733,10 @@ describe("EditMonDialog placement", () => {
     const user = userEvent.setup();
     const adapter = createMemoryAdapter();
     await seedParty(adapter, 6);
-    renderDialog({ adapter, mon: makeMon({ ...FILLED_MON, status: "box", partySlot: null }) });
+    await renderSettledDialog({
+      adapter,
+      mon: makeMon({ ...FILLED_MON, status: "box", partySlot: null }),
+    });
 
     expect(await screen.findByText("Party is full")).toBeInTheDocument();
     await user.click(placement());
@@ -730,7 +751,7 @@ describe("EditMonDialog placement", () => {
     const adapter = createMemoryAdapter();
     await seedParty(adapter, 6);
     const mon = (await adapter.mons.get("party-2"))!;
-    renderDialog({ adapter, mon });
+    await renderSettledDialog({ adapter, mon });
 
     await user.click(placement());
     expect(await screen.findByRole("option", { name: "Party" })).not.toHaveAttribute(
@@ -745,7 +766,7 @@ describe("EditMonDialog placement", () => {
     const adapter = createMemoryAdapter();
     const mon = makeMon(FILLED_MON);
     await adapter.mons.put(mon);
-    renderDialog({ adapter, mon });
+    await renderSettledDialog({ adapter, mon });
 
     await user.click(placement());
     await user.click(await screen.findByRole("option", { name: "Box" }));
