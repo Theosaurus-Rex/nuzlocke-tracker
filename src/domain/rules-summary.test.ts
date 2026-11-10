@@ -193,12 +193,6 @@ describe("ruleChips", () => {
     ]);
   });
 
-  it("shows a chip for free levelling when on", () => {
-    expect(ruleChips({ ...ALL_OFF, freeLevelling: true }, null).map((c) => c.label)).toEqual([
-      "Free levelling",
-    ]);
-  });
-
   it("shows Randomised from the randomiser switch", () => {
     const rules = { ...ALL_OFF, randomiser: { ...ALL_OFF.randomiser, enabled: true } };
     expect(ruleChips(rules, null).map((chip) => chip.label)).toEqual(["Randomised"]);

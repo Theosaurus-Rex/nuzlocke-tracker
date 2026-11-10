@@ -164,21 +164,6 @@ describe("read hooks", () => {
     });
   });
 
-  it("reads a run saved before free levelling existed with it off", async () => {
-    const adapter = createMemoryAdapter();
-    await adapter.init();
-    const draft = makeRunDraft();
-    const { freeLevelling, ...oldRules } = draft.rules;
-    void freeLevelling;
-    const run = await adapter.runs.put({ ...draft, rules: oldRules as typeof draft.rules });
-
-    const one = renderHook(() => useRun(run.id), { wrapper: createWrapper(adapter) });
-
-    await waitFor(() => {
-      expect(one.result.current.data?.rules.freeLevelling).toBe(false);
-    });
-  });
-
   it("useRun returns the single run matching its id, not another run", async () => {
     const adapter = createMemoryAdapter();
     await adapter.init();

@@ -857,34 +857,3 @@ describe("atomicity", () => {
     },
   );
 });
-
-describe("parseBundle — free levelling rule", () => {
-  function bundleWithRules(rules: Record<string, unknown>): string {
-    const bundle = baseValidBundle();
-    const run = bundle.runs[0];
-    if (run === undefined) throw new Error("fixture has no run");
-    const merged: Record<string, unknown> = { ...run.rules, ...rules };
-    for (const key of Object.keys(merged)) {
-      if (merged[key] === undefined) delete merged[key];
-    }
-    return JSON.stringify({ ...bundle, runs: [{ ...run, rules: merged }] });
-  }
-
-  it("reads a run saved before the rule existed as off", () => {
-    const result = parseBundle(bundleWithRules({ freeLevelling: undefined }));
-    expect(result.ok).toBe(true);
-    if (!result.ok) return;
-    expect(result.bundle.runs[0]?.rules.freeLevelling).toBe(false);
-  });
-
-  it("keeps the rule a backup carries", () => {
-    const result = parseBundle(bundleWithRules({ freeLevelling: true }));
-    expect(result.ok).toBe(true);
-    if (!result.ok) return;
-    expect(result.bundle.runs[0]?.rules.freeLevelling).toBe(true);
-  });
-
-  it("rejects a value that is not a boolean", () => {
-    expect(parseBundle(bundleWithRules({ freeLevelling: "yes" })).ok).toBe(false);
-  });
-});

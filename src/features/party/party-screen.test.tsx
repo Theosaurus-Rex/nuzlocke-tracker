@@ -572,7 +572,7 @@ describe("PartyScreen", () => {
     });
   });
   describe("level party to cap", () => {
-    const freeRules = makeRules({ levelCaps: true, freeLevelling: true });
+    const levelRules = makeRules({ levelCaps: true });
     const buttonName = { name: "Level party to cap" };
     let restoreGame: (() => void) | null = null;
 
@@ -586,18 +586,9 @@ describe("PartyScreen", () => {
       return mons.sort((a, b) => (a.partySlot ?? 99) - (b.partySlot ?? 99)).map((m) => m.level);
     }
 
-    it("is hidden when the rule is off", async () => {
-      const adapter = createMemoryAdapter();
-      const { run } = await seedCapRun(adapter, [10], makeRules({ levelCaps: true }));
-      renderScreen(adapter, run.id);
-
-      expect(await screen.findByText("cap L13")).toBeInTheDocument();
-      expect(screen.queryByRole("button", buttonName)).toBeNull();
-    });
-
     it("is hidden when level caps are off", async () => {
       const adapter = createMemoryAdapter();
-      const { run } = await seedCapRun(adapter, [10], makeRules({ freeLevelling: true }));
+      const { run } = await seedCapRun(adapter, [10], makeRules({ levelCaps: false }));
       renderScreen(adapter, run.id);
 
       expect(await cardHeadings()).toHaveLength(1);
@@ -607,7 +598,7 @@ describe("PartyScreen", () => {
     it("raises party mons below the cap and leaves the rest alone", async () => {
       const user = userEvent.setup();
       const adapter = createMemoryAdapter();
-      const { run } = await seedCapRun(adapter, [10, 13, 20], freeRules);
+      const { run } = await seedCapRun(adapter, [10, 13, 20], levelRules);
       await adapter.mons.put(
         makeMonDraft(run.id, { level: 3, status: "box", partySlot: null, boxOrder: 0 }),
       );
@@ -622,7 +613,7 @@ describe("PartyScreen", () => {
 
     it("is disabled with a reason when every party mon is at or over the cap", async () => {
       const adapter = createMemoryAdapter();
-      const { run } = await seedCapRun(adapter, [13, 20], freeRules);
+      const { run } = await seedCapRun(adapter, [13, 20], levelRules);
       renderScreen(adapter, run.id);
 
       expect(await screen.findByRole("button", buttonName)).toBeDisabled();
@@ -632,7 +623,7 @@ describe("PartyScreen", () => {
     it("is disabled with a reason when there is no current cap", async () => {
       restoreGame = overrideGame("heartgold", { levelCaps: [] });
       const adapter = createMemoryAdapter();
-      const { run } = await seedCapRun(adapter, [10], freeRules);
+      const { run } = await seedCapRun(adapter, [10], levelRules);
       renderScreen(adapter, run.id);
 
       expect(await screen.findByRole("button", buttonName)).toBeDisabled();

@@ -136,7 +136,7 @@ export function PartyScreen(): ReactNode {
     overCount > 0 ? (
       <StatusChip status="pending">{`${String(overCount)} over cap`}</StatusChip>
     ) : null;
-  const showLevelButton = runQuery.data?.rules.levelCaps && runQuery.data.rules.freeLevelling;
+  const showLevelButton = runQuery.data?.rules.levelCaps === true;
   const belowCap = cap === null ? 0 : levelPartyToCap(party, cap).length;
   const levelBlockedReason =
     cap === null ? "No level cap yet." : belowCap === 0 ? "No party mon is below the cap." : null;

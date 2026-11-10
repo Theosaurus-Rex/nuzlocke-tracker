@@ -77,7 +77,6 @@ export interface Rules {
   noGifts: boolean;
   nicknamesRequired: boolean;
   levelCaps: boolean;
-  freeLevelling: boolean;
   setMode: boolean;
   hardcore: boolean;
   randomiser: {
