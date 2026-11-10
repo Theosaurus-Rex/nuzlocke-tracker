@@ -8,6 +8,7 @@ function values(overrides: Partial<DeathFormValues> = {}): DeathFormValues {
     speciesId: "miltank",
     level: 20,
     move: "rollout",
+    fightId: null,
     trainerName: "",
     status: "poison",
     detail: "",
@@ -65,6 +66,17 @@ describe("buildCause", () => {
   test("a trainer name is trimmed", () => {
     const cause = buildCause(values({ trainerName: " Joey " }));
     expect(cause.type === "trainer" && cause.trainerName).toBe("Joey");
+  });
+
+  test("a picked fight is saved and drops any typed trainer name", () => {
+    expect(buildCause(values({ fightId: "fight-1", trainerName: "Joey" }))).toEqual({
+      type: "trainer",
+      fightId: "fight-1",
+      trainerName: null,
+      species: "miltank",
+      level: 20,
+      move: "rollout",
+    });
   });
 
   test("wild carries no trainer fields", () => {

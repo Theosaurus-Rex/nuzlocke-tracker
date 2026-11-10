@@ -74,6 +74,7 @@ function toDeathValues(input: LossInput) {
     speciesId: input.speciesId,
     level: Number(input.levelText),
     move: input.move,
+    fightId: null,
     trainerName: "",
     status: "poison" as const,
     detail: "",
