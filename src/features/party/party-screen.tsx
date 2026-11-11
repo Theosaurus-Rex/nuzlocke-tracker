@@ -179,30 +179,30 @@ export function PartyScreen(): ReactNode {
           <>
             {overCapChip}
             {showLevelButton && !monsQuery.isPending && (
-              <div className="flex items-center gap-2">
-                {cap !== null && (
-                  <span className={cn(CHIP_SHAPE, "bg-flag text-foreground")}>
-                    {`cap L${String(cap)}`}
-                  </span>
-                )}
-                <Button
-                  type="button"
-                  variant="outline"
-                  disabled={levelBlockedReason !== null || levelParty.isPending}
-                  onClick={handleLevelParty}
-                  className="h-10 px-4 shadow-none"
-                >
-                  Level party to cap
-                </Button>
-              </div>
+              <Button
+                type="button"
+                variant="outline"
+                disabled={levelBlockedReason !== null || levelParty.isPending}
+                onClick={handleLevelParty}
+                className="h-10 px-4 shadow-none"
+              >
+                Level party to cap
+              </Button>
             )}
           </>
         }
       >
         {!monsQuery.isPending && (
-          <Typography variant="body" tone="muted">
-            {party.length} of {MAX_PARTY_SIZE}
-          </Typography>
+          <div className="flex items-center gap-2">
+            <Typography variant="body" tone="muted">
+              {party.length} of {MAX_PARTY_SIZE}
+            </Typography>
+            {cap !== null && (
+              <span className={cn(CHIP_SHAPE, "bg-flag text-foreground")}>
+                {`cap L${String(cap)}`}
+              </span>
+            )}
+          </div>
         )}
         {showLevelButton && !monsQuery.isPending && levelBlockedReason !== null && (
           <Typography variant="body" tone="muted">
