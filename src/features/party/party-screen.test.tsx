@@ -8,6 +8,7 @@ import type { StorageAdapter } from "@/storage/adapter";
 import { createMemoryAdapter } from "@/storage/memory-adapter";
 import { makeFightDraft, makeMon, makeMonDraft, makeRules, makeRunDraft } from "@/test/factories";
 import { defaultPokeApiRoutes, stubPokeApi } from "@/test/pokeapi-fetch";
+import { overrideGame } from "@/test/override-game";
 import { renderWithProviders } from "@/test/render";
 
 import { PartyScreen, partyMembers } from "./party-screen";
@@ -568,6 +569,65 @@ describe("PartyScreen", () => {
 
       expect(await screen.findByText("cap L17")).toBeInTheDocument();
       expect(screen.queryByText(/over cap/i)).toBeNull();
+    });
+  });
+  describe("level party to cap", () => {
+    const levelRules = makeRules({ levelCaps: true });
+    const buttonName = { name: "Level party to cap" };
+    let restoreGame: (() => void) | null = null;
+
+    afterEach(() => {
+      restoreGame?.();
+      restoreGame = null;
+    });
+
+    async function levelsOf(adapter: StorageAdapter, runId: string): Promise<number[]> {
+      const mons = await adapter.mons.where("runId", runId);
+      return mons.sort((a, b) => (a.partySlot ?? 99) - (b.partySlot ?? 99)).map((m) => m.level);
+    }
+
+    it("is hidden when level caps are off", async () => {
+      const adapter = createMemoryAdapter();
+      const { run } = await seedCapRun(adapter, [10], makeRules({ levelCaps: false }));
+      renderScreen(adapter, run.id);
+
+      expect(await cardHeadings()).toHaveLength(1);
+      expect(screen.queryByRole("button", buttonName)).toBeNull();
+    });
+
+    it("raises party mons below the cap and leaves the rest alone", async () => {
+      const user = userEvent.setup();
+      const adapter = createMemoryAdapter();
+      const { run } = await seedCapRun(adapter, [10, 13, 20], levelRules);
+      await adapter.mons.put(
+        makeMonDraft(run.id, { level: 3, status: "box", partySlot: null, boxOrder: 0 }),
+      );
+      renderScreen(adapter, run.id);
+
+      await user.click(await screen.findByRole("button", buttonName));
+
+      await waitFor(async () => {
+        expect(await levelsOf(adapter, run.id)).toEqual([13, 13, 20, 3]);
+      });
+    });
+
+    it("is disabled with a reason when every party mon is at or over the cap", async () => {
+      const adapter = createMemoryAdapter();
+      const { run } = await seedCapRun(adapter, [13, 20], levelRules);
+      renderScreen(adapter, run.id);
+
+      expect(await screen.findByRole("button", buttonName)).toBeDisabled();
+      expect(screen.getByText("No party mon is below the cap.")).toBeInTheDocument();
+    });
+
+    it("is disabled with a reason when there is no current cap", async () => {
+      restoreGame = overrideGame("heartgold", { levelCaps: [] });
+      const adapter = createMemoryAdapter();
+      const { run } = await seedCapRun(adapter, [10], levelRules);
+      renderScreen(adapter, run.id);
+
+      expect(await screen.findByRole("button", buttonName)).toBeDisabled();
+      expect(screen.getByText("No level cap yet.")).toBeInTheDocument();
     });
   });
 });
