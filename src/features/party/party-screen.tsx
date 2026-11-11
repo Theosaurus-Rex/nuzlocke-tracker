@@ -18,6 +18,7 @@ import {
 import { useState, type ReactNode } from "react";
 import { Navigate, useParams } from "react-router";
 
+import { CHIP_SHAPE } from "@/components/chip";
 import { Button } from "@/components/ui/button";
 import { ScreenHeader } from "@/components/screen-header";
 import { Typography } from "@/components/typography";
@@ -25,6 +26,7 @@ import { StatusChip } from "@/components/status-chip";
 import { isOverCap } from "@/domain/rules-summary";
 import { levelPartyToCap, MAX_PARTY_SIZE } from "@/domain/transitions";
 import type { Mon } from "@/domain/types";
+import { cn } from "@/lib/utils";
 import { useLevelParty, useReorderParty } from "@/storage/mutations";
 import {
   useCurrentLevelCap,
@@ -175,26 +177,24 @@ export function PartyScreen(): ReactNode {
         title="Party"
         actions={
           <>
-            <div className="hidden items-center gap-3 md:flex">
-              {overCapChip}
-              {cap !== null && (
-                <Typography
-                  variant="body"
-                  className="border-[1.5px] border-border bg-card px-4 py-2"
-                >{`cap L${String(cap)}`}</Typography>
-              )}
-            </div>
-            <div className="md:hidden">{overCapChip}</div>
+            {overCapChip}
             {showLevelButton && !monsQuery.isPending && (
-              <Button
-                type="button"
-                variant="outline"
-                disabled={levelBlockedReason !== null || levelParty.isPending}
-                onClick={handleLevelParty}
-                className="h-10 px-4 shadow-none"
-              >
-                Level party to cap
-              </Button>
+              <div className="flex items-center gap-2">
+                {cap !== null && (
+                  <span className={cn(CHIP_SHAPE, "bg-flag text-foreground")}>
+                    {`cap L${String(cap)}`}
+                  </span>
+                )}
+                <Button
+                  type="button"
+                  variant="outline"
+                  disabled={levelBlockedReason !== null || levelParty.isPending}
+                  onClick={handleLevelParty}
+                  className="h-10 px-4 shadow-none"
+                >
+                  Level party to cap
+                </Button>
+              </div>
             )}
           </>
         }
@@ -202,7 +202,6 @@ export function PartyScreen(): ReactNode {
         {!monsQuery.isPending && (
           <Typography variant="body" tone="muted">
             {party.length} of {MAX_PARTY_SIZE}
-            {cap !== null && <span className="md:hidden">{` · cap L${String(cap)}`}</span>}
           </Typography>
         )}
         {showLevelButton && !monsQuery.isPending && levelBlockedReason !== null && (
